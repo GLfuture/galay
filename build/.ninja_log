@@ -1,0 +1,9 @@
+# ninja log v5
+12	66	1702949408848542886	src/config/CMakeFiles/config.dir/config.cc.o	a0274e084c0f7cee
+112	1190	1702949409972500052	src/server/CMakeFiles/server.dir/server.cc.o	4ebe4bfef90324cf
+9	72	1702949408852542734	src/protocol/CMakeFiles/protocol.dir/http.cc.o	94dcccf4120f51fa
+6	1044	1702949409828505539	src/util/CMakeFiles/util.dir/base64.cc.o	7634e31bc3c54ee7
+1235	1318	1702949410100495173	src/libgalay-static.a	c264e7d6ab3e72ef
+137	196	1702949408980537856	src/client/CMakeFiles/client.dir/client.cc.o	8e68c09e59d139cc
+4	1146	1702949409928501728	src/util/CMakeFiles/util.dir/stringutil.cc.o	dc3794646ab93bac
+8	49	1702949408832543495	src/factory/CMakeFiles/factory.dir/factory.cc.o	17557346f17de0dd
