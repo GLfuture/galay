@@ -94,9 +94,10 @@ namespace galay
                 this->m_engine = std::make_shared<Epoll_Engine>(config->m_event_size, config->m_event_time_out);
                 Epoll_Engine::ptr engine = std::dynamic_pointer_cast<Epoll_Engine>(this->m_engine);
                 engine->add_event(this->m_fd,EPOLLIN | EPOLLET);
-                while (!this->m_stop)
+                while (1)
                 {
                     int ret = engine->event_check();
+                    if(this->m_stop) break;
                     if (ret == -1)
                     {
                         //need to call engine's get_error
