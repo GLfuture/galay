@@ -1,0 +1,62 @@
+[
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/kernel/CMakeFiles/kernel.dir/engine.cc.o -c /home/gong/projects/galay/src/kernel/engine.cc",
+  "file": "/home/gong/projects/galay/src/kernel/engine.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o -c /home/gong/projects/galay/src/kernel/iofunction.cc",
+  "file": "/home/gong/projects/galay/src/kernel/iofunction.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/kernel/CMakeFiles/kernel.dir/task.cc.o -c /home/gong/projects/galay/src/kernel/task.cc",
+  "file": "/home/gong/projects/galay/src/kernel/task.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/util/CMakeFiles/util.dir/stringutil.cc.o -c /home/gong/projects/galay/src/util/stringutil.cc",
+  "file": "/home/gong/projects/galay/src/util/stringutil.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/util/CMakeFiles/util.dir/base64.cc.o -c /home/gong/projects/galay/src/util/base64.cc",
+  "file": "/home/gong/projects/galay/src/util/base64.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/factory/CMakeFiles/factory.dir/factory.cc.o -c /home/gong/projects/galay/src/factory/factory.cc",
+  "file": "/home/gong/projects/galay/src/factory/factory.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/protocol/CMakeFiles/protocol.dir/http.cc.o -c /home/gong/projects/galay/src/protocol/http.cc",
+  "file": "/home/gong/projects/galay/src/protocol/http.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/protocol/CMakeFiles/protocol.dir/tcp.cc.o -c /home/gong/projects/galay/src/protocol/tcp.cc",
+  "file": "/home/gong/projects/galay/src/protocol/tcp.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/config/CMakeFiles/config.dir/config.cc.o -c /home/gong/projects/galay/src/config/config.cc",
+  "file": "/home/gong/projects/galay/src/config/config.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/server/CMakeFiles/server.dir/server.cc.o -c /home/gong/projects/galay/src/server/server.cc",
+  "file": "/home/gong/projects/galay/src/server/server.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -fPIC -std=gnu++20 -o src/client/CMakeFiles/client.dir/client.cc.o -c /home/gong/projects/galay/src/client/client.cc",
+  "file": "/home/gong/projects/galay/src/client/client.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -g -std=gnu++20 -o test/CMakeFiles/test.dir/test.cc.o -c /home/gong/projects/galay/test/test.cc",
+  "file": "/home/gong/projects/galay/test/test.cc"
+}
+]
