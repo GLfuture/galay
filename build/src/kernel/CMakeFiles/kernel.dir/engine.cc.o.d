@@ -198,4 +198,6 @@ src/kernel/CMakeFiles/kernel.dir/engine.cc.o: \
  /usr/include/c++/12/bits/uses_allocator_args.h \
  /usr/include/c++/12/pstl/glue_memory_defs.h \
  /usr/include/c++/12/pstl/execution_defs.h \
- /home/gong/projects/galay/src/kernel/error.h
+ /home/gong/projects/galay/src/kernel/error.h \
+ /usr/include/c++/12/iostream /usr/include/c++/12/istream \
+ /usr/include/c++/12/bits/istream.tcc
