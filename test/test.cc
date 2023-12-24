@@ -1,11 +1,12 @@
 #include "../src/server/server.hpp"
+#include "../src/protocol/tcp.h"
 #include <signal.h>
 using namespace galay;
 
-void func(Tcp_Request::ptr request,Tcp_Response::ptr response)
+void func(Task<Tcp_Request,Tcp_Response>::ptr task)
 {
-    std::cout<<request->get_buffer()<<std::endl;
-    response->set_buffer(request->get_buffer());
+    std::cout<<task->get_req()->get_buffer()<<std::endl;
+    task->get_resp()->get_buffer() = task->get_req()->get_buffer();
 }
 
 Tcp_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_Server<Tcp_Request,Tcp_Response>>(Tcp_Server_Config(8080,10,IO_ENGINE::IO_EPOLL));

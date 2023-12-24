@@ -2,11 +2,14 @@
 #define GALAY_TCP_H
 
 #include "basic_protocol.h"
+#include "../kernel/error.h"
 
 namespace galay
 {
     class Tcp_Protocol
     {
+    public:
+        std::string& get_buffer();
     protected:
         std::string m_buffer;
     };
@@ -15,15 +18,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Request>;
-        int decode(const std::string &buffer , int& state)
-        {
-            this->m_buffer = buffer;
-            return this->m_buffer.length();
-        }
-
-        std::string get_buffer() const {
-            return this->m_buffer;
-        }
+        int decode(const std::string &buffer , int& state);
 
     };
 
@@ -31,15 +26,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Response>;
-        std::string encode()
-        {
-            return this->m_buffer;
-        }
-
-        void set_buffer(const std::string& buffer){
-            this->m_buffer = buffer;
-        }
-
+        std::string encode();
     };
 
 }

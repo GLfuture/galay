@@ -11,7 +11,7 @@ namespace galay{
     #define DEFAULT_EVENT_SIZE              2048
     #define DEFAULT_EVENT_TIME_OUT          5
     #define DEFAULT_RECV_LENGTH             1024
-
+    #define DEFAULT_FD_NUM                  2000
 
     enum IO_ENGINE{
         IO_SELECT,
@@ -24,9 +24,8 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Config>;
-        //virtual void show() = 0;
-        //virtual void show(const std::string& filepath) = 0;
         virtual ~Config() {}
+        int m_default_fd_num = DEFAULT_FD_NUM;
     };
 
     //tcp server配置类
