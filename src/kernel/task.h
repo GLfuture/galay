@@ -5,38 +5,35 @@
 #include <memory>
 #include <string>
 #include "iofunction.h"
-#include "context.h"
+#include "basic_concepts.h"
+
 
 namespace galay
 {
+    template<Request REQ,Response RESP>
     class Task
     {
     public:
         using ptr = std::shared_ptr<Task>;
+        virtual std::shared_ptr<REQ> get_req() = 0;
+        virtual std::shared_ptr<RESP>  get_resp() = 0;
         virtual ~Task() {}
     };
 
-    class Tcp_Task : public Task
+    template<Request REQ,Response RESP>
+    class Tcp_Task : public Task<REQ,RESP>
     {
     public:
         using ptr = std::shared_ptr<Tcp_Task>;
         Tcp_Task()
         {
-            this->m_ssl = nullptr;
-            this->m_rbuffer = "";
-            this->m_wbuffer = "";
+            this->m_req = std::make_shared<REQ>();
+            this->m_resp = std::make_shared<RESP>();
         }
-
-        size_t Get_Rbuffer_Length() { return m_rbuffer.length(); }
-
-        size_t Get_Wbuffer_Length() { return m_wbuffer.length(); }
 
         void Set_SSL(SSL *ssl) { m_ssl = ssl; }
 
-        SSL *Get_SSL()
-        {
-            return m_ssl;
-        }
+        SSL *Get_SSL() { return m_ssl; }
        
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
@@ -51,12 +48,31 @@ namespace galay
             }
         }
 
-    protected:
-        SSL *m_ssl = nullptr;
-        std::string m_rbuffer;
-        std::string m_wbuffer;
+        std::shared_ptr<REQ> get_req() override { return this->m_req; }
+        std::shared_ptr<RESP>  get_resp()  override { return this->m_resp; }
+        //return status
+        int decode()
+        {
+            int state = error::protocol_error::GY_PROTOCOL_SUCCESS;
+            int len = this->m_req->decode(this->m_rbuffer, state);
+            if (state == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                return state;
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
+            return state;
+        }
+
+        void encode()
+        {
+            m_wbuffer = m_resp->encode();
+        }
 
     protected:
+        SSL *m_ssl = nullptr;
+        //origin's dada
+        std::string m_rbuffer;
+        std::string m_wbuffer;
+        std::shared_ptr<REQ> m_req;
+        std::shared_ptr<RESP> m_resp;
     };
 
 }

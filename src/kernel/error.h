@@ -28,9 +28,10 @@ namespace galay
             GY_ENGINE_EPOLL_WAIT_ERROR,         //epoll egine epoll_wait error
         };
 
-        enum package_error{
-            GY_PACKAGE_SUCCESS,                 //success
-            GY_PACKAGE_INCOMPLETE,              //incomplete package
+        enum protocol_error{
+            GY_PROTOCOL_SUCCESS,                //success
+            GY_PROTOCOL_INCOMPLETE,             //incomplete package
+            GY_PROTOCOL_NO_NECCESSARY_FILED,    //has no neccessary field
         };
 
     }

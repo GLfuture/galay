@@ -1,5 +1,5 @@
-#ifndef GALAY_SERVER_H
-#define GALAY_SERVER_H
+#ifndef GALAY_SERVER_HPP
+#define GALAY_SERVER_HPP
 
 #include "../config/config.h"
 #include "../kernel/iofunction.h"
@@ -23,12 +23,10 @@ namespace galay
         Server(Config::ptr config) : m_config(config)
         {
             m_stop.store(false, std::memory_order::relaxed);
+            this->m_tasks.reserve(config->m_default_fd_num);
         }
 
-        virtual void start(std::function<void(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)> &&func) = 0;
-
-        virtual void protocol_proccess(std::string &rbuffer, std::string &wbuffer,
-                                       std::function<void(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)> &&func) = 0;
+        virtual void start(std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func) = 0;
 
         virtual int get_error()
         {
@@ -56,7 +54,7 @@ namespace galay
         int m_error = error::server_error::GY_SUCCESS;
         std::atomic_bool m_stop;
         Engine::ptr m_engine;
-        std::unordered_map<int, Task::ptr> m_tasks;
+        std::unordered_map<int, std::shared_ptr<Task<REQ,RESP>>> m_tasks;
     };
 
     
@@ -75,7 +73,7 @@ namespace galay
         {
         }
 
-        void start(std::function<void(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)> &&func) override
+        void start(std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func) override
         {
             Tcp_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
             this->m_error = init(this->m_fd, config);
@@ -115,18 +113,20 @@ namespace galay
                         }
                         else if (events[i].events & EPOLLIN)
                         {
-                            Tcp_Task::ptr task = std::dynamic_pointer_cast<Tcp_Task>(this->m_tasks.at(fd));
+                            typename Tcp_Task<REQ,RESP>::ptr task = std::dynamic_pointer_cast<Tcp_Task<REQ,RESP>>(this->m_tasks.at(fd));
                             std::string& rbuffer = task->Get_Rbuffer();
-                            if (epoll_read_package(engine, config, fd, rbuffer) == -1) continue; 
+                            if (epoll_read_package(engine, config, fd , task , rbuffer) == -1) continue; 
                             std::string& wbuffer = task->Get_Wbuffer();
-                            protocol_proccess(rbuffer, wbuffer,std::forward<std::function<void(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)>>(func));
+                            if(task->decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE) continue;
+                            func(task);
+                            task->encode();
                             engine->mod_event(fd, EPOLLOUT);
                         }
                         else if (events[i].events & EPOLLOUT)
                         {
-                            Tcp_Task::ptr task = std::dynamic_pointer_cast<Tcp_Task>(this->m_tasks.at(fd));
+                            typename Tcp_Task<REQ,RESP>::ptr task = std::dynamic_pointer_cast<Tcp_Task<REQ,RESP>>(this->m_tasks.at(fd));
                             std::string& wbuffer = task->Get_Wbuffer();
-                            epoll_send_package(engine, fd, wbuffer);
+                            epoll_send_package(engine, fd , task, wbuffer);
                             engine->mod_event(events[i].data.fd, EPOLLIN);
                         }
                     }
@@ -181,18 +181,23 @@ namespace galay
             if (connfd <= 0)
                 return;
             iofunction::Tcp_Function::IO_Set_No_Block(fd);
-            this->m_tasks.emplace(connfd, std::make_shared<Tcp_Task>());
+            auto it = this->m_tasks.find(connfd);
+            if( it != this->m_tasks.end()){
+                it->second.reset(new Tcp_Task<REQ,RESP>());
+            }else{
+                this->m_tasks.emplace(connfd, std::make_shared<Tcp_Task<REQ,RESP>>());
+            }
             engine->add_event(connfd, EPOLLIN|EPOLLET);
         }
 
-        int epoll_read_package(Epoll_Engine::ptr engine, Tcp_Server_Config::ptr config, int fd, std::string &buffer)
+        int epoll_read_package(Epoll_Engine::ptr engine, Tcp_Server_Config::ptr config, int fd , std::shared_ptr<Task<REQ,RESP>> task, std::string &buffer)
         {
             int len = iofunction::Tcp_Function::Recv(fd, buffer, config->m_recv_len);
             if (len == 0)
             {
                 close(fd);
                 engine->del_event(fd, EPOLLIN);
-                this->m_tasks.erase(fd);
+                task.reset();
                 return -1;
             }
             else if (len == -1)
@@ -205,14 +210,14 @@ namespace galay
                 {
                     close(fd);
                     engine->del_event(fd, EPOLLIN);
-                    this->m_tasks.erase(fd);
+                    task.reset();
                     return -1;
                 }
             }
             return 0;
         }
 
-        void epoll_send_package(Epoll_Engine::ptr engine, int fd, std::string &wbuffer)
+        void epoll_send_package(Epoll_Engine::ptr engine, int fd, std::shared_ptr<Task<REQ,RESP>> task, std::string &wbuffer)
         {
             int len = iofunction::Tcp_Function::Send(fd, wbuffer, wbuffer.length());
             if (len == -1)
@@ -225,25 +230,11 @@ namespace galay
                 {
                     close(fd);
                     engine->del_event(fd, EPOLLIN);
-                    this->m_tasks.erase(fd);
+                    task.reset();
                     return;
                 }
             }
             wbuffer.erase(wbuffer.begin(), wbuffer.begin() + len);
-        }
-
-        void protocol_proccess(std::string &rbuffer, std::string &wbuffer,
-                               std::function<void(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)> &&func) override
-        {
-            std::shared_ptr<REQ> req = std::make_shared<REQ>();
-            int state = error::package_error::GY_PACKAGE_SUCCESS;
-            int len = req->decode(rbuffer, state);
-            if (state == error::package_error::GY_PACKAGE_INCOMPLETE)
-                return;
-            rbuffer.erase(rbuffer.begin(), rbuffer.begin() + len);
-            std::shared_ptr<RESP> resp = std::make_shared<RESP>();
-            func(req, resp);
-            wbuffer = resp->encode();
         }
 
     protected:
