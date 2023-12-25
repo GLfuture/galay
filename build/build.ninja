@@ -901,39 +901,6 @@ build src/client/install/strip: phony src/client/CMakeFiles/install/strip.util
 # /home/gong/projects/galay/CMakeLists.txt
 # =============================================================================
 
-# =============================================================================
-# Object build statements for EXECUTABLE target test
-
-
-#############################################
-# Order-only phony target for test
-
-build cmake_object_order_depends_target_test: phony || test/CMakeFiles/test.dir
-
-build test/CMakeFiles/test.dir/test.cc.o: CXX_COMPILER__test_Debug /home/gong/projects/galay/test/test.cc || cmake_object_order_depends_target_test
-  DEP_FILE = test/CMakeFiles/test.dir/test.cc.o.d
-  FLAGS = -g -std=gnu++20
-  OBJECT_DIR = test/CMakeFiles/test.dir
-  OBJECT_FILE_DIR = test/CMakeFiles/test.dir
-
-
-# =============================================================================
-# Link build statements for EXECUTABLE target test
-
-
-#############################################
-# Link the executable test/test
-
-build test/test: CXX_EXECUTABLE_LINKER__test_Debug test/CMakeFiles/test.dir/test.cc.o
-  FLAGS = -g
-  LINK_LIBRARIES = -Wl,-rpath,/home/gong/projects/galay/build/src  -Wl,-Bstatic  -lgalay-static  -Wl,-Bdynamic  -lssl  -lcrypto
-  LINK_PATH = -L/home/gong/projects/galay/build/src
-  OBJECT_DIR = test/CMakeFiles/test.dir
-  POST_BUILD = :
-  PRE_LINK = :
-  TARGET_FILE = test/test
-  TARGET_PDB = test.dbg
-
 
 #############################################
 # Utility command for edit_cache
@@ -1000,6 +967,212 @@ build test/CMakeFiles/install/strip.util: CUSTOM_COMMAND test/all
 build test/install/strip: phony test/CMakeFiles/install/strip.util
 
 # =============================================================================
+# Write statements declared in CMakeLists.txt:
+# /home/gong/projects/galay/test/CMakeLists.txt
+# =============================================================================
+
+# =============================================================================
+# Object build statements for EXECUTABLE target test_tcp_client
+
+
+#############################################
+# Order-only phony target for test_tcp_client
+
+build cmake_object_order_depends_target_test_tcp_client: phony || test/client/CMakeFiles/test_tcp_client.dir
+
+build test/client/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o: CXX_COMPILER__test_tcp_client_Debug /home/gong/projects/galay/test/client/test_tcp_client.cc || cmake_object_order_depends_target_test_tcp_client
+  DEP_FILE = test/client/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o.d
+  FLAGS = -g -std=gnu++20
+  OBJECT_DIR = test/client/CMakeFiles/test_tcp_client.dir
+  OBJECT_FILE_DIR = test/client/CMakeFiles/test_tcp_client.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target test_tcp_client
+
+
+#############################################
+# Link the executable test/client/test_tcp_client
+
+build test/client/test_tcp_client: CXX_EXECUTABLE_LINKER__test_tcp_client_Debug test/client/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o
+  FLAGS = -g
+  LINK_LIBRARIES = -Wl,-rpath,/home/gong/projects/galay/build/src  -Wl,-Bstatic  -lgalay-static  -Wl,-Bdynamic  -lssl  -lcrypto
+  LINK_PATH = -L/home/gong/projects/galay/build/src
+  OBJECT_DIR = test/client/CMakeFiles/test_tcp_client.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = test/client/test_tcp_client
+  TARGET_PDB = test_tcp_client.dbg
+
+
+#############################################
+# Utility command for edit_cache
+
+build test/client/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /home/gong/projects/galay/build/test/client && /usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build test/client/edit_cache: phony test/client/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build test/client/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /home/gong/projects/galay/build/test/client && /usr/bin/cmake --regenerate-during-build -S/home/gong/projects/galay -B/home/gong/projects/galay/build
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build test/client/rebuild_cache: phony test/client/CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Utility command for list_install_components
+
+build test/client/list_install_components: phony
+
+
+#############################################
+# Utility command for install
+
+build test/client/CMakeFiles/install.util: CUSTOM_COMMAND test/client/all
+  COMMAND = cd /home/gong/projects/galay/build/test/client && /usr/bin/cmake -P cmake_install.cmake
+  DESC = Install the project...
+  pool = console
+  restat = 1
+
+build test/client/install: phony test/client/CMakeFiles/install.util
+
+
+#############################################
+# Utility command for install/local
+
+build test/client/CMakeFiles/install/local.util: CUSTOM_COMMAND test/client/all
+  COMMAND = cd /home/gong/projects/galay/build/test/client && /usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  DESC = Installing only the local directory...
+  pool = console
+  restat = 1
+
+build test/client/install/local: phony test/client/CMakeFiles/install/local.util
+
+
+#############################################
+# Utility command for install/strip
+
+build test/client/CMakeFiles/install/strip.util: CUSTOM_COMMAND test/client/all
+  COMMAND = cd /home/gong/projects/galay/build/test/client && /usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  DESC = Installing the project stripped...
+  pool = console
+  restat = 1
+
+build test/client/install/strip: phony test/client/CMakeFiles/install/strip.util
+
+# =============================================================================
+# Write statements declared in CMakeLists.txt:
+# /home/gong/projects/galay/test/CMakeLists.txt
+# =============================================================================
+
+# =============================================================================
+# Object build statements for EXECUTABLE target test_tcp_server
+
+
+#############################################
+# Order-only phony target for test_tcp_server
+
+build cmake_object_order_depends_target_test_tcp_server: phony || test/server/CMakeFiles/test_tcp_server.dir
+
+build test/server/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o: CXX_COMPILER__test_tcp_server_Debug /home/gong/projects/galay/test/server/test_tcp_server.cc || cmake_object_order_depends_target_test_tcp_server
+  DEP_FILE = test/server/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o.d
+  FLAGS = -g -std=gnu++20
+  OBJECT_DIR = test/server/CMakeFiles/test_tcp_server.dir
+  OBJECT_FILE_DIR = test/server/CMakeFiles/test_tcp_server.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target test_tcp_server
+
+
+#############################################
+# Link the executable test/server/test_tcp_server
+
+build test/server/test_tcp_server: CXX_EXECUTABLE_LINKER__test_tcp_server_Debug test/server/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o
+  FLAGS = -g
+  LINK_LIBRARIES = -Wl,-rpath,/home/gong/projects/galay/build/src  -Wl,-Bstatic  -lgalay-static  -Wl,-Bdynamic  -lssl  -lcrypto
+  LINK_PATH = -L/home/gong/projects/galay/build/src
+  OBJECT_DIR = test/server/CMakeFiles/test_tcp_server.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = test/server/test_tcp_server
+  TARGET_PDB = test_tcp_server.dbg
+
+
+#############################################
+# Utility command for edit_cache
+
+build test/server/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /home/gong/projects/galay/build/test/server && /usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build test/server/edit_cache: phony test/server/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build test/server/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /home/gong/projects/galay/build/test/server && /usr/bin/cmake --regenerate-during-build -S/home/gong/projects/galay -B/home/gong/projects/galay/build
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build test/server/rebuild_cache: phony test/server/CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Utility command for list_install_components
+
+build test/server/list_install_components: phony
+
+
+#############################################
+# Utility command for install
+
+build test/server/CMakeFiles/install.util: CUSTOM_COMMAND test/server/all
+  COMMAND = cd /home/gong/projects/galay/build/test/server && /usr/bin/cmake -P cmake_install.cmake
+  DESC = Install the project...
+  pool = console
+  restat = 1
+
+build test/server/install: phony test/server/CMakeFiles/install.util
+
+
+#############################################
+# Utility command for install/local
+
+build test/server/CMakeFiles/install/local.util: CUSTOM_COMMAND test/server/all
+  COMMAND = cd /home/gong/projects/galay/build/test/server && /usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  DESC = Installing only the local directory...
+  pool = console
+  restat = 1
+
+build test/server/install/local: phony test/server/CMakeFiles/install/local.util
+
+
+#############################################
+# Utility command for install/strip
+
+build test/server/CMakeFiles/install/strip.util: CUSTOM_COMMAND test/server/all
+  COMMAND = cd /home/gong/projects/galay/build/test/server && /usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  DESC = Installing the project stripped...
+  pool = console
+  restat = 1
+
+build test/server/install/strip: phony test/server/CMakeFiles/install/strip.util
+
+# =============================================================================
 # Target aliases.
 
 build client: phony src/client/client
@@ -1022,7 +1195,9 @@ build protocol: phony src/protocol/protocol
 
 build server: phony src/server/server
 
-build test: phony test/test
+build test_tcp_client: phony test/client/test_tcp_client
+
+build test_tcp_server: phony test/server/test_tcp_server
 
 build util: phony src/util/util
 
@@ -1097,7 +1272,21 @@ build src/util/all: phony src/util/util
 #############################################
 # Folder: /home/gong/projects/galay/build/test
 
-build test/all: phony test/test
+build test/all: phony test/client/all test/server/all
+
+# =============================================================================
+
+#############################################
+# Folder: /home/gong/projects/galay/build/test/client
+
+build test/client/all: phony test/client/test_tcp_client
+
+# =============================================================================
+
+#############################################
+# Folder: /home/gong/projects/galay/build/test/server
+
+build test/server/all: phony test/server/test_tcp_server
 
 # =============================================================================
 # Built-in targets
@@ -1106,14 +1295,14 @@ build test/all: phony test/test
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | /home/gong/projects/galay/CMakeLists.txt /home/gong/projects/galay/src/CMakeLists.txt /home/gong/projects/galay/src/client/CMakeLists.txt /home/gong/projects/galay/src/config/CMakeLists.txt /home/gong/projects/galay/src/factory/CMakeLists.txt /home/gong/projects/galay/src/kernel/CMakeLists.txt /home/gong/projects/galay/src/protocol/CMakeLists.txt /home/gong/projects/galay/src/server/CMakeLists.txt /home/gong/projects/galay/src/util/CMakeLists.txt /home/gong/projects/galay/test/CMakeLists.txt /usr/share/cmake-3.25/Modules/CMakeCInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.25/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.25/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.25/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.25/Modules/CheckCSourceCompiles.cmake /usr/share/cmake-3.25/Modules/CheckIncludeFile.cmake /usr/share/cmake-3.25/Modules/CheckLibraryExists.cmake /usr/share/cmake-3.25/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-C.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU.cmake /usr/share/cmake-3.25/Modules/FindOpenSSL.cmake /usr/share/cmake-3.25/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.25/Modules/FindPackageMessage.cmake /usr/share/cmake-3.25/Modules/FindPkgConfig.cmake /usr/share/cmake-3.25/Modules/FindThreads.cmake /usr/share/cmake-3.25/Modules/Internal/CheckSourceCompiles.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.25/Modules/Platform/Linux.cmake /usr/share/cmake-3.25/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.25.1/CMakeCCompiler.cmake CMakeFiles/3.25.1/CMakeCXXCompiler.cmake CMakeFiles/3.25.1/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | /home/gong/projects/galay/CMakeLists.txt /home/gong/projects/galay/src/CMakeLists.txt /home/gong/projects/galay/src/client/CMakeLists.txt /home/gong/projects/galay/src/config/CMakeLists.txt /home/gong/projects/galay/src/factory/CMakeLists.txt /home/gong/projects/galay/src/kernel/CMakeLists.txt /home/gong/projects/galay/src/protocol/CMakeLists.txt /home/gong/projects/galay/src/server/CMakeLists.txt /home/gong/projects/galay/src/util/CMakeLists.txt /home/gong/projects/galay/test/CMakeLists.txt /home/gong/projects/galay/test/client/CMakeLists.txt /home/gong/projects/galay/test/server/CMakeLists.txt /usr/share/cmake-3.25/Modules/CMakeCInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.25/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.25/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.25/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.25/Modules/CheckCSourceCompiles.cmake /usr/share/cmake-3.25/Modules/CheckIncludeFile.cmake /usr/share/cmake-3.25/Modules/CheckLibraryExists.cmake /usr/share/cmake-3.25/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-C.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU.cmake /usr/share/cmake-3.25/Modules/FindOpenSSL.cmake /usr/share/cmake-3.25/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.25/Modules/FindPackageMessage.cmake /usr/share/cmake-3.25/Modules/FindPkgConfig.cmake /usr/share/cmake-3.25/Modules/FindThreads.cmake /usr/share/cmake-3.25/Modules/Internal/CheckSourceCompiles.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.25/Modules/Platform/Linux.cmake /usr/share/cmake-3.25/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.25.1/CMakeCCompiler.cmake CMakeFiles/3.25.1/CMakeCXXCompiler.cmake CMakeFiles/3.25.1/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /home/gong/projects/galay/CMakeLists.txt /home/gong/projects/galay/src/CMakeLists.txt /home/gong/projects/galay/src/client/CMakeLists.txt /home/gong/projects/galay/src/config/CMakeLists.txt /home/gong/projects/galay/src/factory/CMakeLists.txt /home/gong/projects/galay/src/kernel/CMakeLists.txt /home/gong/projects/galay/src/protocol/CMakeLists.txt /home/gong/projects/galay/src/server/CMakeLists.txt /home/gong/projects/galay/src/util/CMakeLists.txt /home/gong/projects/galay/test/CMakeLists.txt /usr/share/cmake-3.25/Modules/CMakeCInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.25/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.25/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.25/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.25/Modules/CheckCSourceCompiles.cmake /usr/share/cmake-3.25/Modules/CheckIncludeFile.cmake /usr/share/cmake-3.25/Modules/CheckLibraryExists.cmake /usr/share/cmake-3.25/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-C.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU.cmake /usr/share/cmake-3.25/Modules/FindOpenSSL.cmake /usr/share/cmake-3.25/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.25/Modules/FindPackageMessage.cmake /usr/share/cmake-3.25/Modules/FindPkgConfig.cmake /usr/share/cmake-3.25/Modules/FindThreads.cmake /usr/share/cmake-3.25/Modules/Internal/CheckSourceCompiles.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.25/Modules/Platform/Linux.cmake /usr/share/cmake-3.25/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.25.1/CMakeCCompiler.cmake CMakeFiles/3.25.1/CMakeCXXCompiler.cmake CMakeFiles/3.25.1/CMakeSystem.cmake: phony
+build /home/gong/projects/galay/CMakeLists.txt /home/gong/projects/galay/src/CMakeLists.txt /home/gong/projects/galay/src/client/CMakeLists.txt /home/gong/projects/galay/src/config/CMakeLists.txt /home/gong/projects/galay/src/factory/CMakeLists.txt /home/gong/projects/galay/src/kernel/CMakeLists.txt /home/gong/projects/galay/src/protocol/CMakeLists.txt /home/gong/projects/galay/src/server/CMakeLists.txt /home/gong/projects/galay/src/util/CMakeLists.txt /home/gong/projects/galay/test/CMakeLists.txt /home/gong/projects/galay/test/client/CMakeLists.txt /home/gong/projects/galay/test/server/CMakeLists.txt /usr/share/cmake-3.25/Modules/CMakeCInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCXXInformation.cmake /usr/share/cmake-3.25/Modules/CMakeCommonLanguageInclude.cmake /usr/share/cmake-3.25/Modules/CMakeGenericSystem.cmake /usr/share/cmake-3.25/Modules/CMakeInitializeConfigs.cmake /usr/share/cmake-3.25/Modules/CMakeLanguageInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInformation.cmake /usr/share/cmake-3.25/Modules/CMakeSystemSpecificInitialize.cmake /usr/share/cmake-3.25/Modules/CheckCSourceCompiles.cmake /usr/share/cmake-3.25/Modules/CheckIncludeFile.cmake /usr/share/cmake-3.25/Modules/CheckLibraryExists.cmake /usr/share/cmake-3.25/Modules/Compiler/CMakeCommonCompilerMacros.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-C.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Compiler/GNU.cmake /usr/share/cmake-3.25/Modules/FindOpenSSL.cmake /usr/share/cmake-3.25/Modules/FindPackageHandleStandardArgs.cmake /usr/share/cmake-3.25/Modules/FindPackageMessage.cmake /usr/share/cmake-3.25/Modules/FindPkgConfig.cmake /usr/share/cmake-3.25/Modules/FindThreads.cmake /usr/share/cmake-3.25/Modules/Internal/CheckSourceCompiles.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-C.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU-CXX.cmake /usr/share/cmake-3.25/Modules/Platform/Linux-GNU.cmake /usr/share/cmake-3.25/Modules/Platform/Linux.cmake /usr/share/cmake-3.25/Modules/Platform/UnixPaths.cmake CMakeCache.txt CMakeFiles/3.25.1/CMakeCCompiler.cmake CMakeFiles/3.25.1/CMakeCXXCompiler.cmake CMakeFiles/3.25.1/CMakeSystem.cmake: phony
 
 
 #############################################

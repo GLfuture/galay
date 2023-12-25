@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/test.dir/test.cc.o -o test   -L/home/gong/projects/galay/build/src  -Wl,-rpath,/home/gong/projects/galay/build/src -Wl,-Bstatic -lgalay-static -Wl,-Bdynamic -lssl -lcrypto 

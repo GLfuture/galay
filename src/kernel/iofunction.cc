@@ -71,11 +71,11 @@ ssize_t galay::iofunction::Tcp_Function::Recv(int fd , std::string& buffer,uint3
     memset(temp, 0, len);
     ssize_t ret = recv(fd, temp, len, 0);
     if(ret <= 0){
-        delete temp;
+        delete[] temp;
         return ret;
     }
     buffer.append(temp,ret);
-    delete temp;
+    delete[] temp;
     return ret;
 }
 
@@ -113,11 +113,11 @@ int galay::iofunction::Tcp_Function::SSL_Recv(SSL* ssl,std::string& buffer,int l
     memset(temp,0,len);
     int ret = SSL_read(ssl,temp,len);
     if(ret <= 0){
-        delete temp;
+        delete[] temp;
         return ret;
     }
     buffer.append(temp,ret);
-    delete temp;
+    delete[] temp;
     return ret;
 }
 
@@ -202,7 +202,7 @@ ssize_t galay::iofunction::Udp_Function::Recv_From(int fd , Addr& addr , std::st
     ssize_t ret = recvfrom(fd,temp,len,0,(sockaddr*) &sin,&slen);
     if(ret <= 0)
     {
-        delete temp;
+        delete[] temp;
         return ret;
     }
     char ip[INET_ADDRSTRLEN] = {0};
@@ -210,7 +210,7 @@ ssize_t galay::iofunction::Udp_Function::Recv_From(int fd , Addr& addr , std::st
     addr.ip.assign(ip,INET_ADDRSTRLEN);
     addr.port = ntohs(sin.sin_port);
     buffer.append(temp,ret);
-    delete temp;
+    delete[] temp;
     return ret;
 }
 

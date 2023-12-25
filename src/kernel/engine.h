@@ -18,9 +18,11 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Engine>;
         virtual int event_check() = 0; // if return 0 is success , return < 0 is failed
+        virtual int get_active_event_num() const = 0;
         virtual int add_event(int fd , uint32_t event_type) = 0;
         virtual int del_event(int fd , uint32_t event_type) = 0;
         virtual int mod_event(int fd , uint32_t event_type) = 0;
+        virtual void* result() = 0;
         virtual int get_error()
         {
             return this->m_error;
@@ -28,7 +30,7 @@ namespace galay
         virtual void stop() = 0;
         virtual ~Engine() {}
     protected:
-        int m_error = error::engine_error::GY_ENGINE_SUCCESS;
+        int m_error = error::base_error::GY_SUCCESS;
     };
 
 
@@ -41,7 +43,7 @@ namespace galay
         int event_check() override;
 
         // return evnents , combine with event_check
-        epoll_event *result();
+        void *result() override;
 
         // return epollfd
         int get_epoll_fd() const;
@@ -50,7 +52,7 @@ namespace galay
         int get_event_size() const;
         
         //get epoll_wait return
-        int get_active_event_num() const;
+        int get_active_event_num() const override;
 
         int add_event(int fd ,uint32_t event_type) override;
         
