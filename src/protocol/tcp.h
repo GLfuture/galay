@@ -18,15 +18,20 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Request>;
+        //for server
         int decode(const std::string &buffer , int& state);
-
+        //for client
+        std::string encode();
     };
 
     class Tcp_Response: public Tcp_Protocol,public Response_Base
     {
     public:
         using ptr = std::shared_ptr<Tcp_Response>;
+        //for server
         std::string encode();
+        //for client 
+        int decode(const std::string& buffer,int & state);
     };
 
 }

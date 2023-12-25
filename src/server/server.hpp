@@ -51,7 +51,7 @@ namespace galay
     protected:
         int m_fd = 0;
         Config::ptr m_config;
-        int m_error = error::server_error::GY_SUCCESS;
+        int m_error = error::base_error::GY_SUCCESS;
         std::atomic_bool m_stop;
         Engine::ptr m_engine;
         std::unordered_map<int, std::shared_ptr<Task<REQ,RESP>>> m_tasks;
@@ -67,18 +67,6 @@ namespace galay
         Tcp_Server() = delete;
         Tcp_Server(Tcp_Server_Config::ptr config) : Server<REQ, RESP>(config)
         {
-        }
-
-        Tcp_Server(Tcp_Server_Config &&config) : Server<REQ, RESP>(std::make_shared<Tcp_Server_Config>(config))
-        {
-        }
-
-        void start(std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func) override
-        {
-            Tcp_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
-            this->m_error = init(this->m_fd, config);
-            if (this->m_error != error::server_error::GY_SUCCESS)
-                return;
             switch (config->m_engine)
             {
             case IO_ENGINE::IO_POLL:
@@ -89,48 +77,7 @@ namespace galay
                 break;
             case IO_ENGINE::IO_EPOLL:
             {
-                this->m_engine = std::make_shared<Epoll_Engine>(config->m_event_size, config->m_event_time_out);
-                Epoll_Engine::ptr engine = std::dynamic_pointer_cast<Epoll_Engine>(this->m_engine);
-                engine->add_event(this->m_fd,EPOLLIN | EPOLLET);
-                while (1)
-                {
-                    int ret = engine->event_check();
-                    if(this->m_stop) break;
-                    if (ret == -1)
-                    {
-                        //need to call engine's get_error
-                        this->m_error = error::server_error::GY_ENGINE_HAS_ERROR;
-                        return;
-                    }
-                    epoll_event *events = engine->result();
-                    int nready = engine->get_active_event_num();
-                    for (int i = 0; i < nready; i++)
-                    {
-                        int fd = events[i].data.fd;
-                        if (fd == this->m_fd)
-                        {
-                            epoll_accept_conn(engine, this->m_fd);
-                        }
-                        else if (events[i].events & EPOLLIN)
-                        {
-                            typename Tcp_Task<REQ,RESP>::ptr task = std::dynamic_pointer_cast<Tcp_Task<REQ,RESP>>(this->m_tasks.at(fd));
-                            std::string& rbuffer = task->Get_Rbuffer();
-                            if (epoll_read_package(engine, config, fd , task , rbuffer) == -1) continue; 
-                            std::string& wbuffer = task->Get_Wbuffer();
-                            if(task->decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE) continue;
-                            func(task);
-                            task->encode();
-                            engine->mod_event(fd, EPOLLOUT);
-                        }
-                        else if (events[i].events & EPOLLOUT)
-                        {
-                            typename Tcp_Task<REQ,RESP>::ptr task = std::dynamic_pointer_cast<Tcp_Task<REQ,RESP>>(this->m_tasks.at(fd));
-                            std::string& wbuffer = task->Get_Wbuffer();
-                            epoll_send_package(engine, fd , task, wbuffer);
-                            engine->mod_event(events[i].data.fd, EPOLLIN);
-                        }
-                    }
-                }
+                this->m_engine = std::make_shared<Epoll_Engine>(config->m_event_size,config->m_event_time_out);
                 break;
             }
             case IO_ENGINE::IO_URING:
@@ -141,12 +88,70 @@ namespace galay
             }
         }
 
+        Tcp_Server(Tcp_Server_Config &&config) : Server<REQ, RESP>(std::make_shared<Tcp_Server_Config>(config))
+        {
+            switch (config.m_engine)
+            {
+            case IO_ENGINE::IO_POLL:
+            {
+                break;
+            }
+            case IO_ENGINE::IO_SELECT:
+                break;
+            case IO_ENGINE::IO_EPOLL:
+            {
+                this->m_engine = std::make_shared<Epoll_Engine>(config.m_event_size,config.m_event_time_out);
+                break;
+            }
+            case IO_ENGINE::IO_URING:
+                break;
+            default:
+                this->m_error = error::server_error::GY_ENGINE_CHOOSE_ERROR;
+                break;
+            }
+        }
+
+        void start(std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func) override
+        {
+            Tcp_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
+            this->m_error = init(this->m_fd, config);
+            if (this->m_error != error::base_error::GY_SUCCESS)
+                return;
+            this->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
+            this->m_tasks.emplace(std::make_pair(this->m_fd,std::make_shared<Tcp_Accept_Task<REQ,RESP>>(this->m_fd,this->m_engine,&this->m_tasks
+                ,std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(func),config->m_recv_len)));
+            while (1)
+            {
+                int ret = this->m_engine->event_check();
+                if (this->m_stop)
+                    break;
+                if (ret == -1)
+                {
+                    // need to call engine's get_error
+                    this->m_error = error::server_error::GY_ENGINE_HAS_ERROR;
+                    return;
+                }
+                epoll_event *events = (epoll_event*)this->m_engine->result();
+                int nready = this->m_engine->get_active_event_num();
+                for (int i = 0; i < nready; i++)
+                {
+                    typename Task<REQ,RESP>::ptr task = this->m_tasks[events[i].data.fd];
+                    task->exec();
+                    if(task->get_state() == task_state::GY_TASK_STOP){
+                        this->m_tasks.erase(events[i].data.fd);
+                    }
+                }
+            }
+        }
+
         ~Tcp_Server()
         {
             for(auto it = this->m_tasks.begin() ; it != this->m_tasks.end() ; it++)
             {
                 this->m_engine->del_event(it->first,EPOLLIN);
                 close(it->first);
+                it->second.reset();
+                std::cout<<"reset"<<it->first;
             }
             this->m_tasks.clear();
         }
@@ -172,69 +177,7 @@ namespace galay
                 return error::server_error::GY_LISTEN_ERROR;
             }
             iofunction::Tcp_Function::IO_Set_No_Block(sockfd);
-            return error::server_error::GY_SUCCESS;
-        }
-
-        void epoll_accept_conn(Epoll_Engine::ptr engine, int fd)
-        {
-            int connfd = iofunction::Tcp_Function::Accept(fd);
-            if (connfd <= 0)
-                return;
-            iofunction::Tcp_Function::IO_Set_No_Block(fd);
-            auto it = this->m_tasks.find(connfd);
-            if( it != this->m_tasks.end()){
-                it->second.reset(new Tcp_Task<REQ,RESP>());
-            }else{
-                this->m_tasks.emplace(connfd, std::make_shared<Tcp_Task<REQ,RESP>>());
-            }
-            engine->add_event(connfd, EPOLLIN|EPOLLET);
-        }
-
-        int epoll_read_package(Epoll_Engine::ptr engine, Tcp_Server_Config::ptr config, int fd , std::shared_ptr<Task<REQ,RESP>> task, std::string &buffer)
-        {
-            int len = iofunction::Tcp_Function::Recv(fd, buffer, config->m_recv_len);
-            if (len == 0)
-            {
-                close(fd);
-                engine->del_event(fd, EPOLLIN);
-                task.reset();
-                return -1;
-            }
-            else if (len == -1)
-            {
-                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                {
-                    return 0;
-                }
-                else
-                {
-                    close(fd);
-                    engine->del_event(fd, EPOLLIN);
-                    task.reset();
-                    return -1;
-                }
-            }
-            return 0;
-        }
-
-        void epoll_send_package(Epoll_Engine::ptr engine, int fd, std::shared_ptr<Task<REQ,RESP>> task, std::string &wbuffer)
-        {
-            int len = iofunction::Tcp_Function::Send(fd, wbuffer, wbuffer.length());
-            if (len == -1)
-            {
-                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                {
-                    return;
-                }
-                else
-                {
-                    close(fd);
-                    engine->del_event(fd, EPOLLIN);
-                    task.reset();
-                    return;
-                }
-            }
-            wbuffer.erase(wbuffer.begin(), wbuffer.begin() + len);
+            return error::base_error::GY_SUCCESS;
         }
 
     protected:

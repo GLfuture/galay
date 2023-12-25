@@ -23,7 +23,7 @@ int galay::Epoll_Engine::get_epoll_fd() const
     return m_epfd;
 }
 
-epoll_event* galay::Epoll_Engine::result()
+void* galay::Epoll_Engine::result()
 {
     return m_events;
 }

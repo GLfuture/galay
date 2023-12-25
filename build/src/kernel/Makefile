@@ -223,6 +223,30 @@ iofunction.cc.s:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/iofunction.cc.s
 .PHONY : iofunction.cc.s
 
+task.o: task.cc.o
+.PHONY : task.o
+
+# target to build an object file
+task.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/task.cc.o
+.PHONY : task.cc.o
+
+task.i: task.cc.i
+.PHONY : task.i
+
+# target to preprocess a source file
+task.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/task.cc.i
+.PHONY : task.cc.i
+
+task.s: task.cc.s
+.PHONY : task.s
+
+# target to generate assembly for a file
+task.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/task.cc.s
+.PHONY : task.cc.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -242,6 +266,9 @@ help:
 	@echo "... iofunction.o"
 	@echo "... iofunction.i"
 	@echo "... iofunction.s"
+	@echo "... task.o"
+	@echo "... task.i"
+	@echo "... task.s"
 .PHONY : help
 
 

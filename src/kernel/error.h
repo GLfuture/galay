@@ -4,9 +4,12 @@
 namespace galay
 {
     namespace error{
+        enum base_error{
+            GY_SUCCESS,
+            GY_BASE_ERROR_END
+        };
         enum server_error{
-            GY_SUCCESS,                         //success
-            GY_SOCKET_ERROR,                    //socket
+            GY_SOCKET_ERROR = GY_BASE_ERROR_END, //socket
             GY_BIND_ERROR,                      //bind
             GY_LISTEN_ERROR,                    //listen
             GY_CONNECT_ERROR,                   //connect
@@ -21,19 +24,18 @@ namespace galay
             GY_SSL_SEND_ERROR,                  //ssl_send
             GY_ENGINE_CHOOSE_ERROR,             //engine choose error
             GY_ENGINE_HAS_ERROR,                //engine has error ,need to call engine's get_error interface
+            GY_SERVER_END
         };
 
         enum engine_error{
-            GY_ENGINE_SUCCESS,                  //success
-            GY_ENGINE_EPOLL_WAIT_ERROR,         //epoll egine epoll_wait error
+            GY_ENGINE_EPOLL_WAIT_ERROR = server_error::GY_SERVER_END,                //epoll egine epoll_wait error
+            GY_ENGINE_ERROR_END
         };
 
         enum protocol_error{
-            GY_PROTOCOL_SUCCESS,                //success
-            GY_PROTOCOL_INCOMPLETE,             //incomplete package
-            GY_PROTOCOL_NO_NECCESSARY_FILED,    //has no neccessary field
+            GY_PROTOCOL_INCOMPLETE = engine_error::GY_ENGINE_ERROR_END,             //incomplete package
+            GY_PROTOCOL_NO_NECCESSARY_FILED,                                        //has no neccessary field
         };
-
     }
 }
 
