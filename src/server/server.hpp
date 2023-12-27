@@ -23,7 +23,6 @@ namespace galay
         Server(Config::ptr config) : m_config(config)
         {
             m_stop.store(false, std::memory_order::relaxed);
-            this->m_tasks.reserve(config->m_default_fd_num);
         }
 
         virtual void start(std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func) = 0;
