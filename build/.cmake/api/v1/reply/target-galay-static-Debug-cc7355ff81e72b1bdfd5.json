@@ -1,8 +1,9 @@
 {
+	"archive" : {},
 	"artifacts" : 
 	[
 		{
-			"path" : "src/libgalay-shared.so"
+			"path" : "src/libgalay-static.a"
 		}
 	],
 	"backtrace" : 1,
@@ -18,8 +19,7 @@
 		],
 		"files" : 
 		[
-			"src/CMakeLists.txt",
-			"src/kernel/CMakeLists.txt"
+			"src/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -29,76 +29,67 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 12,
+				"line" : 8,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 23,
+				"line" : 22,
 				"parent" : 0
-			},
-			{
-				"file" : 1
-			},
-			{
-				"command" : 2,
-				"file" : 1,
-				"line" : 11,
-				"parent" : 3
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 13,
+				"line" : 9,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 26,
+				"line" : 25,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 19,
+				"line" : 18,
 				"parent" : 0
 			}
 		]
@@ -106,43 +97,39 @@
 	"dependencies" : 
 	[
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "kernel::@a2e5c2148a26843338a5"
 		},
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "util::@6bc12a100e338ba65b7b"
 		},
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "factory::@fe291e6479ff98ed29de"
 		},
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "protocol::@265c2c6246c6aa3fd761"
 		},
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "config::@f954cdf8d5380f57b616"
 		},
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "server::@2804e40980a64c7d7ad1"
 		},
 		{
-			"backtrace" : 5,
+			"backtrace" : 3,
 			"id" : "client::@8ca63c80a879d0067daa"
 		}
 	],
-	"id" : "galay-shared::@145eef247bfb46b6828c",
+	"id" : "galay-static::@145eef247bfb46b6828c",
 	"install" : 
 	{
 		"destinations" : 
 		[
-			{
-				"backtrace" : 2,
-				"path" : "lib"
-			},
 			{
 				"backtrace" : 2,
 				"path" : "lib"
@@ -153,29 +140,8 @@
 			"path" : ".."
 		}
 	},
-	"link" : 
-	{
-		"commandFragments" : 
-		[
-			{
-				"fragment" : "",
-				"role" : "flags"
-			},
-			{
-				"backtrace" : 4,
-				"fragment" : "-lssl",
-				"role" : "libraries"
-			},
-			{
-				"backtrace" : 4,
-				"fragment" : "-lcrypto",
-				"role" : "libraries"
-			}
-		],
-		"language" : "CXX"
-	},
-	"name" : "galay-shared",
-	"nameOnDisk" : "libgalay-shared.so",
+	"name" : "galay-static",
+	"nameOnDisk" : "libgalay-static.a",
 	"paths" : 
 	{
 		"build" : "src",
@@ -196,79 +162,72 @@
 				6,
 				7,
 				8,
-				9,
-				10
+				9
 			]
 		}
 	],
 	"sources" : 
 	[
 		{
-			"backtrace" : 7,
+			"backtrace" : 5,
 			"isGenerated" : true,
 			"path" : "build/src/kernel/CMakeFiles/kernel.dir/engine.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 7,
+			"backtrace" : 5,
 			"isGenerated" : true,
 			"path" : "build/src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 7,
-			"isGenerated" : true,
-			"path" : "build/src/kernel/CMakeFiles/kernel.dir/task.cc.o",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 8,
+			"backtrace" : 6,
 			"isGenerated" : true,
 			"path" : "build/src/util/CMakeFiles/util.dir/stringutil.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 8,
+			"backtrace" : 6,
 			"isGenerated" : true,
 			"path" : "build/src/util/CMakeFiles/util.dir/base64.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 9,
+			"backtrace" : 7,
 			"isGenerated" : true,
 			"path" : "build/src/factory/CMakeFiles/factory.dir/factory.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 10,
+			"backtrace" : 8,
 			"isGenerated" : true,
 			"path" : "build/src/protocol/CMakeFiles/protocol.dir/http.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 10,
+			"backtrace" : 8,
 			"isGenerated" : true,
 			"path" : "build/src/protocol/CMakeFiles/protocol.dir/tcp.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 11,
+			"backtrace" : 9,
 			"isGenerated" : true,
 			"path" : "build/src/config/CMakeFiles/config.dir/config.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 12,
+			"backtrace" : 10,
 			"isGenerated" : true,
 			"path" : "build/src/server/CMakeFiles/server.dir/server.cc.o",
 			"sourceGroupIndex" : 0
 		},
 		{
-			"backtrace" : 13,
+			"backtrace" : 11,
 			"isGenerated" : true,
 			"path" : "build/src/client/CMakeFiles/client.dir/client.cc.o",
 			"sourceGroupIndex" : 0
 		}
 	],
-	"type" : "SHARED_LIBRARY"
+	"type" : "STATIC_LIBRARY"
 }

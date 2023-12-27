@@ -5,8 +5,9 @@ using namespace galay;
 
 void func(Task<Tcp_Request,Tcp_Response>::ptr task)
 {
-    std::cout<<task->get_req()->get_buffer()<<std::endl;
+    std::cout<<task->get_req()->get_buffer()<<'\n';
     task->get_resp()->get_buffer() = task->get_req()->get_buffer();
+    std::cout << task->get_error() << '\n';
 }
 
 Tcp_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_Server<Tcp_Request,Tcp_Response>>(Tcp_Server_Config(8080,10,IO_ENGINE::IO_EPOLL));

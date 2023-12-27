@@ -65,7 +65,7 @@ namespace galay
         ~Epoll_Engine() ;
     private:
         int m_epfd = 0;
-        epoll_event *m_events;
+        epoll_event *m_events = nullptr;
         int m_events_size;
         int m_time_out;
         int m_active_event_num = 0;

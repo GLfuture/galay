@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/config/CMakeFiles/config.dir/./config.cc.o"
+			"path" : "src/config/CMakeFiles/config.dir/config.cc.o"
 		}
 	],
 	"backtrace" : 1,

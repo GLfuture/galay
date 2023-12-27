@@ -74,7 +74,7 @@ galay::Epoll_Engine::~Epoll_Engine()
 {
     if (m_events)
     {
-        delete m_events;
+        delete[] m_events;
         m_events = nullptr;
     }
 }

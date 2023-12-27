@@ -124,6 +124,7 @@ namespace galay
             this->m_engine = engine;
             this->m_fd = fd;
             this->m_read_len = read_len;
+            this->m_temp = new char[read_len];
         }
 
         void Set_SSL(SSL *ssl) { m_ssl = ssl; }
@@ -133,15 +134,6 @@ namespace galay
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
-
-        virtual ~Tcp_Task()
-        {
-            if (m_ssl)
-            {
-                iofunction::Tcp_Function::SSL_Destory(m_ssl);
-                m_ssl = nullptr;
-            }
-        }
 
         std::shared_ptr<REQ> get_req() override { return this->m_req; }
         std::shared_ptr<RESP>  get_resp()  override { return this->m_resp; }
@@ -180,6 +172,32 @@ namespace galay
             this->m_func = func;
         }
 
+        Engine::ptr get_engine()
+        {
+            return this->m_engine;
+        }
+
+        void reset_buffer(int len)
+        {
+            if(this->m_temp) delete[] this->m_temp;
+            this->m_temp = new char[len];
+            this->m_read_len = len;
+        }
+
+        virtual ~Tcp_Task()
+        {
+            if (m_ssl)
+            {
+                iofunction::Tcp_Function::SSL_Destory(m_ssl);
+                m_ssl = nullptr;
+            }
+            if(m_temp){
+                delete[] m_temp;
+                m_temp = nullptr;
+            }
+        }
+
+
     protected:
         int decode()
         {
@@ -199,7 +217,7 @@ namespace galay
 
         int read_package()
         {
-            int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_rbuffer, this->m_read_len);
+            int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
             if (len == 0)
             {
                 close(this->m_fd);
@@ -221,6 +239,8 @@ namespace galay
                     return -1;
                 }
             }
+            this->m_rbuffer.append(this->m_temp,len);
+            memset(this->m_temp,0,len);
             return 0;
         }
 
@@ -244,11 +264,12 @@ namespace galay
             this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
         }
 
+
     protected:
         SSL *m_ssl = nullptr;
+        char* m_temp = nullptr;
         Engine::ptr m_engine;
         int m_fd;
-        //origin's dada
         uint32_t m_read_len;
         std::string m_rbuffer;
         std::string m_wbuffer;
@@ -256,6 +277,7 @@ namespace galay
         std::shared_ptr<RESP> m_resp;
         Callback m_func;
     };
+
 
 }
 

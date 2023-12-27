@@ -151,7 +151,6 @@ namespace galay
                 this->m_engine->del_event(it->first,EPOLLIN);
                 close(it->first);
                 it->second.reset();
-                std::cout<<"reset"<<it->first;
             }
             this->m_tasks.clear();
         }

@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/client/CMakeFiles/client.dir/./client.cc.o"
+			"path" : "src/factory/CMakeFiles/factory.dir/factory.cc.o"
 		}
 	],
 	"backtrace" : 1,
@@ -14,7 +14,7 @@
 		],
 		"files" : 
 		[
-			"src/client/CMakeLists.txt"
+			"src/factory/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -56,12 +56,12 @@
 			]
 		}
 	],
-	"id" : "client::@8ca63c80a879d0067daa",
-	"name" : "client",
+	"id" : "factory::@fe291e6479ff98ed29de",
+	"name" : "factory",
 	"paths" : 
 	{
-		"build" : "src/client",
-		"source" : "src/client"
+		"build" : "src/factory",
+		"source" : "src/factory"
 	},
 	"sourceGroups" : 
 	[
@@ -78,7 +78,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/client/client.cc",
+			"path" : "src/factory/factory.cc",
 			"sourceGroupIndex" : 0
 		}
 	],
