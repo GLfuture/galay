@@ -25,7 +25,6 @@ namespace galay{
     public:
         using ptr = std::shared_ptr<Config>;
         virtual ~Config() {}
-        int m_default_fd_num = DEFAULT_FD_NUM;
     };
 
     //tcp server配置类
@@ -73,7 +72,12 @@ namespace galay{
         bool m_is_ssl = false;
     };
 
+    class Tcp_Client_Config: public Config
+    {
+    public:
+        
 
+    };
 
     //http server 配置类
     class Http_Server_Config: public Tcp_Server_Config 

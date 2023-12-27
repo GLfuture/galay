@@ -1,7 +1,9 @@
 #ifndef GALAY_CLIENT_H
 #define GALAY_CLIENT_H
 
+#include "../config/config.h"
 #include "../kernel/basic_concepts.h"
+#include "../kernel/engine.h"
 
 namespace galay
 {
@@ -9,8 +11,18 @@ namespace galay
     class Client
     {
     public:
-        
+        Client()
+        {
+            
+        }
+    protected:
+        int m_fd;
+        Engine::ptr m_engine;
+
     };
+
+
+
 }
 
 
