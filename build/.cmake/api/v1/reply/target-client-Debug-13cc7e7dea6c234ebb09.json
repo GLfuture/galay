@@ -2,13 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/kernel/CMakeFiles/kernel.dir/./engine.cc.o"
-		},
-		{
-			"path" : "src/kernel/CMakeFiles/kernel.dir/./iofunction.cc.o"
-		},
-		{
-			"path" : "src/kernel/CMakeFiles/kernel.dir/./task.cc.o"
+			"path" : "src/client/CMakeFiles/client.dir/client.cc.o"
 		}
 	],
 	"backtrace" : 1,
@@ -20,7 +14,7 @@
 		],
 		"files" : 
 		[
-			"src/kernel/CMakeLists.txt"
+			"src/client/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -30,7 +24,7 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 10,
+				"line" : 8,
 				"parent" : 0
 			}
 		]
@@ -58,18 +52,16 @@
 			},
 			"sourceIndexes" : 
 			[
-				0,
-				1,
-				2
+				0
 			]
 		}
 	],
-	"id" : "kernel::@a2e5c2148a26843338a5",
-	"name" : "kernel",
+	"id" : "client::@8ca63c80a879d0067daa",
+	"name" : "client",
 	"paths" : 
 	{
-		"build" : "src/kernel",
-		"source" : "src/kernel"
+		"build" : "src/client",
+		"source" : "src/client"
 	},
 	"sourceGroups" : 
 	[
@@ -77,9 +69,7 @@
 			"name" : "Source Files",
 			"sourceIndexes" : 
 			[
-				0,
-				1,
-				2
+				0
 			]
 		}
 	],
@@ -88,19 +78,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/kernel/engine.cc",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "src/kernel/iofunction.cc",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "src/kernel/task.cc",
+			"path" : "src/client/client.cc",
 			"sourceGroupIndex" : 0
 		}
 	],

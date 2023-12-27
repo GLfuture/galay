@@ -65,18 +65,9 @@ int galay::iofunction::Tcp_Function::Accept(int fd)
     return accept(fd, (sockaddr *)&sin, &len);
 }
 
-ssize_t galay::iofunction::Tcp_Function::Recv(int fd , std::string& buffer,uint32_t len)
+ssize_t galay::iofunction::Tcp_Function::Recv(int fd , char *buffer,uint32_t len)
 {
-    char* temp = new char[len];
-    memset(temp, 0, len);
-    ssize_t ret = recv(fd, temp, len, 0);
-    if(ret <= 0){
-        delete[] temp;
-        return ret;
-    }
-    buffer.append(temp,ret);
-    delete[] temp;
-    return ret;
+    return recv(fd, buffer, len, 0);
 }
 
 ssize_t galay::iofunction::Tcp_Function::Send(int fd,const std::string& buffer,uint32_t len)
@@ -107,18 +98,9 @@ int galay::iofunction::Tcp_Function::SSL_Connect(SSL* ssl)
     return SSL_connect(ssl);
 }
 
-int galay::iofunction::Tcp_Function::SSL_Recv(SSL* ssl,std::string& buffer,int len)
+int galay::iofunction::Tcp_Function::SSL_Recv(SSL* ssl,char* buffer,int len)
 {
-    char* temp = new char[len];
-    memset(temp,0,len);
-    int ret = SSL_read(ssl,temp,len);
-    if(ret <= 0){
-        delete[] temp;
-        return ret;
-    }
-    buffer.append(temp,ret);
-    delete[] temp;
-    return ret;
+    return SSL_read(ssl,buffer,len);
 }
 
 
@@ -193,24 +175,19 @@ int galay::iofunction::Udp_Function::Bind(int fd, uint32_t port)
     return bind(fd,(sockaddr*)&sin,sizeof(sin));
 }
 
-ssize_t galay::iofunction::Udp_Function::Recv_From(int fd , Addr& addr , std::string& buffer , int len)
+ssize_t galay::iofunction::Udp_Function::Recv_From(int fd , Addr& addr , char* buffer , int len)
 {
-    char* temp = new char[len];
-    memset(temp,0,len);
     sockaddr_in sin = {0};
     socklen_t slen = sizeof(sin);
-    ssize_t ret = recvfrom(fd,temp,len,0,(sockaddr*) &sin,&slen);
+    ssize_t ret = recvfrom(fd,buffer,len,0,(sockaddr*) &sin,&slen);
     if(ret <= 0)
     {
-        delete[] temp;
         return ret;
     }
     char ip[INET_ADDRSTRLEN] = {0};
     inet_ntop(AF_INET,&sin.sin_addr,ip,INET_ADDRSTRLEN);
     addr.ip.assign(ip,INET_ADDRSTRLEN);
     addr.port = ntohs(sin.sin_port);
-    buffer.append(temp,ret);
-    delete[] temp;
     return ret;
 }
 

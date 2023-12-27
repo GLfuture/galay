@@ -53,7 +53,7 @@ namespace galay{
 
             static int Accept(int fd);
 
-            static ssize_t Recv(int fd, std::string &buffer, uint32_t len);
+            static ssize_t Recv(int fd , char *buffer,uint32_t len);
 
             static ssize_t Send(int fd, const std::string &buffer, uint32_t len);
 
@@ -69,7 +69,7 @@ namespace galay{
 
             static int SSL_Connect(SSL *ssl);
 
-            static int SSL_Recv(SSL *ssl, std::string &buffer, int len);
+            static int SSL_Recv(SSL* ssl,char* buffer,int len);
 
             static int SSL_Send(SSL *ssl, const std::string &buffer, int len);
 
@@ -95,7 +95,7 @@ namespace galay{
 
             static int Bind(int fd, uint32_t port);
 
-            static ssize_t Recv_From(int fd , Addr& addr,std::string &buffer , int len);
+            static ssize_t Recv_From(int fd , Addr& addr , char* buffer , int len);
 
             static ssize_t Send_To(int fd,const Addr& addr,const std::string& buffer);
         };

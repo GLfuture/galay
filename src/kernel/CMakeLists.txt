@@ -4,7 +4,6 @@ project(kernel)
 set(SRC_LIST 
     engine.cc
     iofunction.cc
-    task.cc
     )
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
