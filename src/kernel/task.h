@@ -14,8 +14,8 @@ namespace galay
     enum task_state
     {
         GY_TASK_STOP,
-        GY_TASK_TCP_READ,
-        GY_TASK_TCP_WRITE,
+        GY_TASK_READ,
+        GY_TASK_WRITE,
     };
 
 
@@ -24,7 +24,10 @@ namespace galay
     class Server;
 
     template<Request REQ,Response RESP>
-    class Tcp_Task;
+    class Tcp_RW_Task;
+
+    template<Request REQ,Response RESP>
+    class Http_RW_Task;
 
     template<Request REQ,Response RESP>
     class Task
@@ -52,7 +55,7 @@ namespace galay
         int m_error;
     };
 
-    //server accept task
+    //tcp server accept task
     template<Request REQ,Response RESP>
     class Tcp_Accept_Task:public Task<REQ,RESP>
     {
@@ -63,7 +66,7 @@ namespace galay
         {
             this->m_fd = fd;
             this->m_engine = engine;
-            this->m_state = task_state::GY_TASK_TCP_READ;
+            this->m_state = task_state::GY_TASK_READ;
             this->m_tasks = tasks;
             this->m_error = error::base_error::GY_SUCCESS;
             this->m_func = func;
@@ -85,17 +88,22 @@ namespace galay
                 return -1;
             iofunction::Tcp_Function::IO_Set_No_Block(connfd);
             m_engine->add_event(connfd, EPOLLIN|EPOLLET);
+            add_rw_task(connfd);
+            return 0;
+        }
+    protected:
+        virtual void add_rw_task(int connfd)
+        {
             auto it = this->m_tasks->find(connfd);
             if( it != this->m_tasks->end()){
-                it->second.reset(new Tcp_Task<REQ,RESP>(connfd,m_engine,this->m_read_len));
-                auto task = std::static_pointer_cast<Tcp_Task<REQ,RESP>>(it->second);
+                it->second.reset(new Tcp_RW_Task<REQ,RESP>(connfd,m_engine,this->m_read_len));
+                auto task = std::static_pointer_cast<Tcp_RW_Task<REQ,RESP>>(it->second);
                 task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(this->m_func));
             }else{
-                auto task = std::make_shared<Tcp_Task<REQ,RESP>>(connfd,m_engine,this->m_read_len);
+                auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd,m_engine,this->m_read_len);
                 task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(this->m_func));
                 this->m_tasks->emplace(connfd, task);
             }
-            return 0;
         }
 
     protected:
@@ -109,17 +117,17 @@ namespace galay
 
     //server read and write task
     template<Request REQ,Response RESP>
-    class Tcp_Task : public Task<REQ,RESP> , public std::enable_shared_from_this<Tcp_Task<REQ,RESP>>
+    class Tcp_RW_Task : public Task<REQ,RESP> , public std::enable_shared_from_this<Tcp_RW_Task<REQ,RESP>>
     {
     protected:
         using Callback = std::function<void(std::shared_ptr<Task<REQ,RESP>>)>;
     public:
-        using ptr = std::shared_ptr<Tcp_Task>;
-        Tcp_Task(int fd , Engine::ptr engine,uint32_t read_len)
+        using ptr = std::shared_ptr<Tcp_RW_Task>;
+        Tcp_RW_Task(int fd , Engine::ptr engine,uint32_t read_len)
         {
             this->m_req = std::make_shared<REQ>();
             this->m_resp = std::make_shared<RESP>();
-            this->m_state = task_state::GY_TASK_TCP_READ;
+            this->m_state = task_state::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
             this->m_engine = engine;
             this->m_fd = fd;
@@ -143,7 +151,7 @@ namespace galay
         {
             switch (this->m_state)
             {
-            case task_state::GY_TASK_TCP_READ :
+            case task_state::GY_TASK_READ :
             {
                 if (read_package() == -1)
                     return -1;
@@ -152,19 +160,20 @@ namespace galay
                 this->m_func(this->shared_from_this());
                 encode();
                 this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_state = task_state::GY_TASK_TCP_WRITE;
+                this->m_state = task_state::GY_TASK_WRITE;
                 break;
             }
-            case task_state::GY_TASK_TCP_WRITE:
+            case task_state::GY_TASK_WRITE:
             {
                 if(send_package() == -1) return -1;
                 this->m_engine->mod_event(this->m_fd, EPOLLIN);
-                this->m_state = task_state::GY_TASK_TCP_READ;
+                this->m_state = task_state::GY_TASK_READ;
                 break;
             }
             default:
                 break;
             }
+            return 0;
         }
 
         void set_callback(Callback&& func)
@@ -184,7 +193,7 @@ namespace galay
             this->m_read_len = len;
         }
 
-        virtual ~Tcp_Task()
+        virtual ~Tcp_RW_Task()
         {
             if (m_ssl)
             {
@@ -233,8 +242,8 @@ namespace galay
                 }
                 else
                 {
-                    close(this->m_fd);
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
+                    close(this->m_fd);
                     this->m_state = task_state::GY_TASK_STOP;
                     return -1;
                 }
@@ -255,8 +264,8 @@ namespace galay
                 }
                 else
                 {
-                    close(this->m_fd);
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
+                    close(this->m_fd);
                     this->m_state = task_state::GY_TASK_STOP;
                     return -1;
                 }
@@ -278,6 +287,72 @@ namespace galay
         Callback m_func;
     };
 
+    template<Request REQ,Response RESP>
+    class Http_Accept_Task : public Tcp_Accept_Task<REQ,RESP>
+    {
+    public:
+        Http_Accept_Task(int fd , Engine::ptr engine,std::unordered_map<int, std::shared_ptr<Task<REQ,RESP>>>* tasks,
+            std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func,uint32_t read_len):
+            Tcp_Accept_Task<REQ,RESP>(fd,engine,tasks,std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(func),read_len)
+        {
+            
+        }
+
+        void add_rw_task(int connfd) override
+        {
+            auto it = this->m_tasks->find(connfd);
+            if( it != this->m_tasks->end()){
+                it->second.reset(new Http_RW_Task<REQ,RESP>(connfd,this->m_engine,this->m_read_len));
+                auto task = std::static_pointer_cast<Http_RW_Task<REQ,RESP>>(it->second);
+                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(this->m_func));
+            }else{
+                auto task = std::make_shared<Http_RW_Task<REQ,RESP>>(connfd,this->m_engine,this->m_read_len);
+                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(this->m_func));
+                this->m_tasks->emplace(connfd, task);
+            }
+        }
+    };
+
+    template<Request REQ,Response RESP>
+    class Http_RW_Task: public Tcp_RW_Task<REQ,RESP>
+    {
+    public:
+        Http_RW_Task(int fd , Engine::ptr engine,uint32_t read_len):
+            Tcp_RW_Task<REQ,RESP>(fd,engine,read_len)
+        {
+
+        }
+
+        int exec() override
+        {
+            switch (this->m_state)
+            {
+            case task_state::GY_TASK_READ :
+            {
+                if (Tcp_RW_Task<REQ,RESP>::read_package() == -1)
+                    return -1;
+                if (Tcp_RW_Task<REQ,RESP>::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                    return -1;
+                this->m_func(this->shared_from_this());
+                Tcp_RW_Task<REQ,RESP>::encode();
+                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
+                this->m_state = task_state::GY_TASK_WRITE;
+                break;
+            }
+            case task_state::GY_TASK_WRITE :
+            {
+                if(Tcp_RW_Task<REQ,RESP>::send_package() == -1) return -1;
+                this->m_engine->del_event(this->m_fd, EPOLLIN);
+                close(this->m_fd);
+                this->m_state = task_state::GY_TASK_STOP;
+                break;
+            }
+            default:
+                break;
+            }
+            return 0;
+        }
+    };
 
 }
 

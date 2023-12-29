@@ -250,7 +250,10 @@ src/protocol/CMakeFiles/protocol.dir/http.cc.o: /home/gong/projects/galay/src/pr
   /usr/include/c++/12/bits/node_handle.h \
   /usr/include/c++/12/bits/unordered_map.h \
   /usr/include/c++/12/bits/erase_if.h \
-  /usr/include/assert.h
+  /usr/include/assert.h \
+  /usr/include/c++/12/iostream \
+  /usr/include/c++/12/istream \
+  /usr/include/c++/12/bits/istream.tcc
 
 src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/protocol/tcp.cc \
   /usr/include/stdc-predef.h \
@@ -568,6 +571,8 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
 
+/usr/include/c++/12/iostream:
+
 /usr/include/c++/12/backward/auto_ptr.h:
 
 /usr/include/sched.h:
@@ -691,6 +696,8 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 /usr/include/c++/12/bits/ranges_cmp.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
+
+/usr/include/c++/12/bits/istream.tcc:
 
 /usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
 
@@ -947,6 +954,8 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 /usr/include/c++/12/ext/type_traits.h:
 
 /usr/include/c++/12/bits/basic_string.h:
+
+/usr/include/c++/12/istream:
 
 /usr/include/c++/12/bits/atomic_base.h:
 
