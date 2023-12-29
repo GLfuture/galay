@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/kernel/CMakeFiles/kernel.dir/engine.cc.o"
+			"path" : "src/kernel/CMakeFiles/kernel.dir/./engine.cc.o"
 		},
 		{
-			"path" : "src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o"
+			"path" : "src/kernel/CMakeFiles/kernel.dir/./iofunction.cc.o"
 		}
 	],
 	"backtrace" : 1,

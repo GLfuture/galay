@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/util/CMakeFiles/util.dir/stringutil.cc.o"
+			"path" : "src/util/CMakeFiles/util.dir/./stringutil.cc.o"
 		},
 		{
-			"path" : "src/util/CMakeFiles/util.dir/base64.cc.o"
+			"path" : "src/util/CMakeFiles/util.dir/./base64.cc.o"
 		}
 	],
 	"backtrace" : 1,
