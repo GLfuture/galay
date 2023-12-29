@@ -1,7 +1,6 @@
 src/protocol/CMakeFiles/protocol.dir/http.cc.o: \
  /home/gong/projects/galay/src/protocol/http.cc \
  /usr/include/stdc-predef.h /home/gong/projects/galay/src/protocol/http.h \
- /home/gong/projects/galay/src/protocol/tcp.h \
  /home/gong/projects/galay/src/protocol/basic_protocol.h \
  /usr/include/c++/12/string \
  /usr/include/x86_64-linux-gnu/c++/12/bits/c++config.h \
@@ -206,4 +205,4 @@ src/protocol/CMakeFiles/protocol.dir/http.cc.o: \
  /usr/include/c++/12/bits/enable_special_members.h \
  /usr/include/c++/12/bits/node_handle.h \
  /usr/include/c++/12/bits/unordered_map.h \
- /usr/include/c++/12/bits/erase_if.h
+ /usr/include/c++/12/bits/erase_if.h /usr/include/assert.h

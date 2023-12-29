@@ -279,19 +279,6 @@ client/fast:
 .PHONY : client/fast
 
 #=============================================================================
-# Target rules for targets named test_tcp_client
-
-# Build rule for target.
-test_tcp_client: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_tcp_client
-.PHONY : test_tcp_client
-
-# fast build rule for target.
-test_tcp_client/fast:
-	$(MAKE) $(MAKESILENT) -f test/client/CMakeFiles/test_tcp_client.dir/build.make test/client/CMakeFiles/test_tcp_client.dir/build
-.PHONY : test_tcp_client/fast
-
-#=============================================================================
 # Target rules for targets named test_tcp_server
 
 # Build rule for target.
@@ -301,8 +288,21 @@ test_tcp_server: cmake_check_build_system
 
 # fast build rule for target.
 test_tcp_server/fast:
-	$(MAKE) $(MAKESILENT) -f test/server/CMakeFiles/test_tcp_server.dir/build.make test/server/CMakeFiles/test_tcp_server.dir/build
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/build
 .PHONY : test_tcp_server/fast
+
+#=============================================================================
+# Target rules for targets named test_http_server
+
+# Build rule for target.
+test_http_server: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_http_server
+.PHONY : test_http_server
+
+# fast build rule for target.
+test_http_server/fast:
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/build
+.PHONY : test_http_server/fast
 
 # Help Target
 help:
@@ -324,7 +324,7 @@ help:
 	@echo "... kernel"
 	@echo "... protocol"
 	@echo "... server"
-	@echo "... test_tcp_client"
+	@echo "... test_http_server"
 	@echo "... test_tcp_server"
 	@echo "... util"
 .PHONY : help

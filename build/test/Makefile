@@ -161,6 +161,82 @@ depend:
 	cd /home/gong/projects/galay/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
+# Convenience name for target.
+test/CMakeFiles/test_tcp_server.dir/rule:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_tcp_server.dir/rule
+.PHONY : test/CMakeFiles/test_tcp_server.dir/rule
+
+# Convenience name for target.
+test_tcp_server: test/CMakeFiles/test_tcp_server.dir/rule
+.PHONY : test_tcp_server
+
+# fast build rule for target.
+test_tcp_server/fast:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/build
+.PHONY : test_tcp_server/fast
+
+# Convenience name for target.
+test/CMakeFiles/test_http_server.dir/rule:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_http_server.dir/rule
+.PHONY : test/CMakeFiles/test_http_server.dir/rule
+
+# Convenience name for target.
+test_http_server: test/CMakeFiles/test_http_server.dir/rule
+.PHONY : test_http_server
+
+# fast build rule for target.
+test_http_server/fast:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/build
+.PHONY : test_http_server/fast
+
+test_http_server.o: test_http_server.cc.o
+.PHONY : test_http_server.o
+
+# target to build an object file
+test_http_server.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/test_http_server.cc.o
+.PHONY : test_http_server.cc.o
+
+test_http_server.i: test_http_server.cc.i
+.PHONY : test_http_server.i
+
+# target to preprocess a source file
+test_http_server.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/test_http_server.cc.i
+.PHONY : test_http_server.cc.i
+
+test_http_server.s: test_http_server.cc.s
+.PHONY : test_http_server.s
+
+# target to generate assembly for a file
+test_http_server.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/test_http_server.cc.s
+.PHONY : test_http_server.cc.s
+
+test_tcp_server.o: test_tcp_server.cc.o
+.PHONY : test_tcp_server.o
+
+# target to build an object file
+test_tcp_server.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o
+.PHONY : test_tcp_server.cc.o
+
+test_tcp_server.i: test_tcp_server.cc.i
+.PHONY : test_tcp_server.i
+
+# target to preprocess a source file
+test_tcp_server.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.i
+.PHONY : test_tcp_server.cc.i
+
+test_tcp_server.s: test_tcp_server.cc.s
+.PHONY : test_tcp_server.s
+
+# target to generate assembly for a file
+test_tcp_server.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.s
+.PHONY : test_tcp_server.cc.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -173,6 +249,14 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... test_http_server"
+	@echo "... test_tcp_server"
+	@echo "... test_http_server.o"
+	@echo "... test_http_server.i"
+	@echo "... test_http_server.s"
+	@echo "... test_tcp_server.o"
+	@echo "... test_tcp_server.i"
+	@echo "... test_tcp_server.s"
 .PHONY : help
 
 
