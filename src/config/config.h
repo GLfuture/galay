@@ -32,8 +32,8 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Tcp_Server_Config>;
-        Tcp_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine) : 
-            m_port(port),m_backlog(backlog),m_engine(engine)//,Config()
+        Tcp_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine ,bool is_ssl = false) : 
+            m_port(port),m_backlog(backlog),m_engine(engine) , m_is_ssl(is_ssl) //,Config()
         {
 
         } 
@@ -69,7 +69,7 @@ namespace galay{
         uint32_t m_event_size = DEFAULT_EVENT_SIZE;
         uint32_t m_event_time_out = DEFAULT_EVENT_TIME_OUT;
         uint32_t m_recv_len = DEFAULT_RECV_LENGTH;
-        bool m_is_ssl = false;
+        bool m_is_ssl;
     };
 
     class Tcp_Client_Config: public Config
@@ -84,8 +84,8 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Http_Server_Config>;
-        Http_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine):
-            Tcp_Server_Config(port , backlog , engine)
+        Http_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine,bool is_ssl = false):
+            Tcp_Server_Config(port , backlog , engine , is_ssl)
         {
 
         }

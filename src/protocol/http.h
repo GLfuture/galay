@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <assert.h>
 
+#include <iostream>
+
 namespace galay
 {
     class Http_Protocol
@@ -79,7 +81,7 @@ namespace galay
             int end = buffer.find("\r\n\r\n");
             if (end == std::string::npos)
             {
-                state = 1;
+                state = error::protocol_error::GY_PROTOCOL_INCOMPLETE;
                 return -1;
             }
             std::string head = buffer.substr(beg, end);
@@ -151,8 +153,13 @@ namespace galay
             {
                 args = args + k + '=' + v + '&';
             }
-            args.erase(--args.end());
-            res += encode_url(std::move(this->m_url_path + '?' + args));
+            if(!m_arg_list.empty())
+            {
+                args.erase(--args.end());
+                res += encode_url(std::move(this->m_url_path + '?' + args));
+            }else{
+                res += encode_url(std::move(this->m_url_path));
+            }
             res = res + ' ' + this->m_version + "\r\n";
             for (auto &[k, v] : m_filed_list)
             {

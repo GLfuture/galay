@@ -1,4 +1,4 @@
-#include "../src/server/server.hpp"
+#include "../src/server/tcpserver.hpp"
 #include "../src/protocol/tcp.h"
 #include <signal.h>
 using namespace galay;
@@ -10,7 +10,7 @@ void func(Task<Tcp_Request,Tcp_Response>::ptr task)
     std::cout << task->get_error() << '\n';
 }
 
-Tcp_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_Server<Tcp_Request,Tcp_Response>>(Tcp_Server_Config(8080,10,IO_ENGINE::IO_EPOLL));
+Tcp_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_Server<Tcp_Request,Tcp_Response>>(Tcp_Server_Config(8081,10,IO_ENGINE::IO_EPOLL));
 
 void signal_handle(int sign)
 {
