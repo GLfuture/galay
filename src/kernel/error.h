@@ -34,7 +34,7 @@ namespace galay
 
         enum protocol_error{
             GY_PROTOCOL_INCOMPLETE = engine_error::GY_ENGINE_ERROR_END,             //incomplete package
-            GY_PROTOCOL_NO_NECCESSARY_FILED,                                        //has no neccessary field
+            GY_PROTOCOL_BAD_REQUEST,                                                   //bad request
         };
     }
 }

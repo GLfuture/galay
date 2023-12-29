@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o -o test_tcp_client   -L/home/gong/projects/galay/build/src  -Wl,-rpath,/home/gong/projects/galay/build/src -Wl,-Bstatic -lgalay-static -Wl,-Bdynamic -lssl -lcrypto 

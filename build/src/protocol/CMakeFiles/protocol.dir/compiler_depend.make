@@ -4,7 +4,6 @@
 src/protocol/CMakeFiles/protocol.dir/http.cc.o: /home/gong/projects/galay/src/protocol/http.cc \
   /usr/include/stdc-predef.h \
   /home/gong/projects/galay/src/protocol/http.h \
-  /home/gong/projects/galay/src/protocol/tcp.h \
   /home/gong/projects/galay/src/protocol/basic_protocol.h \
   /usr/include/c++/12/string \
   /usr/include/x86_64-linux-gnu/c++/12/bits/c++config.h \
@@ -250,7 +249,8 @@ src/protocol/CMakeFiles/protocol.dir/http.cc.o: /home/gong/projects/galay/src/pr
   /usr/include/c++/12/bits/enable_special_members.h \
   /usr/include/c++/12/bits/node_handle.h \
   /usr/include/c++/12/bits/unordered_map.h \
-  /usr/include/c++/12/bits/erase_if.h
+  /usr/include/c++/12/bits/erase_if.h \
+  /usr/include/assert.h
 
 src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/protocol/tcp.cc \
   /usr/include/stdc-predef.h \
@@ -492,6 +492,10 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
   /home/gong/projects/galay/src/kernel/error.h
 
 
+/home/gong/projects/galay/src/protocol/tcp.h:
+
+/usr/include/assert.h:
+
 /usr/include/c++/12/bits/erase_if.h:
 
 /usr/include/c++/12/bits/unordered_map.h:
@@ -662,6 +666,8 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 
 /usr/lib/gcc/x86_64-linux-gnu/12/include/stdint.h:
 
+/usr/include/c++/12/bits/allocator.h:
+
 /usr/include/x86_64-linux-gnu/bits/uio_lim.h:
 
 /usr/include/x86_64-linux-gnu/c++/12/bits/ctype_base.h:
@@ -716,6 +722,14 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 
 /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h:
 
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+
+/usr/include/c++/12/cstdlib:
+
+/usr/include/x86_64-linux-gnu/bits/byteswap.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
+
 /usr/include/x86_64-linux-gnu/bits/xopen_lim.h:
 
 /usr/include/c++/12/bits/shared_ptr.h:
@@ -730,13 +744,11 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 
 /usr/include/x86_64-linux-gnu/c++/12/bits/c++config.h:
 
+/usr/include/c++/12/bits/cpp_type_traits.h:
+
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+
 /usr/include/features.h:
-
-/usr/include/x86_64-linux-gnu/c++/12/bits/error_constants.h:
-
-/usr/include/x86_64-linux-gnu/c++/12/bits/cpu_defines.h:
-
-/usr/include/x86_64-linux-gnu/c++/12/bits/os_defines.h:
 
 /usr/include/c++/12/new:
 
@@ -756,9 +768,11 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 
 /usr/include/c++/12/bits/functional_hash.h:
 
-/home/gong/projects/galay/src/protocol/tcp.h:
+/usr/include/x86_64-linux-gnu/c++/12/bits/error_constants.h:
 
-/usr/include/x86_64-linux-gnu/bits/pthreadtypes.h:
+/usr/include/x86_64-linux-gnu/c++/12/bits/cpu_defines.h:
+
+/usr/include/x86_64-linux-gnu/c++/12/bits/os_defines.h:
 
 /usr/include/c++/12/bits/uses_allocator.h:
 
@@ -789,14 +803,6 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 /usr/lib/gcc/x86_64-linux-gnu/12/include/stddef.h:
 
 /usr/include/c++/12/ext/alloc_traits.h:
-
-/usr/include/x86_64-linux-gnu/bits/long-double.h:
-
-/usr/include/c++/12/cstdlib:
-
-/usr/include/x86_64-linux-gnu/bits/byteswap.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
 
 /home/gong/projects/galay/src/protocol/basic_protocol.h:
 
@@ -839,12 +845,6 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 /usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/floatn-common.h:
-
-/usr/include/c++/12/bits/allocator.h:
-
-/usr/include/x86_64-linux-gnu/bits/wordsize.h:
-
-/usr/include/c++/12/bits/cpp_type_traits.h:
 
 /usr/include/x86_64-linux-gnu/bits/getopt_core.h:
 
@@ -979,6 +979,8 @@ src/protocol/CMakeFiles/protocol.dir/tcp.cc.o: /home/gong/projects/galay/src/pro
 /usr/include/c++/12/ext/concurrence.h:
 
 /usr/include/endian.h:
+
+/usr/include/x86_64-linux-gnu/bits/pthreadtypes.h:
 
 /usr/include/c++/12/cstdio:
 
