@@ -143,7 +143,7 @@
 			},
 			{
 				"backtrace" : 3,
-				"fragment" : "../src/libgalay-static.a",
+				"fragment" : "src/libgalay-static.a",
 				"role" : "libraries"
 			},
 			{

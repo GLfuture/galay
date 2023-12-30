@@ -86,11 +86,16 @@ namespace galay
             int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
             if (connfd <= 0)
                 return -1;
+            add_rw_task(connfd);
             iofunction::Tcp_Function::IO_Set_No_Block(connfd);
             m_engine->add_event(connfd, EPOLLIN|EPOLLET);
-            add_rw_task(connfd);
             return 0;
         }
+
+        virtual ~Tcp_Accept_Task()
+        {
+        }
+
     protected:
         virtual void add_rw_task(int connfd)
         {
@@ -135,10 +140,6 @@ namespace galay
             this->m_temp = new char[read_len];
         }
 
-        void Set_SSL(SSL *ssl) { m_ssl = ssl; }
-
-        SSL *Get_SSL() { return m_ssl; }
-       
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
@@ -195,11 +196,6 @@ namespace galay
 
         virtual ~Tcp_RW_Task()
         {
-            if (m_ssl)
-            {
-                iofunction::Tcp_Function::SSL_Destory(m_ssl);
-                m_ssl = nullptr;
-            }
             if(m_temp){
                 delete[] m_temp;
                 m_temp = nullptr;
@@ -226,7 +222,7 @@ namespace galay
 
         int read_package()
         {
-            int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
+            int len = iofunction::Tcp_Function::Recv(this->m_fd,this->m_temp,this->m_read_len);
             if (len == 0)
             {
                 close(this->m_fd);
@@ -271,11 +267,11 @@ namespace galay
                 }
             }
             this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+            return 0;
         }
 
 
     protected:
-        SSL *m_ssl = nullptr;
         char* m_temp = nullptr;
         Engine::ptr m_engine;
         int m_fd;

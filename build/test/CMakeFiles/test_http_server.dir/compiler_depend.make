@@ -381,6 +381,8 @@ test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: /home/gong/projects/
   /home/gong/projects/galay/src/kernel/basic_concepts.h \
   /home/gong/projects/galay/src/kernel/engine.h \
   /usr/include/c++/12/atomic \
+  /home/gong/projects/galay/src/factory/factory.h \
+  /home/gong/projects/galay/src/config/config.h \
   /usr/include/signal.h \
   /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
   /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
@@ -422,6 +424,8 @@ test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: /home/gong/projects/
 /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/signum-generic.h:
+
+/home/gong/projects/galay/src/factory/factory.h:
 
 /usr/include/c++/12/atomic:
 

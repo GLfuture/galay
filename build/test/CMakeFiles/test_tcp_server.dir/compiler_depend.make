@@ -379,6 +379,8 @@ test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o: /home/gong/projects/ga
   /home/gong/projects/galay/src/protocol/tcp.h \
   /home/gong/projects/galay/src/protocol/basic_protocol.h \
   /home/gong/projects/galay/src/kernel/error.h \
+  /home/gong/projects/galay/src/factory/factory.h \
+  /home/gong/projects/galay/src/config/config.h \
   /usr/include/signal.h \
   /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
   /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
@@ -420,6 +422,8 @@ test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o: /home/gong/projects/ga
 /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/signum-generic.h:
+
+/home/gong/projects/galay/src/factory/factory.h:
 
 /home/gong/projects/galay/src/protocol/tcp.h:
 
