@@ -59,6 +59,8 @@ namespace galay{
 
             static SSL_CTX *SSL_Init(long min_version, long max_version);
 
+            static void SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath);
+
             // 修改ssl的绑定
             static int SSL_Reset(SSL *ssl, int fd);
 

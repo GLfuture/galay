@@ -1,5 +1,6 @@
 #include "../src/protocol/http.h"
 #include "../src/server/httpserver.hpp"
+#include "../src/factory/factory.h"
 #include <signal.h>
 using namespace galay;
 
@@ -13,7 +14,7 @@ void func(Task<Http_Request,Http_Response>::ptr task)
     std::cout << task->get_resp()->encode()<<'\n';
 }
 
-Http_Server<Http_Request,Http_Response>::ptr http_server = std::make_shared<Http_Server<Http_Request,Http_Response>>(Http_Server_Config(8080,10,IO_EPOLL));
+Http_Server<Http_Request,Http_Response>::ptr http_server = std::make_shared<Http_Server<Http_Request,Http_Response>>(Config_Factory::create_http_server_config(Http_Server_Config(8080,10,IO_EPOLL)));
 
 void signal_handle(int sign)
 {

@@ -35,28 +35,31 @@ namespace galay
             }
         }
 
-        Tcp_Server(Tcp_Server_Config &&config) : Server<REQ, RESP>(std::make_shared<Tcp_Server_Config>(config))
-        {
-            switch (config.m_engine)
-            {
-            case IO_ENGINE::IO_POLL:
-            {
-                break;
-            }
-            case IO_ENGINE::IO_SELECT:
-                break;
-            case IO_ENGINE::IO_EPOLL:
-            {
-                this->m_engine = std::make_shared<Epoll_Engine>(config.m_event_size, config.m_event_time_out);
-                break;
-            }
-            case IO_ENGINE::IO_URING:
-                break;
-            default:
-                this->m_error = error::server_error::GY_ENGINE_CHOOSE_ERROR;
-                break;
-            }
-        }
+        // Tcp_Server(Tcp_Server_Config &&config) : Server<REQ, RESP>(std::make_shared<Tcp_Server_Config>(config))
+        // {
+        //     switch (config.m_engine)
+        //     {
+        //     case IO_ENGINE::IO_POLL:
+        //     {
+        //         break;
+        //     }
+        //     case IO_ENGINE::IO_SELECT:
+        //         break;
+        //     case IO_ENGINE::IO_EPOLL:
+        //     {
+        //         this->m_engine = std::make_shared<Epoll_Engine>(config.m_event_size, config.m_event_time_out);
+        //         break;
+        //     }
+        //     case IO_ENGINE::IO_URING:
+        //         break;
+        //     default:
+        //         this->m_error = error::server_error::GY_ENGINE_CHOOSE_ERROR;
+        //         break;
+        //     }
+        //     if(config.m_is_ssl){
+        //         this->m_ctx = iofunction::Tcp_Function::SSL_Init(config.m_ssl_min_version,config.m_ssl_max_version);
+        //     }
+        // }
 
         void start(std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func) override
         {
@@ -131,10 +134,16 @@ namespace galay
             this->m_tasks.emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task<REQ, RESP>>(this->m_fd, this->m_engine, 
                 &this->m_tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len)));
         }
-
-    protected:
-        SSL_CTX *m_ctx;
     };
+
+    template <Request REQ, Response RESP>
+    class Tcp_SSL_Server: public Tcp_Server<REQ,RESP>
+    {
+    public:
+
+    };
+
+
 
 }
 
