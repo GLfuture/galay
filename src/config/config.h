@@ -14,7 +14,7 @@ namespace galay{
     #define DEFAULT_RECV_LENGTH             1024
     #define DEFAULT_FD_NUM                  2000
     #define DEFAULT_BACKLOG                 256        
-
+    #define DEFAULT_ENGINE                  IO_ENGINE::IO_EPOLL
     enum IO_ENGINE{
         IO_SELECT,
         IO_POLL,
@@ -75,6 +75,7 @@ namespace galay{
     class Tcp_SSL_Server_Config: public Tcp_Server_Config
     {
     public:
+        using ptr = std::shared_ptr<Tcp_SSL_Server_Config>;
         Tcp_SSL_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine , long ssl_min_version , long ssl_max_version
             ,const char* cert_filepath, const char* key_filepath):
             Tcp_Server_Config(port,backlog,engine),m_ssl_min_version(ssl_min_version),m_ssl_max_version(ssl_max_version),

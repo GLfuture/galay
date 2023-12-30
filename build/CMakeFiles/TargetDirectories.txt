@@ -63,6 +63,7 @@
 /home/gong/projects/galay/build/src/client/CMakeFiles/install/strip.dir
 /home/gong/projects/galay/build/test/CMakeFiles/test_tcp_server.dir
 /home/gong/projects/galay/build/test/CMakeFiles/test_http_server.dir
+/home/gong/projects/galay/build/test/CMakeFiles/test_tcp_ssl_server.dir
 /home/gong/projects/galay/build/test/CMakeFiles/edit_cache.dir
 /home/gong/projects/galay/build/test/CMakeFiles/rebuild_cache.dir
 /home/gong/projects/galay/build/test/CMakeFiles/list_install_components.dir
