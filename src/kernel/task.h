@@ -27,6 +27,9 @@ namespace galay
     class Tcp_RW_Task;
 
     template<Request REQ,Response RESP>
+    class Tcp_SSL_RW_Task;
+
+    template<Request REQ,Response RESP>
     class Http_RW_Task;
 
     template<Request REQ,Response RESP>
@@ -54,6 +57,8 @@ namespace galay
         int m_state;
         int m_error;
     };
+
+
 
     //tcp server accept task
     template<Request REQ,Response RESP>
@@ -119,7 +124,7 @@ namespace galay
         std::function<void(std::shared_ptr<Task<REQ,RESP>>)> m_func;
     };
 
-
+    //tcp
     //server read and write task
     template<Request REQ,Response RESP>
     class Tcp_RW_Task : public Task<REQ,RESP> , public std::enable_shared_from_this<Tcp_RW_Task<REQ,RESP>>
@@ -220,7 +225,7 @@ namespace galay
         }
 
 
-        int read_package()
+        virtual int read_package()
         {
             int len = iofunction::Tcp_Function::Recv(this->m_fd,this->m_temp,this->m_read_len);
             if (len == 0)
@@ -249,7 +254,7 @@ namespace galay
             return 0;
         }
 
-        int send_package()
+        virtual int send_package()
         {
             int len = iofunction::Tcp_Function::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
             if (len == -1)
@@ -284,6 +289,131 @@ namespace galay
     };
 
     template<Request REQ,Response RESP>
+    class Tcp_SSL_Accept_Task: public Tcp_Accept_Task<REQ,RESP>
+    {
+    public:
+        Tcp_SSL_Accept_Task(int fd , Engine::ptr engine,std::unordered_map<int, std::shared_ptr<Task<REQ,RESP>>>* tasks,
+            std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func,uint32_t read_len,SSL_CTX *ctx)
+        {
+            
+        }
+
+        int exec() override
+        {
+            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
+            if (connfd <= 0)
+                return -1;
+            SSL* ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx,connfd);
+            if(iofunction::Tcp_Function::SSL_Accept(ssl) == -1)
+            {
+                close(connfd);
+                return -1;
+            }
+            add_rw_task(connfd , ssl);
+            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+            this->m_engine->add_event(connfd, EPOLLIN|EPOLLET);
+            return 0;
+        }
+
+
+        virtual ~Tcp_SSL_Accept_Task()
+        {
+            if(this->m_ctx) this->m_ctx = nullptr;
+        }
+
+    protected:
+        void add_rw_task(int connfd , SSL* ssl)
+        {
+            auto it = this->m_tasks->find(connfd);
+            if( it != this->m_tasks->end()){
+                it->second.reset(new Tcp_SSL_RW_Task<REQ,RESP>(connfd,this->m_engine,this->m_read_len,ssl));
+                auto task = std::static_pointer_cast<Tcp_SSL_RW_Task<REQ,RESP>>(it->second);
+                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(this->m_func));
+            }else{
+                auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd,this->m_engine,this->m_read_len,ssl);
+                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ,RESP>>)>>(this->m_func));
+                this->m_tasks->emplace(connfd, task);
+            }
+        }
+
+    protected:
+        SSL_CTX *m_ctx;
+    };
+    
+    template<Request REQ,Response RESP>
+    class Tcp_SSL_RW_Task: public Tcp_RW_Task<REQ,RESP>
+    {
+    public:
+        Tcp_SSL_RW_Task(int fd , Engine::ptr engine,uint32_t read_len ,SSL *ssl):
+            Tcp_RW_Task<REQ,RESP>(fd,engine,read_len),m_ssl(ssl)
+        {
+        
+        }
+
+        virtual ~Tcp_SSL_RW_Task()
+        {
+            if(this->m_ssl){
+                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
+                this->m_ssl = nullptr;
+            }
+        }
+    protected:
+        int read_package() override
+        {
+            int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl,this->m_temp,this->m_read_len);
+            if (len == 0)
+            {
+                close(this->m_fd);
+                this->m_engine->del_event(this->m_fd, EPOLLIN);
+                this->m_state = task_state::GY_TASK_STOP;
+                return -1;
+            }
+            else if (len == -1)
+            {
+                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }
+                else
+                {
+                    this->m_engine->del_event(this->m_fd, EPOLLIN);
+                    close(this->m_fd);
+                    this->m_state = task_state::GY_TASK_STOP;
+                    return -1;
+                }
+            }
+            this->m_rbuffer.append(this->m_temp,len);
+            memset(this->m_temp,0,len);
+            return 0;
+        }
+
+        int send_package() override
+        {
+            int len = iofunction::Tcp_Function::SSL_Send(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
+            if (len == -1)
+            {
+                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }
+                else
+                {
+                    this->m_engine->del_event(this->m_fd, EPOLLIN);
+                    close(this->m_fd);
+                    this->m_state = task_state::GY_TASK_STOP;
+                    return -1;
+                }
+            }
+            this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+            return 0;
+        }
+    protected:
+        SSL* m_ssl = nullptr;
+    };
+
+    
+    //http server's task
+    template<Request REQ,Response RESP>
     class Http_Accept_Task : public Tcp_Accept_Task<REQ,RESP>
     {
     public:
@@ -294,7 +424,7 @@ namespace galay
             
         }
 
-        void add_rw_task(int connfd) override
+        void add_rw_task(int connfd)
         {
             auto it = this->m_tasks->find(connfd);
             if( it != this->m_tasks->end()){
@@ -307,6 +437,7 @@ namespace galay
                 this->m_tasks->emplace(connfd, task);
             }
         }
+    
     };
 
     template<Request REQ,Response RESP>

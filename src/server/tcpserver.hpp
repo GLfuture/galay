@@ -35,6 +35,7 @@ namespace galay
             }
         }
 
+        // 移除右值构造，通过工厂模式统一创建config
         // Tcp_Server(Tcp_Server_Config &&config) : Server<REQ, RESP>(std::make_shared<Tcp_Server_Config>(config))
         // {
         //     switch (config.m_engine)
@@ -140,7 +141,21 @@ namespace galay
     class Tcp_SSL_Server: public Tcp_Server<REQ,RESP>
     {
     public:
-
+        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config):
+            Tcp_Server<REQ,RESP>(config)
+        {
+            m_ctx = iofunction::Tcp_Function::SSL_Init(config->m_ssl_min_version,config->m_ssl_max_version);
+            iofunction::Tcp_Function::SSL_Config_Cert_And_Key(m_ctx,config->m_cert_filepath.c_str(),config->m_key_filepath.c_str());
+        }
+    protected:
+        void add_accept_task(std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func , uint32_t recv_len) override
+        {
+            this->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
+            this->m_tasks.emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task<REQ, RESP>>(this->m_fd, this->m_engine, 
+                &this->m_tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len,this->m_ctx)));
+        }
+    protected:
+        SSL_CTX *m_ctx = nullptr;
     };
 
 

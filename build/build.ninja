@@ -963,6 +963,40 @@ build test/test_http_server: CXX_EXECUTABLE_LINKER__test_http_server_Debug test/
   TARGET_FILE = test/test_http_server
   TARGET_PDB = test_http_server.dbg
 
+# =============================================================================
+# Object build statements for EXECUTABLE target test_tcp_ssl_server
+
+
+#############################################
+# Order-only phony target for test_tcp_ssl_server
+
+build cmake_object_order_depends_target_test_tcp_ssl_server: phony || cmake_object_order_depends_target_client cmake_object_order_depends_target_config cmake_object_order_depends_target_factory cmake_object_order_depends_target_galay-static cmake_object_order_depends_target_kernel cmake_object_order_depends_target_protocol cmake_object_order_depends_target_server cmake_object_order_depends_target_util
+
+build test/CMakeFiles/test_tcp_ssl_server.dir/test_tcp_ssl_server.cc.o: CXX_COMPILER__test_tcp_ssl_server_Debug /home/gong/projects/galay/test/test_tcp_ssl_server.cc || cmake_object_order_depends_target_test_tcp_ssl_server
+  DEP_FILE = test/CMakeFiles/test_tcp_ssl_server.dir/test_tcp_ssl_server.cc.o.d
+  FLAGS = -g -std=gnu++20
+  INCLUDES = -I/home/gong/projects/galay/test/../src
+  OBJECT_DIR = test/CMakeFiles/test_tcp_ssl_server.dir
+  OBJECT_FILE_DIR = test/CMakeFiles/test_tcp_ssl_server.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target test_tcp_ssl_server
+
+
+#############################################
+# Link the executable test/test_tcp_ssl_server
+
+build test/test_tcp_ssl_server: CXX_EXECUTABLE_LINKER__test_tcp_ssl_server_Debug test/CMakeFiles/test_tcp_ssl_server.dir/test_tcp_ssl_server.cc.o | src/libgalay-static.a || src/client/client src/config/config src/factory/factory src/kernel/kernel src/libgalay-static.a src/protocol/protocol src/server/server src/util/util
+  FLAGS = -g
+  LINK_LIBRARIES = -Wl,-rpath,/home/gong/projects/galay/build/src  src/libgalay-static.a  -lssl  -lcrypto  -lssl  -lcrypto
+  LINK_PATH = -L/home/gong/projects/galay/build/src
+  OBJECT_DIR = test/CMakeFiles/test_tcp_ssl_server.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = test/test_tcp_ssl_server
+  TARGET_PDB = test_tcp_ssl_server.dbg
+
 
 #############################################
 # Utility command for edit_cache
@@ -1055,6 +1089,8 @@ build test_http_server: phony test/test_http_server
 
 build test_tcp_server: phony test/test_tcp_server
 
+build test_tcp_ssl_server: phony test/test_tcp_ssl_server
+
 build util: phony src/util/util
 
 # =============================================================================
@@ -1128,7 +1164,7 @@ build src/util/all: phony src/util/util
 #############################################
 # Folder: /home/gong/projects/galay/build/test
 
-build test/all: phony test/test_tcp_server test/test_http_server
+build test/all: phony test/test_tcp_server test/test_http_server test/test_tcp_ssl_server
 
 # =============================================================================
 # Built-in targets

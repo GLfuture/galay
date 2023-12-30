@@ -58,5 +58,10 @@
   "directory": "/home/gong/projects/galay/build",
   "command": "/usr/bin/g++ -I/home/gong/projects/galay/test/../src -g -std=gnu++20 -o test/CMakeFiles/test_http_server.dir/test_http_server.cc.o -c /home/gong/projects/galay/test/test_http_server.cc",
   "file": "/home/gong/projects/galay/test/test_http_server.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -I/home/gong/projects/galay/test/../src -g -std=gnu++20 -o test/CMakeFiles/test_tcp_ssl_server.dir/test_tcp_ssl_server.cc.o -c /home/gong/projects/galay/test/test_tcp_ssl_server.cc",
+  "file": "/home/gong/projects/galay/test/test_tcp_ssl_server.cc"
 }
 ]

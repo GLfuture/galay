@@ -3,7 +3,9 @@ include_directories(../src)
 set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     test_tcp_server.cc
-    test_http_server.cc)
+    test_http_server.cc
+    test_tcp_ssl_server.cc
+    )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
