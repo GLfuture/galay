@@ -27,8 +27,18 @@ namespace galay
         static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
             , long ssl_min_version , long ssl_max_version ,uint32_t ssl_max_accept_retry,const char* cert_filepath, const char* key_filepath);
 
-
+        //http
+        static Http_Server_Config::ptr create_http_server_config(int port);
         static Http_Server_Config::ptr create_http_server_config(Http_Server_Config &&config);
+        static Http_Server_Config::ptr create_http_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine);
+
+
+        //https
+        static Https_Server_Config::ptr create_https_server_config(int port,long ssl_min_version,long ssl_max_version
+            , const char* cert_filepath,const char* key_filepath);
+        static Https_Server_Config::ptr create_https_server_config(Https_Server_Config &&config);
+        static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
+            , long ssl_min_version , long ssl_max_version, uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath);
     };
 }
 
