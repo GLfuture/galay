@@ -18,7 +18,8 @@ Hello, World!\
 </html>\r\n\r\n";
 }
 
-Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_SSL_Server<Tcp_Request,Tcp_Response>>(Config_Factory::create_tcp_ssl_server_config(8080,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key"));
+Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_SSL_Server<Tcp_Request,Tcp_Response>>
+    (Config_Factory::create_tcp_ssl_server_config(8080,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key"));
 
 void signal_handle(int sign)
 {
