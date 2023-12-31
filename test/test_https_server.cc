@@ -11,7 +11,6 @@ void func(Task<Http_Request,Http_Response>::ptr task)
     task->get_resp()->get_version() = "HTTP/1.1";
     task->get_resp()->set_head_kv_pair({"Connection","close"});
     task->get_resp()->get_body() = "<!DOCTYPE html><html><body>Hello, World!</body></html>";
-    std::cout << task->get_resp()->encode()<<'\n';
 }
 
 Https_Server<Http_Request,Http_Response>::ptr http_server = std::make_shared<Https_Server<Http_Request,Http_Response>>(Config_Factory::create_https_server_config(8080,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key"));

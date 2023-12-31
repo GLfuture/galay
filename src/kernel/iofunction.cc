@@ -88,17 +88,16 @@ SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_Client(long min_version, long
     return SSL_Init_CTX_Client(min_version,max_version);
 }
 
-void galay::iofunction::Tcp_Function::SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath)
+int galay::iofunction::Tcp_Function::SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath)
 {
     if (SSL_CTX_use_certificate_file(ctx, cert_filepath, SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     if (SSL_CTX_use_PrivateKey_file(ctx, key_filepath, SSL_FILETYPE_PEM) <= 0 ) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
+        return -1;
     }
+    return 0;
 }
 
 

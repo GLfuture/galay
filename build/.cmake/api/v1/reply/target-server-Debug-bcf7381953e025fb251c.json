@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/server/CMakeFiles/server.dir/server.cc.o"
+			"path" : "src/server/CMakeFiles/server.dir/./server.cc.o"
 		}
 	],
 	"backtrace" : 1,

@@ -237,6 +237,7 @@ namespace galay
 
         virtual int read_package()
         {
+            this->m_error = error::base_error::GY_SUCCESS;
             int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
             if (len == 0)
             {
@@ -324,8 +325,6 @@ namespace galay
             if (ret == 0)
             {
                 close(this->m_fd);
-                std::cout << "ssl accept error\n";
-                std::cout << ERR_error_string(ERR_get_error(), nullptr) << '\n';
                 return -1;
             }
             uint32_t retry = 0;
@@ -406,7 +405,6 @@ namespace galay
                 }
                 else
                 {
-                    std::cout << ERR_error_string(ERR_get_error(), nullptr) << '\n';
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
                     close(this->m_fd);
                     this->m_state = task_state::GY_TASK_STOP;

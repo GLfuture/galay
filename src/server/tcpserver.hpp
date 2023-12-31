@@ -111,7 +111,7 @@ namespace galay
             this->m_fd = iofunction::Tcp_Function::Sock();
             if (this->m_fd <= 0)
             {
-                return error::server_error::GY_SOCKET_ERROR;
+                return error::base_error::GY_SOCKET_ERROR;
             }
             int ret = iofunction::Tcp_Function::Bind(this->m_fd, config->m_port);
             if (ret == -1)
@@ -145,7 +145,17 @@ namespace galay
             Tcp_Server<REQ,RESP>(config)
         {
             m_ctx = iofunction::Tcp_Function::SSL_Init_Server(config->m_ssl_min_version,config->m_ssl_max_version);
-            iofunction::Tcp_Function::SSL_Config_Cert_And_Key(m_ctx,config->m_cert_filepath.c_str(),config->m_key_filepath.c_str());
+            if(m_ctx == nullptr){
+                this->m_error = error::server_error::GY_SSL_CTX_INIT_ERROR;
+                ERR_print_errors_fp(stderr);
+                exit(-1);
+            }
+            if(iofunction::Tcp_Function::SSL_Config_Cert_And_Key(m_ctx,config->m_cert_filepath.c_str(),config->m_key_filepath.c_str()) == -1)
+            {
+                this->m_error = error::server_error::GY_SSL_CRT_OR_KEY_FILE_ERROR;
+                ERR_print_errors_fp(stderr);
+                exit(-1);
+            }
         }
 
         ~Tcp_SSL_Server() override
