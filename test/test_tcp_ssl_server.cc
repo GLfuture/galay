@@ -8,10 +8,17 @@ using namespace galay;
 void func(Task<Tcp_Request,Tcp_Response>::ptr task)
 {
     std::cout<<task->get_req()->get_buffer()<<'\n';
-    task->get_resp()->get_buffer() = "world!";
+    task->get_resp()->get_buffer() = "HTTP/1.1 200 OK\r\n\
+Content-Type: text/html\r\n\r\n\
+<!DOCTYPE html>\
+<html>\
+<body>\
+Hello, World!\
+</body>\
+</html>\r\n\r\n";
 }
 
-Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_SSL_Server<Tcp_Request,Tcp_Response>>(Config_Factory::create_tcp_ssl_server_config(8080,TLS1_3_VERSION,TLS1_3_VERSION,"/home/gong/projects/demo/server.crt","/home/gong/projects/demo/server.key"));
+Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_SSL_Server<Tcp_Request,Tcp_Response>>(Config_Factory::create_tcp_ssl_server_config(8080,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key"));
 
 void signal_handle(int sign)
 {
