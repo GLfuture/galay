@@ -22,7 +22,7 @@ galay::Tcp_SSL_Server_Config::ptr galay::Config_Factory::create_tcp_ssl_server_c
             ,const char* cert_filepath,const char* key_filepath)
 {
     return std::make_shared<Tcp_SSL_Server_Config>(Tcp_SSL_Server_Config(port,DEFAULT_BACKLOG,DEFAULT_ENGINE
-        ,ssl_min_version,ssl_max_version,cert_filepath,key_filepath));
+        ,DEFAULT_MAX_SSL_ACCEPT_RETRY,ssl_min_version,ssl_max_version,cert_filepath,key_filepath));
 }
 
 
@@ -32,9 +32,9 @@ galay::Tcp_SSL_Server_Config::ptr galay::Config_Factory::create_tcp_ssl_server_c
 }
 
 galay::Tcp_SSL_Server_Config::ptr galay::Config_Factory::create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
-            , long ssl_min_version , long ssl_max_version , const char* cert_filepath, const char* key_filepath)
+            , long ssl_min_version , long ssl_max_version, uint32_t ssl_max_accept_retry , const char* cert_filepath, const char* key_filepath)
 {
-    return std::make_shared<Tcp_SSL_Server_Config>(port,backlog,engine,ssl_min_version,ssl_max_version,cert_filepath,key_filepath);
+    return std::make_shared<Tcp_SSL_Server_Config>(port,backlog,engine,ssl_min_version,ssl_max_version,ssl_max_accept_retry ,cert_filepath,key_filepath);
 }
 
 

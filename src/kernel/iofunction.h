@@ -57,7 +57,11 @@ namespace galay{
 
             static ssize_t Send(int fd, const std::string &buffer, uint32_t len);
 
-            static SSL_CTX *SSL_Init(long min_version, long max_version);
+            //for server
+            static SSL_CTX *SSL_Init_Server(long min_version,long max_version);
+
+            //for client
+            static SSL_CTX *SSL_Init_Client(long min_version, long max_version);
 
             static void SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath);
 
@@ -82,7 +86,9 @@ namespace galay{
         private:
             static void SSL_Init_Env();
 
-            static SSL_CTX *SSL_Init_CTX(long min_version, long max_version);
+            static SSL_CTX *SSL_Init_CTX_Server(long min_version, long max_version);
+
+            static SSL_CTX *SSL_Init_CTX_Client(long min_version, long max_version);
 
             static void SSL_Destory_CTX(SSL_CTX *ctx);
 

@@ -304,6 +304,19 @@ test_http_server/fast:
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/build
 .PHONY : test_http_server/fast
 
+#=============================================================================
+# Target rules for targets named test_tcp_ssl_server
+
+# Build rule for target.
+test_tcp_ssl_server: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_tcp_ssl_server
+.PHONY : test_tcp_ssl_server
+
+# fast build rule for target.
+test_tcp_ssl_server/fast:
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_ssl_server.dir/build.make test/CMakeFiles/test_tcp_ssl_server.dir/build
+.PHONY : test_tcp_ssl_server/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -326,6 +339,7 @@ help:
 	@echo "... server"
 	@echo "... test_http_server"
 	@echo "... test_tcp_server"
+	@echo "... test_tcp_ssl_server"
 	@echo "... util"
 .PHONY : help
 

@@ -9,12 +9,17 @@
 #include <functional>
 
 namespace galay{
-    #define DEFAULT_EVENT_SIZE              2048
-    #define DEFAULT_EVENT_TIME_OUT          5
-    #define DEFAULT_RECV_LENGTH             1024
-    #define DEFAULT_FD_NUM                  2000
-    #define DEFAULT_BACKLOG                 256        
-    #define DEFAULT_ENGINE                  IO_ENGINE::IO_EPOLL
+    #define DEFAULT_EVENT_SIZE                      2048
+    #define DEFAULT_EVENT_TIME_OUT                  5
+    #define DEFAULT_RECV_LENGTH                     1024
+    #define DEFAULT_FD_NUM                          2000
+    #define DEFAULT_BACKLOG                         256        
+    #define DEFAULT_ENGINE                          IO_ENGINE::IO_EPOLL
+    #define DEFAULT_MAX_SSL_ACCEPT_RETRY            1000
+    #define DEFAULT_SSL_SLEEP_MISC_PER_RETRY        1
+
+
+    
     enum IO_ENGINE{
         IO_SELECT,
         IO_POLL,
@@ -77,9 +82,9 @@ namespace galay{
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Server_Config>;
         Tcp_SSL_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine , long ssl_min_version , long ssl_max_version
-            ,const char* cert_filepath, const char* key_filepath):
+            , uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath):
             Tcp_Server_Config(port,backlog,engine),m_ssl_min_version(ssl_min_version),m_ssl_max_version(ssl_max_version),
-                m_cert_filepath(cert_filepath),m_key_filepath(key_filepath)
+               m_ssl_accept_retry(ssl_accept_max_retry) ,m_cert_filepath(cert_filepath),m_key_filepath(key_filepath)
         {
 
         }
@@ -91,6 +96,7 @@ namespace galay{
             this->m_ssl_max_version = other.m_ssl_max_version;
             this->m_cert_filepath = other.m_cert_filepath;
             this->m_key_filepath = other.m_key_filepath;
+            this->m_ssl_accept_retry = other.m_ssl_accept_retry;
         }
 
         Tcp_SSL_Server_Config(Tcp_SSL_Server_Config &&other)
@@ -100,12 +106,14 @@ namespace galay{
             this->m_ssl_max_version = other.m_ssl_max_version;
             this->m_cert_filepath = std::move(other.m_cert_filepath);
             this->m_key_filepath = std::move(other.m_key_filepath);
+            this->m_ssl_accept_retry = other.m_ssl_accept_retry;
         }
 
         std::string m_cert_filepath;
         std::string m_key_filepath;
         long m_ssl_min_version;
         long m_ssl_max_version;
+        uint32_t m_ssl_accept_retry;
     };
 
     class Tcp_Client_Config: public Config

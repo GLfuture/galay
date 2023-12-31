@@ -16,10 +16,6 @@ namespace galay
         
         }
 
-        // Http_Server(Http_Server_Config && config):Tcp_Server<REQ, RESP>(std::make_shared<Http_Server_Config>(config))
-        // {
-        
-        // }
     protected:
         void add_accept_task(std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func , uint32_t recv_len) override
         {
@@ -28,5 +24,17 @@ namespace galay
                 &this->m_tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len)));
         }
     };
+
+
+    template <Request REQ, Response RESP>
+    class Https_Server: public Tcp_SSL_Server<REQ,RESP>
+    {
+    public:
+        
+    };
+
 }
+
+
+
 #endif

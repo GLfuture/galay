@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/config/CMakeFiles/config.dir/./config.cc.o"
+			"path" : "src/client/CMakeFiles/client.dir/client.cc.o"
 		}
 	],
 	"backtrace" : 1,
@@ -14,7 +14,7 @@
 		],
 		"files" : 
 		[
-			"src/config/CMakeLists.txt"
+			"src/client/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -56,12 +56,12 @@
 			]
 		}
 	],
-	"id" : "config::@f954cdf8d5380f57b616",
-	"name" : "config",
+	"id" : "client::@8ca63c80a879d0067daa",
+	"name" : "client",
 	"paths" : 
 	{
-		"build" : "src/config",
-		"source" : "src/config"
+		"build" : "src/client",
+		"source" : "src/client"
 	},
 	"sourceGroups" : 
 	[
@@ -78,7 +78,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/config/config.cc",
+			"path" : "src/client/client.cc",
 			"sourceGroupIndex" : 0
 		}
 	],

@@ -75,10 +75,17 @@ ssize_t galay::iofunction::Tcp_Function::Send(int fd,const std::string& buffer,u
     return send(fd, buffer.c_str() ,len,0);
 }
 
-SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init(long min_version, long max_version)
+SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_Server(long min_version, long max_version)
 {
     SSL_Init_Env();
-    return SSL_Init_CTX(min_version,max_version);
+    return SSL_Init_CTX_Server(min_version,max_version);
+}
+
+
+SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_Client(long min_version, long max_version)
+{
+    SSL_Init_Env();
+    return SSL_Init_CTX_Client(min_version,max_version);
 }
 
 void galay::iofunction::Tcp_Function::SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath)
@@ -153,7 +160,15 @@ void galay::iofunction::Tcp_Function::SSL_Init_Env()
     SSL_load_error_strings();
 }
 
-SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX(long min_version,long max_version)
+SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX_Server(long min_version,long max_version)
+{
+    SSL_CTX* ctx = SSL_CTX_new(TLS_server_method()); // 创建客户端 SSL 上下文对象
+    SSL_CTX_set_min_proto_version(ctx, min_version); // 最小支持 TLSv1.3 协议
+    SSL_CTX_set_max_proto_version(ctx, max_version); // 最大支持 TLSv1.3 协议
+    return ctx;
+}
+
+SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX_Client(long min_version,long max_version)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method()); // 创建客户端 SSL 上下文对象
     SSL_CTX_set_min_proto_version(ctx, min_version); // 最小支持 TLSv1.3 协议
