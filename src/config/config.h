@@ -19,7 +19,7 @@ namespace galay{
     #define DEFAULT_SSL_SLEEP_MISC_PER_RETRY        1
 
 
-    
+
     enum IO_ENGINE{
         IO_SELECT,
         IO_POLL,
@@ -77,6 +77,8 @@ namespace galay{
         uint32_t m_recv_len = DEFAULT_RECV_LENGTH;
     };
 
+
+    //tcp ssl 配置类
     class Tcp_SSL_Server_Config: public Tcp_Server_Config
     {
     public:
@@ -128,14 +130,50 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Http_Server_Config>;
-        Http_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine):
-            Tcp_Server_Config(port , backlog , engine)
+        Http_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine)
+            :Tcp_Server_Config(port , backlog , engine)
         {
 
         }
 
+        Http_Server_Config(const Http_Server_Config &other)
+            :Tcp_Server_Config(other)
+        {
+
+        }
+
+        
+        Http_Server_Config(Http_Server_Config &&other)
+            :Tcp_Server_Config(std::forward<Http_Server_Config>(other))
+        {
+
+        }
     };
 
+    class Https_Server_Config: public Tcp_SSL_Server_Config
+    {
+    public:
+        using ptr = std::shared_ptr<Https_Server_Config>;
+        Https_Server_Config(uint16_t port,uint32_t backlog,IO_ENGINE engine , long ssl_min_version , long ssl_max_version
+            , uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath)
+                : Tcp_SSL_Server_Config(port,backlog,engine,ssl_min_version,ssl_max_version,ssl_accept_max_retry,cert_filepath,key_filepath)
+        {
+
+        }
+
+        Https_Server_Config(const Https_Server_Config &other)
+            :Tcp_SSL_Server_Config(other)
+        {
+            
+        }
+
+        
+        Https_Server_Config(Https_Server_Config &&other)
+            :Tcp_SSL_Server_Config(std::forward<Https_Server_Config>(other))
+        {
+
+        }
+    };
 
 
 };

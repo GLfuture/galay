@@ -32,6 +32,9 @@ namespace galay
 
     template <Request REQ, Response RESP>
     class Http_RW_Task;
+    
+    template <Request REQ, Response RESP>
+    class Https_RW_Task;
 
     template <Request REQ, Response RESP>
     class Task
@@ -293,7 +296,9 @@ namespace galay
         std::shared_ptr<RESP> m_resp;
         Callback m_func;
     };
+    
 
+    //tcp's ssl task
     template <Request REQ, Response RESP>
     class Tcp_SSL_Accept_Task : public Tcp_Accept_Task<REQ, RESP>
     {
@@ -341,7 +346,7 @@ namespace galay
         }
 
     protected:
-        void add_rw_task(int connfd, SSL *ssl)
+        virtual void add_rw_task(int connfd, SSL *ssl)
         {
             auto it = this->m_tasks->find(connfd);
             if (it != this->m_tasks->end())
@@ -368,7 +373,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl) : Tcp_RW_Task<REQ, RESP>(fd, engine, read_len), m_ssl(ssl)
+        Tcp_SSL_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl) 
+            : Tcp_RW_Task<REQ, RESP>(fd, engine, read_len), m_ssl(ssl)
         {
         }
 
@@ -442,6 +448,7 @@ namespace galay
     class Http_Accept_Task : public Tcp_Accept_Task<REQ, RESP>
     {
     public:
+        using ptr = std::shared_ptr<Http_Accept_Task>;
         Http_Accept_Task(int fd, Engine::ptr engine, std::unordered_map<int, std::shared_ptr<Task<REQ, RESP>>> *tasks,
                          std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func, uint32_t read_len) : Tcp_Accept_Task<REQ, RESP>(fd, engine, tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), read_len)
         {
@@ -469,6 +476,7 @@ namespace galay
     class Http_RW_Task : public Tcp_RW_Task<REQ, RESP>
     {
     public:
+        using ptr = std::shared_ptr<Http_RW_Task>;
         Http_RW_Task(int fd, Engine::ptr engine, uint32_t read_len) : Tcp_RW_Task<REQ, RESP>(fd, engine, read_len)
         {
         }
@@ -503,6 +511,81 @@ namespace galay
             }
             return 0;
         }
+    };
+
+    //https task
+    template <Request REQ, Response RESP>
+    class Https_Accept_Task : public Tcp_SSL_Accept_Task<REQ, RESP>
+    {
+    public:
+        using ptr = std::shared_ptr<Https_Accept_Task>;
+        Https_Accept_Task(int fd, Engine::ptr engine, std::unordered_map<int, std::shared_ptr<Task<REQ, RESP>>> *tasks,
+                            std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func, uint32_t read_len , uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : 
+                            Tcp_SSL_Accept_Task<REQ, RESP>(fd, engine, tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func)
+                                , read_len , ssl_accept_max_retry , ctx){}
+        
+        void add_rw_task(int connfd, SSL *ssl) override
+        {
+            auto it = this->m_tasks->find(connfd);
+            if (it != this->m_tasks->end())
+            {
+                it->second.reset(new Https_RW_Task<REQ, RESP>(connfd, this->m_engine, this->m_read_len , ssl));
+                auto task = std::static_pointer_cast<Https_RW_Task<REQ, RESP>>(it->second);
+                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            }
+            else
+            {
+                auto task = std::make_shared<Https_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len, ssl);
+                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+                this->m_tasks->emplace(connfd, task);
+            }
+        }
+
+
+    };
+
+    template <Request REQ, Response RESP>
+    class Https_RW_Task : public Tcp_SSL_RW_Task<REQ, RESP>
+    {
+    public:
+        using ptr = std::shared_ptr<Https_RW_Task>;
+        Https_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl)
+            :Tcp_SSL_RW_Task<REQ,RESP>(fd,engine,read_len,ssl)
+        {
+
+        }
+
+        int exec() override
+        {
+            switch (this->m_state)
+            {
+            case task_state::GY_TASK_READ:
+            {
+                if (Tcp_SSL_RW_Task<REQ, RESP>::read_package() == -1)
+                    return -1;
+                if (Tcp_SSL_RW_Task<REQ, RESP>::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                    return -1;
+                this->m_func(this->shared_from_this());
+                Tcp_SSL_RW_Task<REQ, RESP>::encode();
+                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
+                this->m_state = task_state::GY_TASK_WRITE;
+                break;
+            }
+            case task_state::GY_TASK_WRITE:
+            {
+                if (Tcp_SSL_RW_Task<REQ, RESP>::send_package() == -1)
+                    return -1;
+                this->m_engine->del_event(this->m_fd, EPOLLIN);
+                close(this->m_fd);
+                this->m_state = task_state::GY_TASK_STOP;
+                break;
+            }
+            default:
+                break;
+            }
+            return 0;
+        }
+        
     };
 
 }

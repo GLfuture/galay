@@ -203,6 +203,20 @@ test_tcp_ssl_server/fast:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_ssl_server.dir/build.make test/CMakeFiles/test_tcp_ssl_server.dir/build
 .PHONY : test_tcp_ssl_server/fast
 
+# Convenience name for target.
+test/CMakeFiles/test_https_server.dir/rule:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_https_server.dir/rule
+.PHONY : test/CMakeFiles/test_https_server.dir/rule
+
+# Convenience name for target.
+test_https_server: test/CMakeFiles/test_https_server.dir/rule
+.PHONY : test_https_server
+
+# fast build rule for target.
+test_https_server/fast:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/build
+.PHONY : test_https_server/fast
+
 test_http_server.o: test_http_server.cc.o
 .PHONY : test_http_server.o
 
@@ -226,6 +240,30 @@ test_http_server.s: test_http_server.cc.s
 test_http_server.cc.s:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/test_http_server.cc.s
 .PHONY : test_http_server.cc.s
+
+test_https_server.o: test_https_server.cc.o
+.PHONY : test_https_server.o
+
+# target to build an object file
+test_https_server.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
+.PHONY : test_https_server.cc.o
+
+test_https_server.i: test_https_server.cc.i
+.PHONY : test_https_server.i
+
+# target to preprocess a source file
+test_https_server.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/test_https_server.cc.i
+.PHONY : test_https_server.cc.i
+
+test_https_server.s: test_https_server.cc.s
+.PHONY : test_https_server.s
+
+# target to generate assembly for a file
+test_https_server.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/test_https_server.cc.s
+.PHONY : test_https_server.cc.s
 
 test_tcp_server.o: test_tcp_server.cc.o
 .PHONY : test_tcp_server.o
@@ -288,11 +326,15 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... test_http_server"
+	@echo "... test_https_server"
 	@echo "... test_tcp_server"
 	@echo "... test_tcp_ssl_server"
 	@echo "... test_http_server.o"
 	@echo "... test_http_server.i"
 	@echo "... test_http_server.s"
+	@echo "... test_https_server.o"
+	@echo "... test_https_server.i"
+	@echo "... test_https_server.s"
 	@echo "... test_tcp_server.o"
 	@echo "... test_tcp_server.i"
 	@echo "... test_tcp_server.s"
