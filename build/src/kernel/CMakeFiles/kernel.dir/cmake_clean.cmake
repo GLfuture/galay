@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/kernel.dir/engine.cc.o"
   "CMakeFiles/kernel.dir/engine.cc.o.d"
+  "CMakeFiles/kernel.dir/error.cc.o"
+  "CMakeFiles/kernel.dir/error.cc.o.d"
   "CMakeFiles/kernel.dir/iofunction.cc.o"
   "CMakeFiles/kernel.dir/iofunction.cc.o.d"
 )

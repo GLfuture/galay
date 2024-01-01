@@ -246,6 +246,11 @@ src/kernel/CMakeFiles/kernel.dir/engine.cc.o
  /usr/include/c++/12/pstl/execution_defs.h
  /home/gong/projects/galay/src/kernel/error.h
 
+src/kernel/CMakeFiles/kernel.dir/error.cc.o
+ /home/gong/projects/galay/src/kernel/error.cc
+ /usr/include/stdc-predef.h
+ /home/gong/projects/galay/src/kernel/error.h
+
 src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o
  /home/gong/projects/galay/src/kernel/iofunction.cc
  /usr/include/stdc-predef.h

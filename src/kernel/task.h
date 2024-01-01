@@ -96,7 +96,8 @@ namespace galay
             int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
             if (connfd <= 0)
                 return -1;
-            add_rw_task(connfd);
+            auto task = create_rw_task(connfd);
+            add_task(connfd,task);
             iofunction::Tcp_Function::IO_Set_No_Block(connfd);
             m_engine->add_event(connfd, EPOLLIN | EPOLLET);
             return 0;
@@ -104,23 +105,25 @@ namespace galay
 
         virtual ~Tcp_Accept_Task()
         {
+            if(m_tasks) m_tasks = nullptr;
         }
 
     protected:
-        virtual void add_rw_task(int connfd)
+        virtual Task<REQ,RESP>::ptr create_rw_task(int connfd)
         {
-            auto it = this->m_tasks->find(connfd);
-            if (it != this->m_tasks->end())
+            auto task = std::make_shared<Tcp_RW_Task<REQ, RESP>>(connfd, m_engine, this->m_read_len);
+            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            return task;
+        }
+
+        virtual void add_task(int connfd , Task<REQ,RESP>::ptr task)
+        {
+            auto it = m_tasks->find(connfd);
+            if(it == m_tasks->end())
             {
-                it->second.reset(new Tcp_RW_Task<REQ, RESP>(connfd, m_engine, this->m_read_len));
-                auto task = std::static_pointer_cast<Tcp_RW_Task<REQ, RESP>>(it->second);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-            }
-            else
-            {
-                auto task = std::make_shared<Tcp_RW_Task<REQ, RESP>>(connfd, m_engine, this->m_read_len);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
                 this->m_tasks->emplace(connfd, task);
+            }else{
+                it->second = task;
             }
         }
 
@@ -321,7 +324,6 @@ namespace galay
             SSL *ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx, connfd);
             iofunction::Tcp_Function::IO_Set_No_Block(connfd);
             int ret = iofunction::Tcp_Function::SSL_Accept(ssl);
-            
             if (ret == 0)
             {
                 close(this->m_fd);
@@ -333,7 +335,8 @@ namespace galay
                 std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SSL_SLEEP_MISC_PER_RETRY));
                 ret = iofunction::Tcp_Function::SSL_Accept(ssl);
             }
-            add_rw_task(connfd, ssl);
+            auto task = create_rw_task(connfd, ssl);
+            Tcp_Accept_Task<REQ, RESP>::add_task(connfd,task);
             this->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
             return 0;
         }
@@ -345,22 +348,14 @@ namespace galay
         }
 
     protected:
-        virtual void add_rw_task(int connfd, SSL *ssl)
+        virtual Task<REQ,RESP>::ptr create_rw_task(int connfd, SSL *ssl)
         {
-            auto it = this->m_tasks->find(connfd);
-            if (it != this->m_tasks->end())
-            {
-                it->second.reset(new Tcp_SSL_RW_Task<REQ, RESP>(connfd, this->m_engine, this->m_read_len, ssl));
-                auto task = std::static_pointer_cast<Tcp_SSL_RW_Task<REQ, RESP>>(it->second);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-            }
-            else
-            {
-                auto task = std::make_shared<Tcp_SSL_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len, ssl);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-                this->m_tasks->emplace(connfd, task);
-            }
+
+            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len, ssl);
+            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            return task;
         }
+
 
     protected:
         SSL_CTX *m_ctx;
@@ -452,21 +447,12 @@ namespace galay
         {
         }
 
-        void add_rw_task(int connfd)
+        Task<REQ,RESP>::ptr create_rw_task(int connfd) override
         {
-            auto it = this->m_tasks->find(connfd);
-            if (it != this->m_tasks->end())
-            {
-                it->second.reset(new Http_RW_Task<REQ, RESP>(connfd, this->m_engine, this->m_read_len));
-                auto task = std::static_pointer_cast<Http_RW_Task<REQ, RESP>>(it->second);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-            }
-            else
-            {
-                auto task = std::make_shared<Http_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-                this->m_tasks->emplace(connfd, task);
-            }
+
+            auto task = std::make_shared<Http_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len);
+            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            return task;
         }
     };
 
@@ -521,25 +507,14 @@ namespace galay
                             std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func, uint32_t read_len , uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : 
                             Tcp_SSL_Accept_Task<REQ, RESP>(fd, engine, tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func)
                                 , read_len , ssl_accept_max_retry , ctx){}
-        
-        void add_rw_task(int connfd, SSL *ssl) override
+    
+    private:
+        Task<REQ,RESP>::ptr create_rw_task(int connfd, SSL *ssl) override
         {
-            auto it = this->m_tasks->find(connfd);
-            if (it != this->m_tasks->end())
-            {
-                it->second.reset(new Https_RW_Task<REQ, RESP>(connfd, this->m_engine, this->m_read_len , ssl));
-                auto task = std::static_pointer_cast<Https_RW_Task<REQ, RESP>>(it->second);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-            }
-            else
-            {
-                auto task = std::make_shared<Https_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len, ssl);
-                task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
-                this->m_tasks->emplace(connfd, task);
-            }
+            auto task = std::make_shared<Https_RW_Task<REQ, RESP>>(connfd, this->m_engine, this->m_read_len, ssl);
+            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            return task;
         }
-
-
     };
 
     template <Request REQ, Response RESP>

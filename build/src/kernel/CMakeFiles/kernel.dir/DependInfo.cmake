@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/gong/projects/galay/src/kernel/engine.cc" "src/kernel/CMakeFiles/kernel.dir/engine.cc.o" "gcc" "src/kernel/CMakeFiles/kernel.dir/engine.cc.o.d"
+  "/home/gong/projects/galay/src/kernel/error.cc" "src/kernel/CMakeFiles/kernel.dir/error.cc.o" "gcc" "src/kernel/CMakeFiles/kernel.dir/error.cc.o.d"
   "/home/gong/projects/galay/src/kernel/iofunction.cc" "src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o" "gcc" "src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o.d"
   )
 

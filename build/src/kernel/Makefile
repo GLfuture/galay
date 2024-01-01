@@ -199,6 +199,30 @@ engine.cc.s:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/engine.cc.s
 .PHONY : engine.cc.s
 
+error.o: error.cc.o
+.PHONY : error.o
+
+# target to build an object file
+error.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/error.cc.o
+.PHONY : error.cc.o
+
+error.i: error.cc.i
+.PHONY : error.i
+
+# target to preprocess a source file
+error.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/error.cc.i
+.PHONY : error.cc.i
+
+error.s: error.cc.s
+.PHONY : error.s
+
+# target to generate assembly for a file
+error.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/error.cc.s
+.PHONY : error.cc.s
+
 iofunction.o: iofunction.cc.o
 .PHONY : iofunction.o
 
@@ -239,6 +263,9 @@ help:
 	@echo "... engine.o"
 	@echo "... engine.i"
 	@echo "... engine.s"
+	@echo "... error.o"
+	@echo "... error.i"
+	@echo "... error.s"
 	@echo "... iofunction.o"
 	@echo "... iofunction.i"
 	@echo "... iofunction.s"

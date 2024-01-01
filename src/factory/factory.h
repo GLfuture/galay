@@ -2,6 +2,10 @@
 #define GALAY_FACTORY_H
 
 #include "../config/config.h"
+#include "../server/tcpserver.hpp"
+#include "../server/httpserver.hpp"
+#include "../protocol/tcp.h"
+#include "../protocol/http.h"
 
 namespace galay
 {
@@ -40,6 +44,21 @@ namespace galay
         static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
             , long ssl_min_version , long ssl_max_version, uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath);
     };
+
+    class Server_Factory:public Factory_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Server_Factory>;
+        //tcp
+        static Tcp_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_server(Tcp_Server_Config::ptr config);
+        //tcp ssl
+        static Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config);
+        //http
+        static Http_Server<Http_Request,Http_Response>::ptr create_http_server(Http_Server_Config::ptr config);
+        //https
+        static Https_Server<Http_Request,Http_Response>::ptr create_https_server(Https_Server_Config::ptr config);
+    };
+
 }
 
 

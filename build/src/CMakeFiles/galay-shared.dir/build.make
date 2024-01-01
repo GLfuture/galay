@@ -76,6 +76,7 @@ galay__shared_OBJECTS =
 galay__shared_EXTERNAL_OBJECTS = \
 "/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/engine.cc.o" \
 "/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o" \
+"/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/error.cc.o" \
 "/home/gong/projects/galay/build/src/util/CMakeFiles/util.dir/stringutil.cc.o" \
 "/home/gong/projects/galay/build/src/util/CMakeFiles/util.dir/base64.cc.o" \
 "/home/gong/projects/galay/build/src/factory/CMakeFiles/factory.dir/factory.cc.o" \
@@ -87,6 +88,7 @@ galay__shared_EXTERNAL_OBJECTS = \
 
 src/libgalay-shared.so: src/kernel/CMakeFiles/kernel.dir/engine.cc.o
 src/libgalay-shared.so: src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o
+src/libgalay-shared.so: src/kernel/CMakeFiles/kernel.dir/error.cc.o
 src/libgalay-shared.so: src/util/CMakeFiles/util.dir/stringutil.cc.o
 src/libgalay-shared.so: src/util/CMakeFiles/util.dir/base64.cc.o
 src/libgalay-shared.so: src/factory/CMakeFiles/factory.dir/factory.cc.o
