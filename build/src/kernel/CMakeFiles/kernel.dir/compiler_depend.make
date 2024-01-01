@@ -245,6 +245,10 @@ src/kernel/CMakeFiles/kernel.dir/engine.cc.o: /home/gong/projects/galay/src/kern
   /usr/include/c++/12/pstl/execution_defs.h \
   /home/gong/projects/galay/src/kernel/error.h
 
+src/kernel/CMakeFiles/kernel.dir/error.cc.o: /home/gong/projects/galay/src/kernel/error.cc \
+  /usr/include/stdc-predef.h \
+  /home/gong/projects/galay/src/kernel/error.h
+
 src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o: /home/gong/projects/galay/src/kernel/iofunction.cc \
   /usr/include/stdc-predef.h \
   /home/gong/projects/galay/src/kernel/iofunction.h \
@@ -708,6 +712,8 @@ src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o: /home/gong/projects/galay/src/
 
 /usr/include/linux/posix_types.h:
 
+/usr/include/asm-generic/socket.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/floatn-common.h:
@@ -1154,8 +1160,6 @@ src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o: /home/gong/projects/galay/src/
 
 /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
 
-/usr/include/asm-generic/socket.h:
-
 /usr/include/c++/12/memory:
 
 /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
@@ -1267,6 +1271,8 @@ src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o: /home/gong/projects/galay/src/
 /usr/include/c++/12/bits/std_mutex.h:
 
 /usr/include/c++/12/bits/ranges_algobase.h:
+
+/home/gong/projects/galay/src/kernel/error.cc:
 
 /home/gong/projects/galay/src/kernel/iofunction.cc:
 

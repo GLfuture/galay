@@ -15,7 +15,8 @@ namespace galay
         };
 
         enum server_error{
-            GY_BIND_ERROR = GY_BASE_ERROR_END,  //socket
+            GY_BIND_ERROR = GY_BASE_ERROR_END,  //bind
+            GY_SETSOCKOPT_ERROR,                //setsockopt
             GY_LISTEN_ERROR,                    //listen
             GY_ACCEPT_ERROR,                    //accept
             GY_SSL_ACCEPT_ERROR,                //ssl_accept
@@ -28,8 +29,8 @@ namespace galay
         };
 
         enum client_error{
-            GY_CONNECT_ERROR = GY_SERVER_ERROR_END,                   //connect
-            GY_SSL_CONNECT_ERROR,               //ssl_connect
+            GY_CONNECT_ERROR = GY_SERVER_ERROR_END,                     //connect
+            GY_SSL_CONNECT_ERROR,                                       //ssl_connect
             GY_CLIENT_ERROR_RND
         };
 
@@ -40,11 +41,12 @@ namespace galay
 
         enum protocol_error{
             GY_PROTOCOL_INCOMPLETE = GY_ENGINE_ERROR_END,             //incomplete package
-            GY_PROTOCOL_BAD_REQUEST,                                                   //bad request
+            GY_PROTOCOL_BAD_REQUEST,                                  //bad request
+            GY_PROTOCOL_ERROR_END
         };
 
         extern const char* global_err_str[];
-        
+        extern const char* get_err_str(int error);
     }
 }
 

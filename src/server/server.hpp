@@ -31,7 +31,7 @@ namespace galay
         {
             return this->m_error;
         }
-
+    
         virtual void stop()
         {
             this->m_stop.store(true, std::memory_order::relaxed);
@@ -44,7 +44,7 @@ namespace galay
 
         virtual ~Server()
         {
-            this->m_engine->stop();
+            if(!m_stop) this->m_engine->stop();
         }
 
     protected:

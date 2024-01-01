@@ -258,7 +258,7 @@ src/CMakeFiles/galay-static.dir/all: src/client/CMakeFiles/client.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/galay-static.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/CMakeFiles/galay-static.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/galay-static.dir/rule
@@ -290,7 +290,7 @@ src/CMakeFiles/galay-shared.dir/all: src/client/CMakeFiles/client.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/galay-shared.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/CMakeFiles/galay-shared.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/galay-shared.dir/rule
@@ -311,12 +311,12 @@ src/CMakeFiles/galay-shared.dir/clean:
 src/kernel/CMakeFiles/kernel.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=6,7 "Built target kernel"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=6,7,8 "Built target kernel"
 .PHONY : src/kernel/CMakeFiles/kernel.dir/all
 
 # Build rule for subdir invocation for target.
 src/kernel/CMakeFiles/kernel.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 3
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/kernel/CMakeFiles/kernel.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : src/kernel/CMakeFiles/kernel.dir/rule
@@ -337,7 +337,7 @@ src/kernel/CMakeFiles/kernel.dir/clean:
 src/util/CMakeFiles/util.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=19,20 "Built target util"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=20,21 "Built target util"
 .PHONY : src/util/CMakeFiles/util.dir/all
 
 # Build rule for subdir invocation for target.
@@ -389,7 +389,7 @@ src/factory/CMakeFiles/factory.dir/clean:
 src/protocol/CMakeFiles/protocol.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/protocol/CMakeFiles/protocol.dir/build.make src/protocol/CMakeFiles/protocol.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/protocol/CMakeFiles/protocol.dir/build.make src/protocol/CMakeFiles/protocol.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=8,9 "Built target protocol"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=9,10 "Built target protocol"
 .PHONY : src/protocol/CMakeFiles/protocol.dir/all
 
 # Build rule for subdir invocation for target.
@@ -441,7 +441,7 @@ src/config/CMakeFiles/config.dir/clean:
 src/server/CMakeFiles/server.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/server/CMakeFiles/server.dir/build.make src/server/CMakeFiles/server.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/server/CMakeFiles/server.dir/build.make src/server/CMakeFiles/server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=10 "Built target server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=11 "Built target server"
 .PHONY : src/server/CMakeFiles/server.dir/all
 
 # Build rule for subdir invocation for target.
@@ -500,12 +500,12 @@ test/CMakeFiles/test_tcp_server.dir/all: src/server/CMakeFiles/server.dir/all
 test/CMakeFiles/test_tcp_server.dir/all: src/client/CMakeFiles/client.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=15,16 "Built target test_tcp_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=16,17 "Built target test_tcp_server"
 .PHONY : test/CMakeFiles/test_tcp_server.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/test_tcp_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 13
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_tcp_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/test_tcp_server.dir/rule
@@ -533,12 +533,12 @@ test/CMakeFiles/test_http_server.dir/all: src/server/CMakeFiles/server.dir/all
 test/CMakeFiles/test_http_server.dir/all: src/client/CMakeFiles/client.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_server.dir/build.make test/CMakeFiles/test_http_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=11,12 "Built target test_http_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=12,13 "Built target test_http_server"
 .PHONY : test/CMakeFiles/test_http_server.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/test_http_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 13
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_http_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/test_http_server.dir/rule
@@ -566,12 +566,12 @@ test/CMakeFiles/test_tcp_ssl_server.dir/all: src/server/CMakeFiles/server.dir/al
 test/CMakeFiles/test_tcp_ssl_server.dir/all: src/client/CMakeFiles/client.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_ssl_server.dir/build.make test/CMakeFiles/test_tcp_ssl_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_ssl_server.dir/build.make test/CMakeFiles/test_tcp_ssl_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=17,18 "Built target test_tcp_ssl_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=18,19 "Built target test_tcp_ssl_server"
 .PHONY : test/CMakeFiles/test_tcp_ssl_server.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/test_tcp_ssl_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 13
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_tcp_ssl_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/test_tcp_ssl_server.dir/rule
@@ -599,12 +599,12 @@ test/CMakeFiles/test_https_server.dir/all: src/server/CMakeFiles/server.dir/all
 test/CMakeFiles/test_https_server.dir/all: src/client/CMakeFiles/client.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=13,14 "Built target test_https_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=14,15 "Built target test_https_server"
 .PHONY : test/CMakeFiles/test_https_server.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/test_https_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 13
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_https_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/test_https_server.dir/rule

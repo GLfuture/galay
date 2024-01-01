@@ -74,3 +74,25 @@ galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_confi
 {
     return std::make_shared<Https_Server_Config>(port,backlog,engine,ssl_min_version,ssl_max_version,ssl_accept_max_retry,cert_filepath,key_filepath);
 }
+
+
+//server
+galay::Tcp_Server<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Server_Factory::create_tcp_server(Tcp_Server_Config::ptr config)
+{
+    return std::make_shared<Tcp_Server<galay::Tcp_Request,galay::Tcp_Response>>(config);
+}
+
+galay::Tcp_SSL_Server<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Server_Factory::create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config)
+{
+    return std::make_shared<Tcp_SSL_Server<galay::Tcp_Request,galay::Tcp_Response>>(config);
+}
+
+galay::Http_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server_Factory::create_http_server(Http_Server_Config::ptr config)
+{
+    return std::make_shared<Http_Server<galay::Http_Request,galay::Http_Response>>(config);
+}
+
+galay::Https_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server_Factory::create_https_server(Https_Server_Config::ptr config)
+{
+    return std::make_shared<Https_Server<galay::Http_Request,galay::Http_Response>>(config);
+}

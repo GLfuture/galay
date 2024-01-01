@@ -113,7 +113,12 @@ namespace galay
             {
                 return error::base_error::GY_SOCKET_ERROR;
             }
-            int ret = iofunction::Tcp_Function::Bind(this->m_fd, config->m_port);
+            int ret = iofunction::Tcp_Function::Reuse_Fd(this->m_fd);
+            if(ret == -1){
+                close(this->m_fd);
+                return error::server_error::GY_SETSOCKOPT_ERROR;
+            }
+            ret = iofunction::Tcp_Function::Bind(this->m_fd, config->m_port);
             if (ret == -1)
             {
                 close(this->m_fd);

@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "src/util/CMakeFiles/util.dir/./stringutil.cc.o"
+			"path" : "src/protocol/CMakeFiles/protocol.dir/http.cc.o"
 		},
 		{
-			"path" : "src/util/CMakeFiles/util.dir/./base64.cc.o"
+			"path" : "src/protocol/CMakeFiles/protocol.dir/tcp.cc.o"
 		}
 	],
 	"backtrace" : 1,
@@ -17,7 +17,7 @@
 		],
 		"files" : 
 		[
-			"src/util/CMakeLists.txt"
+			"src/protocol/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -60,12 +60,12 @@
 			]
 		}
 	],
-	"id" : "util::@6bc12a100e338ba65b7b",
-	"name" : "util",
+	"id" : "protocol::@265c2c6246c6aa3fd761",
+	"name" : "protocol",
 	"paths" : 
 	{
-		"build" : "src/util",
-		"source" : "src/util"
+		"build" : "src/protocol",
+		"source" : "src/protocol"
 	},
 	"sourceGroups" : 
 	[
@@ -83,13 +83,13 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/util/stringutil.cc",
+			"path" : "src/protocol/http.cc",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/util/base64.cc",
+			"path" : "src/protocol/tcp.cc",
 			"sourceGroupIndex" : 0
 		}
 	],

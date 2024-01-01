@@ -4,9 +4,9 @@
 test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /home/gong/projects/galay/test/test_https_server.cc
  /usr/include/stdc-predef.h
- /home/gong/projects/galay/src/protocol/http.h
- /home/gong/projects/galay/src/protocol/basic_protocol.h
- /usr/include/c++/12/string
+ /home/gong/projects/galay/src/factory/factory.h
+ /home/gong/projects/galay/src/config/config.h
+ /usr/include/c++/12/iostream
  /usr/include/x86_64-linux-gnu/c++/12/bits/c++config.h
  /usr/include/x86_64-linux-gnu/c++/12/bits/os_defines.h
  /usr/include/features.h
@@ -19,9 +19,11 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h
  /usr/include/x86_64-linux-gnu/c++/12/bits/cpu_defines.h
  /usr/include/c++/12/pstl/pstl_config.h
+ /usr/include/c++/12/ostream
+ /usr/include/c++/12/ios
+ /usr/include/c++/12/iosfwd
  /usr/include/c++/12/bits/stringfwd.h
  /usr/include/c++/12/bits/memoryfwd.h
- /usr/include/c++/12/bits/char_traits.h
  /usr/include/c++/12/bits/postypes.h
  /usr/include/c++/12/cwchar
  /usr/include/wchar.h
@@ -38,13 +40,21 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/x86_64-linux-gnu/bits/types/FILE.h
  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h
  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h
+ /usr/include/c++/12/exception
+ /usr/include/c++/12/bits/exception.h
+ /usr/include/c++/12/bits/exception_ptr.h
+ /usr/include/c++/12/bits/exception_defines.h
+ /usr/include/c++/12/bits/cxxabi_init_exception.h
+ /usr/include/c++/12/typeinfo
+ /usr/include/c++/12/bits/hash_bytes.h
+ /usr/include/c++/12/new
+ /usr/include/c++/12/bits/move.h
  /usr/include/c++/12/type_traits
+ /usr/include/c++/12/bits/nested_exception.h
+ /usr/include/c++/12/bits/char_traits.h
  /usr/include/c++/12/compare
  /usr/include/c++/12/concepts
  /usr/include/c++/12/bits/stl_construct.h
- /usr/include/c++/12/new
- /usr/include/c++/12/bits/exception.h
- /usr/include/c++/12/bits/move.h
  /usr/include/c++/12/bits/stl_iterator_base_types.h
  /usr/include/c++/12/bits/iterator_concepts.h
  /usr/include/c++/12/bits/ptr_traits.h
@@ -60,22 +70,54 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/x86_64-linux-gnu/bits/time64.h
  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h
- /usr/include/c++/12/bits/allocator.h
- /usr/include/x86_64-linux-gnu/c++/12/bits/c++allocator.h
- /usr/include/c++/12/bits/new_allocator.h
- /usr/include/c++/12/bits/functexcept.h
- /usr/include/c++/12/bits/exception_defines.h
- /usr/include/c++/12/bits/cpp_type_traits.h
  /usr/include/c++/12/bits/localefwd.h
  /usr/include/x86_64-linux-gnu/c++/12/bits/c++locale.h
  /usr/include/c++/12/clocale
  /usr/include/locale.h
  /usr/include/x86_64-linux-gnu/bits/locale.h
- /usr/include/c++/12/iosfwd
  /usr/include/c++/12/cctype
  /usr/include/ctype.h
  /usr/include/x86_64-linux-gnu/bits/endian.h
  /usr/include/x86_64-linux-gnu/bits/endianness.h
+ /usr/include/c++/12/bits/ios_base.h
+ /usr/include/c++/12/ext/atomicity.h
+ /usr/include/x86_64-linux-gnu/c++/12/bits/gthr.h
+ /usr/include/x86_64-linux-gnu/c++/12/bits/gthr-default.h
+ /usr/include/pthread.h
+ /usr/include/sched.h
+ /usr/include/x86_64-linux-gnu/bits/types/time_t.h
+ /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h
+ /usr/include/x86_64-linux-gnu/bits/sched.h
+ /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h
+ /usr/include/x86_64-linux-gnu/bits/cpu-set.h
+ /usr/include/time.h
+ /usr/include/x86_64-linux-gnu/bits/time.h
+ /usr/include/x86_64-linux-gnu/bits/timex.h
+ /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h
+ /usr/include/x86_64-linux-gnu/bits/types/clock_t.h
+ /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h
+ /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h
+ /usr/include/x86_64-linux-gnu/bits/types/timer_t.h
+ /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h
+ /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h
+ /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h
+ /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h
+ /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h
+ /usr/include/x86_64-linux-gnu/bits/struct_mutex.h
+ /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h
+ /usr/include/x86_64-linux-gnu/bits/setjmp.h
+ /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h
+ /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h
+ /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h
+ /usr/include/x86_64-linux-gnu/c++/12/bits/atomic_word.h
+ /usr/include/x86_64-linux-gnu/sys/single_threaded.h
+ /usr/include/c++/12/bits/locale_classes.h
+ /usr/include/c++/12/string
+ /usr/include/c++/12/bits/allocator.h
+ /usr/include/x86_64-linux-gnu/c++/12/bits/c++allocator.h
+ /usr/include/c++/12/bits/new_allocator.h
+ /usr/include/c++/12/bits/functexcept.h
+ /usr/include/c++/12/bits/cpp_type_traits.h
  /usr/include/c++/12/bits/ostream_insert.h
  /usr/include/c++/12/bits/cxxabi_forced.h
  /usr/include/c++/12/bits/stl_iterator.h
@@ -97,7 +139,6 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/c++/12/bits/alloc_traits.h
  /usr/include/c++/12/string_view
  /usr/include/c++/12/bits/functional_hash.h
- /usr/include/c++/12/bits/hash_bytes.h
  /usr/include/c++/12/bits/ranges_base.h
  /usr/include/c++/12/bits/max_size_type.h
  /usr/include/c++/12/numbers
@@ -108,25 +149,12 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/x86_64-linux-gnu/bits/waitflags.h
  /usr/include/x86_64-linux-gnu/bits/waitstatus.h
  /usr/include/x86_64-linux-gnu/sys/types.h
- /usr/include/x86_64-linux-gnu/bits/types/clock_t.h
- /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h
- /usr/include/x86_64-linux-gnu/bits/types/time_t.h
- /usr/include/x86_64-linux-gnu/bits/types/timer_t.h
  /usr/include/endian.h
  /usr/include/x86_64-linux-gnu/bits/byteswap.h
  /usr/include/x86_64-linux-gnu/bits/uintn-identity.h
  /usr/include/x86_64-linux-gnu/sys/select.h
  /usr/include/x86_64-linux-gnu/bits/select.h
  /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h
- /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h
- /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h
- /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h
- /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h
- /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h
- /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h
- /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h
- /usr/include/x86_64-linux-gnu/bits/struct_mutex.h
- /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h
  /usr/include/alloca.h
  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h
  /usr/include/c++/12/bits/std_abs.h
@@ -147,42 +175,6 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/x86_64-linux-gnu/bits/types/error_t.h
  /usr/include/c++/12/bits/charconv.h
  /usr/include/c++/12/bits/basic_string.tcc
- /usr/include/c++/12/memory
- /usr/include/c++/12/bits/stl_uninitialized.h
- /usr/include/c++/12/bits/stl_tempbuf.h
- /usr/include/c++/12/bits/stl_raw_storage_iter.h
- /usr/include/c++/12/bits/align.h
- /usr/include/c++/12/bit
- /usr/include/c++/12/bits/uses_allocator.h
- /usr/include/c++/12/bits/unique_ptr.h
- /usr/include/c++/12/tuple
- /usr/include/c++/12/ostream
- /usr/include/c++/12/ios
- /usr/include/c++/12/exception
- /usr/include/c++/12/bits/exception_ptr.h
- /usr/include/c++/12/bits/cxxabi_init_exception.h
- /usr/include/c++/12/typeinfo
- /usr/include/c++/12/bits/nested_exception.h
- /usr/include/c++/12/bits/ios_base.h
- /usr/include/c++/12/ext/atomicity.h
- /usr/include/x86_64-linux-gnu/c++/12/bits/gthr.h
- /usr/include/x86_64-linux-gnu/c++/12/bits/gthr-default.h
- /usr/include/pthread.h
- /usr/include/sched.h
- /usr/include/x86_64-linux-gnu/bits/sched.h
- /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h
- /usr/include/x86_64-linux-gnu/bits/cpu-set.h
- /usr/include/time.h
- /usr/include/x86_64-linux-gnu/bits/time.h
- /usr/include/x86_64-linux-gnu/bits/timex.h
- /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h
- /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h
- /usr/include/x86_64-linux-gnu/bits/setjmp.h
- /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h
- /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h
- /usr/include/x86_64-linux-gnu/c++/12/bits/atomic_word.h
- /usr/include/x86_64-linux-gnu/sys/single_threaded.h
- /usr/include/c++/12/bits/locale_classes.h
  /usr/include/c++/12/bits/locale_classes.tcc
  /usr/include/c++/12/system_error
  /usr/include/x86_64-linux-gnu/c++/12/bits/error_constants.h
@@ -200,6 +192,17 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/c++/12/bits/locale_facets.tcc
  /usr/include/c++/12/bits/basic_ios.tcc
  /usr/include/c++/12/bits/ostream.tcc
+ /usr/include/c++/12/istream
+ /usr/include/c++/12/bits/istream.tcc
+ /usr/include/c++/12/memory
+ /usr/include/c++/12/bits/stl_uninitialized.h
+ /usr/include/c++/12/bits/stl_tempbuf.h
+ /usr/include/c++/12/bits/stl_raw_storage_iter.h
+ /usr/include/c++/12/bits/align.h
+ /usr/include/c++/12/bit
+ /usr/include/c++/12/bits/uses_allocator.h
+ /usr/include/c++/12/bits/unique_ptr.h
+ /usr/include/c++/12/tuple
  /usr/include/c++/12/bits/shared_ptr.h
  /usr/include/c++/12/bits/shared_ptr_base.h
  /usr/include/c++/12/bits/allocated_ptr.h
@@ -239,26 +242,6 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/c++/12/bits/uses_allocator_args.h
  /usr/include/c++/12/pstl/glue_memory_defs.h
  /usr/include/c++/12/pstl/execution_defs.h
- /home/gong/projects/galay/src/kernel/error.h
- /usr/include/c++/12/vector
- /usr/include/c++/12/bits/stl_vector.h
- /usr/include/c++/12/bits/stl_bvector.h
- /usr/include/c++/12/bits/vector.tcc
- /usr/include/c++/12/unordered_map
- /usr/include/c++/12/bits/hashtable.h
- /usr/include/c++/12/bits/hashtable_policy.h
- /usr/include/c++/12/bits/enable_special_members.h
- /usr/include/c++/12/bits/node_handle.h
- /usr/include/c++/12/bits/unordered_map.h
- /usr/include/c++/12/bits/erase_if.h
- /usr/include/assert.h
- /usr/include/c++/12/iostream
- /usr/include/c++/12/istream
- /usr/include/c++/12/bits/istream.tcc
- /home/gong/projects/galay/src/server/httpserver.hpp
- /home/gong/projects/galay/src/server/tcpserver.hpp
- /home/gong/projects/galay/src/server/server.hpp
- /home/gong/projects/galay/src/config/config.h
  /usr/include/c++/12/cxxabi.h
  /usr/include/x86_64-linux-gnu/c++/12/bits/cxxabi_tweaks.h
  /usr/include/c++/12/fstream
@@ -268,11 +251,25 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /usr/include/c++/12/bits/fstream.tcc
  /usr/include/c++/12/functional
  /usr/include/c++/12/bits/std_function.h
+ /usr/include/c++/12/unordered_map
+ /usr/include/c++/12/bits/hashtable.h
+ /usr/include/c++/12/bits/hashtable_policy.h
+ /usr/include/c++/12/bits/enable_special_members.h
+ /usr/include/c++/12/bits/node_handle.h
+ /usr/include/c++/12/bits/unordered_map.h
+ /usr/include/c++/12/bits/erase_if.h
+ /usr/include/c++/12/vector
+ /usr/include/c++/12/bits/stl_vector.h
+ /usr/include/c++/12/bits/stl_bvector.h
+ /usr/include/c++/12/bits/vector.tcc
  /usr/include/c++/12/array
  /usr/include/c++/12/bits/stl_algo.h
  /usr/include/c++/12/bits/algorithmfwd.h
  /usr/include/c++/12/bits/stl_heap.h
  /usr/include/c++/12/bits/uniform_int_dist.h
+ /home/gong/projects/galay/src/server/tcpserver.hpp
+ /home/gong/projects/galay/src/server/server.hpp
+ /home/gong/projects/galay/src/config/config.h
  /home/gong/projects/galay/src/kernel/iofunction.h
  /usr/include/arpa/inet.h
  /usr/include/netinet/in.h
@@ -399,8 +396,13 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o
  /home/gong/projects/galay/src/kernel/iofunction.h
  /home/gong/projects/galay/src/kernel/basic_concepts.h
  /home/gong/projects/galay/src/kernel/engine.h
- /home/gong/projects/galay/src/factory/factory.h
- /home/gong/projects/galay/src/config/config.h
+ /home/gong/projects/galay/src/server/httpserver.hpp
+ /home/gong/projects/galay/src/server/tcpserver.hpp
+ /home/gong/projects/galay/src/protocol/tcp.h
+ /home/gong/projects/galay/src/protocol/basic_protocol.h
+ /home/gong/projects/galay/src/kernel/error.h
+ /home/gong/projects/galay/src/protocol/http.h
+ /usr/include/assert.h
  /usr/include/signal.h
  /usr/include/x86_64-linux-gnu/bits/signum-generic.h
  /usr/include/x86_64-linux-gnu/bits/signum-arch.h

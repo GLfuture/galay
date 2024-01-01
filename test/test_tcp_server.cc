@@ -1,6 +1,5 @@
-#include "../src/server/tcpserver.hpp"
-#include "../src/protocol/tcp.h"
 #include "../src/factory/factory.h"
+#include "../src/kernel/error.h"
 #include <signal.h>
 using namespace galay;
 
@@ -10,20 +9,20 @@ void func(Task<Tcp_Request,Tcp_Response>::ptr task)
     task->get_resp()->get_buffer() = "world!";
 }
 
-Tcp_Server<Tcp_Request,Tcp_Response>::ptr server = std::make_shared<Tcp_Server<Tcp_Request,Tcp_Response>>(Config_Factory::create_tcp_server_config(Tcp_Server_Config(8080,10,IO_ENGINE::IO_EPOLL)));
-
-void signal_handle(int sign)
+void sig_handle(int sig)
 {
-    server->stop();
+
 }
 
 int main()
 {
-    signal(SIGINT,signal_handle);
+    signal(SIGINT,sig_handle);
+    auto config = Config_Factory::create_tcp_server_config(8080);
+    auto server = Server_Factory::create_tcp_server(config);
     server->start(func);
     if(server->get_error() == error::server_error::GY_ENGINE_HAS_ERROR)
     {
-        std::cout<<server->get_engine()->get_error()<<std::endl;
+       std::cout<<error::get_err_str(server->get_engine()->get_error())<<std::endl;
     }
     return 0;
 }
