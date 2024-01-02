@@ -2,6 +2,7 @@
 #define GALAY_TCP_SERVER_HPP
 
 #include "server.hpp"
+#include "../kernel/tcptask.h"
 
 namespace galay
 {
@@ -24,7 +25,8 @@ namespace galay
                 break;
             case IO_ENGINE::IO_EPOLL:
             {
-                this->m_engine = std::make_shared<Epoll_Engine>(config->m_event_size, config->m_event_time_out);
+                auto engine = std::make_shared<Epoll_Engine>(config->m_event_size, config->m_event_time_out);
+                this->m_scheduler = std::make_shared<IO_Scheduler<REQ,RESP>>(engine);
                 break;
             }
             case IO_ENGINE::IO_URING:
@@ -48,7 +50,7 @@ namespace galay
         //         break;
         //     case IO_ENGINE::IO_EPOLL:
         //     {
-        //         this->m_engine = std::make_shared<Epoll_Engine>(config.m_event_size, config.m_event_time_out);
+        //         this->m_scheduler->m_engine = std::make_shared<Epoll_Engine>(config.m_event_size, config.m_event_time_out);
         //         break;
         //     }
         //     case IO_ENGINE::IO_URING:
@@ -71,7 +73,7 @@ namespace galay
             add_accept_task(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func),config->m_recv_len);
             while (1)
             {
-                int ret = this->m_engine->event_check();
+                int ret = this->m_scheduler->m_engine->event_check();
                 if (this->m_stop)
                     break;
                 if (ret == -1)
@@ -80,15 +82,15 @@ namespace galay
                     this->m_error = error::server_error::GY_ENGINE_HAS_ERROR;
                     return;
                 }
-                epoll_event *events = (epoll_event *)this->m_engine->result();
-                int nready = this->m_engine->get_active_event_num();
+                epoll_event *events = (epoll_event *)this->m_scheduler->m_engine->result();
+                int nready = this->m_scheduler->m_engine->get_active_event_num();
                 for (int i = 0; i < nready; i++)
                 {
-                    typename Task<REQ, RESP>::ptr task = this->m_tasks[events[i].data.fd];
+                    typename Task<REQ, RESP>::ptr task = this->m_scheduler->m_tasks->at(events[i].data.fd);
                     task->exec();
                     if (task->get_state() == task_state::GY_TASK_STOP)
                     {
-                        this->m_tasks.erase(events[i].data.fd);
+                        this->m_scheduler->m_tasks->erase(events[i].data.fd);
                     }
                 }
             }
@@ -96,13 +98,13 @@ namespace galay
 
         virtual ~Tcp_Server()
         {
-            for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
+            for (auto it = this->m_scheduler->m_tasks->begin(); it != this->m_scheduler->m_tasks->end(); it++)
             {
-                this->m_engine->del_event(it->first, EPOLLIN);
+                this->m_scheduler->m_engine->del_event(it->first, EPOLLIN);
                 close(it->first);
                 it->second.reset();
             }
-            this->m_tasks.clear();
+            this->m_scheduler->m_tasks->clear();
         }
 
     protected:
@@ -136,9 +138,9 @@ namespace galay
 
         virtual void add_accept_task(std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func , uint32_t recv_len)
         {
-            this->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
-            this->m_tasks.emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task<REQ, RESP>>(this->m_fd, this->m_engine, 
-                &this->m_tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len)));
+            this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
+            this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task<REQ, RESP>>(this->m_fd, this->m_scheduler
+                , std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len)));
         }
     };
 
@@ -174,10 +176,10 @@ namespace galay
     protected:
         void add_accept_task(std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func , uint32_t recv_len) override
         {
-            this->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
+            this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
             Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
-            this->m_tasks.emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task<REQ, RESP>>(this->m_fd, this->m_engine, 
-                &this->m_tasks, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len,config->m_ssl_accept_retry,this->m_ctx)));
+            this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task<REQ, RESP>>(this->m_fd, this->m_scheduler
+                , std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), recv_len,config->m_ssl_accept_retry,this->m_ctx)));
         }
     protected:
         SSL_CTX *m_ctx = nullptr;

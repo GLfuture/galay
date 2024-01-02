@@ -4,12 +4,8 @@
 #include "../config/config.h"
 #include "../kernel/iofunction.h"
 #include "../kernel/error.h"
-#include "../kernel/engine.h"
-#include "../kernel/basic_concepts.h"
-#include "../kernel/task.h"
+#include "../kernel/scheduler.h"
 #include <functional>
-#include <concepts>
-#include <unordered_map>
 #include <atomic>
 #include <type_traits>
 
@@ -37,14 +33,14 @@ namespace galay
             this->m_stop.store(true, std::memory_order::relaxed);
         }
 
-        Engine::ptr get_engine()
+        IO_Scheduler<REQ,RESP>::ptr get_scheduler()
         {
-            return this->m_engine;
+            return this->m_scheduler;
         }
 
         virtual ~Server()
         {
-            if(!m_stop) this->m_engine->stop();
+            if(!m_stop) this->m_scheduler->m_engine->stop();
         }
 
     protected:
@@ -52,8 +48,7 @@ namespace galay
         Config::ptr m_config;
         int m_error = error::base_error::GY_SUCCESS;
         std::atomic_bool m_stop;
-        Engine::ptr m_engine;
-        std::unordered_map<int, std::shared_ptr<Task<REQ,RESP>>> m_tasks;
+        IO_Scheduler<REQ,RESP>::ptr m_scheduler;
     };
 
     

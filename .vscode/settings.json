@@ -59,6 +59,8 @@
         "semaphore": "cpp",
         "sstream": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "coroutine": "cpp",
+        "optional": "cpp"
     }
 }
