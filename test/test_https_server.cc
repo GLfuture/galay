@@ -9,6 +9,7 @@ void func(Task<Http_Request,Http_Response>::ptr task)
     task->get_resp()->get_version() = "HTTP/1.1";
     task->get_resp()->set_head_kv_pair({"Connection","close"});
     task->get_resp()->get_body() = "<!DOCTYPE html><html><body>Hello, World!</body></html>";
+    task->control_task_behavior(Task_Status::GY_TASK_WRITE);
 }
 
 void sig_handle(int sig)

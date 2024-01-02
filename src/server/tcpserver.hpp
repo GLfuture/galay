@@ -88,7 +88,7 @@ namespace galay
                 {
                     typename Task<REQ, RESP>::ptr task = this->m_scheduler->m_tasks->at(events[i].data.fd);
                     task->exec();
-                    if (task->get_state() == task_state::GY_TASK_STOP)
+                    if (task->get_state() == Task_Status::GY_TASK_STOP)
                     {
                         this->m_scheduler->m_tasks->erase(events[i].data.fd);
                     }
