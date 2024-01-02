@@ -55,6 +55,7 @@ namespace galay
     class Net_Awaiter: public Awaiter_Base
     {
     public:
+        using ptr = std::shared_ptr<Net_Awaiter>;
         Net_Awaiter(Task<REQ,RESP>::ptr task)
             : Awaiter_Base<REQ,RESP>(task)
         {

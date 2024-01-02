@@ -298,11 +298,11 @@ test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o: \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/engine.h \
  /usr/include/x86_64-linux-gnu/sys/epoll.h \
  /usr/include/x86_64-linux-gnu/bits/epoll.h \
- /home/gong/projects/galay/test/../src/factory/../server/../kernel/tcptask.h \
+ /home/gong/projects/galay/test/../src/factory/../server/../kernel/task_tcp.h \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/scheduler.h \
  /home/gong/projects/galay/test/../src/factory/../server/httpserver.hpp \
- /home/gong/projects/galay/test/../src/factory/../server/../kernel/httptask.h \
- /home/gong/projects/galay/test/../src/factory/../server/../kernel/tcptask.h \
+ /home/gong/projects/galay/test/../src/factory/../server/../kernel/task_http.h \
+ /home/gong/projects/galay/test/../src/factory/../server/../kernel/task_tcp.h \
  /home/gong/projects/galay/test/../src/factory/../server/tcpserver.hpp \
  /home/gong/projects/galay/test/../src/factory/../protocol/tcp.h \
  /home/gong/projects/galay/test/../src/factory/../protocol/basic_protocol.h \
