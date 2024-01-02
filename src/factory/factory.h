@@ -59,6 +59,13 @@ namespace galay
         static Https_Server<Http_Request,Http_Response>::ptr create_https_server(Https_Server_Config::ptr config);
     };
 
+    class Client_Factory: public Factory_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Client_Factory>;
+        
+    };
+
 }
 
 

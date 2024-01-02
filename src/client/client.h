@@ -11,14 +11,22 @@ namespace galay
     class Client
     {
     public:
-        Client()
+        Client(IO_Scheduler<REQ,RESP>::ptr scheduler)
+            :m_scheduler(scheduler)
         {
             
         }
+
+        int get_error()
+        {
+            return this->m_error;
+        }
+
+        virtual ~Client(){}
     protected:
         int m_fd;
-        Engine::ptr m_engine;
-
+        int m_error;
+        IO_Scheduler<REQ,RESP>::ptr m_scheduler;
     };
 
 

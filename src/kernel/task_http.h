@@ -1,7 +1,7 @@
-#ifndef GALAY_HTTP_TASK_H
-#define GALAY_HTTP_TASK_H
+#ifndef GALAY_TASK_HTTP_H
+#define GALAY_TASK_HTTP_H
 
-#include "tcptask.h"
+#include "task_tcp.h"
 namespace galay
 {
     template <Request REQ, Response RESP>

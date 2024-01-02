@@ -193,37 +193,6 @@ namespace galay
         std::coroutine_handle<promise_type> m_handle = nullptr;
     };
 
-    // 主协程
-    template <typename RESULT>
-    class MainCoroutine : public Coroutine<RESULT>
-    {
-    public:
-        using promise_type = Promise<RESULT>;
-
-        MainCoroutine<RESULT> &operator=(MainCoroutine<RESULT> &&other)
-        {
-            this->m_handle = other.m_handle;
-            return *this;
-        }
-
-        MainCoroutine() {}
-
-        MainCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept
-        {
-            this->m_handle = co_handle;
-        }
-
-        MainCoroutine(MainCoroutine<RESULT> &&other) noexcept
-        {
-            this->m_handle = other.m_handle;
-        }
-
-        static MainCoroutine<RESULT> creat(std::function<MainCoroutine<RESULT>()> &&func)
-        {
-            return MainCoroutine<RESULT>(func());
-        }
-    };
-
 }
 
 #endif

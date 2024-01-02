@@ -1,5 +1,5 @@
-#ifndef GALAY_TCP_TASK_H
-#define GALAY_TCP_TASK_H
+#ifndef GALAY_TASK_TCP_H
+#define GALAY_TASK_TCP_H
 
 #include "task.h"
 #include "scheduler.h"

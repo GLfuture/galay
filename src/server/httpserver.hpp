@@ -1,7 +1,7 @@
 #ifndef GALAY_HTTP_SERVER_HPP
 #define GALAY_HTTP_SERVER_HPP
 
-#include "../kernel/httptask.h"
+#include "../kernel/task_http.h"
 #include "tcpserver.hpp"
 
 namespace galay
