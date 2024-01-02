@@ -14,7 +14,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Awaiter_Base>;
 
-        Awaiter_Base(Task<REQ,RESP>::ptr task)
+        Awaiter_Base(Task_Base<REQ,RESP>::ptr task)
         {
             this->m_task = task;
         }
@@ -48,7 +48,7 @@ namespace galay
         }
     protected:
         std::coroutine_handle<> m_handle = nullptr;
-        Task<REQ,RESP>::ptr m_task = nullptr;
+        Task_Base<REQ,RESP>::ptr m_task = nullptr;
     };
     
     template<Request REQ , Response RESP , typename RESULT>
@@ -56,7 +56,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Net_Awaiter>;
-        Net_Awaiter(Task<REQ,RESP>::ptr task)
+        Net_Awaiter(Task_Base<REQ,RESP>::ptr task)
             : Awaiter_Base<REQ,RESP>(task)
         {
 

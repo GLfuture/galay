@@ -21,7 +21,7 @@ namespace galay
             m_stop.store(false, std::memory_order::relaxed);
         }
 
-        virtual void start(std::function<void(std::shared_ptr<Task<REQ,RESP>>)> &&func) = 0;
+        virtual void start(std::function<void(std::shared_ptr<Task_Base<REQ,RESP>>)> &&func) = 0;
 
         virtual int get_error()
         {

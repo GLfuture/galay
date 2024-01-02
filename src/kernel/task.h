@@ -10,6 +10,7 @@
 #include "basic_concepts.h"
 #include "error.h"
 #include "engine.h"
+#include "coroutine.h"
 
 
 namespace galay
@@ -38,10 +39,10 @@ namespace galay
     class Https_RW_Task;
 
     template <Request REQ, Response RESP>
-    class Task
+    class Task_Base
     {
     public:
-        using ptr = std::shared_ptr<Task>;
+        using ptr = std::shared_ptr<Task_Base>;
 
         virtual std::shared_ptr<REQ> get_req() = 0;
         virtual std::shared_ptr<RESP> get_resp() = 0;
@@ -59,11 +60,17 @@ namespace galay
             return this->m_error;
         }
 
-        virtual ~Task() {}
+        virtual ~Task_Base() {}
 
     protected:
         int m_status;
         int m_error;
+    };
+
+    template<typename T = void>
+    class Task: public Coroutine<T>
+    {
+
     };
 }
 
