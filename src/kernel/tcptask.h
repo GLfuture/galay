@@ -15,11 +15,16 @@ namespace galay
                         std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func, uint32_t read_len)
         {
             this->m_fd = fd;
-            this->m_status = task_state::GY_TASK_READ;
+            this->m_status = Task_Status::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
             this->m_scheduler = scheduler;
             this->m_func = func;
             this->m_read_len = read_len;
+        }
+
+        void control_task_behavior(Task_Status status) override
+        {
+
         }
 
         std::shared_ptr<RESP> get_resp() override
@@ -90,7 +95,7 @@ namespace galay
         {
             this->m_req = std::make_shared<REQ>();
             this->m_resp = std::make_shared<RESP>();
-            this->m_status = task_state::GY_TASK_READ;
+            this->m_status = Task_Status::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
             this->m_engine = engine;
             this->m_fd = fd;
@@ -98,6 +103,27 @@ namespace galay
             this->m_temp = new char[read_len];
         }
 
+        void control_task_behavior(Task_Status status) override
+        {
+            switch (status)
+            {
+            case Task_Status::GY_TASK_WRITE:
+            {
+                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
+                this->m_status = Task_Status::GY_TASK_WRITE ;
+                break;
+            }
+            case Task_Status::GY_TASK_READ:
+            {
+                this->m_engine->mod_event(this->m_fd, EPOLLIN);
+                this->m_status = Task_Status::GY_TASK_READ;
+                break;
+            }
+            default:
+                break;
+            }
+        }
+        
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
@@ -110,7 +136,7 @@ namespace galay
         {
             switch (this->m_status)
             {
-            case task_state::GY_TASK_READ:
+            case Task_Status::GY_TASK_READ:
             {
                 if (read_package() == -1)
                     return -1;
@@ -118,16 +144,13 @@ namespace galay
                     return -1;
                 this->m_func(this->shared_from_this());
                 encode();
-                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_status = task_state::GY_TASK_WRITE;
                 break;
             }
-            case task_state::GY_TASK_WRITE:
+            case Task_Status::GY_TASK_WRITE:
             {
                 if (send_package() == -1)
                     return -1;
-                this->m_engine->mod_event(this->m_fd, EPOLLIN);
-                this->m_status = task_state::GY_TASK_READ;
+                control_task_behavior(Task_Status::GY_TASK_READ);
                 break;
             }
             default:
@@ -187,7 +210,7 @@ namespace galay
             {
                 close(this->m_fd);
                 this->m_engine->del_event(this->m_fd, EPOLLIN);
-                this->m_status = task_state::GY_TASK_STOP;
+                this->m_status = Task_Status::GY_TASK_STOP;
                 return -1;
             }
             else if (len == -1)
@@ -200,7 +223,7 @@ namespace galay
                 {
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
                     close(this->m_fd);
-                    this->m_status = task_state::GY_TASK_STOP;
+                    this->m_status = Task_Status::GY_TASK_STOP;
                     return -1;
                 }
             }
@@ -222,7 +245,7 @@ namespace galay
                 {
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
                     close(this->m_fd);
-                    this->m_status = task_state::GY_TASK_STOP;
+                    this->m_status = Task_Status::GY_TASK_STOP;
                     return -1;
                 }
             }
@@ -327,7 +350,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
             {
                 close(this->m_fd);
                 this->m_engine->del_event(this->m_fd, EPOLLIN);
-                this->m_status = task_state::GY_TASK_STOP;
+                this->m_status = Task_Status::GY_TASK_STOP;
                 return -1;
             }
             else if (len == -1)
@@ -340,7 +363,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 {
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
                     close(this->m_fd);
-                    this->m_status = task_state::GY_TASK_STOP;
+                    this->m_status = Task_Status::GY_TASK_STOP;
                     return -1;
                 }
             }
@@ -362,7 +385,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 {
                     this->m_engine->del_event(this->m_fd, EPOLLIN);
                     close(this->m_fd);
-                    this->m_status = task_state::GY_TASK_STOP;
+                    this->m_status = Task_Status::GY_TASK_STOP;
                     return -1;
                 }
             }
@@ -384,6 +407,19 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
         {
             this->m_fd = fd;
             this->m_status = GY_TASK_CONNECT;
+        }
+
+        std::shared_ptr<REQ> get_req() override
+        {
+            return nullptr;
+        }
+        std::shared_ptr<RESP> get_resp()  override
+        {
+            return nullptr;
+        }
+        void control_task_behavior(Task_Status status) override
+        {
+
         }
 
         int exec() override

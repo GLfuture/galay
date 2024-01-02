@@ -14,7 +14,7 @@
 
 namespace galay
 {
-    enum task_state
+    enum Task_Status
     {
         GY_TASK_STOP,
         GY_TASK_CONNECT,
@@ -45,6 +45,7 @@ namespace galay
 
         virtual std::shared_ptr<REQ> get_req() = 0;
         virtual std::shared_ptr<RESP> get_resp() = 0;
+        virtual void control_task_behavior(Task_Status status) = 0;
 
         // return -1 error 0 success
         virtual int exec() = 0;

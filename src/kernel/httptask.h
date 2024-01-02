@@ -36,7 +36,7 @@ namespace galay
         {
             switch (this->m_status)
             {
-            case task_state::GY_TASK_READ:
+            case Task_Status::GY_TASK_READ:
             {
                 if (Tcp_RW_Task<REQ, RESP>::read_package() == -1)
                     return -1;
@@ -45,16 +45,16 @@ namespace galay
                 this->m_func(this->shared_from_this());
                 Tcp_RW_Task<REQ, RESP>::encode();
                 this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_status = task_state::GY_TASK_WRITE;
+                this->m_status = Task_Status::GY_TASK_WRITE;
                 break;
             }
-            case task_state::GY_TASK_WRITE:
+            case Task_Status::GY_TASK_WRITE:
             {
                 if (Tcp_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
                 this->m_engine->del_event(this->m_fd, EPOLLIN);
                 close(this->m_fd);
-                this->m_status = task_state::GY_TASK_STOP;
+                this->m_status = Task_Status::GY_TASK_STOP;
                 break;
             }
             default:
@@ -96,7 +96,7 @@ namespace galay
         {
             switch (this->m_status)
             {
-            case task_state::GY_TASK_READ:
+            case Task_Status::GY_TASK_READ:
             {
                 if (Tcp_SSL_RW_Task<REQ, RESP>::read_package() == -1)
                     return -1;
@@ -105,16 +105,16 @@ namespace galay
                 this->m_func(this->shared_from_this());
                 Tcp_SSL_RW_Task<REQ, RESP>::encode();
                 this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_status = task_state::GY_TASK_WRITE;
+                this->m_status = Task_Status::GY_TASK_WRITE;
                 break;
             }
-            case task_state::GY_TASK_WRITE:
+            case Task_Status::GY_TASK_WRITE:
             {
                 if (Tcp_SSL_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
                 this->m_engine->del_event(this->m_fd, EPOLLIN);
                 close(this->m_fd);
-                this->m_status = task_state::GY_TASK_STOP;
+                this->m_status = Task_Status::GY_TASK_STOP;
                 break;
             }
             default:
