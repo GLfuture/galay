@@ -368,11 +368,7 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o: /home/gong/project
   /usr/include/x86_64-linux-gnu/bits/stat.h \
   /usr/include/x86_64-linux-gnu/bits/struct_stat.h \
   /home/gong/projects/galay/src/kernel/error.h \
-  /home/gong/projects/galay/src/kernel/engine.h \
-  /usr/include/x86_64-linux-gnu/sys/epoll.h \
-  /usr/include/x86_64-linux-gnu/bits/epoll.h \
-  /home/gong/projects/galay/src/kernel/error.h \
-  /home/gong/projects/galay/src/kernel/basic_concepts.h \
+  /home/gong/projects/galay/src/kernel/scheduler.h \
   /home/gong/projects/galay/src/kernel/task.h \
   /usr/include/c++/12/thread \
   /usr/include/c++/12/stop_token \
@@ -394,8 +390,15 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o: /home/gong/project
   /usr/include/c++/12/bits/sstream.tcc \
   /home/gong/projects/galay/src/kernel/iofunction.h \
   /home/gong/projects/galay/src/kernel/basic_concepts.h \
+  /home/gong/projects/galay/src/kernel/error.h \
   /home/gong/projects/galay/src/kernel/engine.h \
+  /usr/include/x86_64-linux-gnu/sys/epoll.h \
+  /usr/include/x86_64-linux-gnu/bits/epoll.h \
+  /home/gong/projects/galay/src/kernel/tcptask.h \
+  /home/gong/projects/galay/src/kernel/scheduler.h \
   /home/gong/projects/galay/src/server/httpserver.hpp \
+  /home/gong/projects/galay/src/kernel/httptask.h \
+  /home/gong/projects/galay/src/kernel/tcptask.h \
   /home/gong/projects/galay/src/server/tcpserver.hpp \
   /home/gong/projects/galay/src/protocol/tcp.h \
   /home/gong/projects/galay/src/protocol/basic_protocol.h \
@@ -448,7 +451,13 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o: /home/gong/project
 
 /home/gong/projects/galay/src/protocol/tcp.h:
 
+/home/gong/projects/galay/src/kernel/httptask.h:
+
 /home/gong/projects/galay/src/server/httpserver.hpp:
+
+/usr/include/x86_64-linux-gnu/sys/epoll.h:
+
+/home/gong/projects/galay/src/kernel/engine.h:
 
 /usr/include/c++/12/bits/sstream.tcc:
 
@@ -474,9 +483,7 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o: /home/gong/project
 
 /home/gong/projects/galay/src/kernel/task.h:
 
-/usr/include/x86_64-linux-gnu/sys/epoll.h:
-
-/home/gong/projects/galay/src/kernel/engine.h:
+/home/gong/projects/galay/src/kernel/scheduler.h:
 
 /usr/include/x86_64-linux-gnu/bits/struct_stat.h:
 
@@ -1037,6 +1044,8 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o: /home/gong/project
 /usr/include/c++/12/cstdlib:
 
 /usr/include/x86_64-linux-gnu/bits/byteswap.h:
+
+/home/gong/projects/galay/src/kernel/tcptask.h:
 
 /usr/include/c++/12/chrono:
 

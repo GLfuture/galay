@@ -31,11 +31,12 @@ namespace galay
         enum client_error{
             GY_CONNECT_ERROR = GY_SERVER_ERROR_END,                     //connect
             GY_SSL_CONNECT_ERROR,                                       //ssl_connect
-            GY_CLIENT_ERROR_RND
+            GY_GETSOCKET_STATUS_ERROR,                                  //getsocketopt error
+            GY_CLIENT_ERROR_END
         };
 
         enum engine_error{
-            GY_ENGINE_EPOLL_WAIT_ERROR = GY_CLIENT_ERROR_RND,                //epoll egine epoll_wait error
+            GY_ENGINE_EPOLL_WAIT_ERROR = GY_CLIENT_ERROR_END,                //epoll egine epoll_wait error
             GY_ENGINE_ERROR_END
         };
 

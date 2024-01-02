@@ -31,7 +31,7 @@ int main()
     server->start(func);
     if(server->get_error() == error::server_error::GY_ENGINE_HAS_ERROR)
     {
-        std::cout<<error::get_err_str(server->get_engine()->get_error())<<std::endl;
+        std::cout<<error::get_err_str(server->get_scheduler()->m_engine->get_error())<<std::endl;
     }
     return 0;
 }

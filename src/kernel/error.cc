@@ -19,6 +19,7 @@ const char *galay::error::global_err_str[] = {
     "server's engine has some error , you should call get_engine to use get_error to get engine's error",
     "connect function error",
     "ssl_connect function error",
+    "the getsockopt function in client has some error",
     "epoll engine's epoll_wait function has error",
     "protocol is incomplete",
     "the request is a bad request",
