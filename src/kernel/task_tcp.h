@@ -7,12 +7,12 @@
 namespace galay
 {
     template <Request REQ, Response RESP>
-    class Tcp_Accept_Task : public Task<REQ, RESP>
+    class Tcp_Accept_Task : public Task_Base<REQ, RESP>
     {
     public:
         using ptr = std::shared_ptr<Tcp_Accept_Task>;
         Tcp_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler,
-                        std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func, uint32_t read_len)
+                        std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func, uint32_t read_len)
         {
             this->m_fd = fd;
             this->m_status = Task_Status::GY_TASK_READ;
@@ -54,14 +54,14 @@ namespace galay
         }
 
     protected:
-        virtual Task<REQ, RESP>::ptr create_rw_task(int connfd)
+        virtual Task_Base<REQ, RESP>::ptr create_rw_task(int connfd)
         {
             auto task = std::make_shared<Tcp_RW_Task<REQ, RESP>>(connfd, this->m_scheduler->m_engine, this->m_read_len);
-            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
             return task;
         }
 
-        virtual void add_task(int connfd, Task<REQ, RESP>::ptr task)
+        virtual void add_task(int connfd, Task_Base<REQ, RESP>::ptr task)
         {
             auto it = this->m_scheduler->m_tasks->find(connfd);
             if (it == this->m_scheduler->m_tasks->end())
@@ -78,16 +78,16 @@ namespace galay
         int m_fd;
         IO_Scheduler<REQ,RESP>::ptr m_scheduler;
         uint32_t m_read_len;
-        std::function<void(std::shared_ptr<Task<REQ, RESP>>)> m_func;
+        std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)> m_func;
     };
 
     // tcp
     // server read and write task
     template <Request REQ, Response RESP>
-    class Tcp_RW_Task : public Task<REQ, RESP>, public std::enable_shared_from_this<Tcp_RW_Task<REQ, RESP>>
+    class Tcp_RW_Task : public Task_Base<REQ, RESP>, public std::enable_shared_from_this<Tcp_RW_Task<REQ, RESP>>
     {
     protected:
-        using Callback = std::function<void(std::shared_ptr<Task<REQ, RESP>>)>;
+        using Callback = std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>;
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
@@ -271,8 +271,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Accept_Task>;
-        Tcp_SSL_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<void(std::shared_ptr<Task<REQ, RESP>>)> &&func, 
-uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Task<REQ, RESP>(fd,scheduler, std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(func), read_len)
+        Tcp_SSL_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func, 
+uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Task<REQ, RESP>(fd,scheduler, std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), read_len)
         {
             this->m_ctx = ctx;
             this->m_ssl_accept_retry = ssl_accept_max_retry;
@@ -310,11 +310,11 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
         }
 
     protected:
-        virtual Task<REQ, RESP>::ptr create_rw_task(int connfd, SSL *ssl)
+        virtual Task_Base<REQ, RESP>::ptr create_rw_task(int connfd, SSL *ssl)
         {
 
             auto task = std::make_shared<Tcp_SSL_RW_Task<REQ, RESP>>(connfd, this->m_scheduler->m_engine, this->m_read_len, ssl);
-            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task<REQ, RESP>>)>>(this->m_func));
+            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
             return task;
         }
 
@@ -399,7 +399,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
 
     // to do
     template <Request REQ, Response RESP>
-    class Tcp_Connect_Task : public Task<REQ, RESP>
+    class Tcp_Connect_Task : public Task_Base<REQ, RESP>
     {
     public:
         using ptr = std::shared_ptr<Tcp_Connect_Task>;

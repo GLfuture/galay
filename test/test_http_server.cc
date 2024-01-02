@@ -2,7 +2,7 @@
 #include <signal.h>
 using namespace galay;
 
-void func(Task<Http_Request,Http_Response>::ptr task)
+void func(Task_Base<Http_Request,Http_Response>::ptr task)
 {
     std::cout<<task->get_req()->encode();
     task->get_resp()->get_status() = 200;

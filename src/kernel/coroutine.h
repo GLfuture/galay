@@ -150,11 +150,6 @@ namespace galay
             this->m_handle = other.m_handle;
         }
 
-        static Coroutine<RESULT> creat(std::function<Coroutine<RESULT>()> &&func)
-        {
-            return Coroutine<RESULT>(func());
-        }
-
         // 返回承诺体,包含返回值
         promise_type &promise()
         {

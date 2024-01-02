@@ -298,6 +298,8 @@ test/CMakeFiles/test_https_server.dir/test_https_server.cc.o: \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/engine.h \
  /usr/include/x86_64-linux-gnu/sys/epoll.h \
  /usr/include/x86_64-linux-gnu/bits/epoll.h \
+ /home/gong/projects/galay/test/../src/factory/../server/../kernel/coroutine.h \
+ /usr/include/c++/12/coroutine \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/task_tcp.h \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/scheduler.h \
  /home/gong/projects/galay/test/../src/factory/../server/httpserver.hpp \

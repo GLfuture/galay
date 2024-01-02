@@ -394,11 +394,13 @@ test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: /home/gong/projects/
   /home/gong/projects/galay/src/kernel/engine.h \
   /usr/include/x86_64-linux-gnu/sys/epoll.h \
   /usr/include/x86_64-linux-gnu/bits/epoll.h \
-  /home/gong/projects/galay/src/kernel/tcptask.h \
+  /home/gong/projects/galay/src/kernel/coroutine.h \
+  /usr/include/c++/12/coroutine \
+  /home/gong/projects/galay/src/kernel/task_tcp.h \
   /home/gong/projects/galay/src/kernel/scheduler.h \
   /home/gong/projects/galay/src/server/httpserver.hpp \
-  /home/gong/projects/galay/src/kernel/httptask.h \
-  /home/gong/projects/galay/src/kernel/tcptask.h \
+  /home/gong/projects/galay/src/kernel/task_http.h \
+  /home/gong/projects/galay/src/kernel/task_tcp.h \
   /home/gong/projects/galay/src/server/tcpserver.hpp \
   /home/gong/projects/galay/src/protocol/tcp.h \
   /home/gong/projects/galay/src/protocol/basic_protocol.h \
@@ -451,13 +453,19 @@ test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: /home/gong/projects/
 
 /home/gong/projects/galay/src/protocol/tcp.h:
 
-/home/gong/projects/galay/src/kernel/httptask.h:
+/home/gong/projects/galay/src/kernel/task_http.h:
 
 /home/gong/projects/galay/src/server/httpserver.hpp:
+
+/home/gong/projects/galay/src/kernel/task_tcp.h:
+
+/home/gong/projects/galay/src/kernel/coroutine.h:
 
 /usr/include/x86_64-linux-gnu/sys/epoll.h:
 
 /home/gong/projects/galay/src/kernel/engine.h:
+
+/usr/include/c++/12/coroutine:
 
 /usr/include/c++/12/bits/sstream.tcc:
 
@@ -1046,8 +1054,6 @@ test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: /home/gong/projects/
 /usr/include/c++/12/cstdlib:
 
 /usr/include/x86_64-linux-gnu/bits/byteswap.h:
-
-/home/gong/projects/galay/src/kernel/tcptask.h:
 
 /usr/include/c++/12/chrono:
 
