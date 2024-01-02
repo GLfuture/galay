@@ -3,7 +3,7 @@
 
 #include "../config/config.h"
 #include "../kernel/basic_concepts.h"
-#include "../kernel/engine.h"
+#include "../kernel/scheduler.h"
 
 namespace galay
 {
