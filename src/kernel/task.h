@@ -60,11 +60,16 @@ namespace galay
             return this->m_error;
         }
 
+        virtual void finish(){
+            this->m_is_finish = true;
+        }
+
         virtual ~Task_Base() {}
 
     protected:
         int m_status;
         int m_error;
+        bool m_is_finish = false;
     };
 
     template<typename T = void>
