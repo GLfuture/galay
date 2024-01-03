@@ -32,6 +32,46 @@ namespace galay
         {
         }
 
+        void control_task_behavior(Task_Status status) override
+        {
+            switch (status)
+            {
+            case Task_Status::GY_TASK_WRITE:
+            {
+                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
+                this->m_status = Task_Status::GY_TASK_WRITE ;
+                break;
+            }
+            case Task_Status::GY_TASK_READ:
+            {
+                this->m_engine->mod_event(this->m_fd, EPOLLIN);
+                this->m_status = Task_Status::GY_TASK_READ;
+                break;
+            }
+            case Task_Status::GY_TASK_STOP:
+            {
+                this->m_status = Task_Status::GY_TASK_STOP;
+                this->m_engine->del_event(this->m_fd,EPOLLIN|EPOLLOUT);
+                close(this->m_fd);
+                break;
+            }
+            case Task_Status::GY_HTTP_TASK_CHUNK_OFF:
+            {
+                this->m_is_chunked = false;
+                break;
+            }
+            case Task_Status::GY_HTTP_TASK_CHUNK_ON:
+            {
+                this->m_is_chunked = true;
+                break;
+            }
+            default:
+                break;
+            }
+        }
+
+
+
         int exec() override
         {
             switch (this->m_status)
@@ -42,7 +82,7 @@ namespace galay
                     return -1;
                 if (Tcp_RW_Task<REQ, RESP>::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
-                Tcp_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_WRITE);
+                control_task_behavior(Task_Status::GY_TASK_WRITE);
                 this->m_func(this->shared_from_this());
                 Tcp_RW_Task<REQ, RESP>::encode();
                 break;
@@ -51,7 +91,7 @@ namespace galay
             {
                 if (Tcp_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
-                Tcp_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
+                if(!m_is_chunked) control_task_behavior(Task_Status::GY_TASK_STOP);
                 break;
             }
             default:
@@ -59,6 +99,8 @@ namespace galay
             }
             return 0;
         }
+    private:
+        bool m_is_chunked = false;
     };
 
     // https task
@@ -89,6 +131,45 @@ namespace galay
         {
         }
 
+        void control_task_behavior(Task_Status status) override
+        {
+            switch (status)
+            {
+            case Task_Status::GY_TASK_WRITE:
+            {
+                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
+                this->m_status = Task_Status::GY_TASK_WRITE ;
+                break;
+            }
+            case Task_Status::GY_TASK_READ:
+            {
+                this->m_engine->mod_event(this->m_fd, EPOLLIN);
+                this->m_status = Task_Status::GY_TASK_READ;
+                break;
+            }
+            case Task_Status::GY_TASK_STOP:
+            {
+                this->m_status = Task_Status::GY_TASK_STOP;
+                this->m_engine->del_event(this->m_fd,EPOLLIN|EPOLLOUT);
+                close(this->m_fd);
+                break;
+            }
+            case Task_Status::GY_HTTP_TASK_CHUNK_OFF:
+            {
+                this->m_is_chunked = false;
+                break;
+            }
+            case Task_Status::GY_HTTP_TASK_CHUNK_ON:
+            {
+                this->m_is_chunked = true;
+                break;
+            }
+            default:
+                break;
+            }
+        }
+
+
         int exec() override
         {
             switch (this->m_status)
@@ -99,7 +180,7 @@ namespace galay
                     return -1;
                 if (Tcp_SSL_RW_Task<REQ, RESP>::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
-                Tcp_SSL_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_WRITE);
+                control_task_behavior(Task_Status::GY_TASK_WRITE);
                 this->m_func(this->shared_from_this());
                 Tcp_SSL_RW_Task<REQ, RESP>::encode();
                 break;
@@ -108,7 +189,7 @@ namespace galay
             {
                 if (Tcp_SSL_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
-                Tcp_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
+                if(!m_is_chunked) control_task_behavior(Task_Status::GY_TASK_STOP);
                 break;
             }
             default:
@@ -116,6 +197,8 @@ namespace galay
             }
             return 0;
         }
+    private:
+        bool m_is_chunked = false;
     };
 
 }
