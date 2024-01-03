@@ -4,17 +4,17 @@
 #include <memory>
 #include <coroutine>
 #include <optional>
-#include "task.h"
+#include "task_await.h"
 
 namespace galay
 {
-    template<Request REQ,Response RESP>
+    template<Request REQ , Response RESP , typename RESULT>
     class Awaiter_Base
     {
     public:
         using ptr = std::shared_ptr<Awaiter_Base>;
 
-        Awaiter_Base(Task_Base<REQ,RESP>::ptr task)
+        Awaiter_Base(Co_Task_Base<REQ,RESP,RESULT>::ptr task)
         {
             this->m_task = task;
         }
@@ -24,9 +24,7 @@ namespace galay
         {
             if(this != &other)
             {
-                this->m_handle = std::move(other.m_handle);
                 this->m_task = std::move(other.m_task);
-                other.m_handle = nullptr;
                 other.m_task = nullptr;
             }
         }
@@ -38,17 +36,16 @@ namespace galay
 
         virtual void await_suspend(std::coroutine_handle<> handle)
         {
-            this->m_handle = handle;
+            m_task->set_co_handle(handle);
+        }
+
+        RESULT await_resume(){
+            if constexpr (!std::is_same_v<RESULT,void>)
+                return std::move(m_result.value());
         }
 
     protected:
-        void done()
-        {
-            this->m_handle.resume();
-        }
-    protected:
-        std::coroutine_handle<> m_handle = nullptr;
-        Task_Base<REQ,RESP>::ptr m_task = nullptr;
+        Co_Task_Base<REQ,RESP,RESULT>::ptr m_task = nullptr;
     };
     
     template<Request REQ , Response RESP , typename RESULT>
@@ -62,10 +59,6 @@ namespace galay
 
         }
 
-        RESULT await_resume(){
-            if constexpr (!std::is_same_v<RESULT,void>)
-                return std::move(m_result.value());
-        }
     protected:
         std::optional<RESULT> m_result;
     };
