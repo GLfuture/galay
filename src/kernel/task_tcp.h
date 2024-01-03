@@ -119,6 +119,13 @@ namespace galay
                 this->m_status = Task_Status::GY_TASK_READ;
                 break;
             }
+            case Task_Status::GY_TASK_STOP:
+            {
+                this->m_status = Task_Status::GY_TASK_STOP;
+                this->m_engine->del_event(this->m_fd,EPOLLIN|EPOLLOUT);
+                close(this->m_fd);
+                break;
+            }
             default:
                 break;
             }
@@ -142,6 +149,7 @@ namespace galay
                     return -1;
                 if (decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
+                control_task_behavior(Task_Status::GY_TASK_WRITE);
                 this->m_func(this->shared_from_this());
                 encode();
                 break;
@@ -208,9 +216,7 @@ namespace galay
             int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
             if (len == 0)
             {
-                close(this->m_fd);
-                this->m_engine->del_event(this->m_fd, EPOLLIN);
-                this->m_status = Task_Status::GY_TASK_STOP;
+                control_task_behavior(Task_Status::GY_TASK_STOP);
                 return -1;
             }
             else if (len == -1)
@@ -221,9 +227,7 @@ namespace galay
                 }
                 else
                 {
-                    this->m_engine->del_event(this->m_fd, EPOLLIN);
-                    close(this->m_fd);
-                    this->m_status = Task_Status::GY_TASK_STOP;
+                    control_task_behavior(Task_Status::GY_TASK_STOP);
                     return -1;
                 }
             }
@@ -243,9 +247,7 @@ namespace galay
                 }
                 else
                 {
-                    this->m_engine->del_event(this->m_fd, EPOLLIN);
-                    close(this->m_fd);
-                    this->m_status = Task_Status::GY_TASK_STOP;
+                    control_task_behavior(Task_Status::GY_TASK_STOP);
                     return -1;
                 }
             }
@@ -348,9 +350,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
             int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
             if (len == 0)
             {
-                close(this->m_fd);
-                this->m_engine->del_event(this->m_fd, EPOLLIN);
-                this->m_status = Task_Status::GY_TASK_STOP;
+                Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
                 return -1;
             }
             else if (len == -1)
@@ -361,9 +361,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 }
                 else
                 {
-                    this->m_engine->del_event(this->m_fd, EPOLLIN);
-                    close(this->m_fd);
-                    this->m_status = Task_Status::GY_TASK_STOP;
+                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
                     return -1;
                 }
             }
@@ -383,9 +381,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 }
                 else
                 {
-                    this->m_engine->del_event(this->m_fd, EPOLLIN);
-                    close(this->m_fd);
-                    this->m_status = Task_Status::GY_TASK_STOP;
+                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
                     return -1;
                 }
             }

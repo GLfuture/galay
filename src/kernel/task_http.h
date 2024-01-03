@@ -42,19 +42,16 @@ namespace galay
                     return -1;
                 if (Tcp_RW_Task<REQ, RESP>::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
+                Tcp_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_WRITE);
                 this->m_func(this->shared_from_this());
                 Tcp_RW_Task<REQ, RESP>::encode();
-                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_status = Task_Status::GY_TASK_WRITE;
                 break;
             }
             case Task_Status::GY_TASK_WRITE:
             {
                 if (Tcp_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
-                this->m_engine->del_event(this->m_fd, EPOLLIN);
-                close(this->m_fd);
-                this->m_status = Task_Status::GY_TASK_STOP;
+                Tcp_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
                 break;
             }
             default:
@@ -102,19 +99,16 @@ namespace galay
                     return -1;
                 if (Tcp_SSL_RW_Task<REQ, RESP>::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
+                Tcp_SSL_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_WRITE);
                 this->m_func(this->shared_from_this());
                 Tcp_SSL_RW_Task<REQ, RESP>::encode();
-                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_status = Task_Status::GY_TASK_WRITE;
                 break;
             }
             case Task_Status::GY_TASK_WRITE:
             {
                 if (Tcp_SSL_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
-                this->m_engine->del_event(this->m_fd, EPOLLIN);
-                close(this->m_fd);
-                this->m_status = Task_Status::GY_TASK_STOP;
+                Tcp_RW_Task<REQ,RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
                 break;
             }
             default:
