@@ -21,8 +21,6 @@ namespace galay
         GY_TASK_CONNECT,
         GY_TASK_READ,
         GY_TASK_WRITE,
-        GY_HTTP_TASK_CHUNK_ON,
-        GY_HTTP_TASK_CHUNK_OFF,
     };
 
     template <Request REQ, Response RESP>
