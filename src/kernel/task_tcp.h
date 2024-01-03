@@ -158,7 +158,8 @@ namespace galay
             {
                 if (send_package() == -1)
                     return -1;
-                if(this->m_wbuffer.empty()) control_task_behavior(Task_Status::GY_TASK_READ);
+                if(this->m_is_finish) control_task_behavior(Task_Status::GY_TASK_STOP);
+                else control_task_behavior(Task_Status::GY_TASK_READ);
                 break;
             }
             default:
