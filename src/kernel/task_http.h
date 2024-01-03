@@ -9,8 +9,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Accept_Task>;
-        Http_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func, uint32_t read_len) 
-                        : Tcp_Accept_Task<REQ, RESP>(fd, scheduler, std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), read_len)
+        Http_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func, uint32_t read_len) 
+                        : Tcp_Accept_Task<REQ, RESP>(fd, scheduler, std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), read_len)
         {
         }
 
@@ -18,7 +18,7 @@ namespace galay
         {
 
             auto task = std::make_shared<Http_RW_Task<REQ, RESP>>(connfd, this->m_scheduler->m_engine, this->m_read_len);
-            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
+            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
             return task;
         }
     };
@@ -31,6 +31,7 @@ namespace galay
         Http_RW_Task(int fd, Engine::ptr engine, uint32_t read_len) : Tcp_RW_Task<REQ, RESP>(fd, engine, read_len)
         {
         }
+        
 
         int exec() override
         {
@@ -69,14 +70,14 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Accept_Task>;
-        Https_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func
-                    , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_SSL_Accept_Task<REQ, RESP>(fd,scheduler, std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), read_len, ssl_accept_max_retry, ctx) {}
+        Https_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func
+                    , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_SSL_Accept_Task<REQ, RESP>(fd,scheduler, std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), read_len, ssl_accept_max_retry, ctx) {}
 
     private:
         Task_Base<REQ, RESP>::ptr create_rw_task(int connfd, SSL *ssl) override
         {
             auto task = std::make_shared<Https_RW_Task<REQ, RESP>>(connfd, this->m_scheduler->m_engine, this->m_read_len, ssl);
-            task->set_callback(std::forward<std::function<void(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
+            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
             return task;
         }
     };

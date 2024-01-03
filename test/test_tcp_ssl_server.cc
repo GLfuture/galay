@@ -5,7 +5,7 @@
 using namespace galay;
 
 
-void func(Task_Base<Tcp_Request,Tcp_Response>::ptr task)
+Task<> func(Task_Base<Tcp_Request,Tcp_Response>::ptr task)
 {
     std::cout<<task->get_req()->get_buffer()<<'\n';
     task->get_resp()->get_buffer() = "HTTP/1.1 200 OK\r\n\
@@ -17,6 +17,7 @@ Hello, World!\
 </body>\
 </html>\r\n\r\n";
     task->control_task_behavior(Task_Status::GY_TASK_WRITE);
+    return {};
 }
 
 void sig_handle(int sig)
