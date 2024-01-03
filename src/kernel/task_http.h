@@ -52,7 +52,7 @@ namespace galay
             {
                 if (Tcp_RW_Task<REQ, RESP>::send_package() == -1)
                     return -1;
-                Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
+                if(this->m_wbuffer.empty()) Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
                 break;
             }
             default:
