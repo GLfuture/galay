@@ -37,6 +37,12 @@ namespace galay
             this->m_scheduler->m_engine->add_event(this->m_fd,EPOLLOUT);
             return Net_Awaiter<REQ,RESP,int>{task};
         }
+        
+        Net_Awaiter<REQ,RESP,int> send(std::string &&buffer)
+        {
+            
+        }
+        
 
         void disconnect()
         {

@@ -11,7 +11,7 @@ Task<> func(Task_Base<Tcp_Request,Tcp_Response>::ptr task)
     task->get_resp()->get_buffer() = "world!";
     //finish 完成本次任务后停止，control_task_behavior本次任务仍会执行但不会回发消息
     //if(global_time++ > 5) task->finish();
-    if(global_time++ > 5) task->control_task_behavior(Task_Status::GY_TASK_STOP);
+    if(global_time++ > 5) task->control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
     return {};
 }
 
