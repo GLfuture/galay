@@ -24,6 +24,18 @@ namespace galay
 
         virtual ~Client(){}
     protected:
+
+        void add_task(Task_Base<REQ,RESP>::ptr task)
+        {
+            auto it = this->m_scheduler->m_tasks->find(this->m_fd);
+            if(it == this->m_scheduler->m_tasks->end())
+            {
+                this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd,task));
+            }else{
+                it->second = task;
+            }
+        }
+    protected:
         int m_fd;
         int m_error;
         IO_Scheduler<REQ,RESP>::ptr m_scheduler;

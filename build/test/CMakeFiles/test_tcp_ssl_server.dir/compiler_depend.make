@@ -411,6 +411,7 @@ test/CMakeFiles/test_tcp_ssl_server.dir/test_tcp_ssl_server.cc.o: /home/gong/pro
   /usr/include/c++/12/optional \
   /home/gong/projects/galay/src/kernel/task_await.h \
   /home/gong/projects/galay/src/kernel/task.h \
+  /usr/include/c++/12/cstring \
   /home/gong/projects/galay/src/protocol/tcp.h \
   /home/gong/projects/galay/src/protocol/basic_protocol.h \
   /home/gong/projects/galay/src/kernel/error.h \
@@ -752,6 +753,8 @@ test/CMakeFiles/test_tcp_ssl_server.dir/test_tcp_ssl_server.cc.o: /home/gong/pro
 /usr/include/openssl/macros.h:
 
 /usr/include/c++/12/bits/stl_algobase.h:
+
+/usr/include/c++/12/cstring:
 
 /usr/include/ctype.h:
 
