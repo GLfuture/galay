@@ -1037,6 +1037,40 @@ build test/test_https_server: CXX_EXECUTABLE_LINKER__test_https_server_Debug tes
   TARGET_FILE = test/test_https_server
   TARGET_PDB = test_https_server.dbg
 
+# =============================================================================
+# Object build statements for EXECUTABLE target test_tcp_client
+
+
+#############################################
+# Order-only phony target for test_tcp_client
+
+build cmake_object_order_depends_target_test_tcp_client: phony || cmake_object_order_depends_target_client cmake_object_order_depends_target_config cmake_object_order_depends_target_factory cmake_object_order_depends_target_galay-static cmake_object_order_depends_target_kernel cmake_object_order_depends_target_protocol cmake_object_order_depends_target_server cmake_object_order_depends_target_util
+
+build test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o: CXX_COMPILER__test_tcp_client_Debug /home/gong/projects/galay/test/test_tcp_client.cc || cmake_object_order_depends_target_test_tcp_client
+  DEP_FILE = test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o.d
+  FLAGS = -g -std=gnu++20
+  INCLUDES = -I/home/gong/projects/galay/test/../src
+  OBJECT_DIR = test/CMakeFiles/test_tcp_client.dir
+  OBJECT_FILE_DIR = test/CMakeFiles/test_tcp_client.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target test_tcp_client
+
+
+#############################################
+# Link the executable test/test_tcp_client
+
+build test/test_tcp_client: CXX_EXECUTABLE_LINKER__test_tcp_client_Debug test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o | src/libgalay-static.a || src/client/client src/config/config src/factory/factory src/kernel/kernel src/libgalay-static.a src/protocol/protocol src/server/server src/util/util
+  FLAGS = -g
+  LINK_LIBRARIES = -Wl,-rpath,/home/gong/projects/galay/build/src  src/libgalay-static.a  -lssl  -lcrypto  -lssl  -lcrypto
+  LINK_PATH = -L/home/gong/projects/galay/build/src
+  OBJECT_DIR = test/CMakeFiles/test_tcp_client.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = test/test_tcp_client
+  TARGET_PDB = test_tcp_client.dbg
+
 
 #############################################
 # Utility command for edit_cache
@@ -1129,6 +1163,8 @@ build test_http_server: phony test/test_http_server
 
 build test_https_server: phony test/test_https_server
 
+build test_tcp_client: phony test/test_tcp_client
+
 build test_tcp_server: phony test/test_tcp_server
 
 build test_tcp_ssl_server: phony test/test_tcp_ssl_server
@@ -1206,7 +1242,7 @@ build src/util/all: phony src/util/util
 #############################################
 # Folder: /home/gong/projects/galay/build/test
 
-build test/all: phony test/test_tcp_server test/test_http_server test/test_tcp_ssl_server test/test_https_server
+build test/all: phony test/test_tcp_server test/test_http_server test/test_tcp_ssl_server test/test_https_server test/test_tcp_client
 
 # =============================================================================
 # Built-in targets

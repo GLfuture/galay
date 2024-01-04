@@ -402,6 +402,15 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
   /home/gong/projects/galay/src/kernel/task_http.h \
   /home/gong/projects/galay/src/kernel/task_tcp.h \
   /home/gong/projects/galay/src/server/tcpserver.hpp \
+  /home/gong/projects/galay/src/client/tcpclient.h \
+  /home/gong/projects/galay/src/client/client.h \
+  /home/gong/projects/galay/src/config/config.h \
+  /home/gong/projects/galay/src/kernel/basic_concepts.h \
+  /home/gong/projects/galay/src/kernel/scheduler.h \
+  /home/gong/projects/galay/src/kernel/awaiter.h \
+  /usr/include/c++/12/optional \
+  /home/gong/projects/galay/src/kernel/task_await.h \
+  /home/gong/projects/galay/src/kernel/task.h \
   /home/gong/projects/galay/src/protocol/tcp.h \
   /home/gong/projects/galay/src/protocol/basic_protocol.h \
   /home/gong/projects/galay/src/kernel/error.h \
@@ -414,6 +423,12 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
 /home/gong/projects/galay/src/protocol/http.h:
 
 /home/gong/projects/galay/src/protocol/tcp.h:
+
+/home/gong/projects/galay/src/kernel/task_await.h:
+
+/usr/include/c++/12/optional:
+
+/home/gong/projects/galay/src/client/client.h:
 
 /home/gong/projects/galay/src/kernel/task_http.h:
 
@@ -935,6 +950,8 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
 
 /usr/include/linux/limits.h:
 
+/home/gong/projects/galay/src/client/tcpclient.h:
+
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
 
 /usr/include/c++/12/bits/char_traits.h:
@@ -1124,6 +1141,8 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
 /usr/include/c++/12/memory:
 
 /usr/include/linux/close_range.h:
+
+/home/gong/projects/galay/src/kernel/awaiter.h:
 
 /usr/include/c++/12/bits/stl_uninitialized.h:
 

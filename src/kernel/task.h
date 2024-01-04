@@ -72,10 +72,37 @@ namespace galay
         bool m_is_finish = false;
     };
 
-    template<typename T = void>
-    class Task: public Coroutine<T>
+    template<typename RESULT = void>
+    class Task: public Coroutine<RESULT>
     {
+    public:
+        using promise_type = Promise<RESULT>;
+        Task()
+        {
+            std::cout<<"simple\n";
+        }
 
+        Task(std::coroutine_handle<promise_type> co_handle) noexcept
+            : Coroutine<RESULT>(co_handle)
+        {
+            std::cout<<"handle\n";
+        }
+
+        Task(Task<RESULT> &&other) noexcept
+            : Coroutine<RESULT>(other)
+        {
+            std::cout<<"move\n";
+        }
+
+        Task<RESULT> &operator=(const Task<RESULT> &other) = delete;
+
+        Task<RESULT> &operator=(Task<RESULT> &&other)
+        {
+            std::cout<<"= move\n";
+            this->m_handle = other.m_handle;
+            other.m_handle = nullptr;
+            return *this;
+        }
     };
 }
 

@@ -4,6 +4,7 @@
 #include "../config/config.h"
 #include "../server/tcpserver.hpp"
 #include "../server/httpserver.hpp"
+#include "../client/tcpclient.h"
 #include "../protocol/tcp.h"
 #include "../protocol/http.h"
 
@@ -43,6 +44,7 @@ namespace galay
         static Https_Server_Config::ptr create_https_server_config(Https_Server_Config &&config);
         static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
             , long ssl_min_version , long ssl_max_version, uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath);
+        
     };
 
     class Server_Factory:public Factory_Base
@@ -59,11 +61,20 @@ namespace galay
         static Https_Server<Http_Request,Http_Response>::ptr create_https_server(Https_Server_Config::ptr config);
     };
 
+
+    //for client
+    class Scheduler_Factory: public Factory_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Scheduler_Factory>;
+        static IO_Scheduler<Tcp_Request,Tcp_Response>::ptr create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
+    };
+
     class Client_Factory: public Factory_Base
     {
     public:
         using ptr = std::shared_ptr<Client_Factory>;
-        
+        static Tcp_Client<Tcp_Request,Tcp_Response>::ptr create_tcp_client(IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
     };
 
 }

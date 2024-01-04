@@ -130,6 +130,7 @@ namespace galay
     {
     public:
         using promise_type = Promise<RESULT>;
+        Coroutine<RESULT> &operator=(const Coroutine<RESULT> &other) = delete;
 
         Coroutine<RESULT> &operator=(Coroutine<RESULT> &&other)
         {
@@ -140,7 +141,7 @@ namespace galay
 
         Coroutine() {}
 
-        Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept
+        Coroutine(std::coroutine_handle<> co_handle) noexcept
         {
             this->m_handle = co_handle;
         }
@@ -148,12 +149,6 @@ namespace galay
         Coroutine(Coroutine<RESULT> &&other) noexcept
         {
             this->m_handle = other.m_handle;
-        }
-
-        // 返回承诺体,包含返回值
-        promise_type &promise()
-        {
-            return m_handle.promise();
         }
 
         void resume() noexcept
@@ -175,7 +170,9 @@ namespace galay
         {
             if (m_handle)
             {
+                std::cout<<"destroy\n";
                 m_handle.destroy();
+                m_handle = nullptr;
             }
         }
 
@@ -185,7 +182,7 @@ namespace galay
 
     protected:
         // 协程句柄
-        std::coroutine_handle<promise_type> m_handle = nullptr;
+        std::coroutine_handle<> m_handle = nullptr;
     };
 
 }

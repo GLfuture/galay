@@ -9,8 +9,9 @@ Task<> func(Task_Base<Tcp_Request,Tcp_Response>::ptr task)
 {
     std::cout<<task->get_req()->get_buffer()<<'\n';
     task->get_resp()->get_buffer() = "world!";
-    //finish 完成本次任务后停止，control_task_behavior本次任务不会执行直接停止
-    if(global_time++ > 5) task->finish();
+    //finish 完成本次任务后停止，control_task_behavior本次任务仍会执行但不会回发消息
+    //if(global_time++ > 5) task->finish();
+    if(global_time++ > 5) task->control_task_behavior(Task_Status::GY_TASK_STOP);
     return {};
 }
 

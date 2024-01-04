@@ -227,6 +227,7 @@ test/all: test/CMakeFiles/test_tcp_server.dir/all
 test/all: test/CMakeFiles/test_http_server.dir/all
 test/all: test/CMakeFiles/test_tcp_ssl_server.dir/all
 test/all: test/CMakeFiles/test_https_server.dir/all
+test/all: test/CMakeFiles/test_tcp_client.dir/all
 .PHONY : test/all
 
 # Recursive "preinstall" directory target.
@@ -238,6 +239,7 @@ test/clean: test/CMakeFiles/test_tcp_server.dir/clean
 test/clean: test/CMakeFiles/test_http_server.dir/clean
 test/clean: test/CMakeFiles/test_tcp_ssl_server.dir/clean
 test/clean: test/CMakeFiles/test_https_server.dir/clean
+test/clean: test/CMakeFiles/test_tcp_client.dir/clean
 .PHONY : test/clean
 
 #=============================================================================
@@ -337,7 +339,7 @@ src/kernel/CMakeFiles/kernel.dir/clean:
 src/util/CMakeFiles/util.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/util/CMakeFiles/util.dir/build.make src/util/CMakeFiles/util.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=20,21 "Built target util"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=22,23 "Built target util"
 .PHONY : src/util/CMakeFiles/util.dir/all
 
 # Build rule for subdir invocation for target.
@@ -500,7 +502,7 @@ test/CMakeFiles/test_tcp_server.dir/all: src/server/CMakeFiles/server.dir/all
 test/CMakeFiles/test_tcp_server.dir/all: src/client/CMakeFiles/client.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_server.dir/build.make test/CMakeFiles/test_tcp_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=16,17 "Built target test_tcp_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=18,19 "Built target test_tcp_server"
 .PHONY : test/CMakeFiles/test_tcp_server.dir/all
 
 # Build rule for subdir invocation for target.
@@ -566,7 +568,7 @@ test/CMakeFiles/test_tcp_ssl_server.dir/all: src/server/CMakeFiles/server.dir/al
 test/CMakeFiles/test_tcp_ssl_server.dir/all: src/client/CMakeFiles/client.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_ssl_server.dir/build.make test/CMakeFiles/test_tcp_ssl_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_ssl_server.dir/build.make test/CMakeFiles/test_tcp_ssl_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=18,19 "Built target test_tcp_ssl_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=20,21 "Built target test_tcp_ssl_server"
 .PHONY : test/CMakeFiles/test_tcp_ssl_server.dir/all
 
 # Build rule for subdir invocation for target.
@@ -617,6 +619,39 @@ test_https_server: test/CMakeFiles/test_https_server.dir/rule
 test/CMakeFiles/test_https_server.dir/clean:
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/clean
 .PHONY : test/CMakeFiles/test_https_server.dir/clean
+
+#=============================================================================
+# Target rules for target test/CMakeFiles/test_tcp_client.dir
+
+# All Build rule for target.
+test/CMakeFiles/test_tcp_client.dir/all: src/CMakeFiles/galay-static.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/kernel/CMakeFiles/kernel.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/util/CMakeFiles/util.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/factory/CMakeFiles/factory.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/protocol/CMakeFiles/protocol.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/config/CMakeFiles/config.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/server/CMakeFiles/server.dir/all
+test/CMakeFiles/test_tcp_client.dir/all: src/client/CMakeFiles/client.dir/all
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/depend
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=16,17 "Built target test_tcp_client"
+.PHONY : test/CMakeFiles/test_tcp_client.dir/all
+
+# Build rule for subdir invocation for target.
+test/CMakeFiles/test_tcp_client.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 14
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_tcp_client.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gong/projects/galay/build/CMakeFiles 0
+.PHONY : test/CMakeFiles/test_tcp_client.dir/rule
+
+# Convenience name for target.
+test_tcp_client: test/CMakeFiles/test_tcp_client.dir/rule
+.PHONY : test_tcp_client
+
+# clean rule for target.
+test/CMakeFiles/test_tcp_client.dir/clean:
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/clean
+.PHONY : test/CMakeFiles/test_tcp_client.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
