@@ -315,6 +315,7 @@ test/CMakeFiles/test_tcp_server.dir/test_tcp_server.cc.o: \
  /usr/include/c++/12/optional \
  /home/gong/projects/galay/test/../src/factory/../client/../kernel/task_await.h \
  /home/gong/projects/galay/test/../src/factory/../client/../kernel/task.h \
+ /usr/include/c++/12/cstring \
  /home/gong/projects/galay/test/../src/factory/../protocol/tcp.h \
  /home/gong/projects/galay/test/../src/factory/../protocol/basic_protocol.h \
  /home/gong/projects/galay/test/../src/factory/../protocol/../kernel/error.h \

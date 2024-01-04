@@ -315,6 +315,7 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: \
  /usr/include/c++/12/optional \
  /home/gong/projects/galay/src/factory/../client/../kernel/task_await.h \
  /home/gong/projects/galay/src/factory/../client/../kernel/task.h \
+ /usr/include/c++/12/cstring \
  /home/gong/projects/galay/src/factory/../protocol/tcp.h \
  /home/gong/projects/galay/src/factory/../protocol/basic_protocol.h \
  /home/gong/projects/galay/src/factory/../protocol/../kernel/error.h \

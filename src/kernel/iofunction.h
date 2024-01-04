@@ -45,7 +45,7 @@ namespace galay{
 
             static int Sock();
 
-            static int Conncet(std::string sip, uint32_t sport);
+            static int Conncet(int fd , std::string sip, uint32_t sport);
 
             static int Bind(int fd, uint32_t port);
 

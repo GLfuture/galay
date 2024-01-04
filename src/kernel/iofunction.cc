@@ -28,18 +28,16 @@ int galay::iofunction::Tcp_Function::Sock()
 }
 
 
-int galay::iofunction::Tcp_Function::Conncet(std::string sip, uint32_t sport)
+int galay::iofunction::Tcp_Function::Conncet(int fd , std::string sip, uint32_t sport)
 {
-    int conn_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (conn_fd <= 0) return conn_fd;
     sockaddr_in sin = {0};
     memset(&sin, 0, sizeof(sin));
     sin.sin_addr.s_addr = inet_addr(sip.c_str());
     sin.sin_family = AF_INET;
     sin.sin_port = htons(sport);
-    int ret = connect(conn_fd, (sockaddr *)&sin, sizeof(sin));
+    int ret = connect(fd, (sockaddr *)&sin, sizeof(sin));
     if (ret == -1) return ret;
-    return conn_fd;
+    return 0;
 }
 
 int galay::iofunction::Tcp_Function::Bind(int fd, uint32_t port)
