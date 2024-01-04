@@ -63,8 +63,8 @@ namespace galay
 
         int exec()
         {
-            int status;
-            socklen_t slen;
+            int status = 0;
+            socklen_t slen = 0;
             if(getsockopt(this->m_fd,SOL_SOCKET,SO_ERROR,(void*)&status,&slen) < 0){
                 this->m_result = -1;
             }
