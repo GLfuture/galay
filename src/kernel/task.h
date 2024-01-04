@@ -17,7 +17,7 @@ namespace galay
 {
     enum Task_Status
     {
-        GY_TASK_STOP,
+        GY_TASK_DISCONNECT,
         GY_TASK_CONNECT,
         GY_TASK_READ,
         GY_TASK_WRITE,

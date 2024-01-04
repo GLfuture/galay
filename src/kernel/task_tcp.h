@@ -119,9 +119,9 @@ namespace galay
                 this->m_status = Task_Status::GY_TASK_READ;
                 break;
             }
-            case Task_Status::GY_TASK_STOP:
+            case Task_Status::GY_TASK_DISCONNECT:
             {
-                this->m_status = Task_Status::GY_TASK_STOP;
+                this->m_status = Task_Status::GY_TASK_DISCONNECT;
                 this->m_engine->del_event(this->m_fd,EPOLLIN|EPOLLOUT);
                 close(this->m_fd);
                 break;
@@ -158,7 +158,7 @@ namespace galay
             {
                 if (send_package() == -1)
                     return -1;
-                if(this->m_is_finish) control_task_behavior(Task_Status::GY_TASK_STOP);
+                if(this->m_is_finish) control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                 else control_task_behavior(Task_Status::GY_TASK_READ);
                 break;
             }
@@ -217,7 +217,7 @@ namespace galay
             int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
             if (len == 0)
             {
-                control_task_behavior(Task_Status::GY_TASK_STOP);
+                control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                 return -1;
             }
             else if (len == -1)
@@ -228,7 +228,7 @@ namespace galay
                 }
                 else
                 {
-                    control_task_behavior(Task_Status::GY_TASK_STOP);
+                    control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
@@ -248,7 +248,7 @@ namespace galay
                 }
                 else
                 {
-                    control_task_behavior(Task_Status::GY_TASK_STOP);
+                    control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
@@ -351,7 +351,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
             int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
             if (len == 0)
             {
-                Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
+                Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                 return -1;
             }
             else if (len == -1)
@@ -362,7 +362,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 }
                 else
                 {
-                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
+                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
@@ -382,7 +382,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 }
                 else
                 {
-                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_STOP);
+                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
@@ -424,11 +424,11 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
             int status = 0 , slen = 0;
             if(getsockopt(this->m_fd,SOL_SOCKET,SO_ERROR,(void *)&status,&slen) < 0){
                 this->m_error = error::client_error::GY_GETSOCKET_STATUS_ERROR;
-                this->m_status = GY_TASK_STOP;
+                this->m_status = GY_TASK_DISCONNECT;
             } 
             if(status != 0){
                 this->m_error = error::client_error::GY_CONNECT_ERROR;
-                this->m_status = GY_TASK_STOP;
+                this->m_status = GY_TASK_DISCONNECT;
             }
             return 0;
         } 
