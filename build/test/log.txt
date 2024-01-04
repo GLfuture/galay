@@ -1,14 +1,14 @@
-==121503== Memcheck, a memory error detector
-==121503== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
-==121503== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
-==121503== Command: ./test_tcp_server
-==121503== Parent PID: 99183
-==121503== 
-==121503== 
-==121503== HEAP SUMMARY:
-==121503==     in use at exit: 0 bytes in 0 blocks
-==121503==   total heap usage: 42 allocs, 42 frees, 108,194 bytes allocated
-==121503== 
-==121503== All heap blocks were freed -- no leaks are possible
-==121503== 
-==121503== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==122107== Memcheck, a memory error detector
+==122107== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==122107== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==122107== Command: ./test_tcp_client
+==122107== Parent PID: 99183
+==122107== 
+==122107== 
+==122107== HEAP SUMMARY:
+==122107==     in use at exit: 0 bytes in 0 blocks
+==122107==   total heap usage: 11 allocs, 11 frees, 75,340 bytes allocated
+==122107== 
+==122107== All heap blocks were freed -- no leaks are possible
+==122107== 
+==122107== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
