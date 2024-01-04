@@ -170,7 +170,6 @@ namespace galay
         {
             if (m_handle)
             {
-                std::cout<<"destroy\n";
                 m_handle.destroy();
                 m_handle = nullptr;
             }
