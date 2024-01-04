@@ -20,7 +20,7 @@ namespace galay
         }
 
         Awaiter_Base &operator=(const Awaiter_Base &) = delete;
-        Awaiter_Base &operator=(Awaiter_Base<REQ,RESP> &&other)
+        Awaiter_Base &operator=(Awaiter_Base<REQ,RESP,RESULT> &&other)
         {
             if(this != &other)
             {
@@ -40,27 +40,33 @@ namespace galay
         }
 
         RESULT await_resume(){
+            if(m_task) m_result = m_task->result();
             if constexpr (!std::is_same_v<RESULT,void>)
                 return std::move(m_result.value());
         }
 
     protected:
         Co_Task_Base<REQ,RESP,RESULT>::ptr m_task = nullptr;
+        std::optional<RESULT> m_result;
     };
     
     template<Request REQ , Response RESP , typename RESULT>
-    class Net_Awaiter: public Awaiter_Base
+    class Net_Awaiter: public Awaiter_Base<REQ,RESP,RESULT>
     {
     public:
         using ptr = std::shared_ptr<Net_Awaiter>;
-        Net_Awaiter(Task_Base<REQ,RESP>::ptr task)
-            : Awaiter_Base<REQ,RESP>(task)
+        Net_Awaiter(Co_Task_Base<REQ,RESP,RESULT>::ptr task)
+            : Awaiter_Base<REQ,RESP,RESULT>(task)
         {
 
         }
 
-    protected:
-        std::optional<RESULT> m_result;
+        Net_Awaiter(Co_Task_Base<REQ,RESP,RESULT>::ptr task, RESULT result)
+            :Awaiter_Base<REQ,RESP,RESULT>(task)
+        {
+            this->m_result = result;
+        }
+        
     };
 }
 

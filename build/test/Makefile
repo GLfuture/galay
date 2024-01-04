@@ -217,6 +217,20 @@ test_https_server/fast:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/build
 .PHONY : test_https_server/fast
 
+# Convenience name for target.
+test/CMakeFiles/test_tcp_client.dir/rule:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_tcp_client.dir/rule
+.PHONY : test/CMakeFiles/test_tcp_client.dir/rule
+
+# Convenience name for target.
+test_tcp_client: test/CMakeFiles/test_tcp_client.dir/rule
+.PHONY : test_tcp_client
+
+# fast build rule for target.
+test_tcp_client/fast:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/build
+.PHONY : test_tcp_client/fast
+
 test_http_server.o: test_http_server.cc.o
 .PHONY : test_http_server.o
 
@@ -264,6 +278,30 @@ test_https_server.s: test_https_server.cc.s
 test_https_server.cc.s:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_https_server.dir/build.make test/CMakeFiles/test_https_server.dir/test_https_server.cc.s
 .PHONY : test_https_server.cc.s
+
+test_tcp_client.o: test_tcp_client.cc.o
+.PHONY : test_tcp_client.o
+
+# target to build an object file
+test_tcp_client.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o
+.PHONY : test_tcp_client.cc.o
+
+test_tcp_client.i: test_tcp_client.cc.i
+.PHONY : test_tcp_client.i
+
+# target to preprocess a source file
+test_tcp_client.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.i
+.PHONY : test_tcp_client.cc.i
+
+test_tcp_client.s: test_tcp_client.cc.s
+.PHONY : test_tcp_client.s
+
+# target to generate assembly for a file
+test_tcp_client.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.s
+.PHONY : test_tcp_client.cc.s
 
 test_tcp_server.o: test_tcp_server.cc.o
 .PHONY : test_tcp_server.o
@@ -327,6 +365,7 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test_http_server"
 	@echo "... test_https_server"
+	@echo "... test_tcp_client"
 	@echo "... test_tcp_server"
 	@echo "... test_tcp_ssl_server"
 	@echo "... test_http_server.o"
@@ -335,6 +374,9 @@ help:
 	@echo "... test_https_server.o"
 	@echo "... test_https_server.i"
 	@echo "... test_https_server.s"
+	@echo "... test_tcp_client.o"
+	@echo "... test_tcp_client.i"
+	@echo "... test_tcp_client.s"
 	@echo "... test_tcp_server.o"
 	@echo "... test_tcp_server.i"
 	@echo "... test_tcp_server.s"

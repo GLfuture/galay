@@ -1,5 +1,5 @@
-test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: \
- /home/gong/projects/galay/test/test_http_server.cc \
+test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o: \
+ /home/gong/projects/galay/test/test_tcp_client.cc \
  /usr/include/stdc-predef.h \
  /home/gong/projects/galay/test/../src/factory/factory.h \
  /home/gong/projects/galay/test/../src/factory/../config/config.h \
@@ -319,25 +319,4 @@ test/CMakeFiles/test_http_server.dir/test_http_server.cc.o: \
  /home/gong/projects/galay/test/../src/factory/../protocol/basic_protocol.h \
  /home/gong/projects/galay/test/../src/factory/../protocol/../kernel/error.h \
  /home/gong/projects/galay/test/../src/factory/../protocol/http.h \
- /usr/include/assert.h /usr/include/signal.h \
- /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
- /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
- /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
- /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h \
- /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
- /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h \
- /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h \
- /usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h \
- /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h \
- /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
- /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h \
- /usr/include/x86_64-linux-gnu/bits/sigaction.h \
- /usr/include/x86_64-linux-gnu/bits/sigcontext.h \
- /usr/include/x86_64-linux-gnu/bits/types/stack_t.h \
- /usr/include/x86_64-linux-gnu/sys/ucontext.h \
- /usr/include/x86_64-linux-gnu/bits/sigstack.h \
- /usr/include/x86_64-linux-gnu/bits/sigstksz.h \
- /usr/include/x86_64-linux-gnu/bits/ss_flags.h \
- /usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h \
- /usr/include/x86_64-linux-gnu/bits/sigthread.h \
- /usr/include/x86_64-linux-gnu/bits/signal_ext.h
+ /usr/include/assert.h

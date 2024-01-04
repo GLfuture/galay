@@ -76,6 +76,8 @@ galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_confi
 }
 
 
+
+
 //server
 galay::Tcp_Server<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Server_Factory::create_tcp_server(Tcp_Server_Config::ptr config)
 {
@@ -95,4 +97,26 @@ galay::Http_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server_
 galay::Https_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server_Factory::create_https_server(Https_Server_Config::ptr config)
 {
     return std::make_shared<Https_Server<galay::Http_Request,galay::Http_Response>>(config);
+}
+
+//scheduler
+galay::IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Scheduler_Factory::create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out)
+{
+    Engine::ptr engine;
+    switch (engine_type)
+    {
+    case IO_EPOLL:
+        engine = std::make_shared<Epoll_Engine>(event_num,time_out);
+        break;
+    default:
+        return nullptr;
+    }
+    return std::make_shared<IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>>(engine);
+}
+
+
+//client
+galay::Tcp_Client<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Client_Factory::create_tcp_client(IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler)
+{
+    return std::make_shared<Tcp_Client<galay::Tcp_Request,galay::Tcp_Response>>(scheduler);
 }

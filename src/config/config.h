@@ -17,7 +17,7 @@ namespace galay{
     #define DEFAULT_ENGINE                          IO_ENGINE::IO_EPOLL
     #define DEFAULT_MAX_SSL_ACCEPT_RETRY            1000
     #define DEFAULT_SSL_SLEEP_MISC_PER_RETRY        1
-
+    #define DEFAULT_CLINET_EVENT_SIZE               1
 
 
     enum IO_ENGINE{
@@ -118,13 +118,6 @@ namespace galay{
         uint32_t m_ssl_accept_retry;
     };
 
-    class Tcp_Client_Config: public Config
-    {
-    public:
-        
-
-    };
-
     //http server 配置类
     class Http_Server_Config: public Tcp_Server_Config 
     {
@@ -174,6 +167,7 @@ namespace galay{
 
         }
     };
+
 
 
 };
