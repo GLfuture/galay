@@ -22,7 +22,12 @@ namespace galay
             return this->m_error;
         }
 
-        virtual ~Client(){}
+        virtual ~Client(){
+            if(this->m_scheduler && !this->m_scheduler->is_stop()){
+                this->m_scheduler->stop();
+                this->m_scheduler.reset();
+            }
+        }
     protected:
 
         void add_task(Task_Base<REQ,RESP>::ptr task)
