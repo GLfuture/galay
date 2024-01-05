@@ -3,8 +3,6 @@
 
 using namespace galay;
 
-auto scheduler = Scheduler_Factory::create_tcp_scheduler(IO_EPOLL,1,5);
-
 Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
 {
     auto client = Client_Factory::create_tcp_client(scheduler);
@@ -20,6 +18,7 @@ Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
     char* buffer = new char[20];
     ret = co_await client->recv(buffer,20);
     std::cout<<"recv len :"<<ret <<"buffer: "<<buffer<<'\n';
+    delete[] buffer;
     client->disconnect();
     scheduler->stop();
     co_return;
@@ -28,8 +27,7 @@ Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
 
 int main()
 {
-    epoll_event *events;
-    
+    auto scheduler = Scheduler_Factory::create_tcp_scheduler(IO_EPOLL,1,5);
     Task<> t = func(scheduler);
     scheduler->start();
     std::cout<<"end\n";
