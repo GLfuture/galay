@@ -19,6 +19,7 @@ namespace galay
         {
             this->m_fd = iofunction::Tcp_Function::Sock();
             iofunction::Simple_Fuction::IO_Set_No_Block(this->m_fd);
+            this->m_scheduler->m_engine->add_event(this->m_fd , EPOLLET | EPOLLIN);
         }
 
         //0 is success  -1 is failed
@@ -36,11 +37,12 @@ namespace galay
                 }
             }
             Client<REQ,RESP>::add_task(task);
-            this->m_scheduler->m_engine->add_event(this->m_fd,EPOLLOUT);
+            this->m_scheduler->m_engine->mod_event(this->m_fd,EPOLLOUT);
             return Net_Awaiter<REQ,RESP,int>{task};
         }
         
         //-1 is failed >0 is successful
+        //if >0 return the value that send's length
         Net_Awaiter<REQ,RESP,int> send(const std::string &buffer,uint32_t len)
         {
             int ret = iofunction::Tcp_Function::Send(this->m_fd,buffer,len);
@@ -52,7 +54,9 @@ namespace galay
                 if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                 {
                     typename Co_Tcp_Client_Send_Task<REQ,RESP,int>::ptr task = std::make_shared<Co_Tcp_Client_Send_Task<REQ,RESP,int>>(this->m_fd,buffer,len);
+                    Client<REQ,RESP>::add_task(task);
                     this->m_scheduler->m_engine->mod_event(this->m_fd,EPOLLOUT);
+                    return Net_Awaiter<REQ,RESP,int>{task};
                 }else{
                     return Net_Awaiter<REQ,RESP,int>{nullptr,ret};
                 }
@@ -60,6 +64,27 @@ namespace galay
             return Net_Awaiter<REQ,RESP,int>{nullptr,ret};
         }
         
+        //-1 is failed >0 is success 
+        //if >0 return the value that recv's length
+        Net_Awaiter<REQ,RESP,int> recv(char* buffer,int len)
+        {
+            int ret = iofunction::Tcp_Function::Recv(this->m_fd , buffer, len);
+            if(ret == 0){
+                return Net_Awaiter<REQ,RESP,int>{nullptr,-1};
+            }
+            else if(ret == -1)
+            {
+                if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN){
+                    typename Co_Tcp_Client_Recv_Task<REQ,RESP,int>::ptr task = std::make_shared<Co_Tcp_Client_Recv_Task<REQ,RESP,int>>(this->m_fd,buffer,len);
+                    Client<REQ,RESP>::add_task(task);
+                    this->m_scheduler->m_engine->mod_event(this->m_fd,EPOLLIN);
+                    return Net_Awaiter<REQ,RESP,int>{task};
+                }else{
+                    return Net_Awaiter<REQ,RESP,int>{nullptr,-1};
+                }
+            }
+            return Net_Awaiter<REQ,RESP,int>{nullptr,ret};
+        }
 
         void disconnect()
         {
