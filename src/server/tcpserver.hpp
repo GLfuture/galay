@@ -15,26 +15,7 @@ namespace galay
         Tcp_Server() = delete;
         Tcp_Server(Tcp_Server_Config::ptr config) : Server<REQ, RESP>(config)
         {
-            switch (config->m_engine)
-            {
-            case IO_ENGINE::IO_POLL:
-            {
-                break;
-            }
-            case IO_ENGINE::IO_SELECT:
-                break;
-            case IO_ENGINE::IO_EPOLL:
-            {
-                auto engine = std::make_shared<Epoll_Engine>(config->m_event_size, config->m_event_time_out);
-                this->m_scheduler = std::make_shared<IO_Scheduler<REQ,RESP>>(engine);
-                break;
-            }
-            case IO_ENGINE::IO_URING:
-                break;
-            default:
-                this->m_error = error::server_error::GY_ENGINE_CHOOSE_ERROR;
-                break;
-            }
+            this->m_scheduler = std::make_shared<IO_Scheduler<REQ,RESP>>(config->m_engine,config->m_event_size,config->m_event_time_out);
         }
 
         void start(std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func) override
@@ -44,36 +25,12 @@ namespace galay
             if (this->m_error != error::base_error::GY_SUCCESS)
                 return;
             add_accept_task(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func),config->m_recv_len);
-            while (1)
-            {
-                int ret = this->m_scheduler->m_engine->event_check();
-                if (this->m_stop)
-                    break;
-                if (ret == -1)
-                {
-                    // need to call engine's get_error
-                    this->m_error = error::server_error::GY_ENGINE_HAS_ERROR;
-                    return;
-                }
-                epoll_event *events = (epoll_event *)this->m_scheduler->m_engine->result();
-                int nready = this->m_scheduler->m_engine->get_active_event_num();
-                for (int i = 0; i < nready; i++)
-                {
-                    typename Task_Base<REQ, RESP>::ptr task = this->m_scheduler->m_tasks->at(events[i].data.fd);
-                    task->exec();
-                }
-            }
+            this->m_error = this->m_scheduler->start();
+            
         }
 
         virtual ~Tcp_Server()
         {
-            for (auto it = this->m_scheduler->m_tasks->begin(); it != this->m_scheduler->m_tasks->end(); it++)
-            {
-                this->m_scheduler->m_engine->del_event(it->first, EPOLLIN);
-                close(it->first);
-                it->second.reset();
-            }
-            this->m_scheduler->m_tasks->clear();
         }
 
     protected:

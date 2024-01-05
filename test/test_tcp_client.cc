@@ -2,6 +2,8 @@
 #include "../src/factory/factory.h" 
 using namespace galay;
 
+auto scheduler = Scheduler_Factory::create_tcp_scheduler(IO_EPOLL,1,5);
+
 Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
 {
     auto client = Client_Factory::create_tcp_client(scheduler);
@@ -17,6 +19,7 @@ Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
     ret = iofunction::Tcp_Function::Send(4,buffer,buffer.length());
     std::cout<<ret<<'\n';
     client->disconnect();
+    scheduler->stop();
     co_return;
 }
 
@@ -24,20 +27,9 @@ Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
 int main()
 {
     epoll_event *events;
-    auto scheduler = Scheduler_Factory::create_tcp_scheduler(IO_EPOLL,1,5);
+    
     Task<> t = func(scheduler);
-    while(1)
-    {
-        scheduler->m_engine->event_check();
-        int nready = scheduler->m_engine->get_active_event_num();
-        events = (epoll_event*)scheduler->m_engine->result();
-        for(int i = 0 ; i < nready ; i++)
-        {
-            std::cout<<"exec\n";
-            scheduler->m_tasks->at(events[i].data.fd)->exec();
-        }
-        if(scheduler->m_tasks->empty()) break;
-    }
+    scheduler->start();
     std::cout<<"end\n";
     return 0;
 }

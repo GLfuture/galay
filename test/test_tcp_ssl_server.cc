@@ -31,9 +31,9 @@ int main()
     auto config = Config_Factory::create_tcp_ssl_server_config(8080,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key");
     auto server = Server_Factory::create_tcp_ssl_server(config);
     server->start(func);
-    if(server->get_error() == error::server_error::GY_ENGINE_HAS_ERROR)
+    if(server->get_error() != error::base_error::GY_SUCCESS)
     {
-        std::cout<<error::get_err_str(server->get_scheduler()->m_engine->get_error())<<std::endl;
+       std::cout<<error::get_err_str(server->get_error())<<std::endl;
     }
     return 0;
 }
