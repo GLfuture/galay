@@ -24,7 +24,6 @@ namespace galay
             GY_SSL_OBJ_INIT_ERROR,              //ssl_new
             GY_SSL_CRT_OR_KEY_FILE_ERROR,       //ssl certifaction and key file error
             GY_ENGINE_CHOOSE_ERROR,             //engine choose error
-            GY_ENGINE_HAS_ERROR,                //engine has error ,need to call engine's get_error interface
             GY_SERVER_ERROR_END
         };
 
@@ -35,8 +34,13 @@ namespace galay
             GY_CLIENT_ERROR_END
         };
 
+        enum scheduler_error{
+            GY_SCHEDULER_ENGINE_CHECK_ERROR = GY_CLIENT_ERROR_END,  //scheduler's engine check error
+            GY_SCHEDULER_ERROR_END,
+        };
+
         enum engine_error{
-            GY_ENGINE_EPOLL_WAIT_ERROR = GY_CLIENT_ERROR_END,                //epoll egine epoll_wait error
+            GY_ENGINE_EPOLL_WAIT_ERROR = GY_SCHEDULER_ERROR_END,                //epoll egine epoll_wait error
             GY_ENGINE_ERROR_END
         };
 

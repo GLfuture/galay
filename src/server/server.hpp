@@ -19,7 +19,6 @@ namespace galay
     public:
         Server(Config::ptr config) : m_config(config)
         {
-            m_stop.store(false, std::memory_order::relaxed);
         }
 
         virtual void start(std::function<Task<>(std::shared_ptr<Task_Base<REQ,RESP>>)> &&func) = 0;
@@ -31,7 +30,7 @@ namespace galay
     
         virtual void stop()
         {
-            this->m_stop.store(true, std::memory_order::relaxed);
+            this->m_scheduler->stop();
         }
 
         IO_Scheduler<REQ,RESP>::ptr get_scheduler()
@@ -41,14 +40,15 @@ namespace galay
 
         virtual ~Server()
         {
-            if(!m_stop) this->m_scheduler->m_engine->stop();
+            if(!this->m_scheduler->is_stop()){
+                this->m_scheduler->stop();
+            }
         }
 
     protected:
         int m_fd = 0;
         Config::ptr m_config;
         int m_error = error::base_error::GY_SUCCESS;
-        std::atomic_bool m_stop;
         IO_Scheduler<REQ,RESP>::ptr m_scheduler;
     };
 

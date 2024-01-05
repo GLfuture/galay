@@ -102,16 +102,7 @@ galay::Https_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server
 //scheduler
 galay::IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Scheduler_Factory::create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out)
 {
-    Engine::ptr engine;
-    switch (engine_type)
-    {
-    case IO_EPOLL:
-        engine = std::make_shared<Epoll_Engine>(event_num,time_out);
-        break;
-    default:
-        return nullptr;
-    }
-    return std::make_shared<IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>>(engine);
+    return std::make_shared<IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>>(engine_type,event_num,time_out);
 }
 
 
