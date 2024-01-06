@@ -17,7 +17,8 @@ namespace galay
     class Server
     {
     public:
-        Server(Config::ptr config) : m_config(config)
+        Server(Config::ptr config , IO_Scheduler<REQ,RESP>::ptr scheduler) 
+            : m_config(config),m_scheduler(scheduler)
         {
         }
 

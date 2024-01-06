@@ -24,7 +24,8 @@ int main()
 {
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_tcp_server_config(8080);
-    auto server = Server_Factory::create_tcp_server(config);
+    auto scheduler = Scheduler_Factory::create_tcp_scheduler(IO_EPOLL,DEFAULT_EVENT_SIZE,DEFAULT_EVENT_TIME_OUT);
+    auto server = Server_Factory::create_tcp_server(config,scheduler);
     server->start(func);
     if(server->get_error() != error::base_error::GY_SUCCESS)
     {

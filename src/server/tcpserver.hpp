@@ -13,9 +13,9 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_Server>;
         Tcp_Server() = delete;
-        Tcp_Server(Tcp_Server_Config::ptr config) : Server<REQ, RESP>(config)
+        Tcp_Server(Tcp_Server_Config::ptr config , IO_Scheduler<REQ,RESP>::ptr scheduler) 
+            : Server<REQ, RESP>(config,scheduler)
         {
-            this->m_scheduler = std::make_shared<IO_Scheduler<REQ,RESP>>(config->m_engine,config->m_event_size,config->m_event_time_out);
         }
 
         void start(std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func) override
@@ -24,7 +24,7 @@ namespace galay
             this->m_error = init(config);
             if (this->m_error != error::base_error::GY_SUCCESS)
                 return;
-            add_accept_task(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func),config->m_recv_len);
+            add_accept_task(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func),config->m_max_rbuffer_len);
             this->m_error = this->m_scheduler->start();
             
         }
@@ -74,8 +74,8 @@ namespace galay
     class Tcp_SSL_Server: public Tcp_Server<REQ,RESP>
     {
     public:
-        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config):
-            Tcp_Server<REQ,RESP>(config)
+        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config, IO_Scheduler<REQ,RESP>::ptr scheduler)
+            :Tcp_Server<REQ,RESP>(config,scheduler)
         {
             m_ctx = iofunction::Tcp_Function::SSL_Init_Server(config->m_ssl_min_version,config->m_ssl_max_version);
             if(m_ctx == nullptr){
