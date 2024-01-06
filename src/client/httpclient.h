@@ -20,9 +20,9 @@ namespace galay
         Net_Awaiter<REQ,RESP,int> send(const std::string &buffer,uint32_t len) = delete;
 
 
-        Net_Awaiter<REQ,RESP,int> request(Http_Request::ptr request,Http_Response::ptr response,int len)
+        Net_Awaiter<REQ,RESP,int> request(Http_Request::ptr request,Http_Response::ptr response)
         {
-            typename Http_Request_Task<REQ,RESP,int>::ptr task = std::make_shared<Http_Request_Task<REQ,RESP>>(this->m_fd,this->m_scheduler->m_engine,request,response,len);
+            typename Http_Request_Task<REQ,RESP,int>::ptr task = std::make_shared<Http_Request_Task<REQ,RESP>>(this->m_fd,this->m_scheduler->m_engine,request,response);
             Tcp_Client<REQ,RESP>::add_task(task);
             return Net_Awaiter<REQ,RESP,int>{task};
         }

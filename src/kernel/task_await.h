@@ -165,14 +165,12 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Request_Task>;
-        Http_Request_Task(int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response, int len)
+        Http_Request_Task(int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response)
         {
             this->m_fd = fd;
             this->m_request = request;
             this->m_respnse = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
-            this->m_len = len;
-            this->m_buffer = new char[len];
             this->m_engine = engine;
         }
 
@@ -212,7 +210,8 @@ namespace galay
             }
             case Task_Status::GY_TASK_READ:
             {
-                int ret = iofunction::Tcp_Function::Recv(this->m_fd, this->m_buffer, this->m_len);
+                char* buffer = new char[DEFAULT_RECV_LENGTH];
+                int ret = iofunction::Tcp_Function::Recv(this->m_fd, buffer, DEFAULT_RECV_LENGTH);
                 if (ret == -1)
                 {
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
@@ -232,13 +231,16 @@ namespace galay
                 }
                 else
                 {
-                    this->m_result = ret;
                     int state;
-                    std::string response(this->m_buffer,ret);
-                    this->m_respnse->decode(response,state);
-                    if(state != error::base_error::GY_SUCCESS){
+                    this->m_buffer.append(buffer,ret);
+                    this->m_respnse->decode(this->m_buffer,state);
+                    if(state == error::protocol_error::GY_PROTOCOL_INCOMPLETE){
+                        return -1;
+                    }else{
                         this->m_error = state;
                     }
+                    this->m_result = ret;
+                    
                 }
                 break;
             }
@@ -251,14 +253,12 @@ namespace galay
 
         ~Http_Request_Task()
         {
-            if(m_buffer) delete[] m_buffer;
         }
 
 
     protected:
         int m_fd;
-        int m_len;
-        char* m_buffer = nullptr;
+        std::string m_buffer;
         Http_Request::ptr m_request;
         Http_Response::ptr m_respnse;
         Engine::ptr m_engine;
