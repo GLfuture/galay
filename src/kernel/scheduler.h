@@ -13,7 +13,6 @@ namespace galay{
         virtual ~Scheduler_Base(){}
     };
 
-    template<Request REQ,Response RESP>
     class IO_Scheduler: public Scheduler_Base
     {
     public:
@@ -36,7 +35,7 @@ namespace galay{
             case IO_ENGINE::IO_URING:
                 break;
             }
-            this->m_tasks = std::make_shared<std::unordered_map<int, std::shared_ptr<Task_Base<REQ, RESP>>>>();
+            this->m_tasks = std::make_shared<std::unordered_map<int, std::shared_ptr<Task_Base>>>();
         }
 
         int start()
@@ -54,7 +53,7 @@ namespace galay{
                 int nready = this->m_engine->get_active_event_num();
                 for (int i = 0; i < nready; i++)
                 {
-                    typename Task_Base<REQ, RESP>::ptr task = this->m_tasks->at(events[i].data.fd);
+                    typename Task_Base::ptr task = this->m_tasks->at(events[i].data.fd);
                     task->exec();
                 }
             }
@@ -88,7 +87,7 @@ namespace galay{
 
         bool m_stop = false;
         Engine::ptr m_engine;
-        std::shared_ptr<std::unordered_map<int, std::shared_ptr<Task_Base<REQ, RESP>>>> m_tasks;
+        std::shared_ptr<std::unordered_map<int, std::shared_ptr<Task_Base>>> m_tasks;
     };
 
 }

@@ -24,30 +24,30 @@ namespace galay
         GY_TASK_WRITE,
     };
 
-    template <Request REQ, Response RESP>
     class Server;
 
-    template <Request REQ, Response RESP>
     class Tcp_RW_Task;
 
-    template <Request REQ, Response RESP>
     class Tcp_SSL_RW_Task;
 
-    template <Request REQ, Response RESP>
     class Http_RW_Task;
     
-    template <Request REQ, Response RESP>
     class Https_RW_Task;
 
-    template <Request REQ, Response RESP>
     class Task_Base
     {
     public:
         using ptr = std::shared_ptr<Task_Base>;
 
-        virtual std::shared_ptr<REQ> get_req() = 0;
-        virtual std::shared_ptr<RESP> get_resp() = 0;
-        virtual void control_task_behavior(Task_Status status) = 0;
+        virtual Request_Base::ptr get_req(){
+            return nullptr;
+        }
+        virtual Response_Base::ptr get_resp(){
+            return nullptr;
+        }
+        virtual void control_task_behavior(Task_Status status){
+
+        }
 
         // return -1 error 0 success
         virtual int exec() = 0;

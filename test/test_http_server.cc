@@ -2,13 +2,15 @@
 #include <signal.h>
 using namespace galay;
 
-Task<> func(Task_Base<Http_Request,Http_Response>::ptr task)
+Task<> func(Task_Base::ptr task)
 {
-    std::cout<<task->get_req()->encode();
-    task->get_resp()->get_status() = 200;
-    task->get_resp()->get_version() = "HTTP/1.1";
-    task->get_resp()->set_head_kv_pair({"Connection","close"});
-    task->get_resp()->get_body() = "<!DOCTYPE html><html><body>Hello, World!</body></html>";
+    auto req = std::dynamic_pointer_cast<Http_Request>(task->get_req());
+    auto resp = std::dynamic_pointer_cast<Http_Response>(task->get_resp());
+    std::cout<<req->encode();
+    resp->get_status() = 200;
+    resp->get_version() = "HTTP/1.1";
+    resp->set_head_kv_pair({"Connection","close"});
+    resp->get_body() = "<!DOCTYPE html><html><body>Hello, World!</body></html>";
     return {};
 }
 

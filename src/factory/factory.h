@@ -53,13 +53,13 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Server_Factory>;
         //tcp
-        static Tcp_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_server(Tcp_Server_Config::ptr config , IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
+        static Tcp_Server::ptr create_tcp_server(Tcp_Server_Config::ptr config , IO_Scheduler::ptr scheduler);
         //tcp ssl
-        static Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
+        static Tcp_SSL_Server::ptr create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,IO_Scheduler::ptr scheduler);
         //http
-        static Http_Server<Http_Request,Http_Response>::ptr create_http_server(Http_Server_Config::ptr config ,IO_Scheduler<Http_Request,Http_Response>::ptr scheduler);
+        static Http_Server::ptr create_http_server(Http_Server_Config::ptr config ,IO_Scheduler::ptr scheduler);
         //https
-        static Https_Server<Http_Request,Http_Response>::ptr create_https_server(Https_Server_Config::ptr config ,IO_Scheduler<Http_Request,Http_Response>::ptr scheduler);
+        static Https_Server::ptr create_https_server(Https_Server_Config::ptr config ,IO_Scheduler::ptr scheduler);
     };
 
 
@@ -67,16 +67,16 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Scheduler_Factory>;
-        static IO_Scheduler<Tcp_Request,Tcp_Response>::ptr create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
-        static IO_Scheduler<Http_Request,Http_Response>::ptr create_http_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
+        static IO_Scheduler::ptr create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
+        static IO_Scheduler::ptr create_http_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
     };
 
     class Client_Factory: public Factory_Base
     {
     public:
         using ptr = std::shared_ptr<Client_Factory>;
-        static Tcp_Client<Tcp_Request,Tcp_Response>::ptr create_tcp_client(IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
-        static Http_Client<Http_Request,Http_Response>::ptr create_http_client(IO_Scheduler<Http_Request,Http_Response>::ptr scheduler);
+        static Tcp_Client::ptr create_tcp_client(IO_Scheduler::ptr scheduler);
+        static Http_Client::ptr create_http_client(IO_Scheduler::ptr scheduler);
     };
 
 }

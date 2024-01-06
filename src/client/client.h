@@ -7,11 +7,10 @@
 
 namespace galay
 {
-    template<Request REQ,Response RESP>
     class Client
     {
     public:
-        Client(IO_Scheduler<REQ,RESP>::ptr scheduler)
+        Client(IO_Scheduler::ptr scheduler)
             :m_scheduler(scheduler)
         {
             
@@ -30,7 +29,7 @@ namespace galay
         }
     protected:
 
-        void add_task(Task_Base<REQ,RESP>::ptr task)
+        void add_task(Task_Base::ptr task)
         {
             auto it = this->m_scheduler->m_tasks->find(this->m_fd);
             if(it == this->m_scheduler->m_tasks->end())
@@ -43,7 +42,7 @@ namespace galay
     protected:
         int m_fd;
         int m_error;
-        IO_Scheduler<REQ,RESP>::ptr m_scheduler;
+        IO_Scheduler::ptr m_scheduler;
     };
 
 
