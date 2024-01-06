@@ -231,6 +231,44 @@ test_tcp_client/fast:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_tcp_client.dir/build.make test/CMakeFiles/test_tcp_client.dir/build
 .PHONY : test_tcp_client/fast
 
+# Convenience name for target.
+test/CMakeFiles/test_http_client.dir/rule:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_http_client.dir/rule
+.PHONY : test/CMakeFiles/test_http_client.dir/rule
+
+# Convenience name for target.
+test_http_client: test/CMakeFiles/test_http_client.dir/rule
+.PHONY : test_http_client
+
+# fast build rule for target.
+test_http_client/fast:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_client.dir/build.make test/CMakeFiles/test_http_client.dir/build
+.PHONY : test_http_client/fast
+
+test_http_client.o: test_http_client.cc.o
+.PHONY : test_http_client.o
+
+# target to build an object file
+test_http_client.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_client.dir/build.make test/CMakeFiles/test_http_client.dir/test_http_client.cc.o
+.PHONY : test_http_client.cc.o
+
+test_http_client.i: test_http_client.cc.i
+.PHONY : test_http_client.i
+
+# target to preprocess a source file
+test_http_client.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_client.dir/build.make test/CMakeFiles/test_http_client.dir/test_http_client.cc.i
+.PHONY : test_http_client.cc.i
+
+test_http_client.s: test_http_client.cc.s
+.PHONY : test_http_client.s
+
+# target to generate assembly for a file
+test_http_client.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_client.dir/build.make test/CMakeFiles/test_http_client.dir/test_http_client.cc.s
+.PHONY : test_http_client.cc.s
+
 test_http_server.o: test_http_server.cc.o
 .PHONY : test_http_server.o
 
@@ -363,11 +401,15 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... test_http_client"
 	@echo "... test_http_server"
 	@echo "... test_https_server"
 	@echo "... test_tcp_client"
 	@echo "... test_tcp_server"
 	@echo "... test_tcp_ssl_server"
+	@echo "... test_http_client.o"
+	@echo "... test_http_client.i"
+	@echo "... test_http_client.s"
 	@echo "... test_http_server.o"
 	@echo "... test_http_server.i"
 	@echo "... test_http_server.s"

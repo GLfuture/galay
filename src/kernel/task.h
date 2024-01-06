@@ -11,7 +11,8 @@
 #include "error.h"
 #include "engine.h"
 #include "coroutine.h"
-
+#include "../protocol/tcp.h"
+#include "../protocol/http.h"
 
 namespace galay
 {

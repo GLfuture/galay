@@ -215,8 +215,8 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: \
  /usr/include/c++/12/bits/algorithmfwd.h \
  /usr/include/c++/12/bits/stl_heap.h \
  /usr/include/c++/12/bits/uniform_int_dist.h \
- /home/gong/projects/galay/src/factory/../server/tcpserver.hpp \
- /home/gong/projects/galay/src/factory/../server/server.hpp \
+ /home/gong/projects/galay/src/factory/../server/tcpserver.h \
+ /home/gong/projects/galay/src/factory/../server/server.h \
  /home/gong/projects/galay/src/factory/../server/../config/config.h \
  /home/gong/projects/galay/src/factory/../server/../kernel/iofunction.h \
  /usr/include/arpa/inet.h /usr/include/netinet/in.h \
@@ -300,12 +300,17 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: \
  /usr/include/x86_64-linux-gnu/bits/epoll.h \
  /home/gong/projects/galay/src/factory/../server/../kernel/coroutine.h \
  /usr/include/c++/12/coroutine \
+ /home/gong/projects/galay/src/factory/../server/../kernel/../protocol/tcp.h \
+ /home/gong/projects/galay/src/factory/../server/../kernel/../protocol/basic_protocol.h \
+ /home/gong/projects/galay/src/factory/../server/../kernel/../protocol/../kernel/error.h \
+ /home/gong/projects/galay/src/factory/../server/../kernel/../protocol/http.h \
+ /usr/include/assert.h \
  /home/gong/projects/galay/src/factory/../server/../kernel/task_tcp.h \
  /home/gong/projects/galay/src/factory/../server/../kernel/scheduler.h \
- /home/gong/projects/galay/src/factory/../server/httpserver.hpp \
+ /home/gong/projects/galay/src/factory/../server/httpserver.h \
  /home/gong/projects/galay/src/factory/../server/../kernel/task_http.h \
  /home/gong/projects/galay/src/factory/../server/../kernel/task_tcp.h \
- /home/gong/projects/galay/src/factory/../server/tcpserver.hpp \
+ /home/gong/projects/galay/src/factory/../server/tcpserver.h \
  /home/gong/projects/galay/src/factory/../client/tcpclient.h \
  /home/gong/projects/galay/src/factory/../client/client.h \
  /home/gong/projects/galay/src/factory/../client/../config/config.h \
@@ -316,8 +321,7 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: \
  /home/gong/projects/galay/src/factory/../client/../kernel/task_await.h \
  /home/gong/projects/galay/src/factory/../client/../kernel/task.h \
  /usr/include/c++/12/cstring \
+ /home/gong/projects/galay/src/factory/../client/httpclient.h \
+ /home/gong/projects/galay/src/factory/../client/tcpclient.h \
  /home/gong/projects/galay/src/factory/../protocol/tcp.h \
- /home/gong/projects/galay/src/factory/../protocol/basic_protocol.h \
- /home/gong/projects/galay/src/factory/../protocol/../kernel/error.h \
- /home/gong/projects/galay/src/factory/../protocol/http.h \
- /usr/include/assert.h
+ /home/gong/projects/galay/src/factory/../protocol/http.h

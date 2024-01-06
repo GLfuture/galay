@@ -68,8 +68,10 @@ namespace galay
                 this->m_result = -1;
             }
             if(status != 0){
+                this->m_error = error::GY_CONNECT_ERROR;
                 this->m_result = -1;
             }else{
+                this->m_error = error::GY_CONNECT_ERROR;
                 this->m_result = 0;
             }
             if(!this->m_handle.done()) this->m_handle.resume();
@@ -100,9 +102,11 @@ namespace galay
                 {
                     return -1;
                 }else{
+                    this->m_error = error::GY_SEND_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
+                this->m_error = error::GY_SEND_ERROR;
                 this->m_result = -1;
             }else{
                 this->m_result = ret;
@@ -137,9 +141,11 @@ namespace galay
                 {
                     return -1;
                 }else{
+                    this->m_error = error::GY_RECV_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
+                this->m_error = error::GY_RECV_ERROR;
                 this->m_result = -1;
             }else{
                 this->m_result = ret;
@@ -154,7 +160,111 @@ namespace galay
         int m_len;
     };
 
-}
+    template<Request REQ ,Response RESP , typename RESULT = int>
+    class Http_Request_Task: public Co_Task_Base<REQ,RESP,RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Http_Request_Task>;
+        Http_Request_Task(int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response, int len)
+        {
+            this->m_fd = fd;
+            this->m_request = request;
+            this->m_respnse = response;
+            this->m_status = Task_Status::GY_TASK_WRITE;
+            this->m_len = len;
+            this->m_buffer = new char[len];
+            this->m_engine = engine;
+        }
+
+        int exec() override
+        {
+            switch (this->m_status)
+            {
+            case Task_Status::GY_TASK_WRITE :
+            {
+                std::string request = m_request->encode();
+                int ret = iofunction::Tcp_Function::Send(this->m_fd, request, request.length());
+                if (ret == -1)
+                {
+                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        this->m_error = error::GY_SEND_ERROR;
+                        this->m_result = -1;
+                    }
+                }
+                else if (ret == 0)
+                {
+                    this->m_error = error::GY_SEND_ERROR;
+                    this->m_result = -1;
+                }
+                else
+                {
+                    this->m_result = ret;
+                    this->m_status = Task_Status::GY_TASK_READ;
+                    m_engine->mod_event(this->m_fd , EPOLLIN);
+                    return -1;
+                }
+                break;
+            }
+            case Task_Status::GY_TASK_READ:
+            {
+                int ret = iofunction::Tcp_Function::Recv(this->m_fd, this->m_buffer, this->m_len);
+                if (ret == -1)
+                {
+                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        this->m_error = error::GY_RECV_ERROR;
+                        this->m_result = -1;
+                    }
+                }
+                else if (ret == 0)
+                {
+                    this->m_error = error::GY_RECV_ERROR;
+                    this->m_result = -1;
+                }
+                else
+                {
+                    this->m_result = ret;
+                    int state;
+                    std::string response(this->m_buffer,ret);
+                    this->m_respnse->decode(response,state);
+                    if(state != error::base_error::GY_SUCCESS){
+                        this->m_error = state;
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+            }
+            if (!this->m_handle.done()) this->m_handle.resume();
+            return 0;
+        }
+
+        ~Http_Request_Task()
+        {
+            if(m_buffer) delete[] m_buffer;
+        }
+
+
+    protected:
+        int m_fd;
+        int m_len;
+        char* m_buffer = nullptr;
+        Http_Request::ptr m_request;
+        Http_Response::ptr m_respnse;
+        Engine::ptr m_engine;
+    };
+
+}   
 
 
 #endif
