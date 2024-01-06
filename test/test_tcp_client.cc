@@ -3,7 +3,7 @@
 
 using namespace galay;
 
-Task<> func(IO_Scheduler<galay::Tcp_Request,galay::Tcp_Response>::ptr scheduler)
+Task<> func(IO_Scheduler::ptr scheduler)
 {
     auto client = Client_Factory::create_tcp_client(scheduler);
     int ret = co_await client->connect("127.0.0.1",8080);

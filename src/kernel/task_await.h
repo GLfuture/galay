@@ -5,25 +5,12 @@
 
 namespace galay
 {
-    template<Request REQ ,Response RESP , typename RESULT>
-    class Co_Task_Base : public Task_Base<REQ,RESP>
+    template<typename RESULT>
+    class Co_Task_Base : public Task_Base
     {
     public:
         using ptr = std::shared_ptr<Co_Task_Base>;
 
-        std::shared_ptr<REQ> get_req() override
-        {
-            return nullptr;
-        }
-        std::shared_ptr<RESP> get_resp() override
-        {  
-            return nullptr;
-
-        }
-        void control_task_behavior(Task_Status status) override
-        {
-
-        }
 
         virtual void set_co_handle(std::coroutine_handle<> handle)
         {
@@ -49,11 +36,11 @@ namespace galay
         std::coroutine_handle<> m_handle;
     };
 
-    template<Request REQ ,Response RESP , typename RESULT = int>
-    class Co_Tcp_Client_Connect_Task: public Co_Task_Base<REQ,RESP,RESULT>
+    template<typename RESULT = int>
+    class Co_Tcp_Client_Connect_Task: public Co_Task_Base<RESULT>
     {
     public:
-        using ptr = std::shared_ptr<Co_Tcp_Client_Connect_Task<REQ,RESP,RESULT>>;
+        using ptr = std::shared_ptr<Co_Tcp_Client_Connect_Task<RESULT>>;
 
         Co_Tcp_Client_Connect_Task(int fd)
         {
@@ -82,8 +69,8 @@ namespace galay
     };
 
 
-    template<Request REQ ,Response RESP , typename RESULT = int>
-    class Co_Tcp_Client_Send_Task:public Co_Task_Base<REQ,RESP,RESULT>
+    template<typename RESULT = int>
+    class Co_Tcp_Client_Send_Task:public Co_Task_Base<RESULT>
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Send_Task>;
@@ -121,8 +108,8 @@ namespace galay
         uint32_t m_len;
     };
 
-    template<Request REQ ,Response RESP , typename RESULT = int>
-    class Co_Tcp_Client_Recv_Task:public Co_Task_Base<REQ,RESP,RESULT>
+    template<typename RESULT = int>
+    class Co_Tcp_Client_Recv_Task:public Co_Task_Base<RESULT>
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Recv_Task>;
@@ -160,8 +147,8 @@ namespace galay
         int m_len;
     };
 
-    template<Request REQ ,Response RESP , typename RESULT = int>
-    class Http_Request_Task: public Co_Task_Base<REQ,RESP,RESULT>
+    template<typename RESULT = int>
+    class Http_Request_Task: public Co_Task_Base<RESULT>
     {
     public:
         using ptr = std::shared_ptr<Http_Request_Task>;

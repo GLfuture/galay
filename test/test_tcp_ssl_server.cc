@@ -5,10 +5,12 @@
 using namespace galay;
 
 
-Task<> func(Task_Base<Tcp_Request,Tcp_Response>::ptr task)
+Task<> func(Task_Base::ptr task)
 {
-    std::cout<<task->get_req()->get_buffer()<<'\n';
-    task->get_resp()->get_buffer() = "HTTP/1.1 200 OK\r\n\
+    auto req = std::dynamic_pointer_cast<Tcp_Request>(task->get_req());
+    auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
+    std::cout<<req->get_buffer()<<'\n';
+    resp->get_buffer() = "HTTP/1.1 200 OK\r\n\
 Content-Type: text/html\r\n\r\n\
 <!DOCTYPE html>\
 <html>\

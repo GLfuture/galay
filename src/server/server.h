@@ -12,17 +12,15 @@
 namespace galay
 {
     
-    // server
-    template <Request REQ, Response RESP>
     class Server
     {
     public:
-        Server(Config::ptr config , IO_Scheduler<REQ,RESP>::ptr scheduler) 
+        Server(Config::ptr config , IO_Scheduler::ptr scheduler) 
             : m_config(config),m_scheduler(scheduler)
         {
         }
 
-        virtual void start(std::function<Task<>(std::shared_ptr<Task_Base<REQ,RESP>>)> &&func) = 0;
+        virtual void start(std::function<Task<>(std::shared_ptr<Task_Base>)> &&func) = 0;
 
         virtual int get_error()
         {
@@ -34,7 +32,7 @@ namespace galay
             this->m_scheduler->stop();
         }
 
-        IO_Scheduler<REQ,RESP>::ptr get_scheduler()
+        IO_Scheduler::ptr get_scheduler()
         {
             return this->m_scheduler;
         }
@@ -50,14 +48,13 @@ namespace galay
         int m_fd = 0;
         Config::ptr m_config;
         int m_error = error::base_error::GY_SUCCESS;
-        IO_Scheduler<REQ,RESP>::ptr m_scheduler;
+        IO_Scheduler::ptr m_scheduler;
     };
 
     
     
     // to do
-    template <Request REQ, Response RESP>
-    class Udp_Server : public Server<REQ, RESP>
+    class Udp_Server : public Server
     {
     public:
     };

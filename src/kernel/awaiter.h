@@ -8,19 +8,19 @@
 
 namespace galay
 {
-    template<Request REQ , Response RESP , typename RESULT>
+    template<typename RESULT>
     class Awaiter_Base
     {
     public:
         using ptr = std::shared_ptr<Awaiter_Base>;
 
-        Awaiter_Base(Co_Task_Base<REQ,RESP,RESULT>::ptr task)
+        Awaiter_Base(Co_Task_Base<RESULT>::ptr task)
         {
             this->m_task = task;
         }
 
         Awaiter_Base &operator=(const Awaiter_Base &) = delete;
-        Awaiter_Base &operator=(Awaiter_Base<REQ,RESP,RESULT> &&other)
+        Awaiter_Base &operator=(Awaiter_Base<RESULT> &&other)
         {
             if(this != &other)
             {
@@ -46,23 +46,23 @@ namespace galay
         }
 
     protected:
-        Co_Task_Base<REQ,RESP,RESULT>::ptr m_task = nullptr;
+        Co_Task_Base<RESULT>::ptr m_task = nullptr;
         std::optional<RESULT> m_result;
     };
     
-    template<Request REQ , Response RESP , typename RESULT>
-    class Net_Awaiter: public Awaiter_Base<REQ,RESP,RESULT>
+    template<typename RESULT>
+    class Net_Awaiter: public Awaiter_Base<RESULT>
     {
     public:
         using ptr = std::shared_ptr<Net_Awaiter>;
-        Net_Awaiter(Co_Task_Base<REQ,RESP,RESULT>::ptr task)
-            : Awaiter_Base<REQ,RESP,RESULT>(task)
+        Net_Awaiter(Co_Task_Base<RESULT>::ptr task)
+            : Awaiter_Base<RESULT>(task)
         {
 
         }
 
-        Net_Awaiter(Co_Task_Base<REQ,RESP,RESULT>::ptr task, RESULT result)
-            :Awaiter_Base<REQ,RESP,RESULT>(task)
+        Net_Awaiter(Co_Task_Base<RESULT>::ptr task, RESULT result)
+            :Awaiter_Base<RESULT>(task)
         {
             this->m_result = result;
         }

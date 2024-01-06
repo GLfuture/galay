@@ -6,101 +6,24 @@
 
 namespace galay
 {
-    template <Request REQ, Response RESP>
-    class Tcp_Accept_Task : public Task_Base<REQ, RESP>
-    {
-    public:
-        using ptr = std::shared_ptr<Tcp_Accept_Task>;
-        Tcp_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler,
-                        std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func, uint32_t read_len)
-        {
-            this->m_fd = fd;
-            this->m_status = Task_Status::GY_TASK_READ;
-            this->m_error = error::base_error::GY_SUCCESS;
-            this->m_scheduler = scheduler;
-            this->m_func = func;
-            this->m_read_len = read_len;
-        }
-
-        void control_task_behavior(Task_Status status) override
-        {
-
-        }
-
-        std::shared_ptr<RESP> get_resp() override
-        {
-            return nullptr;
-        }
-        std::shared_ptr<REQ> get_req() override
-        {
-            return nullptr;
-        };
-
-        //
-        int exec() override
-        {
-            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
-            if (connfd <= 0)
-                return -1;
-            auto task = create_rw_task(connfd);
-            add_task(connfd, task);
-            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-            this->m_scheduler->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
-            return 0;
-        }
-
-        virtual ~Tcp_Accept_Task()
-        {
-        }
-
-    protected:
-        virtual Task_Base<REQ, RESP>::ptr create_rw_task(int connfd)
-        {
-            auto task = std::make_shared<Tcp_RW_Task<REQ, RESP>>(connfd, this->m_scheduler->m_engine, this->m_read_len);
-            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
-            return task;
-        }
-
-        virtual void add_task(int connfd, Task_Base<REQ, RESP>::ptr task)
-        {
-            auto it = this->m_scheduler->m_tasks->find(connfd);
-            if (it == this->m_scheduler->m_tasks->end())
-            {
-                this->m_scheduler->m_tasks->emplace(connfd, task);
-            }
-            else
-            {
-                it->second = task;
-            }
-        }
-
-    protected:
-        int m_fd;
-        IO_Scheduler<REQ,RESP>::ptr m_scheduler;
-        uint32_t m_read_len;
-        std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> m_func;
-    };
-
     // tcp
     // server read and write task
-    template <Request REQ, Response RESP>
-    class Tcp_RW_Task : public Task_Base<REQ, RESP>, public std::enable_shared_from_this<Tcp_RW_Task<REQ, RESP>>
+    class Tcp_RW_Task : public Task_Base, public std::enable_shared_from_this<Tcp_RW_Task>
     {
     protected:
-        using Callback = std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>;
+        using Callback = std::function<Task<>(Task_Base::ptr)>;
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
         Tcp_RW_Task(int fd, Engine::ptr engine, uint32_t read_len)
         {
-            this->m_req = std::make_shared<REQ>();
-            this->m_resp = std::make_shared<RESP>();
             this->m_status = Task_Status::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
             this->m_engine = engine;
             this->m_fd = fd;
             this->m_read_len = read_len;
             this->m_temp = new char[read_len];
+            init_protocol_obj();
         }
 
         void control_task_behavior(Task_Status status) override
@@ -135,8 +58,8 @@ namespace galay
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
 
-        std::shared_ptr<REQ> get_req() override { return this->m_req; }
-        std::shared_ptr<RESP> get_resp() override { return this->m_resp; }
+        Request_Base::ptr get_req() override { return this->m_req; }
+        Response_Base::ptr get_resp() override { return this->m_resp; }
 
         // return -1 to delete this task from server
         int exec() override
@@ -196,6 +119,12 @@ namespace galay
         }
 
     protected:
+        virtual void init_protocol_obj()
+        {
+            this->m_req = std::make_shared<Tcp_Request>();
+            this->m_resp = std::make_shared<Tcp_Response>();
+        }
+        
         int decode()
         {
             int state = error::base_error::GY_SUCCESS;
@@ -263,19 +192,145 @@ namespace galay
         uint32_t m_read_len;
         std::string m_rbuffer;
         std::string m_wbuffer;
-        std::shared_ptr<REQ> m_req;
-        std::shared_ptr<RESP> m_resp;
+        Request_Base::ptr m_req;
+        Response_Base::ptr m_resp;
         Callback m_func;
     };
 
+    class Tcp_Accept_Task : public Task_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Tcp_Accept_Task>;
+        Tcp_Accept_Task(int fd, IO_Scheduler::ptr scheduler,
+                        std::function<Task<>(std::shared_ptr<Task_Base>)> &&func, uint32_t read_len)
+        {
+            this->m_fd = fd;
+            this->m_status = Task_Status::GY_TASK_READ;
+            this->m_error = error::base_error::GY_SUCCESS;
+            this->m_scheduler = scheduler;
+            this->m_func = func;
+            this->m_read_len = read_len;
+        }
+
+        //
+        int exec() override
+        {
+            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
+            if (connfd <= 0)
+                return -1;
+            auto task = create_rw_task(connfd);
+            add_task(connfd, task);
+            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+            this->m_scheduler->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+            return 0;
+        }
+
+        virtual ~Tcp_Accept_Task()
+        {
+        }
+
+    protected:
+        virtual Task_Base::ptr create_rw_task(int connfd)
+        {
+            auto task = std::make_shared<Tcp_RW_Task>(connfd, this->m_scheduler->m_engine, this->m_read_len);
+            task->set_callback(std::forward<std::function<Task<>(Task_Base::ptr)>>(this->m_func));
+            return task;
+        }
+
+        virtual void add_task(int connfd, Task_Base::ptr task)
+        {
+            auto it = this->m_scheduler->m_tasks->find(connfd);
+            if (it == this->m_scheduler->m_tasks->end())
+            {
+                this->m_scheduler->m_tasks->emplace(connfd, task);
+            }
+            else
+            {
+                it->second = task;
+            }
+        }
+
+    protected:
+        int m_fd;
+        IO_Scheduler::ptr m_scheduler;
+        uint32_t m_read_len;
+        std::function<Task<>(Task_Base::ptr)> m_func;
+    };
+
+    class Tcp_SSL_RW_Task : public Tcp_RW_Task
+    {
+    public:
+        using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
+        Tcp_SSL_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl)
+            : Tcp_RW_Task(fd, engine, read_len), m_ssl(ssl)
+        {
+        }
+
+        virtual ~Tcp_SSL_RW_Task()
+        {
+            if (this->m_ssl)
+            {
+                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
+                this->m_ssl = nullptr;
+            }
+        }
+
+    protected:
+        int read_package() override
+        {
+            int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
+            if (len == 0)
+            {
+                Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                return -1;
+            }
+            else if (len == -1)
+            {
+                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }
+                else
+                {
+                    Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    return -1;
+                }
+            }
+            this->m_rbuffer.append(this->m_temp, len);
+            memset(this->m_temp, 0, len);
+            return 0;
+        }
+
+        int send_package() override
+        {
+            int len = iofunction::Tcp_Function::SSL_Send(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
+            if (len == -1)
+            {
+                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }
+                else
+                {
+                    Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    return -1;
+                }
+            }
+            this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+            return 0;
+        }
+
+    protected:
+        SSL *m_ssl = nullptr;
+    };
+
     // tcp's ssl task
-    template <Request REQ, Response RESP>
-    class Tcp_SSL_Accept_Task : public Tcp_Accept_Task<REQ, RESP>
+    class Tcp_SSL_Accept_Task : public Tcp_Accept_Task
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Accept_Task>;
-        Tcp_SSL_Accept_Task(int fd, IO_Scheduler<REQ,RESP>::ptr scheduler, std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func, 
-uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Task<REQ, RESP>(fd,scheduler, std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), read_len)
+        Tcp_SSL_Accept_Task(int fd, IO_Scheduler::ptr scheduler, std::function<Task<>(Task_Base::ptr)> &&func, 
+uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Task(fd,scheduler, std::forward<std::function<Task<>(Task_Base::ptr)>>(func), read_len)
         {
             this->m_ctx = ctx;
             this->m_ssl_accept_retry = ssl_accept_max_retry;
@@ -310,7 +365,7 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                 }
             }
             auto task = create_rw_task(connfd, ssl);
-            Tcp_Accept_Task<REQ, RESP>::add_task(connfd, task);
+            Tcp_Accept_Task::add_task(connfd, task);
             this->m_scheduler->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
             return 0;
         }
@@ -322,11 +377,11 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
         }
 
     protected:
-        virtual Task_Base<REQ, RESP>::ptr create_rw_task(int connfd, SSL *ssl)
+        virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl)
         {
 
-            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ, RESP>>(connfd, this->m_scheduler->m_engine, this->m_read_len, ssl);
-            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(this->m_func));
+            auto task = std::make_shared<Tcp_SSL_RW_Task>(connfd, this->m_scheduler->m_engine, this->m_read_len, ssl);
+            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(this->m_func));
             return task;
         }
 
@@ -335,77 +390,9 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
         uint32_t m_ssl_accept_retry;
     };
 
-    template <Request REQ, Response RESP>
-    class Tcp_SSL_RW_Task : public Tcp_RW_Task<REQ, RESP>
-    {
-    public:
-        using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl)
-            : Tcp_RW_Task<REQ, RESP>(fd, engine, read_len), m_ssl(ssl)
-        {
-        }
+    
 
-        virtual ~Tcp_SSL_RW_Task()
-        {
-            if (this->m_ssl)
-            {
-                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
-                this->m_ssl = nullptr;
-            }
-        }
-
-    protected:
-        int read_package() override
-        {
-            int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
-            if (len == 0)
-            {
-                Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
-                return -1;
-            }
-            else if (len == -1)
-            {
-                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                {
-                    return -1;
-                }
-                else
-                {
-                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
-                    return -1;
-                }
-            }
-            this->m_rbuffer.append(this->m_temp, len);
-            memset(this->m_temp, 0, len);
-            return 0;
-        }
-
-        int send_package() override
-        {
-            int len = iofunction::Tcp_Function::SSL_Send(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
-            if (len == -1)
-            {
-                if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                {
-                    return -1;
-                }
-                else
-                {
-                    Tcp_RW_Task<REQ, RESP>::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
-                    return -1;
-                }
-            }
-            this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
-            return 0;
-        }
-
-    protected:
-        SSL *m_ssl = nullptr;
-    };
-
-    // to do
-    template <Request REQ, Response RESP>
-    class Tcp_Connect_Task : public Task_Base<REQ, RESP>
+    class Tcp_Connect_Task : public Task_Base
     {
     public:
         using ptr = std::shared_ptr<Tcp_Connect_Task>;
@@ -415,14 +402,6 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
             this->m_status = GY_TASK_CONNECT;
         }
 
-        std::shared_ptr<REQ> get_req() override
-        {
-            return nullptr;
-        }
-        std::shared_ptr<RESP> get_resp()  override
-        {
-            return nullptr;
-        }
         void control_task_behavior(Task_Status status) override
         {
 
@@ -430,7 +409,8 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
 
         int exec() override
         {
-            int status = 0 , slen = 0;
+            int status = 0;
+            socklen_t slen = sizeof(status);
             if(getsockopt(this->m_fd,SOL_SOCKET,SO_ERROR,(void *)&status,&slen) < 0){
                 this->m_error = error::client_error::GY_GETSOCKET_STATUS_ERROR;
                 this->m_status = GY_TASK_DISCONNECT;

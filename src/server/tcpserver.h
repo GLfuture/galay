@@ -7,24 +7,23 @@
 namespace galay
 {
     // tcp server
-    template <Request REQ, Response RESP>
-    class Tcp_Server : public Server<REQ, RESP>
+    class Tcp_Server : public Server
     {
     public:
         using ptr = std::shared_ptr<Tcp_Server>;
         Tcp_Server() = delete;
-        Tcp_Server(Tcp_Server_Config::ptr config , IO_Scheduler<REQ,RESP>::ptr scheduler) 
-            : Server<REQ, RESP>(config,scheduler)
+        Tcp_Server(Tcp_Server_Config::ptr config , IO_Scheduler::ptr scheduler) 
+            : Server(config,scheduler)
         {
         }
 
-        void start(std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func) override
+        void start(std::function<Task<>(std::shared_ptr<Task_Base>)> &&func) override
         {
             Tcp_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
             this->m_error = init(config);
             if (this->m_error != error::base_error::GY_SUCCESS)
                 return;
-            add_accept_task(std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func),config->m_max_rbuffer_len);
+            add_accept_task(std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(func),config->m_max_rbuffer_len);
             this->m_error = this->m_scheduler->start();
             
         }
@@ -62,20 +61,20 @@ namespace galay
             return error::base_error::GY_SUCCESS;
         }
 
-        virtual void add_accept_task(std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func , uint32_t recv_len)
+        virtual void add_accept_task(std::function<Task<>(std::shared_ptr<Task_Base>)> &&func , uint32_t recv_len)
         {
             this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
-            this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task<REQ, RESP>>(this->m_fd, this->m_scheduler
-                , std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), recv_len)));
+            this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task>(this->m_fd, this->m_scheduler
+                , std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(func), recv_len)));
         }
     };
 
-    template <Request REQ, Response RESP>
-    class Tcp_SSL_Server: public Tcp_Server<REQ,RESP>
+    
+    class Tcp_SSL_Server: public Tcp_Server
     {
     public:
-        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config, IO_Scheduler<REQ,RESP>::ptr scheduler)
-            :Tcp_Server<REQ,RESP>(config,scheduler)
+        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config, IO_Scheduler::ptr scheduler)
+            :Tcp_Server(config,scheduler)
         {
             m_ctx = iofunction::Tcp_Function::SSL_Init_Server(config->m_ssl_min_version,config->m_ssl_max_version);
             if(m_ctx == nullptr){
@@ -100,12 +99,12 @@ namespace galay
         }
 
     protected:
-        void add_accept_task(std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)> &&func , uint32_t recv_len) override
+        void add_accept_task(std::function<Task<>(Task_Base::ptr)> &&func , uint32_t recv_len) override
         {
             this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
             Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
-            this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task<REQ, RESP>>(this->m_fd, this->m_scheduler
-                , std::forward<std::function<Task<>(std::shared_ptr<Task_Base<REQ, RESP>>)>>(func), recv_len,config->m_ssl_accept_retry,this->m_ctx)));
+            this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task>(this->m_fd, this->m_scheduler
+                , std::forward<std::function<Task<>(Task_Base::ptr)>>(func), recv_len,config->m_ssl_accept_retry,this->m_ctx)));
         }
     protected:
         SSL_CTX *m_ctx = nullptr;
