@@ -7,6 +7,7 @@ set(SRC_LIST
     test_tcp_ssl_server.cc
     test_https_server.cc
     test_tcp_client.cc
+    test_http_client.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

@@ -287,18 +287,27 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
             if (connfd <= 0)
                 return -1;
             SSL *ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx, connfd);
-            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-            int ret = iofunction::Tcp_Function::SSL_Accept(ssl);
-            if (ret == 0)
-            {
-                close(this->m_fd);
+            if(ssl == nullptr){
+                close(connfd);
                 return -1;
             }
+            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+            int ret = iofunction::Tcp_Function::SSL_Accept(ssl);
             uint32_t retry = 0;
-            while (ret == -1 && retry++ <= this->m_ssl_accept_retry)
+            while (ret <= 0 && retry++ <= this->m_ssl_accept_retry)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SSL_SLEEP_MISC_PER_RETRY));
                 ret = iofunction::Tcp_Function::SSL_Accept(ssl);
+                if(ret <= 0){
+                    int ssl_err = SSL_get_error(ssl,ret);
+                    if(ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE || ssl_err == SSL_ERROR_WANT_ACCEPT){
+                        continue;
+                    }else{
+                        iofunction::Tcp_Function::SSL_Destory(ssl);
+                        close(connfd);
+                        return -1;
+                    }
+                }
             }
             auto task = create_rw_task(connfd, ssl);
             Tcp_Accept_Task<REQ, RESP>::add_task(connfd, task);

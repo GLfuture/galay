@@ -76,6 +76,7 @@ namespace galay
     class Http_Response : public Http_Protocol, public Response_Base, public Request_Base
     {
     public:
+        using ptr = std::shared_ptr<Http_Response>;
         // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
         enum http_protocol_status
         {

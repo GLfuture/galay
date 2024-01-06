@@ -2,9 +2,10 @@
 #define GALAY_FACTORY_H
 
 #include "../config/config.h"
-#include "../server/tcpserver.hpp"
-#include "../server/httpserver.hpp"
+#include "../server/tcpserver.h"
+#include "../server/httpserver.h"
 #include "../client/tcpclient.h"
+#include "../client/httpclient.h"
 #include "../protocol/tcp.h"
 #include "../protocol/http.h"
 
@@ -75,6 +76,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Client_Factory>;
         static Tcp_Client<Tcp_Request,Tcp_Response>::ptr create_tcp_client(IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
+        static Http_Client<Http_Request,Http_Response>::ptr create_http_client(IO_Scheduler<Http_Request,Http_Response>::ptr scheduler);
     };
 
 }

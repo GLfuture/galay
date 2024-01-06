@@ -60,7 +60,7 @@ galay::Http_Server_Config::ptr galay::Config_Factory::create_http_server_config(
 galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_config(int port,long ssl_min_version,long ssl_max_version
             , const char* cert_filepath,const char* key_filepath)
 {
-    return std::make_shared<Https_Server_Config>(port,DEFAULT_BACKLOG,DEFAULT_ENGINE,ssl_min_version,ssl_max_version
+    return std::make_shared<Https_Server_Config>(port,DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,ssl_min_version,ssl_max_version
         ,DEFAULT_MAX_SSL_ACCEPT_RETRY,cert_filepath,key_filepath);
 }
 
@@ -119,3 +119,10 @@ galay::Tcp_Client<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Client_Fac
 {
     return std::make_shared<Tcp_Client<galay::Tcp_Request,galay::Tcp_Response>>(scheduler);
 }
+
+
+galay::Http_Client<galay::Http_Request,galay::Http_Response>::ptr galay::Client_Factory::create_http_client(IO_Scheduler<Http_Request,Http_Response>::ptr scheduler)
+{
+    return std::make_shared<Http_Client<galay::Http_Request,galay::Http_Response>>(scheduler);
+}
+

@@ -93,6 +93,35 @@ namespace galay
             this->m_scheduler->m_tasks->erase(this->m_fd);
         }
     };
+
+    template<Request REQ,Response RESP>
+    class Tcp_SSL_Client: public Tcp_Client<REQ,RESP>
+    {
+    public:
+        Tcp_SSL_Client(IO_Scheduler<REQ,RESP>::ptr scheduler, long ssl_min_version , long ssl_max_version, uint32_t ssl_connect_max_retry )
+            :Tcp_Client<REQ,RESP>(scheduler)
+        {
+            this->m_ctx = iofunction::Tcp_Function::SSL_Init_Client(ssl_min_version,ssl_max_version);
+            if(this->m_ctx == nullptr){
+                this->m_error = error::server_error::GY_SSL_CTX_INIT_ERROR;
+                ERR_print_errors_fp(stderr);
+                exit(-1);
+            }
+            this->m_ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx,this->m_fd);
+            if(this->m_ssl == nullptr){
+                close(this->m_fd);
+                exit(-1);
+            }
+        }
+
+
+
+
+    protected:
+        SSL* m_ssl;
+        SSL_CTX* m_ctx;
+        uint32_t m_ssl_connect_retry;
+    };
 }
 
 
