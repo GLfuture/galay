@@ -18,7 +18,7 @@ Task<> func(IO_Scheduler<galay::Http_Request,galay::Http_Response>::ptr schedule
     request->get_url_path() = "/";
     request->set_head_kv_pair({"Connection","close"});
     Http_Response::ptr response = std::make_shared<Http_Response>();
-    co_await client->request(request,response,1024);
+    co_await client->request(request,response);
     std::cout<<response->encode()<<std::endl;
     client->disconnect();
     scheduler->stop();
