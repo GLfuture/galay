@@ -21,7 +21,8 @@ int main()
 {
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_http_server_config(8080);
-    auto http_server = Server_Factory::create_http_server(config);
+    auto scheduler = Scheduler_Factory::create_http_scheduler(IO_EPOLL,DEFAULT_EVENT_SIZE,DEFAULT_EVENT_TIME_OUT);
+    auto http_server = Server_Factory::create_http_server(config,scheduler);
     http_server->start(func);
     return 0;
 }

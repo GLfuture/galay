@@ -23,26 +23,26 @@ namespace galay
         //tcp 
         static Tcp_Server_Config::ptr create_tcp_server_config(int port);
         static Tcp_Server_Config::ptr create_tcp_server_config(Tcp_Server_Config &&config);
-        static Tcp_Server_Config::ptr create_tcp_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine);
+        static Tcp_Server_Config::ptr create_tcp_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len);
 
         //tcp ssl
         static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(int port,long ssl_min_version,long ssl_max_version
             , const char* cert_filepath,const char* key_filepath);
         static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(Tcp_SSL_Server_Config &&config);
-        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
+        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len
             , long ssl_min_version , long ssl_max_version ,uint32_t ssl_max_accept_retry,const char* cert_filepath, const char* key_filepath);
 
         //http
         static Http_Server_Config::ptr create_http_server_config(int port);
         static Http_Server_Config::ptr create_http_server_config(Http_Server_Config &&config);
-        static Http_Server_Config::ptr create_http_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine);
+        static Http_Server_Config::ptr create_http_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len);
 
 
         //https
         static Https_Server_Config::ptr create_https_server_config(int port,long ssl_min_version,long ssl_max_version
             , const char* cert_filepath,const char* key_filepath);
         static Https_Server_Config::ptr create_https_server_config(Https_Server_Config &&config);
-        static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,IO_ENGINE engine 
+        static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len
             , long ssl_min_version , long ssl_max_version, uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath);
         
     };
@@ -52,22 +52,22 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Server_Factory>;
         //tcp
-        static Tcp_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_server(Tcp_Server_Config::ptr config);
+        static Tcp_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_server(Tcp_Server_Config::ptr config , IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
         //tcp ssl
-        static Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config);
+        static Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,IO_Scheduler<Tcp_Request,Tcp_Response>::ptr scheduler);
         //http
-        static Http_Server<Http_Request,Http_Response>::ptr create_http_server(Http_Server_Config::ptr config);
+        static Http_Server<Http_Request,Http_Response>::ptr create_http_server(Http_Server_Config::ptr config ,IO_Scheduler<Http_Request,Http_Response>::ptr scheduler);
         //https
-        static Https_Server<Http_Request,Http_Response>::ptr create_https_server(Https_Server_Config::ptr config);
+        static Https_Server<Http_Request,Http_Response>::ptr create_https_server(Https_Server_Config::ptr config ,IO_Scheduler<Http_Request,Http_Response>::ptr scheduler);
     };
 
 
-    //for client
     class Scheduler_Factory: public Factory_Base
     {
     public:
         using ptr = std::shared_ptr<Scheduler_Factory>;
         static IO_Scheduler<Tcp_Request,Tcp_Response>::ptr create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
+        static IO_Scheduler<Http_Request,Http_Response>::ptr create_http_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
     };
 
     class Client_Factory: public Factory_Base
