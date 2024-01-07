@@ -159,6 +159,7 @@ namespace galay
             this->m_respnse = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
             this->m_engine = engine;
+            this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
         }
 
         int exec() override
@@ -197,8 +198,8 @@ namespace galay
             }
             case Task_Status::GY_TASK_READ:
             {
-                char* buffer = new char[DEFAULT_RECV_LENGTH];
-                int ret = iofunction::Tcp_Function::Recv(this->m_fd, buffer, DEFAULT_RECV_LENGTH);
+                memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
+                int ret = iofunction::Tcp_Function::Recv(this->m_fd, m_tempbuffer, DEFAULT_RECV_LENGTH);
                 if (ret == -1)
                 {
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
@@ -218,8 +219,8 @@ namespace galay
                 }
                 else
                 {
-                    int state;
-                    this->m_buffer.append(buffer,ret);
+                    int state = 0;
+                    this->m_buffer.append(m_tempbuffer,ret);
                     this->m_respnse->decode(this->m_buffer,state);
                     if(state == error::protocol_error::GY_PROTOCOL_INCOMPLETE){
                         return -1;
@@ -240,11 +241,16 @@ namespace galay
 
         ~Http_Request_Task()
         {
+            if(m_tempbuffer){
+                delete[] m_tempbuffer;
+                m_tempbuffer = nullptr;
+            }
         }
 
 
     protected:
         int m_fd;
+        char* m_tempbuffer;
         std::string m_buffer;
         Http_Request::ptr m_request;
         Http_Response::ptr m_respnse;

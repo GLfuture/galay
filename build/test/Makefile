@@ -245,6 +245,44 @@ test_http_client/fast:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_client.dir/build.make test/CMakeFiles/test_http_client.dir/build
 .PHONY : test_http_client/fast
 
+# Convenience name for target.
+test/CMakeFiles/homework.dir/rule:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/homework.dir/rule
+.PHONY : test/CMakeFiles/homework.dir/rule
+
+# Convenience name for target.
+homework: test/CMakeFiles/homework.dir/rule
+.PHONY : homework
+
+# fast build rule for target.
+homework/fast:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/homework.dir/build.make test/CMakeFiles/homework.dir/build
+.PHONY : homework/fast
+
+homework.o: homework.cc.o
+.PHONY : homework.o
+
+# target to build an object file
+homework.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/homework.dir/build.make test/CMakeFiles/homework.dir/homework.cc.o
+.PHONY : homework.cc.o
+
+homework.i: homework.cc.i
+.PHONY : homework.i
+
+# target to preprocess a source file
+homework.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/homework.dir/build.make test/CMakeFiles/homework.dir/homework.cc.i
+.PHONY : homework.cc.i
+
+homework.s: homework.cc.s
+.PHONY : homework.s
+
+# target to generate assembly for a file
+homework.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f test/CMakeFiles/homework.dir/build.make test/CMakeFiles/homework.dir/homework.cc.s
+.PHONY : homework.cc.s
+
 test_http_client.o: test_http_client.cc.o
 .PHONY : test_http_client.o
 
@@ -401,12 +439,16 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... homework"
 	@echo "... test_http_client"
 	@echo "... test_http_server"
 	@echo "... test_https_server"
 	@echo "... test_tcp_client"
 	@echo "... test_tcp_server"
 	@echo "... test_tcp_ssl_server"
+	@echo "... homework.o"
+	@echo "... homework.i"
+	@echo "... homework.s"
 	@echo "... test_http_client.o"
 	@echo "... test_http_client.i"
 	@echo "... test_http_client.s"

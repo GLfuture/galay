@@ -13,12 +13,16 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_Client>;
         //创建时自动sock
-        Tcp_Client(IO_Scheduler::ptr scheduler)
+        Tcp_Client(IO_Scheduler::wptr scheduler)
             :Client(scheduler)
         {
-            this->m_fd = iofunction::Tcp_Function::Sock();
-            iofunction::Simple_Fuction::IO_Set_No_Block(this->m_fd);
-            this->m_scheduler->m_engine->add_event(this->m_fd , EPOLLET | EPOLLIN);
+            if(!this->m_scheduler.expired())
+            {
+                this->m_fd = iofunction::Tcp_Function::Sock();
+                iofunction::Simple_Fuction::IO_Set_No_Block(this->m_fd);
+                this->m_scheduler.lock()->m_engine->add_event(this->m_fd , EPOLLET | EPOLLIN);
+            }
+            
         }
 
         //0 is success  -1 is failed
@@ -36,7 +40,9 @@ namespace galay
                 }
             }
             Client::add_task(task);
-            this->m_scheduler->m_engine->mod_event(this->m_fd,EPOLLOUT);
+            if(!m_scheduler.expired()){
+                this->m_scheduler.lock()->m_engine->mod_event(this->m_fd,EPOLLOUT);
+            }
             return Net_Awaiter<int>{task};
         }
         
@@ -54,7 +60,8 @@ namespace galay
                 {
                     typename Co_Tcp_Client_Send_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Send_Task<int>>(this->m_fd,buffer,len);
                     Client::add_task(task);
-                    this->m_scheduler->m_engine->mod_event(this->m_fd,EPOLLOUT);
+
+                    if(!this->m_scheduler.expired()) this->m_scheduler.lock()->m_engine->mod_event(this->m_fd,EPOLLOUT);
                     return Net_Awaiter<int>{task};
                 }else{
                     return Net_Awaiter<int>{nullptr,ret};
@@ -76,7 +83,7 @@ namespace galay
                 if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN){
                     typename Co_Tcp_Client_Recv_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Recv_Task<int>>(this->m_fd,buffer,len);
                     Client::add_task(task);
-                    this->m_scheduler->m_engine->mod_event(this->m_fd,EPOLLIN);
+                    if(!this->m_scheduler.expired()) this->m_scheduler.lock()->m_engine->mod_event(this->m_fd,EPOLLIN);
                     return Net_Awaiter<int>{task};
                 }else{
                     return Net_Awaiter<int>{nullptr,-1};
@@ -88,8 +95,11 @@ namespace galay
         void disconnect()
         {
             close(this->m_fd);
-            this->m_scheduler->m_engine->del_event(this->m_fd,EPOLLOUT|EPOLLIN);
-            this->m_scheduler->m_tasks->erase(this->m_fd);
+            if(!this->m_scheduler.expired())
+            {
+                this->m_scheduler.lock()->m_engine->del_event(this->m_fd,EPOLLOUT|EPOLLIN);
+                this->m_scheduler.lock()->m_tasks->erase(this->m_fd);
+            }
         }
     };
 

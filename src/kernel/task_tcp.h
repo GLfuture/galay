@@ -2,7 +2,7 @@
 #define GALAY_TASK_TCP_H
 
 #include "task.h"
-#include "scheduler.h"
+
 
 namespace galay
 {
@@ -11,49 +11,54 @@ namespace galay
     class Tcp_RW_Task : public Task_Base, public std::enable_shared_from_this<Tcp_RW_Task>
     {
     protected:
-        using Callback = std::function<Task<>(Task_Base::ptr)>;
+        using Callback = std::function<Task<>(Task_Base::wptr)>;
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
-        Tcp_RW_Task(int fd, Engine::ptr engine, uint32_t read_len)
+        Tcp_RW_Task(int fd, IO_Scheduler::wptr scheduler, uint32_t read_len)
         {
             this->m_status = Task_Status::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
-            this->m_engine = engine;
+            this->m_scheduler = scheduler;
             this->m_fd = fd;
             this->m_read_len = read_len;
             this->m_temp = new char[read_len];
-            init_protocol_obj();
+            this->m_req = std::make_shared<Tcp_Request>();
+            this->m_resp = std::make_shared<Tcp_Response>();
         }
 
         void control_task_behavior(Task_Status status) override
         {
-            switch (status)
+            if(!this->m_scheduler.expired())
             {
-            case Task_Status::GY_TASK_WRITE:
-            {
-                this->m_engine->mod_event(this->m_fd, EPOLLOUT);
-                this->m_status = Task_Status::GY_TASK_WRITE ;
-                break;
-            }
-            case Task_Status::GY_TASK_READ:
-            {
-                this->m_engine->mod_event(this->m_fd, EPOLLIN);
-                this->m_status = Task_Status::GY_TASK_READ;
-                break;
-            }
-            case Task_Status::GY_TASK_DISCONNECT:
-            {
-                this->m_status = Task_Status::GY_TASK_DISCONNECT;
-                this->m_engine->del_event(this->m_fd,EPOLLIN|EPOLLOUT);
-                close(this->m_fd);
-                break;
-            }
-            default:
-                break;
-            }
+                auto scheduler = this->m_scheduler.lock();
+                switch (status)
+                {
+                case Task_Status::GY_TASK_WRITE:
+                {
+                    scheduler->m_engine->mod_event(this->m_fd, EPOLLOUT);
+                    this->m_status = Task_Status::GY_TASK_WRITE;
+                    break;
+                }
+                case Task_Status::GY_TASK_READ:
+                {
+                    scheduler->m_engine->mod_event(this->m_fd, EPOLLIN);
+                    this->m_status = Task_Status::GY_TASK_READ;
+                    break;
+                }
+                case Task_Status::GY_TASK_DISCONNECT:
+                {
+                    this->m_status = Task_Status::GY_TASK_DISCONNECT;
+                    scheduler->m_engine->del_event(this->m_fd, EPOLLIN | EPOLLOUT);
+                    close(this->m_fd);
+                    break;
+                }
+                default:
+                    break;
+                }
+            } 
         }
-        
+
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
@@ -73,7 +78,7 @@ namespace galay
                 if (decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
                 control_task_behavior(Task_Status::GY_TASK_WRITE);
-                this->m_func(this->shared_from_this());
+                m_co_task = this->m_func(this->shared_from_this());
                 encode();
                 break;
             }
@@ -96,9 +101,10 @@ namespace galay
             this->m_func = func;
         }
 
-        Engine::ptr get_engine()
+        IO_Scheduler::ptr get_scheduler() override
         {
-            return this->m_engine;
+            if(!this->m_scheduler.expired()) return this->m_scheduler.lock();
+            return nullptr;
         }
 
         void reset_buffer(int len)
@@ -119,11 +125,6 @@ namespace galay
         }
 
     protected:
-        virtual void init_protocol_obj()
-        {
-            this->m_req = std::make_shared<Tcp_Request>();
-            this->m_resp = std::make_shared<Tcp_Response>();
-        }
         
         int decode()
         {
@@ -181,19 +182,25 @@ namespace galay
                     return -1;
                 }
             }
+            else if(len == 0)
+            {
+                control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                return -1;
+            }
             this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
             return 0;
         }
 
     protected:
         char *m_temp = nullptr;
-        Engine::ptr m_engine;
+        IO_Scheduler::wptr m_scheduler;
         int m_fd;
         uint32_t m_read_len;
         std::string m_rbuffer;
         std::string m_wbuffer;
         Request_Base::ptr m_req;
         Response_Base::ptr m_resp;
+        Task<> m_co_task;
         Callback m_func;
     };
 
@@ -201,8 +208,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Accept_Task>;
-        Tcp_Accept_Task(int fd, IO_Scheduler::ptr scheduler,
-                        std::function<Task<>(std::shared_ptr<Task_Base>)> &&func, uint32_t read_len)
+        Tcp_Accept_Task(int fd, IO_Scheduler::wptr scheduler,
+                        std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len)
         {
             this->m_fd = fd;
             this->m_status = Task_Status::GY_TASK_READ;
@@ -218,10 +225,12 @@ namespace galay
             int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
             if (connfd <= 0)
                 return -1;
-            auto task = create_rw_task(connfd);
-            add_task(connfd, task);
-            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-            this->m_scheduler->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+            if(!this->m_scheduler.expired()){
+                auto task = create_rw_task(connfd);
+                add_task(connfd, task);
+                iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+                this->m_scheduler.lock()->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+            }
             return 0;
         }
 
@@ -232,17 +241,19 @@ namespace galay
     protected:
         virtual Task_Base::ptr create_rw_task(int connfd)
         {
-            auto task = std::make_shared<Tcp_RW_Task>(connfd, this->m_scheduler->m_engine, this->m_read_len);
-            task->set_callback(std::forward<std::function<Task<>(Task_Base::ptr)>>(this->m_func));
+            auto task = std::make_shared<Tcp_RW_Task>(connfd, this->m_scheduler, this->m_read_len);
+            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }
 
         virtual void add_task(int connfd, Task_Base::ptr task)
         {
-            auto it = this->m_scheduler->m_tasks->find(connfd);
-            if (it == this->m_scheduler->m_tasks->end())
+            auto scheduler = this->m_scheduler.lock();
+
+            auto it = scheduler->m_tasks->find(connfd);
+            if (it == scheduler->m_tasks->end())
             {
-                this->m_scheduler->m_tasks->emplace(connfd, task);
+                scheduler->m_tasks->emplace(connfd, task);
             }
             else
             {
@@ -252,17 +263,17 @@ namespace galay
 
     protected:
         int m_fd;
-        IO_Scheduler::ptr m_scheduler;
+        IO_Scheduler::wptr m_scheduler;
         uint32_t m_read_len;
-        std::function<Task<>(Task_Base::ptr)> m_func;
+        std::function<Task<>(Task_Base::wptr)> m_func;
     };
 
     class Tcp_SSL_RW_Task : public Tcp_RW_Task
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl)
-            : Tcp_RW_Task(fd, engine, read_len), m_ssl(ssl)
+        Tcp_SSL_RW_Task(int fd, IO_Scheduler::wptr scheduler, uint32_t read_len, SSL *ssl)
+            : Tcp_RW_Task(fd, scheduler, read_len), m_ssl(ssl)
         {
         }
 
@@ -316,6 +327,11 @@ namespace galay
                     return -1;
                 }
             }
+            else if(len == 0)
+            {
+                control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                return -1;
+            }
             this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
             return 0;
         }
@@ -329,8 +345,9 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Accept_Task>;
-        Tcp_SSL_Accept_Task(int fd, IO_Scheduler::ptr scheduler, std::function<Task<>(Task_Base::ptr)> &&func, 
-uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Task(fd,scheduler, std::forward<std::function<Task<>(Task_Base::ptr)>>(func), read_len)
+        Tcp_SSL_Accept_Task(int fd, IO_Scheduler::wptr scheduler, std::function<Task<>(Task_Base::wptr)> &&func, 
+                    uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) 
+                        : Tcp_Accept_Task(fd,scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len)
         {
             this->m_ctx = ctx;
             this->m_ssl_accept_retry = ssl_accept_max_retry;
@@ -364,9 +381,12 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
                     }
                 }
             }
-            auto task = create_rw_task(connfd, ssl);
-            Tcp_Accept_Task::add_task(connfd, task);
-            this->m_scheduler->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+
+            if(!this->m_scheduler.expired()){
+                auto task = create_rw_task(connfd, ssl);
+                Tcp_Accept_Task::add_task(connfd, task);
+                this->m_scheduler.lock()->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+            }
             return 0;
         }
 
@@ -380,8 +400,8 @@ uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_Accept_Tas
         virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl)
         {
 
-            auto task = std::make_shared<Tcp_SSL_RW_Task>(connfd, this->m_scheduler->m_engine, this->m_read_len, ssl);
-            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(this->m_func));
+            auto task = std::make_shared<Tcp_SSL_RW_Task>(connfd, this->m_scheduler, this->m_read_len, ssl);
+            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }
 

@@ -8,8 +8,11 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_RW_Task>;
-        Http_RW_Task(int fd, Engine::ptr engine, uint32_t read_len) : Tcp_RW_Task(fd, engine, read_len)
+        Http_RW_Task(int fd, IO_Scheduler::wptr scheduler, uint32_t read_len) 
+            : Tcp_RW_Task(fd, scheduler, read_len)
         {
+            this->m_req = std::make_shared<Http_Request>();
+            this->m_resp = std::make_shared<Http_Response>();
         }
         
 
@@ -24,15 +27,18 @@ namespace galay
                 if (Tcp_RW_Task::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
                 Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_WRITE);
-                this->m_func(this->shared_from_this());
-                Tcp_RW_Task::encode();
+                this->m_co_task = this->m_func(this->shared_from_this());
                 break;
             }
             case Task_Status::GY_TASK_WRITE:
             {
-                if (Tcp_RW_Task::send_package() == -1)
-                    return -1;
-                if(this->m_wbuffer.empty()) Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                if (this->m_is_finish)
+                {
+                    Tcp_RW_Task::encode();
+                    if (Tcp_RW_Task::send_package() == -1)
+                        return -1;
+                    Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                }
                 break;
             }
             default:
@@ -40,11 +46,9 @@ namespace galay
             }
             return 0;
         }
-    private:
-        void init_protocol_obj()
+        
+        ~Http_RW_Task()
         {
-            this->m_req = std::make_shared<Http_Request>();
-            this->m_resp = std::make_shared<Http_Response>();
         }
     private:
         bool m_is_chunked = false;
@@ -54,17 +58,20 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Accept_Task>;
-        Http_Accept_Task(int fd, IO_Scheduler::ptr scheduler, std::function<Task<>(std::shared_ptr<Task_Base>)> &&func, uint32_t read_len) 
-                        : Tcp_Accept_Task(fd, scheduler, std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(func), read_len)
+        Http_Accept_Task(int fd, IO_Scheduler::wptr scheduler, std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len) 
+                        : Tcp_Accept_Task(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len)
         {
         }
 
         Task_Base::ptr create_rw_task(int connfd) override
         {
-
-            auto task = std::make_shared<Http_RW_Task>(connfd, this->m_scheduler->m_engine, this->m_read_len);
-            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(this->m_func));
-            return task;
+            if(!this->m_scheduler.expired())
+            {
+                auto task = std::make_shared<Http_RW_Task>(connfd, this->m_scheduler, this->m_read_len);
+                task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
+                return task;
+            }
+            return nullptr;
         }
     };
 
@@ -72,9 +79,11 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_RW_Task>;
-        Https_RW_Task(int fd, Engine::ptr engine, uint32_t read_len, SSL *ssl)
-            : Tcp_SSL_RW_Task(fd, engine, read_len, ssl)
+        Https_RW_Task(int fd, IO_Scheduler::wptr scheduler, uint32_t read_len, SSL *ssl)
+            : Tcp_SSL_RW_Task(fd, scheduler, read_len, ssl)
         {
+            this->m_req = std::make_shared<Http_Request>();
+            this->m_resp = std::make_shared<Http_Response>();
         }
 
 
@@ -89,15 +98,18 @@ namespace galay
                 if (Tcp_SSL_RW_Task::decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                     return -1;
                 Tcp_SSL_RW_Task::control_task_behavior(Task_Status::GY_TASK_WRITE);
-                this->m_func(this->shared_from_this());
-                Tcp_SSL_RW_Task::encode();
+                this->m_co_task = this->m_func(this->shared_from_this());
                 break;
             }
             case Task_Status::GY_TASK_WRITE:
             {
-                if (Tcp_SSL_RW_Task::send_package() == -1)
-                    return -1;
-                Tcp_SSL_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                if(this->m_is_finish)
+                {
+                    Tcp_SSL_RW_Task::encode();
+                    if (Tcp_SSL_RW_Task::send_package() == -1)
+                        return -1;
+                    Tcp_SSL_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                }
                 break;
             }
             default:
@@ -106,12 +118,7 @@ namespace galay
             return 0;
         }
     private:
-        void init_protocol_obj() override
-        {
-            this->m_req = std::make_shared<Http_Request>();
-            this->m_resp = std::make_shared<Http_Response>();
-        }
-    private:
+
         bool m_is_chunked = false;
     };
 
@@ -121,14 +128,15 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Accept_Task>;
-        Https_Accept_Task(int fd, IO_Scheduler::ptr scheduler, std::function<Task<>(std::shared_ptr<Task_Base>)> &&func
-                    , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) : Tcp_SSL_Accept_Task(fd,scheduler, std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(func), read_len, ssl_accept_max_retry, ctx) {}
+        Https_Accept_Task(int fd, IO_Scheduler::wptr scheduler, std::function<Task<>(Task_Base::wptr)> &&func
+                    , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) 
+                        : Tcp_SSL_Accept_Task(fd,scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len, ssl_accept_max_retry, ctx) {}
 
     private:
         Task_Base::ptr create_rw_task(int connfd, SSL *ssl) override
         {
-            auto task = std::make_shared<Https_RW_Task>(connfd, this->m_scheduler->m_engine, this->m_read_len, ssl);
-            task->set_callback(std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(this->m_func));
+            auto task = std::make_shared<Https_RW_Task>(connfd, this->m_scheduler, this->m_read_len, ssl);
+            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }
     };

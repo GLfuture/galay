@@ -20,7 +20,7 @@ namespace galay
         {
         }
 
-        virtual void start(std::function<Task<>(std::shared_ptr<Task_Base>)> &&func) = 0;
+        virtual void start(std::function<Task<>(std::weak_ptr<Task_Base>)> &&func) = 0;
 
         virtual int get_error()
         {

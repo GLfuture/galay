@@ -17,11 +17,11 @@ namespace galay
         }
 
     protected:
-        void add_accept_task(std::function<Task<>(std::shared_ptr<Task_Base>)> &&func , uint32_t max_recv_len) override
+        void add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func , uint32_t max_recv_len) override
         {
             this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
             this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Http_Accept_Task>(this->m_fd, this->m_scheduler
-                , std::forward<std::function<Task<>(std::shared_ptr<Task_Base>)>>(func), max_recv_len)));
+                , std::forward<std::function<Task<>(Task_Base::wptr)>>(func), max_recv_len)));
         }
     };
 
@@ -37,12 +37,12 @@ namespace galay
         }
     protected:
         //添加accept task
-        void add_accept_task(std::function<Task<>(Task_Base::ptr)> &&func , uint32_t max_recv_len) override
+        void add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func , uint32_t max_recv_len) override
         {
             this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
             Https_Server_Config::ptr config = std::dynamic_pointer_cast<Https_Server_Config>(this->m_config);
             this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Https_Accept_Task>(this->m_fd, this->m_scheduler
-            , std::forward<std::function<Task<>(Task_Base::ptr)>>(func), max_recv_len,config->m_ssl_accept_retry,this->m_ctx)));
+            , std::forward<std::function<Task<>(Task_Base::wptr)>>(func), max_recv_len,config->m_ssl_accept_retry,this->m_ctx)));
         }
     };
 

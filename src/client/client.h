@@ -10,7 +10,7 @@ namespace galay
     class Client
     {
     public:
-        Client(IO_Scheduler::ptr scheduler)
+        Client(IO_Scheduler::wptr scheduler)
             :m_scheduler(scheduler)
         {
             
@@ -22,27 +22,30 @@ namespace galay
         }
 
         virtual ~Client(){
-            if(this->m_scheduler && !this->m_scheduler->is_stop()){
-                this->m_scheduler->stop();
-                this->m_scheduler.reset();
-            }
+            
         }
     protected:
 
         void add_task(Task_Base::ptr task)
         {
-            auto it = this->m_scheduler->m_tasks->find(this->m_fd);
-            if(it == this->m_scheduler->m_tasks->end())
+            if(!m_scheduler.expired())
             {
-                this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd,task));
-            }else{
-                it->second = task;
+                auto scheduler = m_scheduler.lock();
+                auto it = scheduler->m_tasks->find(this->m_fd);
+                if (it == scheduler->m_tasks->end())
+                {
+                    scheduler->m_tasks->emplace(std::make_pair(this->m_fd, task));
+                }
+                else
+                {
+                    it->second = task;
+                }
             }
         }
     protected:
         int m_fd;
         int m_error;
-        IO_Scheduler::ptr m_scheduler;
+        IO_Scheduler::wptr m_scheduler;
     };
 
 
