@@ -24,6 +24,11 @@ namespace galay
             return this->m_result;
         }
 
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish;
+        }
+
         virtual ~Co_Task_Base()
         {
             if(m_handle){
@@ -64,6 +69,11 @@ namespace galay
             if(!this->m_handle.done()) this->m_handle.resume();
             return 0;
         }
+
+        bool is_need_to_destroy() override
+        {
+            return Co_Task_Base<RESULT>::is_need_to_destroy();
+        }
     protected:
         int m_fd;
     };
@@ -102,6 +112,10 @@ namespace galay
             return 0;
         }
 
+        bool is_need_to_destroy() override
+        {
+            return Co_Task_Base<RESULT>::is_need_to_destroy();
+        }
     protected:
         int m_fd;
         std::string m_buffer;
@@ -141,6 +155,10 @@ namespace galay
             return 0;
         }
 
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish;
+        }
     protected:
         int m_fd;
         char* m_buffer = nullptr;
@@ -237,6 +255,12 @@ namespace galay
             }
             if (!this->m_handle.done()) this->m_handle.resume();
             return 0;
+        }
+
+
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish;
         }
 
         ~Http_Request_Task()

@@ -49,8 +49,6 @@ namespace galay
                 case Task_Status::GY_TASK_DISCONNECT:
                 {
                     this->m_status = Task_Status::GY_TASK_DISCONNECT;
-                    scheduler->m_engine->del_event(this->m_fd, EPOLLIN | EPOLLOUT);
-                    close(this->m_fd);
                     break;
                 }
                 default:
@@ -79,15 +77,17 @@ namespace galay
                     return -1;
                 control_task_behavior(Task_Status::GY_TASK_WRITE);
                 m_co_task = this->m_func(this->shared_from_this());
-                encode();
                 break;
             }
             case Task_Status::GY_TASK_WRITE:
             {
-                if (send_package() == -1)
-                    return -1;
-                if(this->m_is_finish) control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
-                else control_task_behavior(Task_Status::GY_TASK_READ);
+                if(this->m_is_finish) {
+                    encode();
+                    if (send_package() == -1)
+                        return -1;
+                    control_task_behavior(Task_Status::GY_TASK_READ);
+                    this->m_is_finish = false;
+                }
                 break;
             }
             default:
@@ -113,6 +113,11 @@ namespace galay
                 delete[] this->m_temp;
             this->m_temp = new char[len];
             this->m_read_len = len;
+        }
+
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish && this->m_wbuffer.empty() && this->m_status == Task_Status::GY_TASK_DISCONNECT;
         }
 
         virtual ~Tcp_RW_Task()
@@ -147,7 +152,8 @@ namespace galay
             int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
             if (len == 0)
             {
-                control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                finish();
+                control_task_behavior(GY_TASK_DISCONNECT);
                 return -1;
             }
             else if (len == -1)
@@ -158,7 +164,8 @@ namespace galay
                 }
                 else
                 {
-                    control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    finish();
+                    control_task_behavior(GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
@@ -178,13 +185,15 @@ namespace galay
                 }
                 else
                 {
-                    control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    finish();
+                    control_task_behavior(GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
-            else if(len == 0)
+            else if(len == 0 && !this->m_wbuffer.empty())
             {
-                control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                finish();
+                control_task_behavior(GY_TASK_DISCONNECT);
                 return -1;
             }
             this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
@@ -232,6 +241,11 @@ namespace galay
                 this->m_scheduler.lock()->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
             }
             return 0;
+        }
+
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish;
         }
 
         virtual ~Tcp_Accept_Task()
@@ -292,7 +306,8 @@ namespace galay
             int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
             if (len == 0)
             {
-                Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                finish();
+                control_task_behavior(GY_TASK_DISCONNECT);
                 return -1;
             }
             else if (len == -1)
@@ -303,7 +318,8 @@ namespace galay
                 }
                 else
                 {
-                    Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    finish();
+                    control_task_behavior(GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
@@ -323,13 +339,15 @@ namespace galay
                 }
                 else
                 {
-                    Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    finish();
+                    control_task_behavior(GY_TASK_DISCONNECT);
                     return -1;
                 }
             }
-            else if(len == 0)
+            else if(len == 0 && !this->m_wbuffer.empty())
             {
-                control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                finish();
+                control_task_behavior(GY_TASK_DISCONNECT);
                 return -1;
             }
             this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
@@ -408,42 +426,6 @@ namespace galay
     protected:
         SSL_CTX *m_ctx;
         uint32_t m_ssl_accept_retry;
-    };
-
-    
-
-    class Tcp_Connect_Task : public Task_Base
-    {
-    public:
-        using ptr = std::shared_ptr<Tcp_Connect_Task>;
-        Tcp_Connect_Task(int fd)
-        {
-            this->m_fd = fd;
-            this->m_status = GY_TASK_CONNECT;
-        }
-
-        void control_task_behavior(Task_Status status) override
-        {
-
-        }
-
-        int exec() override
-        {
-            int status = 0;
-            socklen_t slen = sizeof(status);
-            if(getsockopt(this->m_fd,SOL_SOCKET,SO_ERROR,(void *)&status,&slen) < 0){
-                this->m_error = error::client_error::GY_GETSOCKET_STATUS_ERROR;
-                this->m_status = GY_TASK_DISCONNECT;
-            } 
-            if(status != 0){
-                this->m_error = error::client_error::GY_CONNECT_ERROR;
-                this->m_status = GY_TASK_DISCONNECT;
-            }
-            return 0;
-        } 
-    protected:
-        int m_fd;
-
     };
 
 }

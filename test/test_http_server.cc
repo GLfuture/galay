@@ -35,6 +35,5 @@ int main()
     auto scheduler = Scheduler_Factory::create_http_scheduler(IO_EPOLL,1024,5);
     auto http_server = Server_Factory::create_http_server(config,scheduler);
     http_server->start(func);
-    std::cout<<error::get_err_str(http_server->get_error())<<'\n';
     return 0;
 }

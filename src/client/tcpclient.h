@@ -94,11 +94,9 @@ namespace galay
 
         void disconnect()
         {
-            close(this->m_fd);
             if(!this->m_scheduler.expired())
             {
-                this->m_scheduler.lock()->m_engine->del_event(this->m_fd,EPOLLOUT|EPOLLIN);
-                this->m_scheduler.lock()->m_tasks->erase(this->m_fd);
+                this->m_scheduler.lock()->m_tasks->at(this->m_fd)->finish();
             }
         }
     };

@@ -58,6 +58,11 @@ namespace galay{
                 {
                     Task_Base::ptr task = this->m_tasks->at(events[i].data.fd);
                     task->exec();
+                    if(task->is_need_to_destroy()){
+                        m_tasks->erase(events[i].data.fd);
+                        m_engine->del_event(events[i].data.fd,EPOLLIN|EPOLLOUT);
+                        close(events[i].data.fd);
+                    }
                 }
             }
             return error::base_error::GY_SUCCESS;

@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "test/test_https_server"
+			"path" : "test/test_tcp_server"
 		}
 	],
 	"backtrace" : 1,
@@ -119,7 +119,7 @@
 			"id" : "client::@8ca63c80a879d0067daa"
 		}
 	],
-	"id" : "test_https_server::@36f028580bb02cc8272a",
+	"id" : "test_tcp_server::@36f028580bb02cc8272a",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -143,7 +143,7 @@
 			},
 			{
 				"backtrace" : 3,
-				"fragment" : "../src/libgalay-static.a",
+				"fragment" : "src/libgalay-static.a",
 				"role" : "libraries"
 			},
 			{
@@ -169,8 +169,8 @@
 		],
 		"language" : "CXX"
 	},
-	"name" : "test_https_server",
-	"nameOnDisk" : "test_https_server",
+	"name" : "test_tcp_server",
+	"nameOnDisk" : "test_tcp_server",
 	"paths" : 
 	{
 		"build" : "test",
@@ -191,7 +191,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "test/test_https_server.cc",
+			"path" : "test/test_tcp_server.cc",
 			"sourceGroupIndex" : 0
 		}
 	],
