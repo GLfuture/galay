@@ -19,10 +19,10 @@ namespace galay
 {
     enum Task_Status
     {
-        GY_TASK_DISCONNECT,
         GY_TASK_CONNECT,
         GY_TASK_READ,
         GY_TASK_WRITE,
+        GY_TASK_DISCONNECT,
     };
 
     class IO_Scheduler;
@@ -53,8 +53,10 @@ namespace galay
         virtual int get_state() {return this->m_status;}
 
         virtual int get_error() {return this->m_error;}
-
+        
         virtual void finish(){ this->m_is_finish = true;}
+
+        virtual bool is_need_to_destroy() = 0;
 
         virtual ~Task_Base() {}
 

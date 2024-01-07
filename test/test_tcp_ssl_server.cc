@@ -19,7 +19,7 @@ Content-Type: text/html\r\n\r\n\
 Hello, World!\
 </body>\
 </html>\r\n\r\n";
-    task->control_task_behavior(Task_Status::GY_TASK_WRITE);
+    task->finish();
     return {};
 }
 

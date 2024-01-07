@@ -15,6 +15,10 @@ namespace galay
             this->m_resp = std::make_shared<Http_Response>();
         }
         
+        bool is_need_to_destroy() override
+        {
+            return Tcp_RW_Task::is_need_to_destroy();
+        }
 
         int exec() override
         {
@@ -32,12 +36,12 @@ namespace galay
             }
             case Task_Status::GY_TASK_WRITE:
             {
-                if (this->m_is_finish)
+                if(this->m_is_finish)
                 {
                     Tcp_RW_Task::encode();
                     if (Tcp_RW_Task::send_package() == -1)
                         return -1;
-                    Tcp_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    control_task_behavior(GY_TASK_DISCONNECT);
                 }
                 break;
             }
@@ -108,14 +112,19 @@ namespace galay
                     Tcp_SSL_RW_Task::encode();
                     if (Tcp_SSL_RW_Task::send_package() == -1)
                         return -1;
-                    Tcp_SSL_RW_Task::control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+                    control_task_behavior(GY_TASK_DISCONNECT);
                 }
+                
                 break;
             }
             default:
                 break;
             }
             return 0;
+        }
+
+        virtual ~Https_RW_Task()
+        {
         }
     private:
 
