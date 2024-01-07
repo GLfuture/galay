@@ -115,13 +115,13 @@ galay::IO_Scheduler::ptr galay::Scheduler_Factory::create_http_scheduler(IO_ENGI
 }
 
 //client
-galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(IO_Scheduler::ptr scheduler)
+galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(IO_Scheduler::wptr scheduler)
 {
     return std::make_shared<Tcp_Client>(scheduler);
 }
 
 
-galay::Http_Client::ptr galay::Client_Factory::create_http_client(IO_Scheduler::ptr scheduler)
+galay::Http_Client::ptr galay::Client_Factory::create_http_client(IO_Scheduler::wptr scheduler)
 {
     return std::make_shared<Http_Client>(scheduler);
 }

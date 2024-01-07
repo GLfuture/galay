@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/homework.dir/homework.cc.o -o homework   -L/home/gong/projects/galay/build/src  -Wl,-rpath,/home/gong/projects/galay/build/src ../src/libgalay-static.a -lssl -lcrypto -lssl -lcrypto 

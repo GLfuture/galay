@@ -9,10 +9,11 @@
 #include "iofunction.h"
 #include "basic_concepts.h"
 #include "error.h"
-#include "engine.h"
+#include "scheduler.h"
 #include "coroutine.h"
 #include "../protocol/tcp.h"
 #include "../protocol/http.h"
+
 
 namespace galay
 {
@@ -24,20 +25,21 @@ namespace galay
         GY_TASK_WRITE,
     };
 
-    class Server;
+    class IO_Scheduler;
 
-    class Tcp_RW_Task;
-
-    class Tcp_SSL_RW_Task;
-
-    class Http_RW_Task;
-    
-    class Https_RW_Task;
 
     class Task_Base
     {
     public:
+        using wptr = std::weak_ptr<Task_Base>;
         using ptr = std::shared_ptr<Task_Base>;
+
+        // return -1 error 0 success
+        virtual int exec() = 0;
+
+        virtual std::shared_ptr<IO_Scheduler> get_scheduler() {
+            return nullptr;
+        }
 
         virtual Request_Base::ptr get_req(){
             return nullptr;
@@ -45,25 +47,14 @@ namespace galay
         virtual Response_Base::ptr get_resp(){
             return nullptr;
         }
-        virtual void control_task_behavior(Task_Status status){
 
-        }
+        virtual void control_task_behavior(Task_Status status){}
 
-        // return -1 error 0 success
-        virtual int exec() = 0;
-        virtual int get_state()
-        {
-            return this->m_status;
-        }
+        virtual int get_state() {return this->m_status;}
 
-        virtual int get_error()
-        {
-            return this->m_error;
-        }
+        virtual int get_error() {return this->m_error;}
 
-        virtual void finish(){
-            this->m_is_finish = true;
-        }
+        virtual void finish(){ this->m_is_finish = true;}
 
         virtual ~Task_Base() {}
 

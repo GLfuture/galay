@@ -61,6 +61,13 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "coroutine": "cpp",
-        "optional": "cpp"
+        "optional": "cpp",
+        "forward_list": "cpp",
+        "any": "cpp",
+        "codecvt": "cpp",
+        "iomanip": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "valarray": "cpp"
     }
 }

@@ -356,6 +356,19 @@ test_http_client/fast:
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_http_client.dir/build.make test/CMakeFiles/test_http_client.dir/build
 .PHONY : test_http_client/fast
 
+#=============================================================================
+# Target rules for targets named homework
+
+# Build rule for target.
+homework: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 homework
+.PHONY : homework
+
+# fast build rule for target.
+homework/fast:
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/homework.dir/build.make test/CMakeFiles/homework.dir/build
+.PHONY : homework/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -373,6 +386,7 @@ help:
 	@echo "... factory"
 	@echo "... galay-shared"
 	@echo "... galay-static"
+	@echo "... homework"
 	@echo "... kernel"
 	@echo "... protocol"
 	@echo "... server"

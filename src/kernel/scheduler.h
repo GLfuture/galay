@@ -3,9 +3,11 @@
 
 #include <unordered_map>
 #include <memory>
+#include "engine.h"
 #include "task.h"
 
 namespace galay{
+
     class Scheduler_Base
     {
     public:
@@ -17,6 +19,7 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<IO_Scheduler>;
+        using wptr = std::weak_ptr<IO_Scheduler>;
         IO_Scheduler(IO_ENGINE engine_type,int max_event,int timeout)
         {
             switch (engine_type)
@@ -53,7 +56,7 @@ namespace galay{
                 int nready = this->m_engine->get_active_event_num();
                 for (int i = 0; i < nready; i++)
                 {
-                    typename Task_Base::ptr task = this->m_tasks->at(events[i].data.fd);
+                    Task_Base::ptr task = this->m_tasks->at(events[i].data.fd);
                     task->exec();
                 }
             }

@@ -5,8 +5,9 @@
 using namespace galay;
 
 
-Task<> func(Task_Base::ptr task)
+Task<> func(Task_Base::wptr t_task)
 {
+    auto task = t_task.lock();
     auto req = std::dynamic_pointer_cast<Tcp_Request>(task->get_req());
     auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
     std::cout<<req->get_buffer()<<'\n';
