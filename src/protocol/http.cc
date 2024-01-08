@@ -140,7 +140,7 @@ std::string galay::Http_Request::encode()
     }
     if (m_filed_list.find("Content-Length") == m_filed_list.end())
     {
-        res = res + "Content-Length: " + std::to_string(this->m_body.length());
+        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
     if (this->m_body.length() != 0)
