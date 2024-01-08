@@ -56,12 +56,16 @@ namespace galay{
                 int nready = this->m_engine->get_active_event_num();
                 for (int i = 0; i < nready; i++)
                 {
-                    Task_Base::ptr task = this->m_tasks->at(events[i].data.fd);
-                    task->exec();
-                    if(task->is_need_to_destroy()){
-                        m_tasks->erase(events[i].data.fd);
-                        m_engine->del_event(events[i].data.fd,EPOLLIN|EPOLLOUT);
-                        close(events[i].data.fd);
+                    if(this->m_tasks->contains(events[i].data.fd))
+                    {
+                        Task_Base::ptr task = this->m_tasks->at(events[i].data.fd);
+                        task->exec();
+                        if (task->is_need_to_destroy())
+                        {
+                            m_tasks->erase(events[i].data.fd);
+                            m_engine->del_event(events[i].data.fd, EPOLLIN | EPOLLOUT);
+                            close(events[i].data.fd);
+                        }
                     }
                 }
             }

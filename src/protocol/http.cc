@@ -1,4 +1,5 @@
 #include "http.h"
+#include <iostream>
 
 std::string &galay::Http_Protocol::get_version()
 {
@@ -102,7 +103,12 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
             return -1;
         }
         this->m_body = buffer.substr(beg, content_len);
-        return beg + content_len + 2;
+        //std::cout<<"body:"<<this->m_body<<'\n';
+        //std::cout << beg + content_len + 2 << " " << buffer.length()<<'\n';
+        int ret_len = beg + content_len;
+        if(buffer.length() == ret_len) return ret_len;
+        if(buffer.length() - 2 >= ret_len && buffer.substr(ret_len,2).compare("\r\n") == 0) return ret_len+2;
+        if(buffer.length() - 4 >= ret_len && buffer.substr(ret_len,4).compare("\r\n\r\n") == 0) return ret_len+4;
     }
     if (beg >= buffer.length() - 1)
         return beg;

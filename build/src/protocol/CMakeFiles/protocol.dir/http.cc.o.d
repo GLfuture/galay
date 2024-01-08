@@ -205,4 +205,6 @@ src/protocol/CMakeFiles/protocol.dir/http.cc.o: \
  /usr/include/c++/12/bits/enable_special_members.h \
  /usr/include/c++/12/bits/node_handle.h \
  /usr/include/c++/12/bits/unordered_map.h \
- /usr/include/c++/12/bits/erase_if.h /usr/include/assert.h
+ /usr/include/c++/12/bits/erase_if.h /usr/include/assert.h \
+ /usr/include/c++/12/iostream /usr/include/c++/12/istream \
+ /usr/include/c++/12/bits/istream.tcc

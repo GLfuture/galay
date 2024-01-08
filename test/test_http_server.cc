@@ -6,6 +6,7 @@ Task<> func(Task_Base::wptr t_task)
 {
     auto task = t_task.lock();
     auto req = std::dynamic_pointer_cast<Http_Request>(task->get_req());
+    std::cout<<req->encode()<<'\n';
     auto resp = std::dynamic_pointer_cast<Http_Response>(task->get_resp());
     if(task->get_scheduler() ==nullptr) std::cout<<"NULL\n";
     auto client = Client_Factory::create_http_client(task->get_scheduler());
