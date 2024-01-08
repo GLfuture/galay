@@ -420,6 +420,9 @@ std::string galay::Http_Response::encode()
     {
         res = res + k + ": " + v + "\r\n";
     }
+    if(!this->m_filed_list.contains("Content-Length")){
+        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
+    }
     res += "\r\n";
     res.append(this->m_body);
     res += "\r\n\r\n";

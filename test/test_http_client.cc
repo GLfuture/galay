@@ -20,7 +20,7 @@ Task<> func(IO_Scheduler::ptr scheduler)
     request->set_head_kv_pair({"Connection","close"});
     request->set_head_kv_pair({"Content-Type","application/json"});
     nlohmann::json js;
-    js["model"] = "RNN";
+    js["model"] = "GRU";
     js["seq_len"] = 10;
     js["pred_len"] = 10;
     js["target"] = "press";
