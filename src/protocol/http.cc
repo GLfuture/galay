@@ -82,7 +82,10 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
             int tbeg = 0, tend = 0;
             tend = lines[i].find_first_of(":");
             std::string key = lines[i].substr(0, tend);
-            tbeg = tend + 2;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) {
+                return std::tolower(c);
+            });
+            tbeg = tend + 1 + (lines[i][tend+1] == ' '? 1 : 0) ;
             std::string value = lines[i].substr(tbeg);
             this->m_filed_list[key] = value;
         }
@@ -92,7 +95,7 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
         return end + 4;
     }
     beg = end + 4;
-    std::string len_str = get_head_value("Content-Length");
+    std::string len_str = get_head_value("content-length");
     if (!len_str.empty())
     {
         int content_len = atoi(len_str.c_str());
@@ -103,8 +106,6 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
             return -1;
         }
         this->m_body = buffer.substr(beg, content_len);
-        //std::cout<<"body:"<<this->m_body<<'\n';
-        //std::cout << beg + content_len + 2 << " " << buffer.length()<<'\n';
         int ret_len = beg + content_len;
         if(buffer.length() == ret_len) return ret_len;
         if(buffer.length() - 2 >= ret_len && buffer.substr(ret_len,2).compare("\r\n") == 0) return ret_len+2;
@@ -144,9 +145,9 @@ std::string galay::Http_Request::encode()
     {
         res = res + k + ": " + v + "\r\n";
     }
-    if (m_filed_list.find("Content-Length") == m_filed_list.end())
+    if (m_filed_list.find("content-length") == m_filed_list.end())
     {
-        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
+        res = res + "content-length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
     if (this->m_body.length() != 0)
@@ -426,8 +427,8 @@ std::string galay::Http_Response::encode()
     {
         res = res + k + ": " + v + "\r\n";
     }
-    if(!this->m_filed_list.contains("Content-Length")){
-        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
+    if(!this->m_filed_list.contains("content-length")){
+        res = res + "content-length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
     res.append(this->m_body);
@@ -469,7 +470,10 @@ int galay::Http_Response::decode(const std::string &buffer, int &state)
             int tbeg = 0, tend = 0;
             tend = lines[i].find_first_of(":");
             std::string key = lines[i].substr(0, tend);
-            tbeg = tend + 2;
+            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) {
+                return std::tolower(c);
+            });
+            tbeg = tend + 1 + (lines[i][tend+1] == ' '? 1 : 0) ;
             std::string value = lines[i].substr(tbeg);
             this->m_filed_list[key] = value;
         }
@@ -477,7 +481,7 @@ int galay::Http_Response::decode(const std::string &buffer, int &state)
 
     //
     beg = end + 4;
-    std::string len_str = get_head_value("Content-Length");
+    std::string len_str = get_head_value("content-length");
     if (!len_str.empty())
     {
         int content_len = atoi(len_str.c_str());
