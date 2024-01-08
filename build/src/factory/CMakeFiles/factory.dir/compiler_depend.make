@@ -402,6 +402,10 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
   /home/gong/projects/galay/src/kernel/error.h \
   /home/gong/projects/galay/src/protocol/http.h \
   /usr/include/assert.h \
+  /usr/include/c++/12/algorithm \
+  /usr/include/c++/12/bits/ranges_algo.h \
+  /usr/include/c++/12/bits/ranges_util.h \
+  /usr/include/c++/12/pstl/glue_algorithm_defs.h \
   /home/gong/projects/galay/src/kernel/task_tcp.h \
   /home/gong/projects/galay/src/server/httpserver.h \
   /home/gong/projects/galay/src/kernel/task_http.h \
@@ -434,6 +438,12 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
 /home/gong/projects/galay/src/server/httpserver.h:
 
 /home/gong/projects/galay/src/kernel/task_tcp.h:
+
+/usr/include/c++/12/bits/ranges_util.h:
+
+/usr/include/c++/12/bits/ranges_algo.h:
+
+/usr/include/c++/12/algorithm:
 
 /usr/include/assert.h:
 
@@ -706,6 +716,8 @@ src/factory/CMakeFiles/factory.dir/factory.cc.o: /home/gong/projects/galay/src/f
 /usr/include/ctype.h:
 
 /usr/include/x86_64-linux-gnu/bits/locale.h:
+
+/usr/include/c++/12/pstl/glue_algorithm_defs.h:
 
 /usr/include/c++/12/bits/localefwd.h:
 

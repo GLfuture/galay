@@ -6,7 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <assert.h>
-
+#include <algorithm>
 
 namespace galay
 {

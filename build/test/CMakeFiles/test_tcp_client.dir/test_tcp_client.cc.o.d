@@ -305,7 +305,10 @@ test/CMakeFiles/test_tcp_client.dir/test_tcp_client.cc.o: \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/../protocol/basic_protocol.h \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/../protocol/../kernel/error.h \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/../protocol/http.h \
- /usr/include/assert.h \
+ /usr/include/assert.h /usr/include/c++/12/algorithm \
+ /usr/include/c++/12/bits/ranges_algo.h \
+ /usr/include/c++/12/bits/ranges_util.h \
+ /usr/include/c++/12/pstl/glue_algorithm_defs.h \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/task_tcp.h \
  /home/gong/projects/galay/test/../src/factory/../server/httpserver.h \
  /home/gong/projects/galay/test/../src/factory/../server/../kernel/task_http.h \
