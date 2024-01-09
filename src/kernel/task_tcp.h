@@ -143,7 +143,7 @@ namespace galay
 
         void encode()
         {
-            m_wbuffer = m_resp->encode();
+            m_wbuffer.append(m_resp->encode());
         }
 
         virtual int read_package()

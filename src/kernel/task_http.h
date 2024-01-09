@@ -38,9 +38,14 @@ namespace galay
             {
                 if(this->m_is_finish)
                 {
-                    Tcp_RW_Task::encode();
+                    if(send_head){
+                        Tcp_RW_Task::encode();
+                        std::cout<< "send head\n";
+                        send_head = false;
+                    }
                     if (Tcp_RW_Task::send_package() == -1)
                         return -1;
+                    if(!this->m_wbuffer.empty()) return -1;
                     control_task_behavior(GY_TASK_DISCONNECT);
                 }
                 break;
@@ -55,6 +60,7 @@ namespace galay
         {
         }
     private:
+        bool send_head = true;
         bool m_is_chunked = false;
     };
 
@@ -109,9 +115,13 @@ namespace galay
             {
                 if(this->m_is_finish)
                 {
-                    Tcp_SSL_RW_Task::encode();
+                    if(send_head){
+                        Tcp_SSL_RW_Task::encode();
+                        send_head = false;
+                    }
                     if (Tcp_SSL_RW_Task::send_package() == -1)
                         return -1;
+                    if(!this->m_wbuffer.empty()) return -1;
                     control_task_behavior(GY_TASK_DISCONNECT);
                 }
                 
@@ -127,7 +137,7 @@ namespace galay
         {
         }
     private:
-
+        bool send_head = true;
         bool m_is_chunked = false;
     };
 
