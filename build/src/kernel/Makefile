@@ -247,6 +247,54 @@ iofunction.cc.s:
 	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/iofunction.cc.s
 .PHONY : iofunction.cc.s
 
+scheduler.o: scheduler.cc.o
+.PHONY : scheduler.o
+
+# target to build an object file
+scheduler.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o
+.PHONY : scheduler.cc.o
+
+scheduler.i: scheduler.cc.i
+.PHONY : scheduler.i
+
+# target to preprocess a source file
+scheduler.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/scheduler.cc.i
+.PHONY : scheduler.cc.i
+
+scheduler.s: scheduler.cc.s
+.PHONY : scheduler.s
+
+# target to generate assembly for a file
+scheduler.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/scheduler.cc.s
+.PHONY : scheduler.cc.s
+
+task.o: task.cc.o
+.PHONY : task.o
+
+# target to build an object file
+task.cc.o:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/task.cc.o
+.PHONY : task.cc.o
+
+task.i: task.cc.i
+.PHONY : task.i
+
+# target to preprocess a source file
+task.cc.i:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/task.cc.i
+.PHONY : task.cc.i
+
+task.s: task.cc.s
+.PHONY : task.s
+
+# target to generate assembly for a file
+task.cc.s:
+	cd /home/gong/projects/galay/build && $(MAKE) $(MAKESILENT) -f src/kernel/CMakeFiles/kernel.dir/build.make src/kernel/CMakeFiles/kernel.dir/task.cc.s
+.PHONY : task.cc.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -269,6 +317,12 @@ help:
 	@echo "... iofunction.o"
 	@echo "... iofunction.i"
 	@echo "... iofunction.s"
+	@echo "... scheduler.o"
+	@echo "... scheduler.i"
+	@echo "... scheduler.s"
+	@echo "... task.o"
+	@echo "... task.i"
+	@echo "... task.s"
 .PHONY : help
 
 

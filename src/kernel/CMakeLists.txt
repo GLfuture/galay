@@ -5,6 +5,8 @@ set(SRC_LIST
     engine.cc
     iofunction.cc
     error.cc
+    task.cc
+    scheduler.cc
     )
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})

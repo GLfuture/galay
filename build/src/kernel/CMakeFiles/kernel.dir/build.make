@@ -111,9 +111,39 @@ src/kernel/CMakeFiles/kernel.dir/error.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/kernel.dir/error.cc.s"
 	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gong/projects/galay/src/kernel/error.cc -o CMakeFiles/kernel.dir/error.cc.s
 
+src/kernel/CMakeFiles/kernel.dir/task.cc.o: src/kernel/CMakeFiles/kernel.dir/flags.make
+src/kernel/CMakeFiles/kernel.dir/task.cc.o: /home/gong/projects/galay/src/kernel/task.cc
+src/kernel/CMakeFiles/kernel.dir/task.cc.o: src/kernel/CMakeFiles/kernel.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/kernel/CMakeFiles/kernel.dir/task.cc.o"
+	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/kernel/CMakeFiles/kernel.dir/task.cc.o -MF CMakeFiles/kernel.dir/task.cc.o.d -o CMakeFiles/kernel.dir/task.cc.o -c /home/gong/projects/galay/src/kernel/task.cc
+
+src/kernel/CMakeFiles/kernel.dir/task.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/kernel.dir/task.cc.i"
+	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gong/projects/galay/src/kernel/task.cc > CMakeFiles/kernel.dir/task.cc.i
+
+src/kernel/CMakeFiles/kernel.dir/task.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/kernel.dir/task.cc.s"
+	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gong/projects/galay/src/kernel/task.cc -o CMakeFiles/kernel.dir/task.cc.s
+
+src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o: src/kernel/CMakeFiles/kernel.dir/flags.make
+src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o: /home/gong/projects/galay/src/kernel/scheduler.cc
+src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o: src/kernel/CMakeFiles/kernel.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/gong/projects/galay/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o"
+	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o -MF CMakeFiles/kernel.dir/scheduler.cc.o.d -o CMakeFiles/kernel.dir/scheduler.cc.o -c /home/gong/projects/galay/src/kernel/scheduler.cc
+
+src/kernel/CMakeFiles/kernel.dir/scheduler.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/kernel.dir/scheduler.cc.i"
+	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gong/projects/galay/src/kernel/scheduler.cc > CMakeFiles/kernel.dir/scheduler.cc.i
+
+src/kernel/CMakeFiles/kernel.dir/scheduler.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/kernel.dir/scheduler.cc.s"
+	cd /home/gong/projects/galay/build/src/kernel && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gong/projects/galay/src/kernel/scheduler.cc -o CMakeFiles/kernel.dir/scheduler.cc.s
+
 kernel: src/kernel/CMakeFiles/kernel.dir/engine.cc.o
 kernel: src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o
 kernel: src/kernel/CMakeFiles/kernel.dir/error.cc.o
+kernel: src/kernel/CMakeFiles/kernel.dir/task.cc.o
+kernel: src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o
 kernel: src/kernel/CMakeFiles/kernel.dir/build.make
 .PHONY : kernel
 
