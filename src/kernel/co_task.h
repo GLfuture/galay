@@ -48,9 +48,10 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Connect_Task<RESULT>>;
 
-        Co_Tcp_Client_Connect_Task(int fd)
+        Co_Tcp_Client_Connect_Task(int fd , int *error)
         {
             this->m_fd = fd;
+            this->m_error = error;
         }
 
         int exec() override
@@ -61,10 +62,10 @@ namespace galay
                 this->m_result = -1;
             }
             if(status != 0){
-                this->m_error = error::GY_CONNECT_ERROR;
+                *(this->m_error) = error::GY_CONNECT_ERROR;
                 this->m_result = -1;
             }else{
-                this->m_error = error::GY_CONNECT_ERROR;
+                *(this->m_error) = error::GY_SUCCESS;
                 this->m_result = 0;
             }
             if(!this->m_handle.done()) this->m_handle.resume();
@@ -77,6 +78,7 @@ namespace galay
         }
     protected:
         int m_fd;
+        int *m_error;
     };
 
 
@@ -85,11 +87,12 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Send_Task>;
-        Co_Tcp_Client_Send_Task(int fd ,const std::string &buffer , uint32_t len)
+        Co_Tcp_Client_Send_Task(int fd ,const std::string &buffer , uint32_t len , int *error)
         {
             this->m_fd = fd;
             this->m_buffer = buffer;
             this->m_len = len;
+            this->m_error = error;
         }
 
         int exec() override
@@ -100,14 +103,15 @@ namespace galay
                 {
                     return -1;
                 }else{
-                    this->m_error = error::GY_SEND_ERROR;
+                    *(this->m_error) = error::GY_SEND_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
-                this->m_error = error::GY_SEND_ERROR;
+                *(this->m_error) = error::GY_SEND_ERROR;
                 this->m_result = -1;
             }else{
                 this->m_result = ret;
+                *(this->m_error) = error::GY_SUCCESS;
             }
             if(!this->m_handle.done()) this->m_handle.resume();
             return 0;
@@ -121,6 +125,7 @@ namespace galay
         int m_fd;
         std::string m_buffer;
         uint32_t m_len;
+        int * m_error;
     };
 
     template<typename RESULT = int>
@@ -128,11 +133,12 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Recv_Task>;
-        Co_Tcp_Client_Recv_Task(int fd,char* buffer,int len)
+        Co_Tcp_Client_Recv_Task(int fd , char* buffer,int len , int *error)
         {
             this->m_fd = fd;
             this->m_buffer = buffer;
             this->m_len = len;
+            this->m_error = error;
         }
  
         int exec() override
@@ -143,13 +149,14 @@ namespace galay
                 {
                     return -1;
                 }else{
-                    this->m_error = error::GY_RECV_ERROR;
+                    *(this->m_error) = error::GY_RECV_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
-                this->m_error = error::GY_RECV_ERROR;
+                *(this->m_error) = error::GY_RECV_ERROR;
                 this->m_result = -1;
             }else{
+                *(this->m_error) = error::GY_SUCCESS;
                 this->m_result = ret;
             }
             if(!this->m_handle.done()) this->m_handle.resume();
@@ -164,6 +171,7 @@ namespace galay
         int m_fd;
         char* m_buffer = nullptr;
         int m_len;
+        int * m_error;
     };
 
     template<typename RESULT = int>
@@ -171,7 +179,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Request_Task>;
-        Http_Request_Task(int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response)
+        Http_Request_Task(int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response , int *error)
         {
             this->m_fd = fd;
             this->m_request = request;
@@ -179,6 +187,7 @@ namespace galay
             this->m_status = Task_Status::GY_TASK_WRITE;
             this->m_engine = engine;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
+            this->m_error = error;
         }
 
         int exec() override
@@ -197,19 +206,20 @@ namespace galay
                     }
                     else
                     {
-                        this->m_error = error::GY_SEND_ERROR;
+                        *(this->m_error) = error::GY_SEND_ERROR;
                         this->m_result = -1;
                     }
                 }
                 else if (ret == 0)
                 {
-                    this->m_error = error::GY_SEND_ERROR;
+                    *(this->m_error) = error::GY_SEND_ERROR;
                     this->m_result = -1;
                 }
                 else
                 {
                     this->m_result = ret;
                     this->m_status = Task_Status::GY_TASK_READ;
+                    *(this->m_error) = error::GY_SUCCESS;
                     m_engine->mod_event(this->m_fd , EPOLLIN);
                     return -1;
                 }
@@ -227,13 +237,13 @@ namespace galay
                     }
                     else
                     {
-                        this->m_error = error::GY_RECV_ERROR;
+                        *(this->m_error) = error::GY_RECV_ERROR;
                         this->m_result = -1;
                     }
                 }
                 else if (ret == 0)
                 {
-                    this->m_error = error::GY_RECV_ERROR;
+                    *(this->m_error) = error::GY_RECV_ERROR;
                     this->m_result = -1;
                 }
                 else
@@ -244,10 +254,10 @@ namespace galay
                     if(state == error::protocol_error::GY_PROTOCOL_INCOMPLETE){
                         return -1;
                     }else{
-                        this->m_error = state;
+                        *(this->m_error) = state;
                     }
+                    *(this->m_error) = error::GY_SUCCESS;
                     this->m_result = ret;
-                    
                 }
                 break;
             }
@@ -280,6 +290,7 @@ namespace galay
         Http_Request::ptr m_request;
         Http_Response::ptr m_respnse;
         Engine::ptr m_engine;
+        int * m_error;
     };
 
 }

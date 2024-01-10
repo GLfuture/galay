@@ -178,7 +178,6 @@ galay::Tcp_Accept_Task::Tcp_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> sche
 {
     this->m_fd = fd;
     this->m_status = Task_Status::GY_TASK_READ;
-    this->m_error = error::base_error::GY_SUCCESS;
     this->m_scheduler = scheduler;
     this->m_func = func;
     this->m_read_len = read_len;
