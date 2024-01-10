@@ -30,7 +30,7 @@ galay::Tcp_Client::Tcp_Client(IO_Scheduler::wptr scheduler)
 
 galay::Net_Awaiter<int> galay::Tcp_Client::connect(std::string ip, uint32_t port)
 {
-    typename Co_Tcp_Client_Connect_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Connect_Task<int>>(this->m_fd);
+    typename Co_Tcp_Client_Connect_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Connect_Task<int>>(this->m_fd, &(this->m_error));
 
     int ret = iofunction::Tcp_Function::Conncet(this->m_fd, ip, port);
     if (ret == 0)
@@ -63,7 +63,7 @@ galay::Net_Awaiter<int> galay::Tcp_Client::send(const std::string &buffer, uint3
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            typename Co_Tcp_Client_Send_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Send_Task<int>>(this->m_fd, buffer, len);
+            typename Co_Tcp_Client_Send_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Send_Task<int>>(this->m_fd, buffer, len , &(this->m_error));
             Client::add_task(task);
 
             if (!this->m_scheduler.expired())
@@ -89,7 +89,7 @@ galay::Net_Awaiter<int> galay::Tcp_Client::recv(char *buffer, int len)
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            typename Co_Tcp_Client_Recv_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Recv_Task<int>>(this->m_fd, buffer, len);
+            typename Co_Tcp_Client_Recv_Task<int>::ptr task = std::make_shared<Co_Tcp_Client_Recv_Task<int>>(this->m_fd, buffer, len , &(this->m_error));
             Client::add_task(task);
             if (!this->m_scheduler.expired())
                 this->m_scheduler.lock()->m_engine->mod_event(this->m_fd, EPOLLIN);
@@ -133,7 +133,7 @@ galay::Net_Awaiter<int> galay::Http_Client::request(Http_Request::ptr request, H
 {
     if (!this->m_scheduler.expired())
     {
-        typename Http_Request_Task<int>::ptr task = std::make_shared<Http_Request_Task<int>>(this->m_fd, this->m_scheduler.lock()->m_engine, request, response);
+        typename Http_Request_Task<int>::ptr task = std::make_shared<Http_Request_Task<int>>(this->m_fd, this->m_scheduler.lock()->m_engine, request, response , &(this->m_error));
         Tcp_Client::add_task(task);
         return Net_Awaiter<int>{task};
     }

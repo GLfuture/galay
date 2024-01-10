@@ -51,8 +51,6 @@ namespace galay
         virtual void control_task_behavior(Task_Status status){}
 
         virtual int get_state() {return this->m_status;}
-
-        virtual int get_error() {return this->m_error;}
         
         virtual void finish(){ this->m_is_finish = true;}
 
@@ -62,7 +60,6 @@ namespace galay
 
     protected:
         int m_status;
-        int m_error;
         bool m_is_finish = false;
     };
 
@@ -125,6 +122,8 @@ namespace galay
 
         void reset_buffer(int len);
 
+        virtual int get_error() {return this->m_error;}
+
         virtual ~Tcp_RW_Task();
 
     protected:
@@ -147,6 +146,7 @@ namespace galay
         Response_Base::ptr m_resp;
         Task<> m_co_task;
         Callback m_func;
+        int m_error;
     };
 
     class Tcp_Accept_Task : public Task_Base
@@ -184,7 +184,6 @@ namespace galay
         {}
 
         virtual ~Tcp_SSL_RW_Task();
-
     protected:
         int read_package() override;
 
