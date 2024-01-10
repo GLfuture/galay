@@ -42,9 +42,9 @@ Task<> func(Task_Base::wptr t_task)
     // ret_js["pred"] = js_arr1;
     // ret_js["true_row"] = js_arr2;
     //resp->get_body() = ret_js.dump();
-    std::ofstream of("demo.txt");
-    of << resp->encode();
-    of.close();
+    //std::ofstream of("demo.txt");
+    //of << resp->encode();
+    //of.close();
     task->finish();
     co_return;
 }

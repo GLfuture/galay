@@ -77,6 +77,8 @@ galay__static_EXTERNAL_OBJECTS = \
 "/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/engine.cc.o" \
 "/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o" \
 "/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/error.cc.o" \
+"/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/task.cc.o" \
+"/home/gong/projects/galay/build/src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o" \
 "/home/gong/projects/galay/build/src/util/CMakeFiles/util.dir/stringutil.cc.o" \
 "/home/gong/projects/galay/build/src/util/CMakeFiles/util.dir/base64.cc.o" \
 "/home/gong/projects/galay/build/src/factory/CMakeFiles/factory.dir/factory.cc.o" \
@@ -89,6 +91,8 @@ galay__static_EXTERNAL_OBJECTS = \
 src/libgalay-static.a: src/kernel/CMakeFiles/kernel.dir/engine.cc.o
 src/libgalay-static.a: src/kernel/CMakeFiles/kernel.dir/iofunction.cc.o
 src/libgalay-static.a: src/kernel/CMakeFiles/kernel.dir/error.cc.o
+src/libgalay-static.a: src/kernel/CMakeFiles/kernel.dir/task.cc.o
+src/libgalay-static.a: src/kernel/CMakeFiles/kernel.dir/scheduler.cc.o
 src/libgalay-static.a: src/util/CMakeFiles/util.dir/stringutil.cc.o
 src/libgalay-static.a: src/util/CMakeFiles/util.dir/base64.cc.o
 src/libgalay-static.a: src/factory/CMakeFiles/factory.dir/factory.cc.o

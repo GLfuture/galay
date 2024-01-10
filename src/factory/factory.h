@@ -2,10 +2,8 @@
 #define GALAY_FACTORY_H
 
 #include "../config/config.h"
-#include "../server/tcpserver.h"
-#include "../server/httpserver.h"
-#include "../client/tcpclient.h"
-#include "../client/httpclient.h"
+#include "../server/server.h"
+#include "../client/client.h"
 #include "../protocol/tcp.h"
 #include "../protocol/http.h"
 
