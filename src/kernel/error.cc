@@ -20,6 +20,7 @@ const char *galay::error::global_err_str[] = {
     "ssl_connect function error",
     "the getsockopt function in client has some error",
     "scheduler's engine check events error",
+    "scheduler is expired",
     "epoll engine's epoll_wait function has error",
     "protocol is incomplete",
     "the request is a bad request",

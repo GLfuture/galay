@@ -7,7 +7,7 @@ using namespace galay;
 Task<> func(IO_Scheduler::ptr scheduler)
 {
     auto client = Client_Factory::create_http_client(scheduler);
-    int ret = co_await client->connect("192.168.196.239",8080);
+    int ret = co_await client->connect("127.0.0.1",8080);
     if(ret == 0) {
         std::cout<<"connect success\n";
     }else{
@@ -29,7 +29,6 @@ Task<> func(IO_Scheduler::ptr scheduler)
     js["e_layers"] = 4;
     js["d_layers"] = 1;
     request->get_body() = js.dump();  
-    std::cout<<request->encode()<<'\n';
     Http_Response::ptr response = std::make_shared<Http_Response>();
     co_await client->request(request,response);
     std::cout<<response->encode()<<std::endl;

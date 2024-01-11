@@ -74,6 +74,9 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Client_Factory>;
         static Tcp_Client::ptr create_tcp_client(IO_Scheduler::wptr scheduler);
+
+        static Tcp_SSL_Client::ptr create_tcp_ssl_client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version);
+
         static Http_Client::ptr create_http_client(IO_Scheduler::wptr scheduler);
     };
 
