@@ -21,6 +21,7 @@ namespace galay
     enum Task_Status
     {
         GY_TASK_CONNECT,
+        GY_TASK_SSL_CONNECT,
         GY_TASK_READ,
         GY_TASK_WRITE,
         GY_TASK_DISCONNECT,

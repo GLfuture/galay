@@ -36,6 +36,7 @@ namespace galay
 
         enum scheduler_error{
             GY_SCHEDULER_ENGINE_CHECK_ERROR = GY_CLIENT_ERROR_END,  //scheduler's engine check error
+            GY_SCHDULER_IS_EXPIRED,
             GY_SCHEDULER_ERROR_END,
         };
 

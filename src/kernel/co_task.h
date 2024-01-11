@@ -59,6 +59,7 @@ namespace galay
             int status = 0;
             socklen_t slen = sizeof(status);
             if(getsockopt(this->m_fd,SOL_SOCKET,SO_ERROR,(void*)&status,&slen) < 0){
+                *(this->m_error) = error::GY_CONNECT_ERROR;
                 this->m_result = -1;
             }
             if(status != 0){
@@ -292,6 +293,174 @@ namespace galay
         Engine::ptr m_engine;
         int * m_error;
     };
+
+    template<typename RESULT = int>
+    class Co_Tcp_Client_SSL_Connect_Task: public Co_Task_Base<RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Connect_Task<RESULT>>;
+
+        Co_Tcp_Client_SSL_Connect_Task(int fd , SSL* ssl , int *error , int init_status)
+        {
+            this->m_fd = fd;
+            this->m_error = error;
+            this->m_status = init_status;
+            this->m_ssl = ssl;
+        }
+
+        int exec() override
+        {
+
+            switch (this->m_status)
+            {
+            case Task_Status::GY_TASK_CONNECT:
+            {
+                int status = 0;
+                socklen_t slen = sizeof(status);
+                if (getsockopt(this->m_fd, SOL_SOCKET, SO_ERROR, (void *)&status, &slen) < 0)
+                {
+                    *(this->m_error) = error::GY_CONNECT_ERROR;
+                    this->m_result = -1;
+                }
+                if (status != 0)
+                {
+                    *(this->m_error) = error::GY_CONNECT_ERROR;
+                    this->m_result = -1;
+                }
+                else
+                {
+                    this->m_status = Task_Status::GY_TASK_SSL_CONNECT;
+                    return -1;
+                }
+                break;
+            }
+            case Task_Status::GY_TASK_SSL_CONNECT:
+            {
+                int ret = iofunction::Tcp_Function::SSL_Connect(this->m_ssl);
+                if(ret <= 0)
+                {
+                    int status = SSL_get_error(this->m_ssl,ret);
+                    if(status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE || status == SSL_ERROR_WANT_CONNECT)
+                    {
+                        return -1;
+                    }else{
+                        *(this->m_error) = error::GY_SSL_CONNECT_ERROR;
+                        this->m_result = -1;
+                    }
+                }else{
+                    *(this->m_error) = error::GY_SUCCESS;
+                    this->m_result = 0;
+                }
+                break;
+            }
+            }
+
+            if(!this->m_handle.done()) this->m_handle.resume();
+            return 0;
+        }
+
+        bool is_need_to_destroy() override
+        {
+            return Co_Task_Base<RESULT>::is_need_to_destroy();
+        }
+    protected:
+        int m_fd;
+        int *m_error;
+        SSL* m_ssl;
+    };
+    
+    template<typename RESULT = int>
+    class Co_Tcp_Client_SSL_Send_Task:public Co_Task_Base<RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Send_Task>;
+        Co_Tcp_Client_SSL_Send_Task(SSL * ssl,const std::string &buffer , uint32_t len , int *error)
+        {
+            this->m_ssl = ssl;
+            this->m_buffer = buffer;
+            this->m_len = len;
+            this->m_error = error;
+        }
+
+        int exec() override
+        {
+            int ret = iofunction::Tcp_Function::SSL_Send(this->m_ssl,this->m_buffer,this->m_len);
+            if(ret == -1){
+                if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }else{
+                    *(this->m_error) = error::GY_SSL_SEND_ERROR;
+                    this->m_result = -1;
+                }
+            }else if(ret == 0){
+                *(this->m_error) = error::GY_SSL_SEND_ERROR;
+                this->m_result = -1;
+            }else{
+                this->m_result = ret;
+                *(this->m_error) = error::GY_SUCCESS;
+            }
+            if(!this->m_handle.done()) this->m_handle.resume();
+            return 0;
+        }
+
+        bool is_need_to_destroy() override
+        {
+            return Co_Task_Base<RESULT>::is_need_to_destroy();
+        }
+    protected:
+        SSL* m_ssl;
+        std::string m_buffer;
+        uint32_t m_len;
+        int * m_error;
+    };
+
+    template<typename RESULT = int>
+    class Co_Tcp_Client_SSL_Recv_Task:public Co_Task_Base<RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Recv_Task>;
+        Co_Tcp_Client_SSL_Recv_Task(SSL* ssl , char* buffer,int len , int *error)
+        {
+            this->m_ssl = ssl;
+            this->m_buffer = buffer;
+            this->m_len = len;
+            this->m_error = error;
+        }
+ 
+        int exec() override
+        {
+            int ret = iofunction::Tcp_Function::SSL_Recv(this->m_ssl,this->m_buffer,this->m_len);
+            if(ret == -1){
+                if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }else{
+                    *(this->m_error) = error::GY_SSL_RECV_ERROR;
+                    this->m_result = -1;
+                }
+            }else if(ret == 0){
+                *(this->m_error) = error::GY_SSL_RECV_ERROR;
+                this->m_result = -1;
+            }else{
+                *(this->m_error) = error::GY_SUCCESS;
+                this->m_result = ret;
+            }
+            if(!this->m_handle.done()) this->m_handle.resume();
+            return 0;
+        }
+
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish;
+        }
+    protected:
+        SSL* m_ssl;
+        char* m_buffer = nullptr;
+        int m_len;
+        int * m_error;
+    };
+
 
 }
 

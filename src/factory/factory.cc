@@ -120,6 +120,11 @@ galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(IO_Scheduler::wp
     return std::make_shared<Tcp_Client>(scheduler);
 }
 
+galay::Tcp_SSL_Client::ptr galay::Client_Factory::create_tcp_ssl_client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version)
+{
+    return std::make_shared<Tcp_SSL_Client>(scheduler,ssl_min_version,ssl_max_version);
+}
+
 
 galay::Http_Client::ptr galay::Client_Factory::create_http_client(IO_Scheduler::wptr scheduler)
 {
