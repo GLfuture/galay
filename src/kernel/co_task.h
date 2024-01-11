@@ -230,8 +230,12 @@ namespace galay
             }
             case Task_Status::GY_TASK_READ:
             {
-                memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
-                int ret = iofunction::Tcp_Function::Recv(this->m_fd, m_tempbuffer, DEFAULT_RECV_LENGTH);
+                int ret;
+                do{
+                    memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
+                    ret = iofunction::Tcp_Function::Recv(this->m_fd, m_tempbuffer, DEFAULT_RECV_LENGTH);
+                    if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
+                }while(ret != -1 && ret != 0);
                 if(ret == -1){
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                     {
@@ -248,14 +252,6 @@ namespace galay
                 {
                     *(this->m_error) = error::GY_RECV_ERROR;
                     this->m_result = -1;
-                }else{
-                    this->m_buffer.append(m_tempbuffer,ret);
-                }
-                while(ret != -1 && ret != 0)
-                {
-                    memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
-                    ret = iofunction::Tcp_Function::Recv(this->m_fd, m_tempbuffer, DEFAULT_RECV_LENGTH);
-                    if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
                 }
                 int state = 0;
                 this->m_respnse->decode(this->m_buffer, state);
@@ -527,8 +523,12 @@ namespace galay
             }
             case Task_Status::GY_TASK_READ:
             {
-                memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
-                int ret = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, m_tempbuffer, DEFAULT_RECV_LENGTH);
+                int ret;
+                do{
+                    memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
+                    ret = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, m_tempbuffer, DEFAULT_RECV_LENGTH);
+                    if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
+                }while(ret != -1 && ret != 0);
                 if(ret == -1){
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                     {
@@ -545,14 +545,6 @@ namespace galay
                 {
                     *(this->m_error) = error::GY_RECV_ERROR;
                     this->m_result = -1;
-                }else{
-                    this->m_buffer.append(m_tempbuffer,ret);
-                }
-                while(ret != -1 && ret != 0)
-                {
-                    memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
-                    ret = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, m_tempbuffer, DEFAULT_RECV_LENGTH);
-                    if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
                 }
                 int state = 0;
                 this->m_respnse->decode(this->m_buffer, state);
