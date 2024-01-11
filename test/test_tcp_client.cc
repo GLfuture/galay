@@ -27,7 +27,7 @@ Task<> func(IO_Scheduler::ptr scheduler)
 
 int main()
 {
-    auto scheduler = Scheduler_Factory::create_tcp_scheduler(IO_EPOLL,1,5);
+    auto scheduler = Scheduler_Factory::create_scheduler(IO_EPOLL,1,5);
     Task<> t = func(scheduler);
     scheduler->start();
     std::cout<<"end\n";

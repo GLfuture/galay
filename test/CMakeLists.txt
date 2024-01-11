@@ -9,6 +9,7 @@ set(SRC_LIST
     test_tcp_client.cc
     test_http_client.cc
     test_tcp_ssl_client.cc
+    test_https_client.cc
     homework.cc
     )
 foreach(SRC ${SRC_LIST})

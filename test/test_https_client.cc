@@ -6,8 +6,8 @@ using namespace galay;
 
 Task<> func(IO_Scheduler::ptr scheduler)
 {
-    auto client = Client_Factory::create_http_client(scheduler);
-    int ret = co_await client->connect("39.156.66.14",80);
+    auto client = Client_Factory::create_https_client(scheduler,TLS1_1_VERSION,TLS1_3_VERSION);
+    int ret = co_await client->connect("39.156.66.14",443);
     if(ret == 0) {
         std::cout<<"connect success\n";
     }else{
@@ -20,8 +20,8 @@ Task<> func(IO_Scheduler::ptr scheduler)
     //request->set_head_kv_pair({"Connection","close"});
     Http_Response::ptr response = std::make_shared<Http_Response>();
     ret = co_await client->request(request,response);
-    std::cout<<ret<<'\n';
-    std::cout<<response->encode()<<std::endl;
+    std::string resp_str = response->encode();
+    std::cout<< resp_str << '\n' << resp_str.length() <<std::endl;
     client->disconnect();
     scheduler->stop();
     co_return;

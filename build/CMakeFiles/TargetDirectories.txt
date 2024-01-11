@@ -68,6 +68,7 @@
 /home/gong/projects/galay/build/test/CMakeFiles/test_tcp_client.dir
 /home/gong/projects/galay/build/test/CMakeFiles/test_http_client.dir
 /home/gong/projects/galay/build/test/CMakeFiles/test_tcp_ssl_client.dir
+/home/gong/projects/galay/build/test/CMakeFiles/test_https_client.dir
 /home/gong/projects/galay/build/test/CMakeFiles/homework.dir
 /home/gong/projects/galay/build/test/CMakeFiles/edit_cache.dir
 /home/gong/projects/galay/build/test/CMakeFiles/rebuild_cache.dir

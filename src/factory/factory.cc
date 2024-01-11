@@ -104,12 +104,7 @@ galay::Https_Server::ptr galay::Server_Factory::create_https_server(Https_Server
 }
 
 //scheduler
-galay::IO_Scheduler::ptr galay::Scheduler_Factory::create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out)
-{
-    return std::make_shared<IO_Scheduler>(engine_type,event_num,time_out);
-}
-
-galay::IO_Scheduler::ptr galay::Scheduler_Factory::create_http_scheduler(IO_ENGINE engine_type,int event_num,int time_out)
+galay::IO_Scheduler::ptr galay::Scheduler_Factory::create_scheduler(IO_ENGINE engine_type,int event_num,int time_out)
 {
     return std::make_shared<IO_Scheduler>(engine_type,event_num,time_out);
 }
@@ -131,3 +126,7 @@ galay::Http_Client::ptr galay::Client_Factory::create_http_client(IO_Scheduler::
     return std::make_shared<Http_Client>(scheduler);
 }
 
+galay::Https_Client::ptr galay::Client_Factory::create_https_client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version)
+{
+    return std::make_shared<Https_Client>(scheduler,ssl_min_version,ssl_max_version);
+}
