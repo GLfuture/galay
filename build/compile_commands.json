@@ -101,6 +101,11 @@
 },
 {
   "directory": "/home/gong/projects/galay/build",
+  "command": "/usr/bin/g++ -I/home/gong/projects/galay/test/../src -g -std=gnu++20 -o test/CMakeFiles/test_https_client.dir/test_https_client.cc.o -c /home/gong/projects/galay/test/test_https_client.cc",
+  "file": "/home/gong/projects/galay/test/test_https_client.cc"
+},
+{
+  "directory": "/home/gong/projects/galay/build",
   "command": "/usr/bin/g++ -I/home/gong/projects/galay/test/../src -g -std=gnu++20 -o test/CMakeFiles/homework.dir/homework.cc.o -c /home/gong/projects/galay/test/homework.cc",
   "file": "/home/gong/projects/galay/test/homework.cc"
 }

@@ -65,8 +65,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Scheduler_Factory>;
-        static IO_Scheduler::ptr create_tcp_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
-        static IO_Scheduler::ptr create_http_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
+        static IO_Scheduler::ptr create_scheduler(IO_ENGINE engine_type,int event_num,int time_out);
     };
 
     class Client_Factory: public Factory_Base
@@ -78,6 +77,8 @@ namespace galay
         static Tcp_SSL_Client::ptr create_tcp_ssl_client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version);
 
         static Http_Client::ptr create_http_client(IO_Scheduler::wptr scheduler);
+
+        static Https_Client::ptr create_https_client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version);
     };
 
 }

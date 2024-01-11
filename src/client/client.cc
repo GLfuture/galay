@@ -238,3 +238,15 @@ galay::Net_Awaiter<int> galay::Http_Client::request(Http_Request::ptr request, H
     return {nullptr, -1};
 }
 
+
+galay::Net_Awaiter<int> galay::Https_Client::request(Http_Request::ptr request,Http_Response::ptr response)
+{
+    if (!this->m_scheduler.expired())
+    {
+        auto task = std::make_shared<Https_Request_Task<int>>(this->m_ssl, this->m_fd ,  this->m_scheduler.lock()->m_engine, request, response , &(this->m_error));
+        Client::add_task(task);
+        return Net_Awaiter<int>{task};
+    }
+    this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
+    return {nullptr, -1};
+}
