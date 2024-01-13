@@ -22,13 +22,13 @@ void galay::Tcp_RW_Task::control_task_behavior(Task_Status status)
         {
         case Task_Status::GY_TASK_WRITE:
         {
-            scheduler->m_engine->mod_event(this->m_fd, EPOLLOUT);
+            scheduler->get_engine()->mod_event(this->m_fd, EPOLLOUT);
             this->m_status = Task_Status::GY_TASK_WRITE;
             break;
         }
         case Task_Status::GY_TASK_READ:
         {
-            scheduler->m_engine->mod_event(this->m_fd, EPOLLIN);
+            scheduler->get_engine()->mod_event(this->m_fd, EPOLLIN);
             this->m_status = Task_Status::GY_TASK_READ;
             break;
         }
@@ -191,9 +191,9 @@ int galay::Tcp_Accept_Task::exec()
     if (!this->m_scheduler.expired())
     {
         auto task = create_rw_task(connfd);
-        add_task(connfd, task);
+        this->m_scheduler.lock()->add_task({connfd,task});
         iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-        this->m_scheduler.lock()->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+        this->m_scheduler.lock()->get_engine()->add_event(connfd, EPOLLIN | EPOLLET);
     }
     return 0;
 }
@@ -210,20 +210,6 @@ galay::Task_Base::ptr galay::Tcp_Accept_Task::create_rw_task(int connfd)
     return task;
 }
 
-void galay::Tcp_Accept_Task::add_task(int connfd, Task_Base::ptr task)
-{
-    auto scheduler = this->m_scheduler.lock();
-
-    auto it = scheduler->m_tasks->find(connfd);
-    if (it == scheduler->m_tasks->end())
-    {
-        scheduler->m_tasks->emplace(connfd, task);
-    }
-    else
-    {
-        it->second = task;
-    }
-}
 
 galay::Tcp_SSL_RW_Task::~Tcp_SSL_RW_Task()
 {
@@ -324,8 +310,8 @@ int galay::Tcp_SSL_Accept_Task::exec()
     if (!this->m_scheduler.expired())
     {
         auto task = create_rw_task(connfd, ssl);
-        Tcp_Accept_Task::add_task(connfd, task);
-        this->m_scheduler.lock()->m_engine->add_event(connfd, EPOLLIN | EPOLLET);
+        this->m_scheduler.lock()->add_task({connfd,task});
+        this->m_scheduler.lock()->get_engine()->add_event(connfd, EPOLLIN | EPOLLET);
     }
     return 0;
 }
@@ -439,4 +425,13 @@ galay::Task_Base::ptr galay::Https_Accept_Task::create_rw_task(int connfd, SSL *
     auto task = std::make_shared<Https_RW_Task>(connfd, this->m_scheduler, this->m_read_len, ssl);
     task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
     return task;
+}
+
+int galay::Time_Task::exec()
+{
+    if (!m_manager.expired())
+    {
+        m_manager.lock()->get_ealist_timer()->exec();
+    }
+    return 0;
 }

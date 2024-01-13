@@ -13,6 +13,7 @@
 #include "error.h"
 #include "iofunction.h"
 #include "scheduler.h"
+#include "timer.h"
 
 
 
@@ -28,6 +29,8 @@ namespace galay
     };
 
     class IO_Scheduler;
+
+    class Timer_Manager;
 
     class Task_Base
     {
@@ -55,13 +58,21 @@ namespace galay
         
         virtual void finish(){ this->m_is_finish = true;}
 
+        virtual bool is_finish() { return this->m_is_finish; }
+
+        //return true is to auto destory
         virtual bool is_need_to_destroy() = 0;
+
+        virtual void destoryed(){   this->m_destroyed = true;   }
+        
+        virtual bool is_destroyed() {   return this->m_destroyed; }
 
         virtual ~Task_Base() {}
 
     protected:
         int m_status;
         bool m_is_finish = false;
+        bool m_destroyed = false;
     };
 
     template <typename RESULT = void>
@@ -167,8 +178,6 @@ namespace galay
 
     protected:
         virtual Task_Base::ptr create_rw_task(int connfd);
-
-        virtual void add_task(int connfd, Task_Base::ptr task);
     protected:
         int m_fd;
         std::weak_ptr<IO_Scheduler> m_scheduler;
@@ -280,6 +289,23 @@ namespace galay
 
     private:
         Task_Base::ptr create_rw_task(int connfd, SSL *ssl) override;
+    };
+
+
+    //time task
+    class Time_Task : public Task_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Time_Task>;
+        Time_Task(std::weak_ptr<Timer_Manager> manager)
+        {
+            this->m_manager = manager;
+        }
+
+        int exec() override;
+
+    protected:
+        std::weak_ptr<Timer_Manager> m_manager;
     };
 
 }

@@ -49,8 +49,8 @@ int galay::Tcp_Server::init(Tcp_Server_Config::ptr config)
 
 void galay::Tcp_Server::add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func, uint32_t recv_len)
 {
-    this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
-    this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len)));
+    this->m_scheduler->get_engine()->add_event(this->m_fd, EPOLLIN | EPOLLET);
+    this->m_scheduler->add_task(std::make_pair(this->m_fd, std::make_shared<Tcp_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len)));
 }
 
 galay::Tcp_SSL_Server::Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config, IO_Scheduler::ptr scheduler)
@@ -82,20 +82,20 @@ galay::Tcp_SSL_Server::~Tcp_SSL_Server()
 
 void galay::Tcp_SSL_Server::add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func, uint32_t recv_len)
 {
-    this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
+    this->m_scheduler->get_engine()->add_event(this->m_fd, EPOLLIN | EPOLLET);
     Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
-    this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len, config->m_ssl_accept_retry, this->m_ctx)));
+    this->m_scheduler->add_task(std::make_pair(this->m_fd, std::make_shared<Tcp_SSL_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len, config->m_ssl_accept_retry, this->m_ctx)));
 }
 
 void galay::Http_Server::add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func, uint32_t max_recv_len)
 {
-    this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
-    this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Http_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), max_recv_len)));
+    this->m_scheduler->get_engine()->add_event(this->m_fd, EPOLLIN | EPOLLET);
+    this->m_scheduler->add_task(std::make_pair(this->m_fd, std::make_shared<Http_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), max_recv_len)));
 }
 
 void galay::Https_Server::add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func, uint32_t max_recv_len)
 {
-    this->m_scheduler->m_engine->add_event(this->m_fd, EPOLLIN | EPOLLET);
+    this->m_scheduler->get_engine()->add_event(this->m_fd, EPOLLIN | EPOLLET);
     Https_Server_Config::ptr config = std::dynamic_pointer_cast<Https_Server_Config>(this->m_config);
-    this->m_scheduler->m_tasks->emplace(std::make_pair(this->m_fd, std::make_shared<Https_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), max_recv_len, config->m_ssl_accept_retry, this->m_ctx)));
+    this->m_scheduler->add_task(std::make_pair(this->m_fd, std::make_shared<Https_Accept_Task>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), max_recv_len, config->m_ssl_accept_retry, this->m_ctx)));
 }

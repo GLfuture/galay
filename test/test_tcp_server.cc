@@ -12,8 +12,7 @@ Task<> func(Task_Base::wptr t_task)
     auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
     std::cout<<req->get_buffer()<<'\n';
     resp->get_buffer() = "world!";
-    //finish 完成本次任务后停止，control_task_behavior本次任务仍会执行但不会回发消息
-    //if(global_time++ > 5) task->finish();
+    if(global_time++ > 5) task->control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
     task->finish();
     return {};
 }

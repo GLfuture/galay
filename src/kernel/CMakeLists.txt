@@ -7,6 +7,7 @@ set(SRC_LIST
     error.cc
     task.cc
     scheduler.cc
+    timer.cc
     )
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
