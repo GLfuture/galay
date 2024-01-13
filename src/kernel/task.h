@@ -304,6 +304,11 @@ namespace galay
 
         int exec() override;
 
+        bool is_need_to_destroy() override
+        {
+            return this->m_is_finish;
+        }
+
     protected:
         std::weak_ptr<Timer_Manager> m_manager;
     };

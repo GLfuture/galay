@@ -19,11 +19,11 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Timer>;
-        Timer(uint64_t during_time , std::function<void()> &&func)
+        Timer(uint64_t during_time , uint32_t exec_times , std::function<void()> &&func)
         {
             m_global_timerid ++;
             this->m_timerid = m_global_timerid;
-            this->m_exec_times = 1;
+            this->m_exec_times = exec_times;
             this->m_func = func;
             set_during_time(during_time);
         }
@@ -33,21 +33,27 @@ namespace galay{
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         }
 
+        inline uint64_t get_during_time()
+        {
+            return this->m_during_time;
+        }
+
         inline uint64_t get_expired_time()
         {
             return this->m_expired_time;
         }
 
-        inline uint64_t get_during_time()
+        inline uint64_t get_remain_time()
         {
-            return this->m_during_time;
+            int64_t time = this->m_expired_time - Timer::get_current_time();
+            return time < 0 ? 0 : time;
         }
 
         inline uint16_t get_timerid()
         {
             return this->m_timerid;
         }
-
+    
         inline void set_during_time(uint64_t during_time)
         {
             this->m_during_time = during_time;
@@ -93,20 +99,29 @@ namespace galay{
             }
             else
             {
-                abstime.tv_sec = m_timers.top()->get_expired_time() / 1000;
-                abstime.tv_nsec = (m_timers.top()->get_expired_time() % 1000) * 1000000;
+                int64_t time = m_timers.top()->get_remain_time();
+                if(time != 0){
+                    abstime.tv_sec = time / 1000;
+                    abstime.tv_nsec = ( time % 1000) * 1000000;
+                }else{
+                    abstime.tv_sec = 0;
+                    abstime.tv_nsec = 1;
+                }
             }
             struct itimerspec its = {
                 .it_interval = {},
-                .it_value = abstime};
+                .it_value = abstime
+            };
+            timerfd_settime(this->m_timerfd, TFD_TIMER_ABSTIME, &its, nullptr);
         }
 
         Timer::ptr get_ealist_timer()
         {
-            std::unique_lock lock(this->m_mtx);
+            if(this->m_timers.empty()) return nullptr;
+            std::unique_lock<std::shared_mutex> lock(this->m_mtx);
             auto timer = this->m_timers.top();
             this->m_timers.pop();
-            if(timer->get_exec_times()-- > 0){
+            if( --timer->get_exec_times() > 0){
                 timer->set_during_time(timer->get_during_time());
                 this->m_timers.push(timer);
             }
@@ -115,10 +130,11 @@ namespace galay{
 
         void add_timer(Timer::ptr timer)
         {
-            std::unique_lock lock(this->m_mtx);
+            std::unique_lock<std::shared_mutex> lock(this->m_mtx);
             this->m_timers.push(timer);
         }
 
+        int get_timerfd(){ return this->m_timerfd;  }
     protected:
         class MyCompare
         {

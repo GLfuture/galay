@@ -431,7 +431,8 @@ int galay::Time_Task::exec()
 {
     if (!m_manager.expired())
     {
-        m_manager.lock()->get_ealist_timer()->exec();
+        auto timer = m_manager.lock()->get_ealist_timer();
+        if(timer) timer->exec();
     }
     return 0;
 }

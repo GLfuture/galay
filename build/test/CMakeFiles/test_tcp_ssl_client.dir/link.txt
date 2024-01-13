@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/test_tcp_ssl_client.dir/test_tcp_ssl_client.cc.o -o test_tcp_ssl_client   -L/home/gong/projects/galay/build/src  -Wl,-rpath,/home/gong/projects/galay/build/src ../src/libgalay-static.a -lssl -lcrypto -lssl -lcrypto 

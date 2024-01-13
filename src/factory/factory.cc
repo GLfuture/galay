@@ -130,3 +130,10 @@ galay::Https_Client::ptr galay::Client_Factory::create_https_client(IO_Scheduler
 {
     return std::make_shared<Https_Client>(scheduler,ssl_min_version,ssl_max_version);
 }
+
+
+//timer
+galay::Timer::ptr galay::Timer_Factory::create_timer(uint64_t during , uint32_t exec_times , std::function<void()> &&func)
+{
+    return std::make_shared<Timer>(during , exec_times , std::forward<std::function<void()>>(func));
+}

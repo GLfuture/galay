@@ -6,8 +6,4 @@ galay::Timer_Manager::Timer_Manager(std::weak_ptr<IO_Scheduler> scheduler)
 {
     this->m_timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
     this->m_scheduler = scheduler;
-    if (!scheduler.expired())
-    {
-        scheduler.lock()->get_engine()->add_event(this->m_timerfd, EPOLLIN);
-    }
 }
