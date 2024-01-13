@@ -23,8 +23,15 @@ galay::IO_Scheduler::IO_Scheduler(IO_ENGINE engine_type, int max_event, int time
 
 int galay::IO_Scheduler::start()
 {
+    if(!m_timer_manager){
+        this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
+        auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
+        this->m_engine->add_event(this->m_timer_manager->get_timerfd(), EPOLLIN);
+        add_task({this->m_timer_manager->get_timerfd(), time_task});
+    }
     while (1)
     {
+        this->m_timer_manager->update_time();
         int ret = this->m_engine->event_check();
         if (this->m_stop)
             break;
@@ -71,6 +78,18 @@ galay::Engine::ptr galay::IO_Scheduler::get_engine()
     return this->m_engine;
 }
 
+galay::Timer_Manager::ptr galay::IO_Scheduler::get_timer_manager()
+{
+    if(!this->m_timer_manager)
+    {
+        this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
+        auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
+        this->m_engine->add_event(this->m_timer_manager->get_timerfd(), EPOLLIN);
+        add_task({this->m_timer_manager->get_timerfd(), time_task});
+    }
+    return this->m_timer_manager;
+}
+
 bool galay::IO_Scheduler::is_stop()
 {
     return this->m_stop;
@@ -78,7 +97,7 @@ bool galay::IO_Scheduler::is_stop()
 
 void galay::IO_Scheduler::add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair)
 {
-    std::unique_lock lock(this->m_mtx);
+    std::unique_lock<std::shared_mutex> lock(this->m_mtx);
     auto it = this->m_tasks->find(pair.first);
     if (it == this->m_tasks->end())
     {
@@ -92,7 +111,7 @@ void galay::IO_Scheduler::add_task(std::pair<int,std::shared_ptr<Task_Base>>&& p
 
 void galay::IO_Scheduler::del_task(int fd)
 {
-    std::unique_lock lock(this->m_mtx);
+    std::unique_lock<std::shared_mutex> lock(this->m_mtx);
     auto it = this->m_tasks->find(fd);
     if (it != this->m_tasks->end()){
         it->second->destoryed();

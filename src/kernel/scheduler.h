@@ -11,6 +11,8 @@
 namespace galay{
     class Task_Base;
 
+    class Timer_Manager;
+
     class Scheduler_Base
     {
     public:
@@ -18,7 +20,7 @@ namespace galay{
         virtual ~Scheduler_Base(){}
     };
 
-    class IO_Scheduler: public Scheduler_Base
+    class IO_Scheduler: public Scheduler_Base , public std::enable_shared_from_this<IO_Scheduler>
     {
     public:
         using ptr = std::shared_ptr<IO_Scheduler>;
@@ -29,20 +31,23 @@ namespace galay{
 
         void stop();
 
-        Engine::ptr get_engine();
-
-        virtual ~IO_Scheduler() {}
-
         bool is_stop();
+
+        std::shared_ptr<Engine> get_engine();
         
+        std::shared_ptr<Timer_Manager> get_timer_manager();
+
         void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair);
 
         void del_task(int fd);
+
+        virtual ~IO_Scheduler() {}
     protected: 
         std::shared_mutex m_mtx;
         Engine::ptr m_engine;
         std::shared_ptr<std::unordered_map<int, std::shared_ptr<Task_Base>>> m_tasks;
         bool m_stop = false;
+        std::shared_ptr<Timer_Manager> m_timer_manager = nullptr;
     };
 
 }
