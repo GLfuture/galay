@@ -22,7 +22,6 @@ Task<> func(IO_Scheduler::ptr scheduler)
     ret = co_await client->request(request,response);
     std::cout<<ret<<'\n';
     std::cout<<response->encode()<<std::endl;
-    client->disconnect();
     scheduler->stop();
     co_return;
 }

@@ -16,9 +16,9 @@ namespace galay
 
         int get_error() { return this->m_error; }
 
-        virtual ~Client() { }
-    protected:
-        void add_task(Task_Base::ptr task);
+        virtual ~Client() { 
+            this->m_scheduler.lock()->del_task(this->m_fd);
+        }
     protected:
         int m_fd;
         int m_error;
@@ -43,7 +43,13 @@ namespace galay
         //if >0 return the value that recv's length
         virtual Net_Awaiter<int> recv(char* buffer,int len);
 
-        virtual void disconnect();
+        virtual ~Tcp_Client()
+        {
+            if (!this->m_scheduler.expired())
+            {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+            }
+        }
     };
 
     class Tcp_SSL_Client: public Tcp_Client

@@ -22,7 +22,6 @@ Task<> func(Task_Base::wptr t_task)
     ret = co_await client->request(t_req,resp);
     if(client->get_error() == error::GY_SUCCESS) std::cout<<"request success\n";
     else std::cout<<"request failed error is "<<client->get_error()<<'\n';
-    client->disconnect();
     task->finish();
     co_return;
 }

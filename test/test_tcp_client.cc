@@ -19,7 +19,6 @@ Task<> func(IO_Scheduler::ptr scheduler)
     ret = co_await client->recv(buffer,20);
     std::cout<<"recv len :"<<ret <<"buffer: "<<buffer<<'\n';
     delete[] buffer;
-    client->disconnect();
     scheduler->stop();
     co_return;
 }

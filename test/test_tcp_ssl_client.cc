@@ -22,7 +22,6 @@ Task<> func(IO_Scheduler::ptr scheduler)
         if(ret != -1) result.append(buffer,ret);
     } while(ret != -1);
     std::cout<<result<<'\n';
-    client->disconnect();
     scheduler->stop();
     co_return;
 }
