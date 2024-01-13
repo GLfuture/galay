@@ -112,7 +112,7 @@ namespace galay{
                 .it_interval = {},
                 .it_value = abstime
             };
-            timerfd_settime(this->m_timerfd, TFD_TIMER_ABSTIME, &its, nullptr);
+            timerfd_settime(this->m_timerfd, 0, &its, nullptr);
         }
 
         Timer::ptr get_ealist_timer()
