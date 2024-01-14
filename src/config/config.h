@@ -60,12 +60,24 @@ namespace galay{
            
         }
 
+        void enable_keepalive(int t_idle,int t_interval,int retry)
+        {
+            this->m_keepalive = true;
+            this->m_idle = t_idle;
+            this->m_interval = t_interval;
+            this->m_retry = retry;
+        }
+
         // void show() override ;
         // void show(const std::string& filepath) override;
 
         uint16_t m_port;
         uint32_t m_backlog;
         uint32_t m_max_rbuffer_len;
+        bool m_keepalive = false;
+        int m_idle;
+        int m_interval;
+        int m_retry;
     };
 
 

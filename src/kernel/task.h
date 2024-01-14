@@ -172,6 +172,8 @@ namespace galay
 
         bool is_need_to_destroy() override;
 
+        void enable_keepalive(uint16_t idle , uint16_t interval,uint16_t retry);
+
         virtual ~Tcp_Accept_Task()
         {
         }
@@ -183,6 +185,12 @@ namespace galay
         std::weak_ptr<IO_Scheduler> m_scheduler;
         uint32_t m_read_len;
         std::function<Task<>(Task_Base::wptr)> m_func;
+
+        //keepalive
+        bool m_is_keepalive = false;
+        int m_idle;
+        int m_interval;
+        int m_retry;
     };
 
     class Tcp_SSL_RW_Task : public Tcp_RW_Task

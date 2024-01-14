@@ -13,6 +13,7 @@
 #include <variant>
 #include <vector>
 #include <fcntl.h>
+#include <netinet/tcp.h>
 
 namespace galay{
     namespace iofunction
@@ -44,6 +45,8 @@ namespace galay{
             using ptr = std::shared_ptr<Tcp_Function>;
 
             static int Sock();
+            
+            static int Sock_Keepalive(int fd , int t_idle , int t_interval , int retry);
 
             static int Conncet(int fd , std::string sip, uint32_t sport);
 

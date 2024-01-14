@@ -305,4 +305,5 @@ src/kernel/CMakeFiles/kernel.dir/timer.cc.o: \
  /usr/include/fcntl.h /usr/include/x86_64-linux-gnu/bits/fcntl.h \
  /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h \
  /usr/include/linux/falloc.h /usr/include/x86_64-linux-gnu/bits/stat.h \
- /usr/include/x86_64-linux-gnu/bits/struct_stat.h
+ /usr/include/x86_64-linux-gnu/bits/struct_stat.h \
+ /usr/include/netinet/tcp.h

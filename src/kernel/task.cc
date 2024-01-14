@@ -188,6 +188,13 @@ int galay::Tcp_Accept_Task::exec()
     int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
     if (connfd <= 0)
         return -1;
+    if (this->m_is_keepalive)
+    {
+        int ret = iofunction::Tcp_Function::Sock_Keepalive(connfd,this->m_idle,this->m_interval,this->m_retry);
+        if(ret == -1){
+            std::cout<<strerror(errno)<<'\n';
+        }
+    }
     if (!this->m_scheduler.expired())
     {
         auto task = create_rw_task(connfd);
@@ -201,6 +208,14 @@ int galay::Tcp_Accept_Task::exec()
 bool galay::Tcp_Accept_Task::is_need_to_destroy()
 {
     return this->m_is_finish;
+}
+
+void galay::Tcp_Accept_Task::enable_keepalive(uint16_t idle , uint16_t interval,uint16_t retry)
+{
+    this->m_is_keepalive = true;
+    this->m_idle = idle;
+    this->m_interval = interval;
+    this->m_retry = retry;
 }
 
 galay::Task_Base::ptr galay::Tcp_Accept_Task::create_rw_task(int connfd)
@@ -278,6 +293,10 @@ int galay::Tcp_SSL_Accept_Task::exec()
     int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
     if (connfd <= 0)
         return -1;
+    if (this->m_is_keepalive)
+    {
+        iofunction::Tcp_Function::Sock_Keepalive(connfd,this->m_idle,this->m_interval,this->m_retry);
+    }
     SSL *ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx, connfd);
     if (ssl == nullptr)
     {
