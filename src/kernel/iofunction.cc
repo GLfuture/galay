@@ -28,6 +28,21 @@ int galay::iofunction::Tcp_Function::Sock()
 }
 
 
+int galay::iofunction::Tcp_Function::Sock_Keepalive(int fd , int t_idle , int t_interval , int retry)
+{
+    int optval = 1;
+    int ret ;
+    ret = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const void *)&optval, sizeof(optval));
+    if(ret != 0) return ret;
+    ret = setsockopt(fd,SOL_TCP,TCP_KEEPIDLE,(void*)&t_idle,sizeof(t_idle));
+    if(ret != 0) return ret;
+    ret = setsockopt(fd,SOL_TCP,TCP_KEEPINTVL,(void*)&t_interval,sizeof(t_interval));
+    if(ret != 0) return ret;
+    ret = setsockopt(fd,SOL_TCP,TCP_KEEPCNT,(void*)&retry,sizeof(retry));
+    return ret;
+}
+
+
 int galay::iofunction::Tcp_Function::Conncet(int fd , std::string sip, uint32_t sport)
 {
     sockaddr_in sin = {0};

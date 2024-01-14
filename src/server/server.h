@@ -82,7 +82,7 @@ namespace galay
         using ptr = std::shared_ptr<Https_Server>;
         Https_Server(Https_Server_Config::ptr config , IO_Scheduler::ptr scheduler)
             :Tcp_SSL_Server(config,scheduler){}
-
+        
     protected:
         //添加accept task
         void add_accept_task(std::function<Task<>(Task_Base::wptr)> &&func , uint32_t max_recv_len) override;
