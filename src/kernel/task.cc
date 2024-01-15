@@ -1,5 +1,6 @@
 #include "task.h"
 
+//tcp rw task
 galay::Tcp_RW_Task::Tcp_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len)
 {
     this->m_status = Task_Status::GY_TASK_READ;
@@ -95,15 +96,6 @@ bool galay::Tcp_RW_Task::is_need_to_destroy()
     return this->m_is_finish && this->m_wbuffer.empty() && this->m_status == Task_Status::GY_TASK_DISCONNECT;
 }
 
-galay::Tcp_RW_Task::~Tcp_RW_Task()
-{
-    if (m_temp)
-    {
-        delete[] m_temp;
-        m_temp = nullptr;
-    }
-}
-
 int galay::Tcp_RW_Task::decode()
 {
     int state = error::base_error::GY_SUCCESS;
@@ -173,6 +165,18 @@ int galay::Tcp_RW_Task::send_package()
     return 0;
 }
 
+
+galay::Tcp_RW_Task::~Tcp_RW_Task()
+{
+    if (m_temp)
+    {
+        delete[] m_temp;
+        m_temp = nullptr;
+    }
+}
+
+
+//tcp accept task
 galay::Tcp_Accept_Task::Tcp_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler,
                                         std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len)
 {
@@ -225,15 +229,17 @@ galay::Task_Base::ptr galay::Tcp_Accept_Task::create_rw_task(int connfd)
     return task;
 }
 
-
-galay::Tcp_SSL_RW_Task::~Tcp_SSL_RW_Task()
+galay::Tcp_Accept_Task::~Tcp_Accept_Task()
 {
-    if (this->m_ssl)
-    {
-        iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
-        this->m_ssl = nullptr;
-    }
+
 }
+
+//tcp ssl rw task
+galay::Tcp_SSL_RW_Task::Tcp_SSL_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len, SSL *ssl)
+    : Tcp_RW_Task(fd, scheduler, read_len), m_ssl(ssl)
+{
+}
+
 
 int galay::Tcp_SSL_RW_Task::read_package()
 {
@@ -288,6 +294,24 @@ int galay::Tcp_SSL_RW_Task::send_package()
     return 0;
 }
 
+galay::Tcp_SSL_RW_Task::~Tcp_SSL_RW_Task()
+{
+    if (this->m_ssl)
+    {
+        iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
+        this->m_ssl = nullptr;
+    }
+}
+
+//tcp ssl accept task
+galay::Tcp_SSL_Accept_Task::Tcp_SSL_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func,
+                                                uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
+    : Tcp_Accept_Task(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len),
+      m_ctx(ctx), m_ssl_accept_retry(ssl_accept_max_retry) 
+{
+
+}
+
 int galay::Tcp_SSL_Accept_Task::exec()
 {
     int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
@@ -335,17 +359,25 @@ int galay::Tcp_SSL_Accept_Task::exec()
     return 0;
 }
 
+galay::Task_Base::ptr galay::Tcp_SSL_Accept_Task::create_rw_task(int connfd, SSL *ssl)
+{
+    auto task = std::make_shared<Tcp_SSL_RW_Task>(connfd, this->m_scheduler, this->m_read_len, ssl);
+    task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
+    return task;
+}
+
 galay::Tcp_SSL_Accept_Task::~Tcp_SSL_Accept_Task()
 {
     if (this->m_ctx)
         this->m_ctx = nullptr;
 }
 
-galay::Task_Base::ptr galay::Tcp_SSL_Accept_Task::create_rw_task(int connfd, SSL *ssl)
+//http rw task
+galay::Http_RW_Task::Http_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len)
+    : Tcp_RW_Task(fd, scheduler, read_len)
 {
-    auto task = std::make_shared<Tcp_SSL_RW_Task>(connfd, this->m_scheduler, this->m_read_len, ssl);
-    task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
-    return task;
+    this->m_req = std::make_shared<Http_Request>();
+    this->m_resp = std::make_shared<Http_Response>();
 }
 
 bool galay::Http_RW_Task::is_need_to_destroy()
@@ -390,6 +422,17 @@ int galay::Http_RW_Task::exec()
     return 0;
 }
 
+galay::Http_RW_Task::~Http_RW_Task()
+{
+
+}
+
+//http accept task
+galay::Http_Accept_Task::Http_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len)
+    : Tcp_Accept_Task(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len)
+{
+}
+
 galay::Task_Base::ptr galay::Http_Accept_Task::create_rw_task(int connfd)
 {
     if (!this->m_scheduler.expired())
@@ -399,6 +442,20 @@ galay::Task_Base::ptr galay::Http_Accept_Task::create_rw_task(int connfd)
         return task;
     }
     return nullptr;
+}
+
+galay::Http_Accept_Task::~Http_Accept_Task()
+{
+
+}
+
+
+//https rw task
+galay::Https_RW_Task::Https_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len, SSL *ssl)
+    : Tcp_SSL_RW_Task(fd, scheduler, read_len, ssl)
+{
+    this->m_req = std::make_shared<Http_Request>();
+    this->m_resp = std::make_shared<Http_Response>();
 }
 
 int galay::Https_RW_Task::exec()
@@ -439,11 +496,33 @@ int galay::Https_RW_Task::exec()
     return 0;
 }
 
+galay::Https_RW_Task::~Https_RW_Task()
+{
+
+}
+
+//https accept task
+galay::Https_Accept_Task::Https_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func
+    , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
+    : Tcp_SSL_Accept_Task(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len, ssl_accept_max_retry, ctx) 
+{}
+
 galay::Task_Base::ptr galay::Https_Accept_Task::create_rw_task(int connfd, SSL *ssl)
 {
     auto task = std::make_shared<Https_RW_Task>(connfd, this->m_scheduler, this->m_read_len, ssl);
     task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
     return task;
+}
+
+galay::Https_Accept_Task::~Https_Accept_Task()
+{
+
+}
+
+//time task
+galay::Time_Task::Time_Task(std::weak_ptr<Timer_Manager> manager)
+{
+    this->m_manager = manager;
 }
 
 int galay::Time_Task::exec()
@@ -454,4 +533,14 @@ int galay::Time_Task::exec()
         if(timer) timer->exec();
     }
     return 0;
+}
+
+bool galay::Time_Task::is_need_to_destroy()
+{
+    return this->m_is_finish;
+}
+
+galay::Time_Task::~Time_Task()
+{
+
 }
