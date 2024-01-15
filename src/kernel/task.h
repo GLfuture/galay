@@ -60,6 +60,10 @@ namespace galay
 
         virtual bool is_finish() { return this->m_is_finish; }
 
+        virtual void set_ctx(void *ctx) { if(!this->m_ctx) this->m_ctx = ctx; }
+
+        virtual void* get_ctx() { return this->m_ctx; }
+
         //return true is to auto destory
         virtual bool is_need_to_destroy() = 0;
 
@@ -73,6 +77,7 @@ namespace galay
         int m_status;
         bool m_is_finish = false;
         bool m_destroyed = false;
+        void *m_ctx = nullptr;
     };
 
     template <typename RESULT = void>
