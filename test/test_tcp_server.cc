@@ -3,16 +3,26 @@
 #include <signal.h>
 using namespace galay;
 
-int global_time = 0;
-
 Task<> func(Task_Base::wptr t_task)
 {
     auto task = t_task.lock();
+    if(!task->get_ctx()){
+        int *a = new int(0);
+        task->set_ctx(a);
+    }
+    auto ctx = (int *)(task->get_ctx());
+    if ((*ctx)++ >= 5)
+    {
+        task->control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
+        delete ctx;
+        task->set_ctx(nullptr);
+        task->finish();
+        return {};
+    }
     auto req = std::dynamic_pointer_cast<Tcp_Request>(task->get_req());
     auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
     std::cout<<req->get_buffer()<<'\n';
     resp->get_buffer() = "world!";
-    if(global_time++ > 5) task->control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
     task->finish();
     return {};
 }

@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/test_http_server.dir/test_http_server.cc.o -o test_http_server   -L/home/gong/projects/galay/build/src  -Wl,-rpath,/home/gong/projects/galay/build/src ../src/libgalay-static.a -lssl -lcrypto -lssl -lcrypto 
