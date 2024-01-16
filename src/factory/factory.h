@@ -6,6 +6,7 @@
 #include "../client/client.h"
 #include "../protocol/tcp.h"
 #include "../protocol/http.h"
+#include "../kernel/threadpool.h"
 
 namespace galay
 {
@@ -85,6 +86,13 @@ namespace galay
     {
     public:
         static Timer::ptr create_timer(uint64_t during , uint32_t exec_times, std::function<void()> &&func);
+    };
+
+    //pool factory
+    class Pool_Factory: public Factory_Base
+    {
+    public:
+        static ThreadPool::ptr create_threadpool(int num);
     };
 }
 

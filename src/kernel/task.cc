@@ -544,3 +544,25 @@ galay::Time_Task::~Time_Task()
 {
 
 }
+
+//thread task
+galay::Thread_Task::Thread_Task(std::function<void()>&& func)
+{
+    this->m_func = func;
+}
+
+int galay::Thread_Task::exec()
+{
+    this->m_func();
+    return 0;
+}
+
+bool galay::Thread_Task::is_need_to_destroy()
+{
+    return this->m_is_finish;
+}
+
+galay::Thread_Task::~Thread_Task()
+{
+
+}

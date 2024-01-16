@@ -7,6 +7,7 @@ set(SRC_LIST
     error.cc
     task.cc
     timer.cc
+    threadpool.cc
     scheduler.cc
     )
 
