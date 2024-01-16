@@ -23,9 +23,9 @@ int main()
     auto fu1 = pool->exec(print,10);
     auto fu2 = pool->exec(print,20);
     auto fu3 = pool->exec(print,10);
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    std::cout << "fu1:" << fu1.get() << '\n';
-    std::cout << "fu2:" << fu2.get() << '\n';
-    std::cout << "fu3:" << fu3.get() << '\n';
+    if(fu1.valid())std::cout << "fu1:" << fu1.get() << '\n';
+    
+    if(fu2.valid()) std::cout << "fu2:" << fu2.get() << '\n';
+    if(fu3.valid()) std::cout << "fu3:" << fu3.get() << '\n';
     return 0;
 }
