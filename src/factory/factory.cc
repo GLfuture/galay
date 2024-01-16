@@ -137,3 +137,10 @@ galay::Timer::ptr galay::Timer_Factory::create_timer(uint64_t during , uint32_t 
 {
     return std::make_shared<Timer>(during , exec_times , std::forward<std::function<void()>>(func));
 }
+
+//pool
+//threadpool
+galay::ThreadPool::ptr galay::Pool_Factory::create_threadpool(int num)
+{
+    return std::make_shared<ThreadPool>(num);
+}

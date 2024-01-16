@@ -69,6 +69,7 @@
         "ranges": "cpp",
         "span": "cpp",
         "valarray": "cpp",
-        "shared_mutex": "cpp"
+        "shared_mutex": "cpp",
+        "future": "cpp"
     }
 }

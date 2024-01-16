@@ -300,6 +300,21 @@ namespace galay
         std::weak_ptr<Timer_Manager> m_manager;
     };
 
+    //thread_task
+    class Thread_Task :public Task_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Thread_Task>;
+        Thread_Task(std::function<void()>&& func);
+
+        int exec() override;
+
+        bool is_need_to_destroy() override;
+
+        ~Thread_Task();
+    private:
+        std::function<void()> m_func;
+    };
 }
 
 #endif
