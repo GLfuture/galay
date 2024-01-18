@@ -32,8 +32,8 @@ int galay::Epoll_Scheduler::start()
             {
                 Task_Base::ptr task = this->m_tasks.at(m_events[i].data.fd);
                 task->exec();
-                if (task->is_need_to_destroy() && !task->is_destroyed())
-                {
+                if (task->is_destroy()) {
+                    std::cout<< "del :" << m_events[i].data.fd <<'\n';
                     del_task(m_events[i].data.fd);
                 }
             }
@@ -132,9 +132,17 @@ void galay::Epoll_Scheduler::del_task(int fd)
     std::unique_lock<std::shared_mutex> lock(this->m_mtx);
     auto it = this->m_tasks.find(fd);
     if (it != this->m_tasks.end()){
-        it->second->destoryed();
+        it->second->destory();
         this->m_tasks.erase(fd);
         this->del_event(fd, EPOLLIN | EPOLLOUT);
         close(fd);
+    }
+}
+
+galay::Epoll_Scheduler::~Epoll_Scheduler() 
+{
+    if(this->m_events){
+        delete[] m_events;
+        m_events = nullptr;
     }
 }

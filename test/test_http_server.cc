@@ -23,6 +23,7 @@ Task<> func(Task_Base::wptr t_task)
     if(client->get_error() == error::GY_SUCCESS) std::cout<<"request success\n";
     else std::cout<<"request failed error is "<<client->get_error()<<'\n';
     task->finish();
+    task->control_task_behavior(Task_Status::GY_TASK_WRITE);
     co_return;
 }
 

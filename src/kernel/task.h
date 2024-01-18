@@ -25,7 +25,6 @@ namespace galay
         GY_TASK_SSL_CONNECT,
         GY_TASK_READ,
         GY_TASK_WRITE,
-        GY_TASK_DISCONNECT,
     };
 
     class Epoll_Scheduler;
@@ -58,25 +57,20 @@ namespace galay
         
         virtual void finish(){ this->m_is_finish = true;}
 
-        virtual bool is_finish() { return this->m_is_finish; }
-
         virtual void set_ctx(void *ctx) { if(!this->m_ctx) this->m_ctx = ctx; }
 
         virtual void* get_ctx() { return this->m_ctx; }
 
-        //return true is to auto destory
-        virtual bool is_need_to_destroy() = 0;
-
-        virtual void destoryed(){   this->m_destroyed = true;   }
+        virtual void destory(){   this->m_destroy = true;   }
         
-        virtual bool is_destroyed() {   return this->m_destroyed; }
+        virtual bool is_destroy() {   return this->m_destroy; }
 
         virtual ~Task_Base() {}
 
     protected:
         int m_status;
         bool m_is_finish = false;
-        bool m_destroyed = false;
+        bool m_destroy = false;
         void *m_ctx = nullptr;
     };
 
@@ -129,8 +123,6 @@ namespace galay
 
         std::shared_ptr<Epoll_Scheduler> get_scheduler() override;
 
-        bool is_need_to_destroy() override;
-
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
@@ -174,8 +166,6 @@ namespace galay
                         std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len);
         
         int exec() override;
-
-        bool is_need_to_destroy() override;
 
         void enable_keepalive(uint16_t idle , uint16_t interval,uint16_t retry);
 
@@ -235,8 +225,6 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Http_RW_Task>;
         Http_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len) ;
-        
-        bool is_need_to_destroy() override;
 
         int exec() override;
         
@@ -292,8 +280,6 @@ namespace galay
 
         int exec() override;
 
-        bool is_need_to_destroy() override;
-
         ~Time_Task();
 
     protected:
@@ -308,8 +294,6 @@ namespace galay
         Thread_Task(std::function<void()>&& func);
 
         int exec() override;
-
-        bool is_need_to_destroy() override;
 
         ~Thread_Task();
     private:

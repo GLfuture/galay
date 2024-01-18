@@ -19,6 +19,9 @@ Content-Type: text/html\r\n\r\n\
 Hello, World!\
 </body>\
 </html>\r\n\r\n";
+    //to send
+    task->control_task_behavior(Task_Status::GY_TASK_WRITE);
+    //to disconnect
     task->finish();
     return {};
 }

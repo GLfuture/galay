@@ -135,6 +135,7 @@ Task<> func(Task_Base::wptr task)
         resp->set_head_kv_pair({"Content-Length", std::to_string(body.length())});
         resp->get_body() = body;
     }
+    t_task->control_task_behavior(Task_Status::GY_TASK_WRITE);
     t_task->finish();
     return {};
 }

@@ -60,7 +60,7 @@ namespace galay{
         // return events' size
         int get_event_size() const;
 
-        virtual ~Epoll_Scheduler() {}
+        virtual ~Epoll_Scheduler() ;
     protected: 
         std::shared_mutex m_mtx;
         std::unordered_map<int, std::shared_ptr<Task_Base>> m_tasks;

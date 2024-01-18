@@ -33,11 +33,6 @@ void galay::Tcp_RW_Task::control_task_behavior(Task_Status status)
             this->m_status = Task_Status::GY_TASK_READ;
             break;
         }
-        case Task_Status::GY_TASK_DISCONNECT:
-        {
-            this->m_status = Task_Status::GY_TASK_DISCONNECT;
-            break;
-        }
         default:
             break;
         }
@@ -54,20 +49,17 @@ int galay::Tcp_RW_Task::exec()
             return -1;
         if (decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
             return -1;
-        control_task_behavior(Task_Status::GY_TASK_WRITE);
         m_co_task = this->m_func(this->shared_from_this());
         break;
     }
     case Task_Status::GY_TASK_WRITE:
     {
-        if (this->m_is_finish)
-        {
-            encode();
-            if (send_package() == -1)
-                return -1;
-            control_task_behavior(Task_Status::GY_TASK_READ);
-            this->m_is_finish = false;
-        }
+
+        encode();
+        if (send_package() == -1)
+            return -1;
+        if(!this->m_is_finish) control_task_behavior(Task_Status::GY_TASK_READ);
+        else this->destory();
         break;
     }
     default:
@@ -91,11 +83,6 @@ void galay::Tcp_RW_Task::reset_buffer(int len)
     this->m_read_len = len;
 }
 
-bool galay::Tcp_RW_Task::is_need_to_destroy()
-{
-    return this->m_is_finish && this->m_wbuffer.empty() && this->m_status == Task_Status::GY_TASK_DISCONNECT;
-}
-
 int galay::Tcp_RW_Task::decode()
 {
     int state = error::base_error::GY_SUCCESS;
@@ -117,8 +104,7 @@ int galay::Tcp_RW_Task::read_package()
     int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
     if (len == 0)
     {
-        finish();
-        control_task_behavior(GY_TASK_DISCONNECT);
+        destory();
         return -1;
     }
     else if (len == -1)
@@ -129,8 +115,7 @@ int galay::Tcp_RW_Task::read_package()
         }
         else
         {
-            finish();
-            control_task_behavior(GY_TASK_DISCONNECT);
+            destory();
             return -1;
         }
     }
@@ -150,15 +135,13 @@ int galay::Tcp_RW_Task::send_package()
         }
         else
         {
-            finish();
-            control_task_behavior(GY_TASK_DISCONNECT);
+            destory();
             return -1;
         }
     }
     else if (len == 0 && !this->m_wbuffer.empty())
     {
-        finish();
-        control_task_behavior(GY_TASK_DISCONNECT);
+        destory();
         return -1;
     }
     this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
@@ -209,11 +192,6 @@ int galay::Tcp_Accept_Task::exec()
     return 0;
 }
 
-bool galay::Tcp_Accept_Task::is_need_to_destroy()
-{
-    return this->m_is_finish;
-}
-
 void galay::Tcp_Accept_Task::enable_keepalive(uint16_t idle , uint16_t interval,uint16_t retry)
 {
     this->m_is_keepalive = true;
@@ -246,8 +224,7 @@ int galay::Tcp_SSL_RW_Task::read_package()
     int len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
     if (len == 0)
     {
-        finish();
-        control_task_behavior(GY_TASK_DISCONNECT);
+        destory();
         return -1;
     }
     else if (len == -1)
@@ -258,8 +235,7 @@ int galay::Tcp_SSL_RW_Task::read_package()
         }
         else
         {
-            finish();
-            control_task_behavior(GY_TASK_DISCONNECT);
+            destory();
             return -1;
         }
     }
@@ -279,15 +255,13 @@ int galay::Tcp_SSL_RW_Task::send_package()
         }
         else
         {
-            finish();
-            control_task_behavior(GY_TASK_DISCONNECT);
+            destory();
             return -1;
         }
     }
     else if (len == 0 && !this->m_wbuffer.empty())
     {
-        finish();
-        control_task_behavior(GY_TASK_DISCONNECT);
+        destory();
         return -1;
     }
     this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
@@ -380,11 +354,6 @@ galay::Http_RW_Task::Http_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> schedul
     this->m_resp = std::make_shared<Http_Response>();
 }
 
-bool galay::Http_RW_Task::is_need_to_destroy()
-{
-    return Tcp_RW_Task::is_need_to_destroy();
-}
-
 int galay::Http_RW_Task::exec()
 {
     switch (this->m_status)
@@ -412,7 +381,7 @@ int galay::Http_RW_Task::exec()
                 return -1;
             if (!this->m_wbuffer.empty())
                 return -1;
-            control_task_behavior(GY_TASK_DISCONNECT);
+            destory();
         }
         break;
     }
@@ -485,7 +454,7 @@ int galay::Https_RW_Task::exec()
                 return -1;
             if (!this->m_wbuffer.empty())
                 return -1;
-            control_task_behavior(GY_TASK_DISCONNECT);
+            destory();
         }
 
         break;
@@ -535,11 +504,6 @@ int galay::Time_Task::exec()
     return 0;
 }
 
-bool galay::Time_Task::is_need_to_destroy()
-{
-    return this->m_is_finish;
-}
-
 galay::Time_Task::~Time_Task()
 {
 
@@ -555,11 +519,6 @@ int galay::Thread_Task::exec()
 {
     this->m_func();
     return 0;
-}
-
-bool galay::Thread_Task::is_need_to_destroy()
-{
-    return this->m_is_finish;
 }
 
 galay::Thread_Task::~Thread_Task()
