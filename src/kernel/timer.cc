@@ -55,7 +55,7 @@ void galay::Timer::exec()
 }
 
 //timermanager
-galay::Timer_Manager::Timer_Manager(std::weak_ptr<IO_Scheduler> scheduler)
+galay::Timer_Manager::Timer_Manager(std::weak_ptr<Epoll_Scheduler> scheduler)
 {
     this->m_timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
     this->m_scheduler = scheduler;

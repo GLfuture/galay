@@ -180,13 +180,13 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Request_Task>;
-        Http_Request_Task(int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response , int *error)
+        Http_Request_Task(int fd , Scheduler_Base::wptr scheduler , Http_Request::ptr request , Http_Response::ptr response , int *error)
         {
             this->m_fd = fd;
             this->m_request = request;
             this->m_respnse = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
-            this->m_engine = engine;
+            this->m_scheduler = scheduler;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
             this->m_error = error;
         }
@@ -221,7 +221,9 @@ namespace galay
                     this->m_result = ret;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
-                    m_engine->mod_event(this->m_fd , EPOLLIN);
+                    if(!m_scheduler.expired()){
+                        m_scheduler.lock()->mod_event(this->m_fd , EPOLLIN);
+                    }
                     return -1;
                 }else{
                     return -1;
@@ -295,8 +297,8 @@ namespace galay
         std::string m_buffer;
         Http_Request::ptr m_request;
         Http_Response::ptr m_respnse;
-        Engine::ptr m_engine;
-        int * m_error;
+        Scheduler_Base::wptr m_scheduler;
+        int* m_error;
     };
 
     template<typename RESULT = int>
@@ -472,14 +474,14 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Request_Task>;
-        Https_Request_Task(SSL* ssl , int fd , Engine::ptr engine , Http_Request::ptr request , Http_Response::ptr response , int *error)
+        Https_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , Http_Request::ptr request , Http_Response::ptr response , int *error)
         {
             this->m_fd = fd;
             this->m_ssl = ssl;
             this->m_request = request;
             this->m_respnse = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
-            this->m_engine = engine;
+            this->m_scheduler = scheduler;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
             this->m_error = error;
         }
@@ -514,7 +516,7 @@ namespace galay
                     this->m_result = ret;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
-                    m_engine->mod_event(this->m_fd , EPOLLIN);
+                    if(!m_scheduler.expired()) m_scheduler.lock()->mod_event(this->m_fd , EPOLLIN);
                     return -1;
                 }else{
                     return -1;
@@ -589,7 +591,7 @@ namespace galay
         std::string m_buffer;
         Http_Request::ptr m_request;
         Http_Response::ptr m_respnse;
-        Engine::ptr m_engine;
+        Scheduler_Base::wptr m_scheduler;
         int* m_error;
     };
 
