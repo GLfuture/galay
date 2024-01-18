@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.21)
 project(kernel)
 
 set(SRC_LIST 
-    engine.cc
     iofunction.cc
     error.cc
     task.cc

@@ -35,7 +35,7 @@ int main()
 {
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_http_server_config(8080);
-    auto scheduler = Scheduler_Factory::create_scheduler(IO_EPOLL,1024,5);
+    auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,5);
     auto http_server = Server_Factory::create_http_server(config,scheduler);
     http_server->start(func);
     return 0;

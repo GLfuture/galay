@@ -15,7 +15,7 @@ void sig_handle(int sig)
 int main()
 {
     signal(SIGINT,sig_handle);
-    auto scheduler = Scheduler_Factory::create_scheduler(IO_EPOLL, 1024, -1);
+    auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024, -1);
     scheduler->get_timer_manager()->add_timer(Timer_Factory::create_timer(500, 1, []() {
         std::ifstream in("/home/gong/projects/galay/1.txt");
         if(in.fail()){

@@ -11,7 +11,7 @@ namespace galay
     class Client
     {
     public:
-        Client(IO_Scheduler::wptr scheduler)
+        Client(Scheduler_Base::wptr scheduler)
             :m_scheduler(scheduler){}
 
         int get_error() { return this->m_error; }
@@ -22,7 +22,7 @@ namespace galay
     protected:
         int m_fd;
         int m_error;
-        IO_Scheduler::wptr m_scheduler;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     class Tcp_Client: public Client
@@ -30,7 +30,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_Client>;
         //创建时自动sock
-        Tcp_Client(IO_Scheduler::wptr scheduler);
+        Tcp_Client(Scheduler_Base::wptr scheduler);
 
         //0 is success  -1 is failed
         virtual Net_Awaiter<int> connect(std::string ip , uint32_t port);
@@ -56,7 +56,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Client>;
-        Tcp_SSL_Client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version);
+        Tcp_SSL_Client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
         
         //0 is success  -1 is failed
         virtual Net_Awaiter<int> connect(std::string ip , uint32_t port);
@@ -80,7 +80,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Client>;
-        Http_Client(IO_Scheduler::wptr scheduler)
+        Http_Client(Scheduler_Base::wptr scheduler)
             :Tcp_Client(scheduler) {}
 
 
@@ -96,7 +96,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Client>;
-        Https_Client(IO_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version)
+        Https_Client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
             :Tcp_SSL_Client(scheduler, ssl_min_version ,ssl_max_version){}
         Net_Awaiter<int> request(Http_Request::ptr request,Http_Response::ptr response);
     private:

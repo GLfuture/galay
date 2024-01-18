@@ -28,7 +28,7 @@ namespace galay
         GY_TASK_DISCONNECT,
     };
 
-    class IO_Scheduler;
+    class Epoll_Scheduler;
 
     class Timer_Manager;
 
@@ -41,7 +41,7 @@ namespace galay
         // return -1 error 0 success
         virtual int exec() = 0;
 
-        virtual std::shared_ptr<IO_Scheduler> get_scheduler() {
+        virtual std::shared_ptr<Epoll_Scheduler> get_scheduler() {
             return nullptr;
         }
 
@@ -118,7 +118,7 @@ namespace galay
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
-        Tcp_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len);
+        Tcp_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len);
 
         void control_task_behavior(Task_Status status) override;
         Request_Base::ptr get_req() override { return this->m_req; }
@@ -127,7 +127,7 @@ namespace galay
         // return -1 to delete this task from server
         int exec() override;
 
-        std::shared_ptr<IO_Scheduler> get_scheduler() override;
+        std::shared_ptr<Epoll_Scheduler> get_scheduler() override;
 
         bool is_need_to_destroy() override;
 
@@ -154,7 +154,7 @@ namespace galay
         virtual int send_package();
     protected:
         char *m_temp = nullptr;
-        std::weak_ptr<IO_Scheduler> m_scheduler;
+        std::weak_ptr<Epoll_Scheduler> m_scheduler;
         int m_fd;
         uint32_t m_read_len;
         std::string m_rbuffer;
@@ -170,7 +170,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Accept_Task>;
-        Tcp_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler,
+        Tcp_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler,
                         std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len);
         
         int exec() override;
@@ -185,7 +185,7 @@ namespace galay
         virtual Task_Base::ptr create_rw_task(int connfd);
     protected:
         int m_fd;
-        std::weak_ptr<IO_Scheduler> m_scheduler;
+        std::weak_ptr<Epoll_Scheduler> m_scheduler;
         uint32_t m_read_len;
         std::function<Task<>(Task_Base::wptr)> m_func;
 
@@ -200,7 +200,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len, SSL *ssl);
+        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len, SSL *ssl);
 
         virtual ~Tcp_SSL_RW_Task();
     protected:
@@ -216,7 +216,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Accept_Task>;
-        Tcp_SSL_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, 
+        Tcp_SSL_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, 
                     uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) ;
 
         int exec() override;
@@ -234,7 +234,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_RW_Task>;
-        Http_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len) ;
+        Http_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len) ;
         
         bool is_need_to_destroy() override;
 
@@ -250,7 +250,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Accept_Task>;
-        Http_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len) ;
+        Http_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len) ;
         Task_Base::ptr create_rw_task(int connfd) override; 
         ~Http_Accept_Task();
     };
@@ -259,7 +259,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_RW_Task>;
-        Https_RW_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, uint32_t read_len, SSL *ssl);
+        Https_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len, SSL *ssl);
 
         int exec() override;
 
@@ -275,7 +275,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Accept_Task>;
-        Https_Accept_Task(int fd, std::weak_ptr<IO_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func
+        Https_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func
                     , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) ;
         ~Https_Accept_Task();
     private:

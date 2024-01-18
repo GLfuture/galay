@@ -12,7 +12,7 @@ namespace galay
     class Server
     {
     public:
-        Server(Config::ptr config , IO_Scheduler::ptr scheduler) 
+        Server(Config::ptr config , Epoll_Scheduler::ptr scheduler) 
             : m_config(config),m_scheduler(scheduler){}
 
         virtual void start(std::function<Task<>(std::weak_ptr<Task_Base>)> &&func) = 0;
@@ -21,7 +21,7 @@ namespace galay
     
         virtual void stop(){ this->m_scheduler->stop(); }
 
-        virtual IO_Scheduler::ptr get_scheduler() { return this->m_scheduler; }
+        virtual Epoll_Scheduler::ptr get_scheduler() { return this->m_scheduler; }
 
         virtual ~Server();
 
@@ -29,7 +29,7 @@ namespace galay
         int m_fd = 0;
         Config::ptr m_config;
         int m_error = error::base_error::GY_SUCCESS;
-        IO_Scheduler::ptr m_scheduler;
+        Epoll_Scheduler::ptr m_scheduler;
     };
 
     //tcp_server
@@ -38,7 +38,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_Server>;
         Tcp_Server() = delete;
-        Tcp_Server(Tcp_Server_Config::ptr config , IO_Scheduler::ptr scheduler) 
+        Tcp_Server(Tcp_Server_Config::ptr config , Epoll_Scheduler::ptr scheduler) 
             : Server(config,scheduler){}
 
         void start(std::function<Task<>(Task_Base::wptr)> &&func) override;
@@ -54,7 +54,7 @@ namespace galay
     class Tcp_SSL_Server: public Tcp_Server
     {
     public:
-        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config, IO_Scheduler::ptr scheduler);
+        Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config, Epoll_Scheduler::ptr scheduler);
 
         ~Tcp_SSL_Server() override;
 
@@ -68,7 +68,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Server>;
-        Http_Server(Http_Server_Config::ptr config, IO_Scheduler::ptr scheduler):
+        Http_Server(Http_Server_Config::ptr config, Epoll_Scheduler::ptr scheduler):
             Tcp_Server(config,scheduler){}
 
     protected:
@@ -80,7 +80,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Server>;
-        Https_Server(Https_Server_Config::ptr config , IO_Scheduler::ptr scheduler)
+        Https_Server(Https_Server_Config::ptr config , Epoll_Scheduler::ptr scheduler)
             :Tcp_SSL_Server(config,scheduler){}
         
     protected:
