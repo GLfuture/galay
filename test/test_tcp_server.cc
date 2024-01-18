@@ -11,19 +11,17 @@ Task<> func(Task_Base::wptr t_task)
         task->set_ctx(a);
     }
     auto ctx = (int *)(task->get_ctx());
-    if ((*ctx)++ >= 5)
-    {
-        task->control_task_behavior(Task_Status::GY_TASK_DISCONNECT);
-        delete ctx;
-        task->set_ctx(nullptr);
-        task->finish();
-        return {};
-    }
     auto req = std::dynamic_pointer_cast<Tcp_Request>(task->get_req());
     auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
     std::cout<<req->get_buffer()<<'\n';
     resp->get_buffer() = "world!";
-    task->finish();
+    task->control_task_behavior(Task_Status::GY_TASK_WRITE);
+    if ((*ctx)++ >= 5)
+    {
+        delete ctx;
+        task->set_ctx(nullptr);
+        task->finish();
+    }
     return {};
 }
 
