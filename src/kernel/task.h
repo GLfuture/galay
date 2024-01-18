@@ -6,73 +6,19 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include "basic_concepts.h"
 #include "../config/config.h"
-#include "../protocol/tcp.h"
-#include "../protocol/http.h"
 #include "coroutine.h"
 #include "error.h"
 #include "iofunction.h"
 #include "scheduler.h"
-#include "timer.h"
-
 
 
 namespace galay
 {
-    enum Task_Status
-    {
-        GY_TASK_CONNECT,
-        GY_TASK_SSL_CONNECT,
-        GY_TASK_READ,
-        GY_TASK_WRITE,
-    };
-
-    class Epoll_Scheduler;
 
     class Timer_Manager;
 
-    class Task_Base
-    {
-    public:
-        using wptr = std::weak_ptr<Task_Base>;
-        using ptr = std::shared_ptr<Task_Base>;
-
-        // return -1 error 0 success
-        virtual int exec() = 0;
-
-        virtual std::shared_ptr<Epoll_Scheduler> get_scheduler() {
-            return nullptr;
-        }
-
-        virtual Request_Base::ptr get_req(){
-            return nullptr;
-        }
-        virtual Response_Base::ptr get_resp(){
-            return nullptr;
-        }
-
-        virtual void control_task_behavior(Task_Status status){}
-
-        virtual int get_state() {return this->m_status;}
-        
-        virtual void finish(){ this->m_is_finish = true;}
-
-        virtual void set_ctx(void *ctx) { if(!this->m_ctx) this->m_ctx = ctx; }
-
-        virtual void* get_ctx() { return this->m_ctx; }
-
-        virtual void destory(){   this->m_destroy = true;   }
-        
-        virtual bool is_destroy() {   return this->m_destroy; }
-
-        virtual ~Task_Base() {}
-
-    protected:
-        int m_status;
-        bool m_is_finish = false;
-        bool m_destroy = false;
-        void *m_ctx = nullptr;
-    };
 
     template <typename RESULT = void>
     class Task : public Coroutine<RESULT>
@@ -105,45 +51,184 @@ namespace galay
 
     // tcp
     // server read and write task
-    class Tcp_RW_Task : public Task_Base, public std::enable_shared_from_this<Tcp_RW_Task>
+    template <Request REQ, Response RESP>
+    class Tcp_RW_Task : public Task_Base, public std::enable_shared_from_this<Tcp_RW_Task<REQ,RESP>>
     {
     protected:
         using Callback = std::function<Task<>(Task_Base::wptr)>;
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
-        Tcp_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len);
+        Tcp_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len)
+        {
+            this->m_status = Task_Status::GY_TASK_READ;
+            this->m_error = error::base_error::GY_SUCCESS;
+            this->m_scheduler = scheduler;
+            this->m_fd = fd;
+            this->m_read_len = read_len;
+            this->m_temp = new char[read_len];
+            this->m_req = std::make_shared<REQ>();
+            this->m_resp = std::make_shared<RESP>();
+        }
 
-        void control_task_behavior(Task_Status status) override;
+        void control_task_behavior(Task_Status status) override
+        {
+            if (!this->m_scheduler.expired())
+            {
+                auto scheduler = this->m_scheduler.lock();
+                switch (status)
+                {
+                case Task_Status::GY_TASK_WRITE:
+                {
+                    scheduler->mod_event(this->m_fd, EPOLLOUT);
+                    this->m_status = Task_Status::GY_TASK_WRITE;
+                    break;
+                }
+                case Task_Status::GY_TASK_READ:
+                {
+                    scheduler->mod_event(this->m_fd, EPOLLIN);
+                    this->m_status = Task_Status::GY_TASK_READ;
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+        }
         Request_Base::ptr get_req() override { return this->m_req; }
         Response_Base::ptr get_resp() override { return this->m_resp; }
 
         // return -1 to delete this task from server
-        int exec() override;
+        int exec() override
+        {
+            switch (this->m_status)
+            {
+            case Task_Status::GY_TASK_READ:
+            {
+                if (read_package() == -1)
+                    return -1;
+                if (decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                    return -1;
+                m_co_task = this->m_func(this->shared_from_this());
+                break;
+            }
+            case Task_Status::GY_TASK_WRITE:
+            {
 
-        std::shared_ptr<Epoll_Scheduler> get_scheduler() override;
+                encode();
+                if (send_package() == -1)
+                    return -1;
+                if (!this->m_is_finish)
+                    control_task_behavior(Task_Status::GY_TASK_READ);
+                else
+                    Task_Base::destory();
+                break;
+            }
+            default:
+                break;
+            }
+            return 0;
+        }
+
+        std::shared_ptr<Epoll_Scheduler> get_scheduler() override
+        {
+            if (!this->m_scheduler.expired())
+                return this->m_scheduler.lock();
+            return nullptr;
+        }
 
         std::string &Get_Rbuffer() { return m_rbuffer; }
 
         std::string &Get_Wbuffer() { return m_wbuffer; }
 
-        void set_callback(Callback &&func) {this->m_func = func;}
+        void set_callback(Callback &&func) { this->m_func = func; }
 
-        void reset_buffer(int len);
+        void reset_buffer(int len)
+        {
+            if (this->m_temp)
+                delete[] this->m_temp;
+            this->m_temp = new char[len];
+            this->m_read_len = len;
+        }
 
-        virtual int get_error() {return this->m_error;}
+        virtual int get_error() { return this->m_error; }
 
-        virtual ~Tcp_RW_Task();
+        virtual ~Tcp_RW_Task()
+        {
+            if (m_temp)
+            {
+                delete[] m_temp;
+                m_temp = nullptr;
+            }
+        }
 
     protected:
-        
-        int decode();
+        int decode()
+        {
+            int state = error::base_error::GY_SUCCESS;
+            int len = this->m_req->decode(this->m_rbuffer, state);
+            if (state == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                return state;
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
+            return state;
+        }
 
-        void encode();
+        void encode()
+        {
+            m_wbuffer.append(m_resp->encode());
+        }
 
-        virtual int read_package();
+        virtual int read_package()
+        {
+            int len;
+            do
+            {
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+            } while (len != -1 && len != 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            return 0;
+        }
 
-        virtual int send_package();
+        virtual int send_package()
+        {
+            int len;
+            if(this->m_wbuffer.empty()) return 0;
+            do{
+                len = iofunction::Tcp_Function::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
+                if (len != -1 && len != 0) this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+                if(this->m_wbuffer.empty()) break;
+            }while(len != 0 && len != -1);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            } 
+            return 0;
+        }
+
     protected:
         char *m_temp = nullptr;
         std::weak_ptr<Epoll_Scheduler> m_scheduler;
@@ -151,127 +236,241 @@ namespace galay
         uint32_t m_read_len;
         std::string m_rbuffer;
         std::string m_wbuffer;
-        Request_Base::ptr m_req;
-        Response_Base::ptr m_resp;
+        std::shared_ptr<REQ> m_req;
+        std::shared_ptr<RESP> m_resp;
         Task<> m_co_task;
         Callback m_func;
         int m_error;
     };
 
-    class Tcp_Accept_Task : public Task_Base
+    template <Request REQ, Response RESP>
+    class Tcp_Main_Task : public Task_Base
     {
     public:
-        using ptr = std::shared_ptr<Tcp_Accept_Task>;
-        Tcp_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler,
-                        std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len);
-        
-        int exec() override;
+        using ptr = std::shared_ptr<Tcp_Main_Task>;
+        Tcp_Main_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler,
+                        std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len)
+        {
+            this->m_fd = fd;
+            this->m_status = Task_Status::GY_TASK_READ;
+            this->m_scheduler = scheduler;
+            this->m_func = func;
+            this->m_read_len = read_len;
+        }
 
-        void enable_keepalive(uint16_t idle , uint16_t interval,uint16_t retry);
+        int exec() override
+        {
+            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
+            if (connfd <= 0)
+                return -1;
+            if (this->m_is_keepalive)
+            {
+                int ret = iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_idle, this->m_interval, this->m_retry);
+                if (ret == -1)
+                {
+                    std::cout << strerror(errno) << '\n';
+                }
+            }
+            if (!this->m_scheduler.expired())
+            {
+                auto task = create_rw_task(connfd);
+                this->m_scheduler.lock()->add_task({connfd, task});
+                iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+                this->m_scheduler.lock()->add_event(connfd, EPOLLIN | EPOLLET);
+            }
+            return 0;
+        }
 
-        virtual ~Tcp_Accept_Task();
+        void enable_keepalive(uint16_t idle, uint16_t interval, uint16_t retry)
+        {
+            this->m_is_keepalive = true;
+            this->m_idle = idle;
+            this->m_interval = interval;
+            this->m_retry = retry;
+        }
+
+        virtual ~Tcp_Main_Task()
+        {
+
+        }
 
     protected:
-        virtual Task_Base::ptr create_rw_task(int connfd);
+        virtual Task_Base::ptr create_rw_task(int connfd)
+        {
+            auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len);
+            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
+            return task;
+        }
+
     protected:
         int m_fd;
         std::weak_ptr<Epoll_Scheduler> m_scheduler;
         uint32_t m_read_len;
         std::function<Task<>(Task_Base::wptr)> m_func;
 
-        //keepalive
+        // keepalive
         bool m_is_keepalive = false;
         int m_idle;
         int m_interval;
         int m_retry;
     };
 
-    class Tcp_SSL_RW_Task : public Tcp_RW_Task
+    template <Request REQ, Response RESP>
+    class Tcp_SSL_RW_Task : public Tcp_RW_Task<REQ,RESP>
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len, SSL *ssl);
+        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len, SSL *ssl)
+            : Tcp_RW_Task<REQ,RESP>(fd, scheduler, read_len), m_ssl(ssl)
+        {
+        }
 
-        virtual ~Tcp_SSL_RW_Task();
+        virtual ~Tcp_SSL_RW_Task()
+        {
+            if (this->m_ssl)
+            {
+                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
+                this->m_ssl = nullptr;
+            }
+        }
+
     protected:
-        int read_package() override;
+        int read_package() override
+        {
+            this->m_error = error::base_error::GY_SUCCESS;
+            int len;
+            do
+            {
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl,this->m_temp,this->m_read_len);
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+            } while (len != -1 && len != 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            return 0;
+        }
 
-        int send_package() override;
+        int send_package() override
+        {
+            int len;
+            if(this->m_wbuffer.empty()) return 0;
+            do{
+                len = iofunction::Tcp_Function::SSL_Send(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
+                if (len != -1 && len != 0) this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+                if(this->m_wbuffer.empty()) break;
+            }while(len != 0 && len != -1);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            } 
+            return 0;
+        }
+
     protected:
         SSL *m_ssl = nullptr;
     };
 
     // tcp's ssl task
-    class Tcp_SSL_Accept_Task : public Tcp_Accept_Task
+    template <Request REQ, Response RESP>
+    class Tcp_SSL_Main_Task : public Tcp_Main_Task<REQ,RESP>
     {
     public:
-        using ptr = std::shared_ptr<Tcp_SSL_Accept_Task>;
-        Tcp_SSL_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, 
-                    uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) ;
+        using ptr = std::shared_ptr<Tcp_SSL_Main_Task>;
+        Tcp_SSL_Main_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func,
+                            uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
+            : Tcp_Main_Task<REQ,RESP>(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len),
+              m_ctx(ctx), m_ssl_accept_retry(ssl_accept_max_retry)
+        {
+        }
 
-        int exec() override;
+        int exec() override
+        {
+            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
+            if (connfd <= 0)
+                return -1;
+            if (this->m_is_keepalive)
+            {
+                iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_idle, this->m_interval, this->m_retry);
+            }
+            SSL *ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx, connfd);
+            if (ssl == nullptr)
+            {
+                close(connfd);
+                return -1;
+            }
+            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+            int ret = iofunction::Tcp_Function::SSL_Accept(ssl);
+            uint32_t retry = 0;
+            while (ret <= 0 && retry++ <= this->m_ssl_accept_retry)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SSL_SLEEP_MISC_PER_RETRY));
+                ret = iofunction::Tcp_Function::SSL_Accept(ssl);
+                if (ret <= 0)
+                {
+                    int ssl_err = SSL_get_error(ssl, ret);
+                    if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE || ssl_err == SSL_ERROR_WANT_ACCEPT)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        iofunction::Tcp_Function::SSL_Destory(ssl);
+                        close(connfd);
+                        return -1;
+                    }
+                }
+            }
 
-        virtual ~Tcp_SSL_Accept_Task();
+            if (!this->m_scheduler.expired())
+            {
+                auto task = create_rw_task(connfd, ssl);
+                this->m_scheduler.lock()->add_task({connfd, task});
+                this->m_scheduler.lock()->add_event(connfd, EPOLLIN | EPOLLET);
+            }
+            return 0;
+        }
+
+        virtual ~Tcp_SSL_Main_Task()
+        {
+            if (this->m_ctx)
+                this->m_ctx = nullptr;
+        }
 
     protected:
-        virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl);
+        virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl)
+        {
+            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len, ssl);
+            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
+            return task;
+        }
+
     protected:
         SSL_CTX *m_ctx;
         uint32_t m_ssl_accept_retry;
     };
 
-    class Http_RW_Task : public Tcp_RW_Task
-    {
-    public:
-        using ptr = std::shared_ptr<Http_RW_Task>;
-        Http_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len) ;
-
-        int exec() override;
-        
-        ~Http_RW_Task();
-    private:
-        bool send_head = true;
-        bool m_is_chunked = false;
-    };
-
-    class Http_Accept_Task : public Tcp_Accept_Task
-    {
-    public:
-        using ptr = std::shared_ptr<Http_Accept_Task>;
-        Http_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len) ;
-        Task_Base::ptr create_rw_task(int connfd) override; 
-        ~Http_Accept_Task();
-    };
-
-    class Https_RW_Task : public Tcp_SSL_RW_Task
-    {
-    public:
-        using ptr = std::shared_ptr<Https_RW_Task>;
-        Https_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len, SSL *ssl);
-
-        int exec() override;
-
-        ~Https_RW_Task();
-    private:
-        bool send_head = true;
-        bool m_is_chunked = false;
-    };
-
-
-    // https task
-    class Https_Accept_Task : public Tcp_SSL_Accept_Task
-    {
-    public:
-        using ptr = std::shared_ptr<Https_Accept_Task>;
-        Https_Accept_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func
-                    , uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx) ;
-        ~Https_Accept_Task();
-    private:
-        Task_Base::ptr create_rw_task(int connfd, SSL *ssl) override;
-    };
-
-
-    //time task
+    // time task
     class Time_Task : public Task_Base
     {
     public:
@@ -286,16 +485,17 @@ namespace galay
         std::weak_ptr<Timer_Manager> m_manager;
     };
 
-    //thread_task
-    class Thread_Task :public Task_Base
+    // thread_task
+    class Thread_Task : public Task_Base
     {
     public:
         using ptr = std::shared_ptr<Thread_Task>;
-        Thread_Task(std::function<void()>&& func);
+        Thread_Task(std::function<void()> &&func);
 
         int exec() override;
 
         ~Thread_Task();
+
     private:
         std::function<void()> m_func;
     };

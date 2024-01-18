@@ -10,6 +10,12 @@
 
 namespace galay
 {
+
+    using TcpServer = Tcp_Server<Tcp_Request,Tcp_Response>::ptr;
+    using TcpSSLServer = Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr;
+    using HttpServer = Tcp_Server<Http_Request,Http_Response>::ptr;
+    using HttpsServer = Tcp_SSL_Server<Http_Request,Http_Response>::ptr;
+
     class Factory_Base
     {
     public:
@@ -52,13 +58,13 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Server_Factory>;
         //tcp
-        static Tcp_Server::ptr create_tcp_server(Tcp_Server_Config::ptr config , Epoll_Scheduler::ptr scheduler);
+        static TcpServer create_tcp_server(Tcp_Server_Config::ptr config , Epoll_Scheduler::ptr scheduler);
         //tcp ssl
-        static Tcp_SSL_Server::ptr create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
+        static TcpSSLServer create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
         //http
-        static Http_Server::ptr create_http_server(Http_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
+        static HttpServer create_http_server(Http_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
         //https
-        static Https_Server::ptr create_https_server(Https_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
+        static HttpsServer create_https_server(Https_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
     };
 
 

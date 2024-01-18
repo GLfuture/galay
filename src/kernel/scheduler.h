@@ -8,11 +8,74 @@
 #ifdef __linux__
 #include <sys/epoll.h>
 #endif
-
-#include "task.h"
+#include "../protocol/tcp.h"
+#include "../protocol/http.h"
+#include "timer.h"
 
 namespace galay{
-    class Task_Base;
+
+    enum Task_Status
+    {
+        GY_TASK_CONNECT,
+        GY_TASK_SSL_CONNECT,
+        GY_TASK_READ,
+        GY_TASK_WRITE,
+    };
+
+    class Scheduler_Base;
+
+    class Epoll_Scheduler;
+
+    class Task_Base
+    {
+    public:
+        using wptr = std::weak_ptr<Task_Base>;
+        using ptr = std::shared_ptr<Task_Base>;
+
+        // return -1 error 0 success
+        virtual int exec() = 0;
+
+        virtual std::shared_ptr<Epoll_Scheduler> get_scheduler()
+        {
+            return nullptr;
+        }
+
+        virtual Request_Base::ptr get_req()
+        {
+            return nullptr;
+        }
+        virtual Response_Base::ptr get_resp()
+        {
+            return nullptr;
+        }
+
+        virtual void control_task_behavior(Task_Status status) {}
+
+        virtual int get_state() { return this->m_status; }
+
+        virtual void finish() { this->m_is_finish = true; }
+
+        virtual void set_ctx(void *ctx)
+        {
+            if (!this->m_ctx)
+                this->m_ctx = ctx;
+        }
+
+        virtual void *get_ctx() { return this->m_ctx; }
+
+        virtual void destory() { this->m_destroy = true; }
+
+        virtual bool is_destroy() { return this->m_destroy; }
+
+        virtual ~Task_Base() {}
+
+    protected:
+        int m_status;
+        bool m_is_finish = false;
+        bool m_destroy = false;
+        void *m_ctx = nullptr;
+    };
+
 
     class Timer_Manager;
 
