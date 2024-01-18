@@ -6,7 +6,6 @@ galay::Epoll_Scheduler::Epoll_Scheduler(int max_event, int timeout)
     this->m_time_out = timeout;
     this->m_events_size = max_event;
     this->m_events = new epoll_event[max_event];
-    this->m_tasks = std::make_shared<std::unordered_map<int, std::shared_ptr<Task_Base>>>();
 }
 
 int galay::Epoll_Scheduler::start()
@@ -29,9 +28,9 @@ int galay::Epoll_Scheduler::start()
         }
         for (int i = 0; i < nready; i++)
         {
-            if (this->m_tasks->contains(m_events[i].data.fd))
+            if (this->m_tasks.contains(m_events[i].data.fd))
             {
-                Task_Base::ptr task = this->m_tasks->at(m_events[i].data.fd);
+                Task_Base::ptr task = this->m_tasks.at(m_events[i].data.fd);
                 task->exec();
                 if (task->is_need_to_destroy() && !task->is_destroyed())
                 {
@@ -86,13 +85,13 @@ void galay::Epoll_Scheduler::stop()
     if (!this->m_stop)
     {
         this->m_stop = true;
-        for (auto it = this->m_tasks->begin(); it != this->m_tasks->end(); it++)
+        for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
         {
             this->del_event(it->first, EPOLLIN);
             close(it->first);
             it->second.reset();
         }
-        this->m_tasks->clear();
+        this->m_tasks.clear();
         this->stop();
     }
 }
@@ -117,10 +116,10 @@ bool galay::Epoll_Scheduler::is_stop()
 void galay::Epoll_Scheduler::add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair)
 {
     std::unique_lock<std::shared_mutex> lock(this->m_mtx);
-    auto it = this->m_tasks->find(pair.first);
-    if (it == this->m_tasks->end())
+    auto it = this->m_tasks.find(pair.first);
+    if (it == this->m_tasks.end())
     {
-        this->m_tasks->emplace(pair);
+        this->m_tasks.emplace(pair);
     }
     else
     {
@@ -131,10 +130,10 @@ void galay::Epoll_Scheduler::add_task(std::pair<int,std::shared_ptr<Task_Base>>&
 void galay::Epoll_Scheduler::del_task(int fd)
 {
     std::unique_lock<std::shared_mutex> lock(this->m_mtx);
-    auto it = this->m_tasks->find(fd);
-    if (it != this->m_tasks->end()){
+    auto it = this->m_tasks.find(fd);
+    if (it != this->m_tasks.end()){
         it->second->destoryed();
-        m_tasks->erase(fd);
+        this->m_tasks.erase(fd);
         this->del_event(fd, EPOLLIN | EPOLLOUT);
         close(fd);
     }

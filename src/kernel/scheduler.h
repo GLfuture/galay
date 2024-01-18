@@ -21,17 +21,11 @@ namespace galay{
     public:
         using ptr = std::shared_ptr<Scheduler_Base>;
         using wptr = std::weak_ptr<Scheduler_Base>;
-
         virtual void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair) = 0;
-
         virtual void del_task(int fd) = 0;
-
         virtual int add_event(int fd ,uint32_t event_type) = 0;
-        
         virtual int del_event(int fd, uint32_t event_type) = 0;
-
         virtual int mod_event(int fd, uint32_t event_type) = 0;
-
         virtual ~Scheduler_Base(){}
     };
 
@@ -69,7 +63,7 @@ namespace galay{
         virtual ~Epoll_Scheduler() {}
     protected: 
         std::shared_mutex m_mtx;
-        std::shared_ptr<std::unordered_map<int, std::shared_ptr<Task_Base>>> m_tasks;
+        std::unordered_map<int, std::shared_ptr<Task_Base>> m_tasks;
         bool m_stop = false;
         std::shared_ptr<Timer_Manager> m_timer_manager = nullptr;
 
