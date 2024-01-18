@@ -101,26 +101,27 @@ void galay::Tcp_RW_Task::encode()
 int galay::Tcp_RW_Task::read_package()
 {
     this->m_error = error::base_error::GY_SUCCESS;
-    int len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
-    if (len == 0)
+    int len;
+    do
     {
-        destory();
-        return -1;
-    }
-    else if (len == -1)
+        memset(this->m_temp, 0, this->m_read_len);
+        len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
+        if (len != -1 && len != 0)
+            this->m_rbuffer.append(this->m_temp, len);
+    } while (len != -1 && len != 0);
+    if (len == -1)
     {
-        if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-        {
-            return -1;
-        }
-        else
+        if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
         {
             destory();
             return -1;
         }
     }
-    this->m_rbuffer.append(this->m_temp, len);
-    memset(this->m_temp, 0, len);
+    else if (len == 0)
+    {
+        destory();
+        return -1;
+    }
     return 0;
 }
 
