@@ -208,7 +208,7 @@ namespace galay
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
                     if(!m_scheduler.expired()){
-                        m_scheduler.lock()->mod_event(this->m_fd , EPOLLIN);
+                        m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_READ);
                     }
                     return -1;
                 }else{
@@ -483,7 +483,7 @@ namespace galay
                     this->m_result = ret;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
-                    if(!m_scheduler.expired()) m_scheduler.lock()->mod_event(this->m_fd , EPOLLIN);
+                    if(!m_scheduler.expired()) m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_READ);
                     return -1;
                 }else{
                     return -1;

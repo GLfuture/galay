@@ -104,10 +104,13 @@ galay::Tcp_SSL_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Serv
 }
 
 //scheduler
+#ifdef __linux__
 galay::Epoll_Scheduler::ptr galay::Scheduler_Factory::create_epoll_scheduler(int event_num,int time_out)
 {
     return std::make_shared<Epoll_Scheduler>(event_num,time_out);
 }
+#endif
+
 
 //client
 galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(Scheduler_Base::wptr scheduler)

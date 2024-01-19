@@ -27,9 +27,11 @@ Task<> func(Task_Base::wptr t_task)
     co_return;
 }
 
+HttpServer http_server;
+
 void sig_handle(int sig)
 {
-
+    http_server->stop();
 }
 
 int main()
@@ -37,7 +39,7 @@ int main()
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_http_server_config(8080);
     auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,5);
-    auto http_server = Server_Factory::create_http_server(config,scheduler);
+    http_server = Server_Factory::create_http_server(config,scheduler);
     http_server->start(func);
     return 0;
 }

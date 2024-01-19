@@ -25,9 +25,11 @@ Task<> func(Task_Base::wptr t_task)
     return {};
 }
 
+TcpServer server;
+
 void sig_handle(int sig)
 {
-
+    server->stop();
 }
 
 int main()
@@ -35,7 +37,7 @@ int main()
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_tcp_server_config(8080);
     auto scheduler = Scheduler_Factory::create_epoll_scheduler(DEFAULT_EVENT_SIZE,DEFAULT_EVENT_TIME_OUT);
-    auto server = Server_Factory::create_tcp_server(config,scheduler);
+    server = Server_Factory::create_tcp_server(config,scheduler);
     config->enable_keepalive(5,5,3);
     server->start(func);
     if(server->get_error() != error::base_error::GY_SUCCESS)
