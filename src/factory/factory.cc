@@ -80,25 +80,25 @@ galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_confi
 
 //server
 galay::Tcp_Server<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Server_Factory::create_tcp_server(Tcp_Server_Config::ptr config 
-    ,Epoll_Scheduler::ptr scheduler)
+    ,Scheduler_Base::ptr scheduler)
 {
     return std::make_shared<Tcp_Server<Tcp_Request,Tcp_Response>>(config,scheduler);
 }
 
 galay::Tcp_SSL_Server<galay::Tcp_Request,galay::Tcp_Response>::ptr galay::Server_Factory::create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config
-     ,Epoll_Scheduler::ptr scheduler)
+     ,Scheduler_Base::ptr scheduler)
 {
     return std::make_shared<Tcp_SSL_Server<Tcp_Request,Tcp_Response>>(config,scheduler);
 }
 
 galay::Tcp_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server_Factory::create_http_server(Http_Server_Config::ptr config
-     ,Epoll_Scheduler::ptr scheduler)
+     ,Scheduler_Base::ptr scheduler)
 {
     return std::make_shared<Tcp_Server<Http_Request,Http_Response>>(config,scheduler);
 }
 
 galay::Tcp_SSL_Server<galay::Http_Request,galay::Http_Response>::ptr galay::Server_Factory::create_https_server(Https_Server_Config::ptr config
-     ,Epoll_Scheduler::ptr scheduler)
+     ,Scheduler_Base::ptr scheduler)
 {
     return std::make_shared<Tcp_SSL_Server<Http_Request,Http_Response>>(config,scheduler);
 }
@@ -110,23 +110,23 @@ galay::Epoll_Scheduler::ptr galay::Scheduler_Factory::create_epoll_scheduler(int
 }
 
 //client
-galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(Epoll_Scheduler::wptr scheduler)
+galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(Scheduler_Base::wptr scheduler)
 {
     return std::make_shared<Tcp_Client>(scheduler);
 }
 
-galay::Tcp_SSL_Client::ptr galay::Client_Factory::create_tcp_ssl_client(Epoll_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version)
+galay::Tcp_SSL_Client::ptr galay::Client_Factory::create_tcp_ssl_client(Scheduler_Base::ptr scheduler, long ssl_min_version , long ssl_max_version)
 {
     return std::make_shared<Tcp_SSL_Client>(scheduler,ssl_min_version,ssl_max_version);
 }
 
 
-galay::Http_Client::ptr galay::Client_Factory::create_http_client(Epoll_Scheduler::wptr scheduler)
+galay::Http_Client::ptr galay::Client_Factory::create_http_client(Scheduler_Base::wptr scheduler)
 {
     return std::make_shared<Http_Client>(scheduler);
 }
 
-galay::Https_Client::ptr galay::Client_Factory::create_https_client(Epoll_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version)
+galay::Https_Client::ptr galay::Client_Factory::create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
 {
     return std::make_shared<Https_Client>(scheduler,ssl_min_version,ssl_max_version);
 }

@@ -19,14 +19,6 @@ namespace galay{
     #define DEFAULT_SSL_SLEEP_MISC_PER_RETRY        1
     #define DEFAULT_CLINET_EVENT_SIZE               1
 
-
-    enum IO_ENGINE{
-        IO_SELECT,
-        IO_POLL,
-        IO_EPOLL,
-        IO_URING,
-    };
-
     class Config
     {
     public:

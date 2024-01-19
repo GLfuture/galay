@@ -10,10 +10,9 @@
 #include <mutex>
 #include <shared_mutex>
 #include <sys/timerfd.h>
-#include "scheduler.h"
+#include "base.h"
 
 namespace galay{
-    class Epoll_Scheduler;
 
     class Timer
     {
@@ -54,7 +53,7 @@ namespace galay{
     public:
         using ptr = std::shared_ptr<Timer_Manager>;
         using wptr = std::weak_ptr<Timer_Manager>;
-        Timer_Manager(std::weak_ptr<Epoll_Scheduler> scheduler);
+        Timer_Manager(std::weak_ptr<Scheduler_Base> scheduler);
 
         void update_time();
 
@@ -83,7 +82,7 @@ namespace galay{
         };
     protected:
         std::shared_mutex m_mtx;
-        std::weak_ptr<Epoll_Scheduler> m_scheduler;
+        std::weak_ptr<Scheduler_Base> m_scheduler;
         int m_timerfd;
         std::priority_queue<Timer::ptr, std::vector<Timer::ptr>, MyCompare> m_timers;
     };
