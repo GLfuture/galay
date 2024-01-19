@@ -6,8 +6,7 @@
 #include <string>
 #include <thread>
 #include <chrono>
-#include "basic_concepts.h"
-#include "../config/config.h"
+#include "base.h"
 #include "coroutine.h"
 #include "error.h"
 #include "iofunction.h"
@@ -59,7 +58,7 @@ namespace galay
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
-        Tcp_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len)
+        Tcp_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len)
         {
             this->m_status = Task_Status::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
@@ -130,7 +129,7 @@ namespace galay
             return 0;
         }
 
-        std::shared_ptr<Epoll_Scheduler> get_scheduler() override
+        std::shared_ptr<Scheduler_Base> get_scheduler() override
         {
             if (!this->m_scheduler.expired())
                 return this->m_scheduler.lock();
@@ -231,7 +230,7 @@ namespace galay
 
     protected:
         char *m_temp = nullptr;
-        std::weak_ptr<Epoll_Scheduler> m_scheduler;
+        std::weak_ptr<Scheduler_Base> m_scheduler;
         int m_fd;
         uint32_t m_read_len;
         std::string m_rbuffer;
@@ -248,7 +247,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Main_Task>;
-        Tcp_Main_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler,
+        Tcp_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler,
                         std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len)
         {
             this->m_fd = fd;
@@ -304,7 +303,7 @@ namespace galay
 
     protected:
         int m_fd;
-        std::weak_ptr<Epoll_Scheduler> m_scheduler;
+        std::weak_ptr<Scheduler_Base> m_scheduler;
         uint32_t m_read_len;
         std::function<Task<>(Task_Base::wptr)> m_func;
 
@@ -320,7 +319,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, uint32_t read_len, SSL *ssl)
+        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len, SSL *ssl)
             : Tcp_RW_Task<REQ,RESP>(fd, scheduler, read_len), m_ssl(ssl)
         {
         }
@@ -397,7 +396,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Main_Task>;
-        Tcp_SSL_Main_Task(int fd, std::weak_ptr<Epoll_Scheduler> scheduler, std::function<Task<>(Task_Base::wptr)> &&func,
+        Tcp_SSL_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, std::function<Task<>(Task_Base::wptr)> &&func,
                             uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
             : Tcp_Main_Task<REQ,RESP>(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len),
               m_ctx(ctx), m_ssl_accept_retry(ssl_accept_max_retry)

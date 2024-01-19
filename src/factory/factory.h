@@ -58,13 +58,13 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Server_Factory>;
         //tcp
-        static TcpServer create_tcp_server(Tcp_Server_Config::ptr config , Epoll_Scheduler::ptr scheduler);
+        static TcpServer create_tcp_server(Tcp_Server_Config::ptr config , Scheduler_Base::ptr scheduler);
         //tcp ssl
-        static TcpSSLServer create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
+        static TcpSSLServer create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
         //http
-        static HttpServer create_http_server(Http_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
+        static HttpServer create_http_server(Http_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
         //https
-        static HttpsServer create_https_server(Https_Server_Config::ptr config ,Epoll_Scheduler::ptr scheduler);
+        static HttpsServer create_https_server(Https_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
     };
 
 
@@ -79,13 +79,13 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Client_Factory>;
-        static Tcp_Client::ptr create_tcp_client(Epoll_Scheduler::wptr scheduler);
+        static Tcp_Client::ptr create_tcp_client(Scheduler_Base::wptr scheduler);
 
-        static Tcp_SSL_Client::ptr create_tcp_ssl_client(Epoll_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version);
+        static Tcp_SSL_Client::ptr create_tcp_ssl_client(Scheduler_Base::ptr scheduler, long ssl_min_version , long ssl_max_version);
 
-        static Http_Client::ptr create_http_client(Epoll_Scheduler::wptr scheduler);
+        static Http_Client::ptr create_http_client(Scheduler_Base::wptr scheduler);
 
-        static Https_Client::ptr create_https_client(Epoll_Scheduler::ptr scheduler, long ssl_min_version , long ssl_max_version);
+        static Https_Client::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
     };
 
     class Timer_Factory: public Factory_Base
