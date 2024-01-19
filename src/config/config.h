@@ -14,7 +14,6 @@ namespace galay{
     #define DEFAULT_RECV_LENGTH                     1024
     #define DEFAULT_FD_NUM                          2000
     #define DEFAULT_BACKLOG                         256        
-    #define DEFAULT_ENGINE                          IO_ENGINE::IO_EPOLL
     #define DEFAULT_MAX_SSL_ACCEPT_RETRY            1000
     #define DEFAULT_SSL_SLEEP_MISC_PER_RETRY        1
     #define DEFAULT_CLINET_EVENT_SIZE               1

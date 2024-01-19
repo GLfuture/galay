@@ -26,9 +26,11 @@ Hello, World!\
     return {};
 }
 
+TcpSSLServer server;
+
 void sig_handle(int sig)
 {
-
+    server->stop();
 }
 
 int main()
@@ -36,7 +38,7 @@ int main()
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_tcp_ssl_server_config(8080,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key");
     auto scheduler = Scheduler_Factory::create_epoll_scheduler(DEFAULT_EVENT_SIZE,DEFAULT_EVENT_TIME_OUT);
-    auto server = Server_Factory::create_tcp_ssl_server(config,scheduler);
+    server = Server_Factory::create_tcp_ssl_server(config,scheduler);
     server->start(func);
     if(server->get_error() != error::base_error::GY_SUCCESS)
     {

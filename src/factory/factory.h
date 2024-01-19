@@ -72,7 +72,9 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Scheduler_Factory>;
+#ifdef __linux__
         static Epoll_Scheduler::ptr create_epoll_scheduler(int event_num,int time_out);
+#endif
     };
 
     class Client_Factory: public Factory_Base

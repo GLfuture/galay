@@ -14,7 +14,7 @@ int galay::Epoll_Scheduler::start()
     if(!m_timer_manager){
         this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
         auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        this->add_event(this->m_timer_manager->get_timerfd(), EPOLLIN);
+        this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ);
         add_task({this->m_timer_manager->get_timerfd(), time_task});
     }
     while (1)
@@ -25,7 +25,9 @@ int galay::Epoll_Scheduler::start()
             break;
         if (nready == -1)
         {
-            return error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR;
+            std::cout<< error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR << ": "<< error::get_err_str(error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR) << '\n';
+    //        std::this_thread::sleep_for(std::chrono::seconds(2));
+            continue;
         }
         for (int i = 0; i < nready; i++)
         {
@@ -34,7 +36,6 @@ int galay::Epoll_Scheduler::start()
                 Task_Base::ptr task = this->m_tasks.at(m_events[i].data.fd);
                 task->exec();
                 if (task->is_destroy()) {
-                    std::cout<< "del :" << m_events[i].data.fd <<'\n';
                     del_task(m_events[i].data.fd);
                 }
             }
@@ -54,30 +55,66 @@ int galay::Epoll_Scheduler::get_event_size() const
     return m_events_size;
 }
 
-int galay::Epoll_Scheduler::add_event(int fd , uint32_t event_type)
+int galay::Epoll_Scheduler::add_event(int fd , int event_type)
 {
-    epoll_event ev{
-        .events = event_type,
-        .data{
-            .fd = fd}};
+    epoll_event ev;
+    ev.data.fd = fd;
+    switch (event_type)
+    {
+    case Event_type::GY_EVENT_READ:
+        ev.events = EPOLLIN | EPOLLET;
+        break;
+    case Event_type::GY_EVENT_WRITE:
+        ev.events = EPOLLOUT | EPOLLET;
+        break;
+    case Event_type::GY_EVENT_READ | Event_type::GY_EVENT_WRITE:
+        ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+        break;
+    default:
+        break;
+    }
     return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &ev);
 }
 
-int galay::Epoll_Scheduler::del_event(int fd , uint32_t event_type)
+int galay::Epoll_Scheduler::del_event(int fd , int event_type)
 {
-    epoll_event ev{
-        .events = event_type,
-        .data{
-            .fd = fd}};
+    epoll_event ev;
+    ev.data.fd = fd;
+    switch (event_type)
+    {
+    case Event_type::GY_EVENT_READ:
+        ev.events = EPOLLIN;
+        break;
+    case Event_type::GY_EVENT_WRITE:
+        ev.events = EPOLLOUT;
+        break;
+    case Event_type::GY_EVENT_READ | Event_type::GY_EVENT_WRITE:
+        ev.events = EPOLLIN | EPOLLOUT;
+        break;
+    default:
+        break;
+    }
     return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &ev);
 }
 
-int galay::Epoll_Scheduler::mod_event(int fd, uint32_t event_type)
+int galay::Epoll_Scheduler::mod_event(int fd, int event_type)
 {
-    epoll_event ev{
-        .events = event_type,
-        .data{
-            .fd = fd}};
+    epoll_event ev;
+    ev.data.fd = fd;
+    switch (event_type)
+    {
+    case Event_type::GY_EVENT_READ:
+        ev.events = EPOLLIN;
+        break;
+    case Event_type::GY_EVENT_WRITE:
+        ev.events = EPOLLOUT;
+        break;
+    case Event_type::GY_EVENT_READ | Event_type::GY_EVENT_WRITE:
+        ev.events = EPOLLIN | EPOLLOUT;
+        break;
+    default:
+        break;
+    }
     return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &ev);
 }
 
@@ -88,7 +125,7 @@ void galay::Epoll_Scheduler::stop()
         this->m_stop = true;
         for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
         {
-            this->del_event(it->first, EPOLLIN);
+            this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE);
             close(it->first);
             it->second.reset();
         }
@@ -103,7 +140,7 @@ galay::Timer_Manager::ptr galay::Epoll_Scheduler::get_timer_manager()
     {
         this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
         auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        this->add_event(this->m_timer_manager->get_timerfd(), EPOLLIN);
+        this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ);
         add_task({this->m_timer_manager->get_timerfd(), time_task});
     }
     return this->m_timer_manager;
@@ -135,7 +172,7 @@ void galay::Epoll_Scheduler::del_task(int fd)
     if (it != this->m_tasks.end()){
         it->second->destory();
         this->m_tasks.erase(fd);
-        this->del_event(fd, EPOLLIN | EPOLLOUT);
+        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE);
         close(fd);
     }
 }

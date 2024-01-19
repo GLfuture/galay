@@ -7,10 +7,11 @@
 #ifdef __linux__
 #include <sys/epoll.h>
 #endif
+#include <sys/select.h>
 #include "timer.h"
 
 namespace galay{
-
+#ifdef __linux__
     class Epoll_Scheduler: public Scheduler_Base , public std::enable_shared_from_this<Epoll_Scheduler>
     {
     public:
@@ -25,12 +26,12 @@ namespace galay{
         void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair) override;
 
         void del_task(int fd) override;
-
-        int add_event(int fd ,uint32_t event_type) override; 
+        //默认添加即为ET模式
+        int add_event(int fd ,int event_type) override; 
         
-        int del_event(int fd, uint32_t event_type) override;
+        int del_event(int fd, int event_type) override;
 
-        int mod_event(int fd, uint32_t event_type) override;
+        int mod_event(int fd, int event_type) override;
 
         void stop() override;
 
@@ -54,6 +55,12 @@ namespace galay{
         epoll_event *m_events = nullptr;
         int m_events_size;
         int m_time_out;
+    };
+#endif
+    class Select_Scheduler: public Scheduler_Base
+    {
+    public:
+
     };
 
 }

@@ -79,13 +79,13 @@ namespace galay
                 {
                 case Task_Status::GY_TASK_WRITE:
                 {
-                    scheduler->mod_event(this->m_fd, EPOLLOUT);
+                    scheduler->mod_event(this->m_fd, GY_EVENT_WRITE);
                     this->m_status = Task_Status::GY_TASK_WRITE;
                     break;
                 }
                 case Task_Status::GY_TASK_READ:
                 {
-                    scheduler->mod_event(this->m_fd, EPOLLIN);
+                    scheduler->mod_event(this->m_fd, GY_EVENT_READ);
                     this->m_status = Task_Status::GY_TASK_READ;
                     break;
                 }
@@ -275,7 +275,7 @@ namespace galay
                 auto task = create_rw_task(connfd);
                 this->m_scheduler.lock()->add_task({connfd, task});
                 iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-                this->m_scheduler.lock()->add_event(connfd, EPOLLIN | EPOLLET);
+                this->m_scheduler.lock()->add_event(connfd, GY_EVENT_READ);
             }
             return 0;
         }
@@ -445,7 +445,7 @@ namespace galay
             {
                 auto task = create_rw_task(connfd, ssl);
                 this->m_scheduler.lock()->add_task({connfd, task});
-                this->m_scheduler.lock()->add_event(connfd, EPOLLIN | EPOLLET);
+                this->m_scheduler.lock()->add_event(connfd, GY_EVENT_READ);
             }
             return 0;
         }

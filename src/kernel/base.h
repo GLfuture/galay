@@ -17,7 +17,8 @@ namespace galay
     };
 
     enum Event_type{
-
+        GY_EVENT_READ = 0x1,
+        GY_EVENT_WRITE = 0x2,
     };
 
     class Scheduler_Base;
@@ -79,9 +80,9 @@ namespace galay
         using wptr = std::weak_ptr<Scheduler_Base>;
         virtual void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair) = 0;
         virtual void del_task(int fd) = 0;
-        virtual int add_event(int fd ,uint32_t event_type) = 0;
-        virtual int del_event(int fd, uint32_t event_type) = 0;
-        virtual int mod_event(int fd, uint32_t event_type) = 0;
+        virtual int add_event(int fd, int event_type) = 0;
+        virtual int del_event(int fd, int event_type) = 0;
+        virtual int mod_event(int fd, int event_type) = 0;
         //is stoped?
         virtual bool is_stop() = 0;
         virtual int start() = 0;
