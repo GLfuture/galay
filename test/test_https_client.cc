@@ -4,7 +4,7 @@
 
 using namespace galay;
 
-Task<> func(Epoll_Scheduler::ptr scheduler)
+Task<> func(Scheduler_Base::ptr scheduler)
 {
     auto client = Client_Factory::create_https_client(scheduler,TLS1_1_VERSION,TLS1_3_VERSION);
     int ret = co_await client->connect("39.156.66.14",443);
@@ -29,7 +29,8 @@ Task<> func(Epoll_Scheduler::ptr scheduler)
 
 int main()
 {
-    auto scheduler = Scheduler_Factory::create_epoll_scheduler(1,5);
+    //auto scheduler = Scheduler_Factory::create_epoll_scheduler(1,5);
+    auto scheduler = Scheduler_Factory::create_select_scheduler(5);
     Task<> t = func(scheduler);
     scheduler->start();
     std::cout<<"end\n";

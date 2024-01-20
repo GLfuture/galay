@@ -5,6 +5,7 @@
 #include "basic_concepts.h"
 #include "../protocol/basic_protocol.h"
 #include "../config/config.h"
+#include "timer.h"
 
 namespace galay
 {
@@ -19,9 +20,13 @@ namespace galay
     enum Event_type{
         GY_EVENT_READ = 0x1,
         GY_EVENT_WRITE = 0x2,
+        GY_EVENT_ERROR = 0x4,
+        GY_EVENT_EPOLLET = 0x8, //epoll et模式
     };
 
     class Scheduler_Base;
+
+
     class Task_Base
     {
     public:
@@ -78,11 +83,12 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Scheduler_Base>;
         using wptr = std::weak_ptr<Scheduler_Base>;
+        virtual std::shared_ptr<Timer_Manager> get_timer_manager() = 0;
         virtual void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair) = 0;
         virtual void del_task(int fd) = 0;
         virtual int add_event(int fd, int event_type) = 0;
         virtual int del_event(int fd, int event_type) = 0;
-        virtual int mod_event(int fd, int event_type) = 0;
+        virtual int mod_event(int fd, int from , int to) = 0;
         //is stoped?
         virtual bool is_stop() = 0;
         virtual int start() = 0;

@@ -10,9 +10,10 @@
 #include <mutex>
 #include <shared_mutex>
 #include <sys/timerfd.h>
-#include "base.h"
+
 
 namespace galay{
+    class Scheduler_Base;
 
     class Timer
     {
