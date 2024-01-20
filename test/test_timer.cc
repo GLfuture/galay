@@ -6,16 +6,18 @@
 
 using namespace galay;
 
+Scheduler_Base::ptr scheduler;
+
 void sig_handle(int sig)
 {
-
+    scheduler->stop();
 }
 
 
 int main()
 {
     signal(SIGINT,sig_handle);
-    auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024, -1);
+    scheduler = Scheduler_Factory::create_select_scheduler(0);
     scheduler->get_timer_manager()->add_timer(Timer_Factory::create_timer(500, 1, []() {
         std::ifstream in("/home/gong/projects/galay/1.txt");
         if(in.fail()){

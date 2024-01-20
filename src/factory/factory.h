@@ -75,6 +75,7 @@ namespace galay
 #ifdef __linux__
         static Epoll_Scheduler::ptr create_epoll_scheduler(int event_num,int time_out);
 #endif
+        static Select_Scheduler::ptr create_select_scheduler(int time_out);
     };
 
     class Client_Factory: public Factory_Base

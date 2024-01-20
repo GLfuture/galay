@@ -1,4 +1,5 @@
 #include "timer.h"
+#include "base.h"
 
 uint32_t galay::Timer::m_global_timerid = 0;
 

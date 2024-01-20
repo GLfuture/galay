@@ -85,7 +85,10 @@ namespace galay
 
         virtual void add_main_task(std::function<Task<>(Task_Base::wptr)> &&func, uint32_t recv_len)
         {
-            this->m_scheduler->add_event(this->m_fd, GY_EVENT_READ);
+            if(this->m_scheduler->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
+            {
+                std::cout<< "add event failed fd = " <<this->m_fd <<'\n';
+            }
             auto task = std::make_shared<Tcp_Main_Task<REQ,RESP>>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len);
             auto config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
             if (config->m_keepalive)
@@ -130,7 +133,10 @@ namespace galay
     protected:
         void add_main_task(std::function<Task<>(Task_Base::wptr)> &&func, uint32_t recv_len) override
         {
-            this->m_scheduler->add_event(this->m_fd, GY_EVENT_READ);
+            if(this->m_scheduler->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
+            {
+                std::cout<< "add event failed fd = " <<this->m_fd <<'\n';
+            }
             Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
             auto task = std::make_shared<Tcp_SSL_Main_Task<REQ,RESP>>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len, config->m_ssl_accept_retry, this->m_ctx);
             if (config->m_keepalive)

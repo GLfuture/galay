@@ -151,11 +151,9 @@ int main()
 {
     signal(SIGINT, sig_handle);
     auto config = Config_Factory::create_https_server_config(8080, TLS1_2_VERSION, TLS1_3_VERSION, "../server.crt", "../server.key");
-    auto scheduler = Scheduler_Factory::create_epoll_scheduler(DEFAULT_EVENT_SIZE, DEFAULT_EVENT_TIME_OUT);
+    //auto scheduler = Scheduler_Factory::create_epoll_scheduler(DEFAULT_EVENT_SIZE, DEFAULT_EVENT_TIME_OUT);
+    auto scheduler = Scheduler_Factory::create_select_scheduler(DEFAULT_EVENT_TIME_OUT);
     https_server = Server_Factory::create_https_server(config, scheduler);
-    // auto config2 = Config_Factory::create_https_server_config(8081,TLS1_2_VERSION,TLS1_3_VERSION,"../server.crt","../server.key");
-    // auto https_server2 = Server_Factory::create_https_server(config2,scheduler);
-    std::cout << errno << std::endl;
     https_server->start(func);
     return 0;
 }

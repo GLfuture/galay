@@ -6,6 +6,7 @@
                 "${default}",
                 "/usr/include/x86_64-linux-gnu/c++/12",
                 "/usr/include/x86_64-linux-gnu",
+                "/usr/include/x86_64-linux-gnu/c++/12"
             ],
             "defines": [],
             "intelliSenseMode": "linux-gcc-x64",

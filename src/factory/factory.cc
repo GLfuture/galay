@@ -111,6 +111,10 @@ galay::Epoll_Scheduler::ptr galay::Scheduler_Factory::create_epoll_scheduler(int
 }
 #endif
 
+galay::Select_Scheduler::ptr galay::Scheduler_Factory::create_select_scheduler(int time_out)
+{
+    return std::make_shared<Select_Scheduler>(time_out);
+}
 
 //client
 galay::Tcp_Client::ptr galay::Client_Factory::create_tcp_client(Scheduler_Base::wptr scheduler)
