@@ -88,33 +88,33 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
             lines.emplace_back(temp);
         hbeg = hend + 2;
     } while (hend != std::string::npos);
-    for (int i = 0; i < lines.size(); i++)
+    std::regex e("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
+    std::smatch sub_match;
+    if(std::regex_match(lines[0], sub_match, e)) {
+        this->m_method = sub_match[1];
+        decode_url(std::move(sub_match[2]));
+        this->m_version = sub_match[3];
+    }else{
+        state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+        return -1;
+    }
+
+    e = "^([^:]*): ?(.*)$";
+    for(int i = 1; i < lines.size(); i++)
     {
-        int index = 0;
-        if (i == 0)
+        if (std::regex_match(lines[i], sub_match, e))
         {
-            index = decode_method(lines[i], index);
-            index = decode_url(lines[i], index);
-            index = decode_version(lines[i], index);
-        }
-        else
-        {
-            int tbeg = 0, tend = 0;
-            tend = lines[i].find_first_of(":");
-            std::string key = lines[i].substr(0, tend);
+            std::string key = std::move(sub_match[1]);
             std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) {
                 return std::tolower(c);
             });
-            tbeg = tend + 1 + (lines[i][tend+1] == ' '? 1 : 0) ;
-            std::string value = lines[i].substr(tbeg);
-            this->m_filed_list[key] = value;
+            this->m_filed_list.emplace(std::make_pair(std::move(key),std::move(sub_match[2])));
+        }else 
+        {
+            state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+            return -1;
         }
     }
-    if (this->m_method.compare("OPTIONS") == 0)
-    {
-        return end + 4;
-    }
-    beg = end + 4;
     std::string len_str = get_head_value("content-length");
     if (!len_str.empty())
     {
@@ -160,7 +160,7 @@ std::string galay::Http_Request::encode()
     {
         res += encode_url(std::move(this->m_url_path));
     }
-    res = res + ' ' + this->m_version + "\r\n";
+    res = res + " HTTP/" +  this->m_version + "\r\n";
     for (auto &[k, v] : m_filed_list)
     {
         res = res + k + ": " + v + "\r\n";
@@ -178,25 +178,9 @@ std::string galay::Http_Request::encode()
     return res;
 }
 
-int galay::Http_Request::decode_version(std::string str, int index)
+int galay::Http_Request::decode_url(std::string aurl)
 {
-    int end = str.find("\r\n");
-    this->m_version = str.substr(index, end - index);
-    return end + 1;
-}
-
-int galay::Http_Request::decode_method(std::string str, int index)
-{
-    int end = str.find_first_of(' ');
-    this->m_method = str.substr(index, end);
-    return end + 1;
-}
-
-int galay::Http_Request::decode_url(std::string str, int index)
-{
-    int end = str.find_first_of(' ', index);
-    std::string temp = str.substr(index, end - index);
-    std::string url = decode_url(std::move(temp), false);
+    std::string url = decode_url(std::move(aurl), false);
     int argindx = url.find('?');
     if (argindx != std::string::npos)
     {
@@ -236,10 +220,10 @@ int galay::Http_Request::decode_url(std::string str, int index)
                 }
             }
         }
-        return end + 1;
+        return -1;
     }
     this->m_url_path = url;
-    return end + 1;
+    return 0;
 }
 
 std::string galay::Http_Request::encode_url(const std::string &s)
@@ -442,7 +426,8 @@ int &galay::Http_Response::get_status()
 
 std::string galay::Http_Response::encode()
 {
-    std::string res = this->m_version + ' ' + std::to_string(this->m_status) + ' ' + status_message(this->m_status) + "\r\n";
+    std::string res = "HTTP/";
+    res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + status_message(this->m_status) + "\r\n";
     for (auto &[k, v] : this->m_filed_list)
     {
         res = res + k + ": " + v + "\r\n";
@@ -476,26 +461,31 @@ int galay::Http_Response::decode(const std::string &buffer, int &state)
             lines.emplace_back(temp);
         hbeg = hend + 2;
     } while (hend != std::string::npos);
+    std::regex e("^([^:]*): ?(.*)$");
+    std::smatch sub_match;
     for (int i = 0; i < lines.size(); i++)
     {
         if (i == 0)
         {
             int indx = lines[i].find_first_of(' ');
-            this->m_version = lines[i].substr(0, indx);
+            this->m_version = lines[i].substr(5, indx);
             std::string status = lines[i].substr(indx + 1, lines[i].find(' ', indx + 1) - indx - 1);
             this->m_status = atoi(status.c_str());
         }
         else
         {
-            int tbeg = 0, tend = 0;
-            tend = lines[i].find_first_of(":");
-            std::string key = lines[i].substr(0, tend);
-            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) {
-                return std::tolower(c);
-            });
-            tbeg = tend + 1 + (lines[i][tend+1] == ' '? 1 : 0) ;
-            std::string value = lines[i].substr(tbeg);
-            this->m_filed_list[key] = value;
+            if (std::regex_match(lines[i], sub_match, e))
+            {
+                std::string key = std::move(sub_match[1]);
+                std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
+                               { return std::tolower(c); });
+                this->m_filed_list.emplace(std::make_pair(std::move(key), std::move(sub_match[2])));
+            }
+            else
+            {
+                state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+                return -1;
+            } 
         }
     }
 

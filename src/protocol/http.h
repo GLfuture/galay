@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <assert.h>
 #include <algorithm>
+#include <regex>
 
 namespace galay
 {
@@ -56,13 +57,8 @@ namespace galay
         void set_extra_msg(std::string&& msg) override;
 
     private:
-        // 解析版本号
-        int decode_version(std::string str, int index);
 
-        // 解析请求类型
-        int decode_method(std::string str, int index);
-
-        int decode_url(std::string str, int index);
+        int decode_url(std::string aurl);
 
         std::string encode_url(const std::string &s);
 
