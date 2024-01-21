@@ -1,4 +1,4 @@
-#include "../src/factory/factory.h"
+#include "../galay/factory/factory.h"
 #include <string.h>
 using namespace galay;
 

@@ -1,5 +1,5 @@
 
-#include "../src/factory/factory.h" 
+#include "../galay/factory/factory.h" 
 #include <nlohmann/json.hpp>
 
 using namespace galay;

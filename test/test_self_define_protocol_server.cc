@@ -1,5 +1,5 @@
-#include "../src/protocol/basic_protocol.h"
-#include "../src/factory/factory.h"
+#include "../galay/protocol/basic_protocol.h"
+#include "../galay/factory/factory.h"
 #include <cstring>
 #include <signal.h>
 

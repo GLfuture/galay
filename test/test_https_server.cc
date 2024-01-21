@@ -1,4 +1,4 @@
-#include "../src/factory/factory.h"
+#include "../galay/factory/factory.h"
 #include <nlohmann/json.hpp>
 #include <signal.h>
 using namespace galay;

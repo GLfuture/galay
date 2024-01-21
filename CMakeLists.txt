@@ -12,6 +12,17 @@ else()
   message(FATAL_ERROR "OpenSSL not found")
 endif()
 set(CMAKE_INSTALL_PREFIX ..)
-add_subdirectory(src)
+add_subdirectory(galay)
 
 add_subdirectory(test)
+
+set(HEADER_SRC_DIR galay)
+set(HEADER_DST_DIR include)
+
+
+install(DIRECTORY ${HEADER_SRC_DIR}
+        DESTINATION ${HEADER_DST_DIR}
+        FILES_MATCHING
+        PATTERN "*.h"
+)
+

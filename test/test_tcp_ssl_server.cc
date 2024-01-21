@@ -1,5 +1,5 @@
-#include "../src/factory/factory.h"
-#include "../src/kernel/error.h"
+#include "../galay/factory/factory.h"
+#include "../galay/kernel/error.h"
 #include <signal.h>
 
 using namespace galay;
