@@ -47,6 +47,14 @@ namespace galay
         // for  client
         std::string encode() override;
 
+        int proto_type() override;
+
+        int proto_fixed_len() override;
+
+        int proto_extra_len() override;
+
+        void set_extra_msg(std::string&& msg) override;
+
     private:
         // 解析版本号
         int decode_version(std::string str, int index);
@@ -159,6 +167,14 @@ namespace galay
         std::string encode();
 
         int decode(const std::string &buffer, int &state) override;
+
+        int proto_type() override;
+
+        int proto_fixed_len() override;
+
+        int proto_extra_len() override;
+
+        void set_extra_msg(std::string&& msg) override;
 
         // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
         const char *status_message(int status);

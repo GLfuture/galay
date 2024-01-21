@@ -78,12 +78,12 @@ int galay::iofunction::Tcp_Function::Accept(int fd)
     return accept(fd, (sockaddr *)&sin, &len);
 }
 
-ssize_t galay::iofunction::Tcp_Function::Recv(int fd , char *buffer,uint32_t len)
+ssize_t galay::iofunction::Tcp_Function::Recv(int fd , char *buffer , uint32_t len)
 {
     return recv(fd, buffer, len, 0);
 }
 
-ssize_t galay::iofunction::Tcp_Function::Send(int fd,const std::string& buffer,uint32_t len)
+ssize_t galay::iofunction::Tcp_Function::Send(int fd,const std::string& buffer , uint32_t len)
 {
     return send(fd, buffer.c_str() ,len,0);
 }
