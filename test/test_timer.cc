@@ -1,6 +1,6 @@
-#include "../src/factory/factory.h"
-#include "../src/util/md5.h"
-#include "../src/util/sha256.h"
+#include "../galay/factory/factory.h"
+#include "../galay/util/md5.h"
+#include "../galay/util/sha256.h"
 #include <fstream>
 #include <signal.h>
 
