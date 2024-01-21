@@ -16,10 +16,18 @@ namespace galay
 
         int get_error() { return this->m_error; }
 
-        virtual ~Client() { 
-            this->m_scheduler.lock()->del_task(this->m_fd);
+        void stop(){
+            if (!this->m_scheduler.expired() && !this->m_stop)
+            {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_stop = true;
+            }
         }
+
+        virtual ~Client();
+
     protected:
+        bool m_stop = false;
         int m_fd;
         int m_error;
         Scheduler_Base::wptr m_scheduler;
@@ -43,13 +51,7 @@ namespace galay
         //if >0 return the value that recv's length
         virtual Net_Awaiter<int> recv(char* buffer,int len);
 
-        virtual ~Tcp_Client()
-        {
-            if (!this->m_scheduler.expired())
-            {
-                this->m_scheduler.lock()->del_task(this->m_fd);
-            }
-        }
+        virtual ~Tcp_Client();
     };
 
     class Tcp_SSL_Client: public Tcp_Client

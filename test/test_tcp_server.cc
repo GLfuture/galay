@@ -6,22 +6,15 @@ using namespace galay;
 Task<> func(Task_Base::wptr t_task)
 {
     auto task = t_task.lock();
-    if(!task->get_ctx()){
-        int *a = new int(0);
-        task->set_ctx(a);
+    if(!task->get_ctx().has_value()){
+        task->get_ctx() = 0;
     }
-    auto ctx = (int *)(task->get_ctx());
+    int& ctx = std::any_cast<int&>(task->get_ctx());
     auto req = std::dynamic_pointer_cast<Tcp_Request>(task->get_req());
     auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
-    std::cout<<req->get_buffer()<<'\n';
+    if( ctx++ % 1000 == 0) std::cout<<"i :" << ctx << "  " <<req->get_buffer();
     resp->get_buffer() = "world!";
     task->control_task_behavior(Task_Status::GY_TASK_WRITE);
-    if ((*ctx)++ >= 5)
-    {
-        delete ctx;
-        task->set_ctx(nullptr);
-        task->finish();
-    }
     return {};
 }
 

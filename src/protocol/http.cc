@@ -32,6 +32,26 @@ std::string galay::Http_Request::get_arg_value(const std::string &key)
     return it->second;
 }
 
+int galay::Http_Request::proto_type()
+{
+    return GY_ALL_RECIEVE_PROTOCOL_TYPE;
+}
+
+int galay::Http_Request::proto_fixed_len()
+{
+    return 0;
+}
+
+int galay::Http_Request::proto_extra_len()
+{
+    return 0;
+}
+
+void galay::Http_Request::set_extra_msg(std::string&& msg)
+{
+
+}
+
 void galay::Http_Request::set_arg_kv_pair(std::pair<std::string, std::string> &&p_arg)
 {
     this->m_arg_list[p_arg.first] = p_arg.second;
@@ -504,6 +524,26 @@ int galay::Http_Response::decode(const std::string &buffer, int &state)
     }
     this->m_body = buffer.substr(beg, end - beg);
     return end + 4;
+}
+
+int galay::Http_Response::proto_type()
+{
+    return GY_ALL_RECIEVE_PROTOCOL_TYPE;
+}
+
+int galay::Http_Response::proto_fixed_len()
+{
+    return 0;
+}
+
+int galay::Http_Response::proto_extra_len()
+{
+    return 0;
+}
+
+void galay::Http_Response::set_extra_msg(std::string&& msg)
+{
+    
 }
 
 const char *galay::Http_Response::status_message(int status)

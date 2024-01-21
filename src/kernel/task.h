@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <algorithm>
 #include "base.h"
 #include "coroutine.h"
 #include "error.h"
@@ -112,8 +113,6 @@ namespace galay
             {
                 if (read_package() == -1)
                     return -1;
-                if (decode() == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
-                    return -1;
                 m_co_task = this->m_func(this->shared_from_this());
                 break;
             }
@@ -168,15 +167,6 @@ namespace galay
         }
 
     protected:
-        int decode()
-        {
-            int state = error::base_error::GY_SUCCESS;
-            int len = this->m_req->decode(this->m_rbuffer, state);
-            if (state == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
-                return state;
-            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
-            return state;
-        }
 
         void encode()
         {
@@ -185,28 +175,19 @@ namespace galay
 
         virtual int read_package()
         {
-            int len;
-            do
+            switch (m_req->proto_type())
             {
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-            } while (len != -1 && len != 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
+                //buffer read empty
+            case GY_ALL_RECIEVE_PROTOCOL_TYPE:
+                return read_all_buffer();
+                //fixed proto package
+            case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
+                return read_fixed_pakage();
+                //fixed head and head includes body's length
+            case GY_HEAD_FIXED_PROTOCOL_TYPE:
+                return read_fixed_head();
             }
-            else if (len == 0)
-            {
-                Task_Base::destory();
-                return -1;
-            }
-            return 0;
+            return -1;
         }
 
         virtual int send_package()
@@ -234,6 +215,123 @@ namespace galay
             return 0;
         }
 
+        int read_all_buffer()
+        {
+            int len;
+            do
+            {
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+            } while (len != -1 && len != 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            int status;
+            len = this->m_req->decode(this->m_rbuffer, status);
+            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                return -1;
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
+            return 0;
+        }
+
+        int read_fixed_pakage()
+        {
+            uint32_t remain_len = m_req->proto_fixed_len() - this->m_rbuffer.length();
+            int len = 1;
+            do{
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len,this->m_read_len));
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+                remain_len -= len;
+            }while(len != -1 && len != 0 && remain_len > 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            int status;
+            len = this->m_req->decode(this->m_rbuffer, status);
+            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                return -1;
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + m_req->proto_fixed_len());
+            return 0;
+        }
+
+        int read_fixed_head()
+        {
+            uint32_t remain_len = m_req->proto_fixed_len() - this->m_rbuffer.length();
+            int len = 1;
+            do{
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len,this->m_read_len));
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+                remain_len -= len;
+            }while(len != -1 && len != 0 && remain_len > 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            int status;
+            len = this->m_req->decode(this->m_rbuffer, status); //解析head 里面赋值 proto_extra_len , return head len
+            remain_len = m_req->proto_extra_len() + m_req->proto_fixed_len() - this->m_rbuffer.length();
+            do{
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len,this->m_read_len));
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+                remain_len -= len;
+            }while(len != -1 && len != 0 && remain_len > 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            if(remain_len != 0) return -1;
+            this->m_req->set_extra_msg(std::move(this->m_rbuffer.substr(m_req->proto_fixed_len())));
+            this->m_rbuffer.clear();
+            return 0;
+        }
+
+
     protected:
         char *m_temp = nullptr;
         std::weak_ptr<Scheduler_Base> m_scheduler;
@@ -254,7 +352,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_Main_Task>;
         Tcp_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler,
-                        std::function<Task<>(Task_Base::wptr)> &&func, uint32_t read_len)
+                        std::function<Task<>(Task_Base::wptr)> &&func, int read_len)
         {
             this->m_fd = fd;
             this->m_status = Task_Status::GY_TASK_READ;
@@ -345,29 +443,19 @@ namespace galay
     protected:
         int read_package() override
         {
-            this->m_error = error::base_error::GY_SUCCESS;
-            int len;
-            do
+            switch (this->m_req->proto_type())
             {
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl,this->m_temp,this->m_read_len);
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-            } while (len != -1 && len != 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
+                //buffer read empty
+            case GY_ALL_RECIEVE_PROTOCOL_TYPE:
+                return read_all_buffer();
+                //fixed proto package
+            case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
+                return read_fixed_pakage();
+                //fixed head and head includes body's length
+            case GY_HEAD_FIXED_PROTOCOL_TYPE:
+                return read_fixed_head();
             }
-            else if (len == 0)
-            {
-                Task_Base::destory();
-                return -1;
-            }
-            return 0;
+            return -1;
         }
 
         int send_package() override
@@ -392,6 +480,122 @@ namespace galay
                 Task_Base::destory();
                 return -1;
             } 
+            return 0;
+        }
+
+        int read_all_buffer()
+        {
+            int len;
+            do
+            {
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+            } while (len != -1 && len != 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            int status;
+            len = this->m_req->decode(this->m_rbuffer, status);
+            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                return -1;
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
+            return 0;
+        }
+
+        int read_fixed_pakage()
+        {
+            uint32_t remain_len = this->m_req->proto_fixed_len();
+            int len ;
+            do{
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, std::min(remain_len,this->m_read_len));
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+                remain_len -= len;
+            }while(len != -1 && len != 0 && remain_len > 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            int status;
+            len = this->m_req->decode(this->m_rbuffer, status);
+            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+                return -1;
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
+            return 0;
+        }
+
+        int read_fixed_head()
+        {
+            uint32_t remain_len = this->m_req->proto_fixed_len() - this->m_rbuffer.length();
+            int len = 1;
+            do{
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, std::min(remain_len,this->m_read_len));
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+                remain_len -= len;
+            }while(len != -1 && len != 0 && remain_len > 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            int status;
+            len = this->m_req->decode(this->m_rbuffer, status); //解析head 里面赋值 proto_extra_len , return head len
+            remain_len = this->m_req->proto_extra_len() + this->m_req->proto_fixed_len() - this->m_rbuffer.length();
+            do{
+                memset(this->m_temp, 0, this->m_read_len);
+                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, std::min(remain_len,this->m_read_len));
+                if (len != -1 && len != 0)
+                    this->m_rbuffer.append(this->m_temp, len);
+                remain_len -= len;
+            }while(len != -1 && len != 0 && remain_len > 0);
+            if (len == -1)
+            {
+                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    Task_Base::destory();
+                    return -1;
+                }
+            }
+            else if (len == 0)
+            {
+                Task_Base::destory();
+                return -1;
+            }
+            if(remain_len != 0) return -1;
+            this->m_req->set_extra_msg(std::move(this->m_rbuffer.substr(this->m_req->proto_fixed_len())));
+            this->m_rbuffer.clear();
             return 0;
         }
 

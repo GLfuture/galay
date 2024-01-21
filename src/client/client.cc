@@ -1,5 +1,14 @@
 #include "client.h"
 
+galay::Client::~Client()
+{
+    if (!this->m_scheduler.expired() && !this->m_stop)
+    {
+        this->m_scheduler.lock()->del_task(this->m_fd);
+        this->m_stop = true;
+    }
+}
+
 galay::Tcp_Client::Tcp_Client(Scheduler_Base::wptr scheduler)
     : Client(scheduler)
 {
@@ -108,6 +117,10 @@ galay::Net_Awaiter<int> galay::Tcp_Client::recv(char *buffer, int len)
     return Net_Awaiter<int>{nullptr, ret};
 }
 
+galay::Tcp_Client::~Tcp_Client()
+{
+    
+}
 
 galay::Tcp_SSL_Client::Tcp_SSL_Client(Scheduler_Base::wptr scheduler, long ssl_min_version, long ssl_max_version)
     : Tcp_Client(scheduler)

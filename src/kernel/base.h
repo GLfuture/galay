@@ -2,6 +2,7 @@
 #define GALAY_BASE_H
 
 #include <memory>
+#include <any>
 #include "basic_concepts.h"
 #include "../protocol/basic_protocol.h"
 #include "../config/config.h"
@@ -56,25 +57,21 @@ namespace galay
 
         virtual void finish() { this->m_is_finish = true; }
 
-        virtual void set_ctx(void *ctx)
-        {
-            if (!this->m_ctx)
-                this->m_ctx = ctx;
-        }
-
-        virtual void *get_ctx() { return this->m_ctx; }
+        virtual std::any& get_ctx() { return this->m_ctx; }
 
         virtual void destory() { this->m_destroy = true; }
 
         virtual bool is_destroy() { return this->m_destroy; }
 
-        virtual ~Task_Base() {}
+        virtual ~Task_Base() {
+            
+        }
 
     protected:
         int m_status;
         bool m_is_finish = false;
         bool m_destroy = false;
-        void *m_ctx = nullptr;
+        std::any m_ctx;
     };
 
 

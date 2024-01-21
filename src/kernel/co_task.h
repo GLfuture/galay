@@ -463,8 +463,15 @@ namespace galay
             case Task_Status::GY_TASK_WRITE :
             {
                 std::string request = m_request->encode();
-                int ret = iofunction::Tcp_Function::SSL_Send(this->m_ssl, request, request.length());
-                if (ret == -1)
+                int len;
+                do{
+                    len = iofunction::Tcp_Function::SSL_Send(this->m_ssl, request, request.length());
+                    if (len != -1 && len != 0)
+                        request.erase(request.begin(),request.begin() + len);
+                    if (request.empty())
+                        break;
+                } while (len != 0 && len != -1);
+                if (len == -1)
                 {
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                     {
@@ -476,14 +483,14 @@ namespace galay
                         this->m_result = -1;
                     }
                 }
-                else if (ret == 0)
+                else if (len == 0)
                 {
                     *(this->m_error) = error::GY_SEND_ERROR;
                     this->m_result = -1;
                 }
-                else if( ret == request.length())
+                else if(request.empty())
                 {
-                    this->m_result = ret;
+                    this->m_result = len;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
                     if(!m_scheduler.expired()) 

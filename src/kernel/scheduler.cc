@@ -61,7 +61,7 @@ int galay::Epoll_Scheduler::get_event_size() const
 
 int galay::Epoll_Scheduler::add_event(int fd , int event_type)
 {
-    epoll_event ev;
+    epoll_event ev = {0};
     ev.data.fd = fd;
     if((event_type & GY_EVENT_READ) != 0)
     {
@@ -84,7 +84,7 @@ int galay::Epoll_Scheduler::add_event(int fd , int event_type)
 
 int galay::Epoll_Scheduler::del_event(int fd , int event_type)
 {
-    epoll_event ev;
+    epoll_event ev = {0};
     ev.data.fd = fd;
     if((event_type & GY_EVENT_READ) != 0)
     {
@@ -103,7 +103,7 @@ int galay::Epoll_Scheduler::del_event(int fd , int event_type)
 
 int galay::Epoll_Scheduler::mod_event(int fd, int from , int to)
 {
-    epoll_event ev;
+    epoll_event ev = {0};
     ev.data.fd = fd;
     if((to & GY_EVENT_READ) != 0)
     {
