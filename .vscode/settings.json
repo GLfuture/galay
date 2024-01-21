@@ -70,6 +70,8 @@
         "span": "cpp",
         "valarray": "cpp",
         "shared_mutex": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "regex": "cpp",
+        "bitset": "cpp"
     }
 }

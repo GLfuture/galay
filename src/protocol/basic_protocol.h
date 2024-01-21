@@ -9,7 +9,7 @@ namespace galay
     enum Proto_Type{
         GY_PACKAGE_FIXED_PROTOCOL_TYPE,  //固定长度包的协议
         GY_HEAD_FIXED_PROTOCOL_TYPE,     //固定头长的协议,头中含有length字段
-        GY_ALL_RECIEVE_PROTOCOL_TYPE,    //把缓冲区读空，适用于一请求一回应
+        GY_ALL_RECIEVE_PROTOCOL_TYPE,    //把读缓冲区读空，适用于一请求一回应
     };
 
 
