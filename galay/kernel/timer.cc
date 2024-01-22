@@ -52,7 +52,26 @@ uint32_t &galay::Timer::get_exec_times()
 
 void galay::Timer::exec()
 {
+    this->m_is_finish = false;
     this->m_func();
+    if(this->m_exec_times == 0) this->m_is_finish = true;
+}
+
+// 取消任务
+void galay::Timer::cancle()
+{
+    this->m_cancle = true;
+}
+
+bool galay::Timer::is_cancled()
+{
+    return this->m_cancle;
+}
+
+// 是否已经完成
+bool galay::Timer::is_finish()
+{
+    return this->m_is_finish;
 }
 
 //timermanager
@@ -88,12 +107,6 @@ void galay::Timer_Manager::update_time()
         .it_interval = {},
         .it_value = abstime};
     timerfd_settime(this->m_timerfd, 0, &its, nullptr);
-}
-
-void galay::Timer_Manager::add_timer(Timer::ptr timer)
-{
-    std::unique_lock<std::shared_mutex> lock(this->m_mtx);
-    this->m_timers.push(timer);
 }
 
 galay::Timer::ptr galay::Timer_Manager::get_ealist_timer()

@@ -90,13 +90,7 @@ namespace galay
 
         static Https_Client::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
     };
-
-    class Timer_Factory: public Factory_Base
-    {
-    public:
-        static Timer::ptr create_timer(uint64_t during , uint32_t exec_times, std::function<void()> &&func);
-    };
-
+    
     //pool factory
     class Pool_Factory: public Factory_Base
     {
