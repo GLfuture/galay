@@ -139,12 +139,6 @@ galay::Https_Client::ptr galay::Client_Factory::create_https_client(Scheduler_Ba
 }
 
 
-//timer
-galay::Timer::ptr galay::Timer_Factory::create_timer(uint64_t during , uint32_t exec_times , std::function<void()> &&func)
-{
-    return std::make_shared<Timer>(during , exec_times , std::forward<std::function<void()>>(func));
-}
-
 //pool
 //threadpool
 galay::ThreadPool::ptr galay::Pool_Factory::create_threadpool(int num)
