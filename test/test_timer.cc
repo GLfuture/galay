@@ -18,7 +18,7 @@ int main()
 {
     signal(SIGINT,sig_handle);
     scheduler = Scheduler_Factory::create_select_scheduler(0);
-    scheduler->get_timer_manager()->add_timer(Timer_Factory::create_timer(500, 1, []() {
+    auto timer = scheduler->get_timer_manager()->add_timer(1000, 1, []() ->void {
         std::ifstream in("/home/gong/projects/galay/1.txt");
         if(in.fail()){
             std::cout<<"fail\n";
@@ -30,8 +30,11 @@ int main()
         std::cout<<Md5Util::md5_encode(str)<<'\n';
         std::cout << Sha256Util::sha256_encode(str) << '\n';
 
-    }));
-
+    });
+    scheduler->get_timer_manager()->add_timer(100,1,[timer](){
+        timer->cancle();
+        std::cout<<"cancle\n";
+    });
     scheduler->start();
     return 0;
 }
