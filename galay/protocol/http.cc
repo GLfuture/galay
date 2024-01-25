@@ -1,17 +1,17 @@
 #include "http.h"
 #include <iostream>
 
-std::string &galay::Http_Protocol::get_version()
+std::string& galay::Http_Protocol::get_version()
 {
     return this->m_version;
 }
 
-std::string &galay::Http_Protocol::get_body()
+std::string& galay::Http_Protocol::get_body()
 {
     return this->m_body;
 }
 
-std::string galay::Http_Protocol::get_head_value(const std::string &key)
+std::string galay::Http_Protocol::get_head_value(const std::string& key)
 {
     auto it = this->m_filed_list.find(key);
     if (it == this->m_filed_list.end())
@@ -19,12 +19,12 @@ std::string galay::Http_Protocol::get_head_value(const std::string &key)
     return it->second;
 }
 
-void galay::Http_Protocol::set_head_kv_pair(std::pair<std::string, std::string> &&p_head)
+void galay::Http_Protocol::set_head_kv_pair(std::pair<std::string, std::string>&& p_head)
 {
     this->m_filed_list[p_head.first] = p_head.second;
 }
 
-std::string galay::Http_Request::get_arg_value(const std::string &key)
+std::string galay::Http_Request::get_arg_value(const std::string& key)
 {
     auto it = this->m_arg_list.find(key);
     if (it == this->m_arg_list.end())
@@ -52,22 +52,22 @@ void galay::Http_Request::set_extra_msg(std::string&& msg)
 
 }
 
-void galay::Http_Request::set_arg_kv_pair(std::pair<std::string, std::string> &&p_arg)
+void galay::Http_Request::set_arg_kv_pair(std::pair<std::string, std::string>&& p_arg)
 {
     this->m_arg_list[p_arg.first] = p_arg.second;
 }
 
-std::string &galay::Http_Request::get_method()
+std::string& galay::Http_Request::get_method()
 {
     return this->m_method;
 }
 
-std::string &galay::Http_Request::get_url_path()
+std::string& galay::Http_Request::get_url_path()
 {
     return this->m_url_path;
 }
 
-int galay::Http_Request::decode(const std::string &buffer, int &state)
+int galay::Http_Request::decode(const std::string& buffer, int& state)
 {
     state = error::base_error::GY_SUCCESS;
     int beg = 0;
@@ -90,26 +90,28 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
     } while (hend != std::string::npos);
     std::regex e("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
     std::smatch sub_match;
-    if(std::regex_match(lines[0], sub_match, e)) {
+    if (std::regex_match(lines[0], sub_match, e)) {
         this->m_method = sub_match[1];
         decode_url(std::move(sub_match[2]));
         this->m_version = sub_match[3];
-    }else{
+    }
+    else {
         state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
         return -1;
     }
 
     e = "^([^:]*): ?(.*)$";
-    for(int i = 1; i < lines.size(); i++)
+    for (int i = 1; i < lines.size(); i++)
     {
         if (std::regex_match(lines[i], sub_match, e))
         {
             std::string key = std::move(sub_match[1]);
             std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) {
                 return std::tolower(c);
-            });
-            this->m_filed_list.emplace(std::make_pair(std::move(key),std::move(sub_match[2])));
-        }else 
+                });
+            this->m_filed_list.emplace(std::make_pair(std::move(key), std::move(sub_match[2])));
+        }
+        else
         {
             state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
             return -1;
@@ -127,9 +129,9 @@ int galay::Http_Request::decode(const std::string &buffer, int &state)
         }
         this->m_body = buffer.substr(beg, content_len);
         int ret_len = beg + content_len;
-        if(buffer.length() == ret_len) return ret_len;
-        if(buffer.length() - 2 >= ret_len && buffer.substr(ret_len,2).compare("\r\n") == 0) return ret_len+2;
-        if(buffer.length() - 4 >= ret_len && buffer.substr(ret_len,4).compare("\r\n\r\n") == 0) return ret_len+4;
+        if (buffer.length() == ret_len) return ret_len;
+        if (buffer.length() - 2 >= ret_len && buffer.substr(ret_len, 2).compare("\r\n") == 0) return ret_len + 2;
+        if (buffer.length() - 4 >= ret_len && buffer.substr(ret_len, 4).compare("\r\n\r\n") == 0) return ret_len + 4;
     }
     if (beg >= buffer.length() - 1)
         return beg;
@@ -147,7 +149,7 @@ std::string galay::Http_Request::encode()
 {
     std::string res = this->m_method + " ";
     std::string args;
-    for (auto &[k, v] : m_arg_list)
+    for (auto& [k, v] : m_arg_list)
     {
         args = args + k + '=' + v + '&';
     }
@@ -160,12 +162,12 @@ std::string galay::Http_Request::encode()
     {
         res += encode_url(std::move(this->m_url_path));
     }
-    res = res + " HTTP/" +  this->m_version + "\r\n";
-    for (auto &[k, v] : m_filed_list)
+    res = res + " HTTP/" + this->m_version + "\r\n";
+    for (auto& [k, v] : m_filed_list)
     {
         res = res + k + ": " + v + "\r\n";
     }
-    if (m_filed_list.find("content-length") == m_filed_list.end())
+    if (!m_filed_list.contains("content-length")&& !m_filed_list.contains("Content-Length"))
     {
         res = res + "content-length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
@@ -174,7 +176,7 @@ std::string galay::Http_Request::encode()
     {
         res.append(std::move(this->m_body));
     }
-    res.append(std::move("\r\n\r\n"));
+    res.append("\r\n\r\n");
     return res;
 }
 
@@ -226,7 +228,7 @@ int galay::Http_Request::decode_url(std::string aurl)
     return 0;
 }
 
-std::string galay::Http_Request::encode_url(const std::string &s)
+std::string galay::Http_Request::encode_url(const std::string& s)
 {
     std::string result;
     result.reserve(s.size());
@@ -252,7 +254,7 @@ std::string galay::Http_Request::encode_url(const std::string &s)
         case ',':
             result += "%2C";
             break;
-        // case ':': result += "%3A"; break; // ok? probably...
+            // case ':': result += "%3A"; break; // ok? probably...
         case ';':
             result += "%3B";
             break;
@@ -277,7 +279,7 @@ std::string galay::Http_Request::encode_url(const std::string &s)
     return result;
 }
 
-std::string galay::Http_Request::decode_url(const std::string &s, bool convert_plus_to_space)
+std::string galay::Http_Request::decode_url(const std::string& s, bool convert_plus_to_space)
 {
     std::string result;
 
@@ -330,7 +332,7 @@ std::string galay::Http_Request::decode_url(const std::string &s, bool convert_p
     return result;
 }
 
-bool galay::Http_Request::is_hex(char c, int &v)
+bool galay::Http_Request::is_hex(char c, int& v)
 {
     if (0x20 <= c && isdigit(c))
     {
@@ -350,7 +352,7 @@ bool galay::Http_Request::is_hex(char c, int &v)
     return false;
 }
 
-size_t galay::Http_Request::to_utf8(int code, char *buff)
+size_t galay::Http_Request::to_utf8(int code, char* buff)
 {
     if (code < 0x0080)
     {
@@ -392,7 +394,7 @@ size_t galay::Http_Request::to_utf8(int code, char *buff)
     return 0;
 }
 
-bool galay::Http_Request::from_hex_to_i(const std::string &s, size_t i, size_t cnt, int &val)
+bool galay::Http_Request::from_hex_to_i(const std::string& s, size_t i, size_t cnt, int& val)
 {
     if (i >= s.size())
     {
@@ -419,7 +421,7 @@ bool galay::Http_Request::from_hex_to_i(const std::string &s, size_t i, size_t c
     return true;
 }
 
-int &galay::Http_Response::get_status()
+int& galay::Http_Response::get_status()
 {
     return this->m_status;
 }
@@ -428,12 +430,12 @@ std::string galay::Http_Response::encode()
 {
     std::string res = "HTTP/";
     res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + status_message(this->m_status) + "\r\n";
-    for (auto &[k, v] : this->m_filed_list)
+    for (auto& [k, v] : this->m_filed_list)
     {
         res = res + k + ": " + v + "\r\n";
     }
-    if(!this->m_filed_list.contains("content-length")){
-        res = res + "content-length: " + std::to_string(this->m_body.length()) + "\r\n";
+    if (!this->m_filed_list.contains("content-length") && !this->m_filed_list.contains("Content-Length")) {
+        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
     res.append(this->m_body);
@@ -441,8 +443,9 @@ std::string galay::Http_Response::encode()
     return res;
 }
 
-int galay::Http_Response::decode(const std::string &buffer, int &state)
+int galay::Http_Response::decode(const std::string& buffer, int& state)
 {
+    state = error::base_error::GY_SUCCESS;
     int beg = 0;
     int end = buffer.find("\r\n\r\n");
     if (end == std::string::npos)
@@ -478,14 +481,14 @@ int galay::Http_Response::decode(const std::string &buffer, int &state)
             {
                 std::string key = std::move(sub_match[1]);
                 std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
-                               { return std::tolower(c); });
+                    { return std::tolower(c); });
                 this->m_filed_list.emplace(std::make_pair(std::move(key), std::move(sub_match[2])));
             }
             else
             {
                 state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
                 return -1;
-            } 
+            }
         }
     }
 
@@ -533,10 +536,10 @@ int galay::Http_Response::proto_extra_len()
 
 void galay::Http_Response::set_extra_msg(std::string&& msg)
 {
-    
+
 }
 
-const char *galay::Http_Response::status_message(int status)
+const char* galay::Http_Response::status_message(int status)
 {
     switch (status)
     {
