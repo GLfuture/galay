@@ -176,7 +176,7 @@ namespace galay
         const char *status_message(int status);
 
     private:
-        int m_status;
+        int m_status = 0;
     };
 
 }

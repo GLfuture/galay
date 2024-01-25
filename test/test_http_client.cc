@@ -30,8 +30,16 @@ Task<> func(Scheduler_Base::ptr scheduler)
 int main()
 {
     //auto scheduler = Scheduler_Factory::create_epoll_scheduler(1,5);
-    auto scheduler = Scheduler_Factory::create_select_scheduler(5);
-    Task<> t = func(scheduler);
-    scheduler->start();
+    Http_Request req;
+    req.get_method() = "POST";
+    req.get_url_path() = "/api/login";
+    req.get_version() = "1.1";
+    std::string body = "hello world!";
+    req.get_body() = body;
+    req.set_head_kv_pair({"Content-Length",std::to_string(body.length())});
+    std::cout<<req.encode();
+    //auto scheduler = Scheduler_Factory::create_select_scheduler(5);
+    //Task<> t = func(scheduler);
+    //scheduler->start();
     return 0;
 }
