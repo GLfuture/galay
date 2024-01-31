@@ -79,18 +79,6 @@ galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_confi
 
 
 //server
-galay::Tcp_Server<galay::protocol::Tcp_Request,galay::protocol::Tcp_Response>::ptr galay::Server_Factory::create_tcp_server(Tcp_Server_Config::ptr config 
-    ,Scheduler_Base::ptr scheduler)
-{
-    return std::make_shared<Tcp_Server<protocol::Tcp_Request,protocol::Tcp_Response>>(config,scheduler);
-}
-
-galay::Tcp_SSL_Server<galay::protocol::Tcp_Request,galay::protocol::Tcp_Response>::ptr galay::Server_Factory::create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config
-     ,Scheduler_Base::ptr scheduler)
-{
-    return std::make_shared<Tcp_SSL_Server<protocol::Tcp_Request,protocol::Tcp_Response>>(config,scheduler);
-}
-
 galay::Tcp_Server<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>::ptr galay::Server_Factory::create_http_server(Http_Server_Config::ptr config
      ,Scheduler_Base::ptr scheduler)
 {

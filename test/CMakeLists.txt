@@ -2,13 +2,9 @@ project(test_server)
 include_directories(../src)
 set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
-    test_tcp_server.cc
     test_http_server.cc
-    test_tcp_ssl_server.cc
     test_https_server.cc
-    test_tcp_client.cc
     test_http_client.cc
-    test_tcp_ssl_client.cc
     test_https_client.cc
     test_timer.cc
     test_threadpool.cc

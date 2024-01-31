@@ -6,7 +6,6 @@ Task<> func(Task_Base::wptr t_task)
 {
     auto task = t_task.lock();
     auto req = std::dynamic_pointer_cast<protocol::Http1_1_Request>(task->get_req());
-    std::cout<<req->get_url_path();
     auto resp = std::dynamic_pointer_cast<protocol::Http1_1_Response>(task->get_resp());
     if(task->get_scheduler() ==nullptr) std::cout<<"NULL\n";
     auto client = Client_Factory::create_http_client(task->get_scheduler());
@@ -23,7 +22,15 @@ Task<> func(Task_Base::wptr t_task)
     if(client->get_error() == error::GY_SUCCESS) std::cout<<"request success\n";
     else std::cout<<"request failed error is "<<client->get_error()<<'\n';
     //std::cout<<resp->encode();
-    task->finish();
+    if(!task->get_ctx().has_value()){
+        task->get_ctx() = 1;
+    }else{
+        int& ctx = std::any_cast<int&>(task->get_ctx());
+        if( ++ctx == 2) {
+            std::cout<<"task finish\n";
+            task->finish();
+        }
+    }
     task->control_task_behavior(Task_Status::GY_TASK_WRITE);
     co_return;
 }
