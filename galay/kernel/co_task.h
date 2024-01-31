@@ -2,7 +2,6 @@
 #define GALAY_CO_TASK_H
 
 #include "task.h"
-#include "../protocol/tcp.h"
 #include "../protocol/http1_1.h"
 
 

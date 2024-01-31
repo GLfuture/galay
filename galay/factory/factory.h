@@ -4,15 +4,11 @@
 #include "../config/config.h"
 #include "../server/server.h"
 #include "../client/client.h"
-#include "../protocol/tcp.h"
 #include "../protocol/http1_1.h"
 #include "../kernel/threadpool.h"
 
 namespace galay
 {
-
-    using TcpServer = Tcp_Server<protocol::Tcp_Request,protocol::Tcp_Response>::ptr;
-    using TcpSSLServer = Tcp_SSL_Server<protocol::Tcp_Request,protocol::Tcp_Response>::ptr;
     using HttpServer = Tcp_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr;
     using HttpsServer = Tcp_SSL_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr;
 
@@ -57,10 +53,6 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Server_Factory>;
-        //tcp
-        static TcpServer create_tcp_server(Tcp_Server_Config::ptr config , Scheduler_Base::ptr scheduler);
-        //tcp ssl
-        static TcpSSLServer create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
         //http
         static HttpServer create_http_server(Http_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
         //https
