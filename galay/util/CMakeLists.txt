@@ -6,6 +6,7 @@ set(SRC_LIST
     base64.cc
     md5.cc
     sha256.cc
+    conf_parser.cc
     )
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})

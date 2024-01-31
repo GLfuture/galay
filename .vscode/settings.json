@@ -72,6 +72,7 @@
         "shared_mutex": "cpp",
         "future": "cpp",
         "regex": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "unordered_set": "cpp"
     }
 }

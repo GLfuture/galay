@@ -10,8 +10,8 @@ Task<> func(Task_Base::wptr t_task)
         task->get_ctx() = 0;
     }
     int& ctx = std::any_cast<int&>(task->get_ctx());
-    auto req = std::dynamic_pointer_cast<Tcp_Request>(task->get_req());
-    auto resp = std::dynamic_pointer_cast<Tcp_Response>(task->get_resp());
+    auto req = std::dynamic_pointer_cast<protocol::Tcp_Request>(task->get_req());
+    auto resp = std::dynamic_pointer_cast<protocol::Tcp_Response>(task->get_resp());
     if( ctx++ % 1000 == 0) std::cout<<"i :" << ctx << "  " <<req->get_buffer();
     resp->get_buffer() = "world!";
     task->control_task_behavior(Task_Status::GY_TASK_WRITE);

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 project(protocol)
 
 set(SRC_LIST 
-    http.cc
+    http1_1.cc
     tcp.cc
     )
 
