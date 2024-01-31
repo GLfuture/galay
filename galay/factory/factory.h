@@ -5,16 +5,16 @@
 #include "../server/server.h"
 #include "../client/client.h"
 #include "../protocol/tcp.h"
-#include "../protocol/http.h"
+#include "../protocol/http1_1.h"
 #include "../kernel/threadpool.h"
 
 namespace galay
 {
 
-    using TcpServer = Tcp_Server<Tcp_Request,Tcp_Response>::ptr;
-    using TcpSSLServer = Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr;
-    using HttpServer = Tcp_Server<Http_Request,Http_Response>::ptr;
-    using HttpsServer = Tcp_SSL_Server<Http_Request,Http_Response>::ptr;
+    using TcpServer = Tcp_Server<protocol::Tcp_Request,protocol::Tcp_Response>::ptr;
+    using TcpSSLServer = Tcp_SSL_Server<protocol::Tcp_Request,protocol::Tcp_Response>::ptr;
+    using HttpServer = Tcp_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr;
+    using HttpsServer = Tcp_SSL_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr;
 
     class Factory_Base
     {

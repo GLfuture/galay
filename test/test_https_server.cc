@@ -91,8 +91,8 @@ const char* global_picture_id[] = {
 Task<> func(Task_Base::wptr task)
 {
     auto t_task = task.lock();
-    auto req = std::dynamic_pointer_cast<Http_Request>(t_task->get_req());
-    auto resp = std::dynamic_pointer_cast<Http_Response>(t_task->get_resp());
+    auto req = std::dynamic_pointer_cast<protocol::Http1_1_Request>(t_task->get_req());
+    auto resp = std::dynamic_pointer_cast<protocol::Http1_1_Response>(t_task->get_resp());
 
     if (req->get_method().compare("GET") == 0)
     {

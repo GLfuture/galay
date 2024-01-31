@@ -3,7 +3,7 @@
 
 #include "task.h"
 #include "../protocol/tcp.h"
-#include "../protocol/http.h"
+#include "../protocol/http1_1.h"
 
 
 namespace galay
@@ -166,7 +166,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Http_Request_Task>;
-        Http_Request_Task(int fd , Scheduler_Base::wptr scheduler , Http_Request::ptr request , Http_Response::ptr response , int *error)
+        Http_Request_Task(int fd , Scheduler_Base::wptr scheduler , protocol::Http1_1_Request::ptr request , protocol::Http1_1_Response::ptr response , int *error)
         {
             this->m_fd = fd;
             this->m_request = request;
@@ -278,8 +278,8 @@ namespace galay
         int m_fd;
         char* m_tempbuffer;
         std::string m_buffer;
-        Http_Request::ptr m_request;
-        Http_Response::ptr m_respnse;
+        protocol::Http1_1_Request::ptr m_request;
+        protocol::Http1_1_Response::ptr m_respnse;
         Scheduler_Base::wptr m_scheduler;
         int* m_error;
     };
@@ -444,7 +444,7 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Https_Request_Task>;
-        Https_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , Http_Request::ptr request , Http_Response::ptr response , int *error)
+        Https_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , protocol::Http1_1_Request::ptr request , protocol::Http1_1_Response::ptr response , int *error)
         {
             this->m_fd = fd;
             this->m_ssl = ssl;
@@ -566,8 +566,8 @@ namespace galay
         SSL* m_ssl;
         char* m_tempbuffer;
         std::string m_buffer;
-        Http_Request::ptr m_request;
-        Http_Response::ptr m_respnse;
+        protocol::Http1_1_Request::ptr m_request;
+        protocol::Http1_1_Response::ptr m_respnse;
         Scheduler_Base::wptr m_scheduler;
         int* m_error;
     };

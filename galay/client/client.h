@@ -86,7 +86,7 @@ namespace galay
             :Tcp_Client(scheduler) {}
 
 
-        Net_Awaiter<int> request(Http_Request::ptr request,Http_Response::ptr response);
+        Net_Awaiter<int> request(protocol::Http1_1_Request::ptr request,protocol::Http1_1_Response::ptr response);
 
     private:
         Net_Awaiter<int> send(const std::string &buffer,uint32_t len) override { return {nullptr} ;}
@@ -100,7 +100,7 @@ namespace galay
         using ptr = std::shared_ptr<Https_Client>;
         Https_Client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
             :Tcp_SSL_Client(scheduler, ssl_min_version ,ssl_max_version){}
-        Net_Awaiter<int> request(Http_Request::ptr request,Http_Response::ptr response);
+        Net_Awaiter<int> request(protocol::Http1_1_Request::ptr request,protocol::Http1_1_Response::ptr response);
     private:
         Net_Awaiter<int> send(const std::string &buffer,uint32_t len) override { return {nullptr} ;}
         Net_Awaiter<int> recv(char* buffer,int len) override { return {nullptr} ;}

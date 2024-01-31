@@ -243,7 +243,7 @@ galay::Tcp_SSL_Client::~Tcp_SSL_Client()
     }
 }
 
-galay::Net_Awaiter<int> galay::Http_Client::request(Http_Request::ptr request, Http_Response::ptr response)
+galay::Net_Awaiter<int> galay::Http_Client::request(protocol::Http1_1_Request::ptr request, protocol::Http1_1_Response::ptr response)
 {
     if (!this->m_scheduler.expired())
     {
@@ -259,7 +259,7 @@ galay::Net_Awaiter<int> galay::Http_Client::request(Http_Request::ptr request, H
 }
 
 
-galay::Net_Awaiter<int> galay::Https_Client::request(Http_Request::ptr request,Http_Response::ptr response)
+galay::Net_Awaiter<int> galay::Https_Client::request(protocol::Http1_1_Request::ptr request,protocol::Http1_1_Response::ptr response)
 {
     if (!this->m_scheduler.expired())
     {
