@@ -51,7 +51,7 @@ namespace galay
 
     // tcp
     // server read and write task
-    template <Request REQ, Response RESP>
+    template <Tcp_Request REQ, Tcp_Response RESP>
     class Tcp_RW_Task : public Task_Base, public std::enable_shared_from_this<Tcp_RW_Task<REQ,RESP>>
     {
     protected:
@@ -101,8 +101,8 @@ namespace galay
                 }
             }
         }
-        Request_Base::ptr get_req() override { return this->m_req; }
-        Response_Base::ptr get_resp() override { return this->m_resp; }
+        Tcp_Request_Base::ptr get_req() override { return this->m_req; }
+        Tcp_Response_Base::ptr get_resp() override { return this->m_resp; }
 
         // return -1 to delete this task from server
         int exec() override
@@ -346,7 +346,7 @@ namespace galay
         int m_error;
     };
 
-    template <Request REQ, Response RESP>
+    template <Tcp_Request REQ, Tcp_Response RESP>
     class Tcp_Main_Task : public Task_Base
     {
     public:
@@ -421,7 +421,7 @@ namespace galay
         int m_retry;
     };
 
-    template <Request REQ, Response RESP>
+    template <Tcp_Request REQ, Tcp_Response RESP>
     class Tcp_SSL_RW_Task : public Tcp_RW_Task<REQ,RESP>
     {
     public:
@@ -604,7 +604,7 @@ namespace galay
     };
 
     // tcp's ssl task
-    template <Request REQ, Response RESP>
+    template <Tcp_Request REQ, Tcp_Response RESP>
     class Tcp_SSL_Main_Task : public Tcp_Main_Task<REQ,RESP>
     {
     public:
@@ -684,6 +684,8 @@ namespace galay
         SSL_CTX *m_ctx;
         uint32_t m_ssl_accept_retry;
     };
+
+    
 
     // time task
     class Time_Task : public Task_Base

@@ -33,7 +33,7 @@ namespace galay
     };
 
     //tcp_server
-    template<Request REQ,Response RESP>
+    template<Tcp_Request REQ,Tcp_Response RESP>
     class Tcp_Server : public Server
     {
     public:
@@ -99,7 +99,7 @@ namespace galay
         }
     };
 
-    template<Request REQ,Response RESP>
+    template<Tcp_Request REQ,Tcp_Response RESP>
     class Tcp_SSL_Server: public Tcp_Server<REQ,RESP>
     {
     public:
@@ -151,9 +151,19 @@ namespace galay
     };
 
     // to do
+    template<Tcp_Request REQ,Tcp_Response RESP>
     class Udp_Server : public Server
     {
     public:
+        Udp_Server(Udp_Server_Config::ptr config,Scheduler_Base::ptr scheduler)
+        {
+            
+        }
+
+        void start(std::function<Task<>(std::weak_ptr<Task_Base>)> &&func)
+        {
+
+        }
     };
 
 }

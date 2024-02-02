@@ -84,3 +84,20 @@ galay::Https_Server_Config::Https_Server_Config(Https_Server_Config &&other)
     : Tcp_SSL_Server_Config(std::forward<Https_Server_Config>(other))
 {
 }
+
+//udp server
+
+galay::Udp_Server_Config::Udp_Server_Config(uint16_t port)
+{
+    this->m_port = port;
+}
+
+galay::Udp_Server_Config::Udp_Server_Config(Udp_Server_Config&& other)
+{
+    this->m_port = other.m_port;
+}
+
+galay::Udp_Server_Config::Udp_Server_Config(const Udp_Server_Config& other)
+{
+    this->m_port = other.m_port;
+}

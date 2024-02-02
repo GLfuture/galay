@@ -31,7 +31,7 @@ namespace galay
             std::string m_body = "";                                   // body
         };
 
-        class Http1_1_Request : public Http1_1_Protocol, public Request_Base, public Response_Base
+        class Http1_1_Request : public Http1_1_Protocol, public Tcp_Request_Base, public Tcp_Response_Base
         {
         public:
             using ptr = std::shared_ptr<Http1_1_Request>;
@@ -78,7 +78,7 @@ namespace galay
             std::unordered_map<std::string, std::string> m_arg_list; // 参数
         };
 
-        class Http1_1_Response : public Http1_1_Protocol, public Response_Base, public Request_Base
+        class Http1_1_Response : public Http1_1_Protocol, public Tcp_Response_Base, public Tcp_Request_Base
         {
         public:
             using ptr = std::shared_ptr<Http1_1_Response>;

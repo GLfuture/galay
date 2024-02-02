@@ -11,13 +11,14 @@ struct self_head
     int length;
 };
 
-class Self_Request: public Request_Base
+class Self_Request: public Tcp_Request_Base
 {
 public:
     using ptr = std::shared_ptr<Self_Request>;
     int decode(const std::string &buffer , int &state) override
     {
-        memcpy(&m_head,buffer.substr(0,sizeof(self_head)).c_str(),sizeof(self_head));
+        memcpy(&m_head.version,buffer.substr(0,4).c_str(),sizeof(4));
+        memcpy(&m_head.length,buffer.substr(4,sizeof(int)).c_str(),sizeof(int));
         return sizeof(self_head);
     }
 
@@ -33,7 +34,7 @@ public:
 
     int proto_extra_len() override
     {
-        return m_head.length;
+        return ntohl(m_head.length);
     }
 
     void set_extra_msg(std::string &&msg) 
@@ -56,7 +57,7 @@ private:
     std::string body;
 };
 
-class Self_Response: public Response_Base
+class Self_Response: public Tcp_Response_Base
 {
 public:
     using ptr =std::shared_ptr<Self_Response>;

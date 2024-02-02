@@ -16,13 +16,7 @@ namespace galay
 
         int get_error() { return this->m_error; }
 
-        void stop(){
-            if (!this->m_scheduler.expired() && !this->m_stop)
-            {
-                this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_stop = true;
-            }
-        }
+        void stop();
 
         virtual ~Client();
 
@@ -106,6 +100,32 @@ namespace galay
         Net_Awaiter<int> recv(char* buffer,int len) override { return {nullptr} ;}
     };
 
+
+    //任务内置定时器,默认最大超时时间为 5000ms
+    class Udp_Client: public Client
+    {
+    public:
+        using ptr = std::shared_ptr<Udp_Client>;
+        Udp_Client(Scheduler_Base::wptr scheduler);
+
+        virtual Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer);
+
+        virtual Net_Awaiter<int> recvfrom(char* buffer, int len , iofunction::Addr* addr);
+
+    };
+
+    class Dns_Client: public Udp_Client
+    {
+    public:
+        using ptr = std::shared_ptr<Dns_Client>;
+        Dns_Client(Scheduler_Base::wptr scheduler);
+
+        Net_Awaiter<int> request(protocol::Dns_Request::ptr request,protocol::Dns_Response::ptr response , std::string ip , uint32_t port);
+
+    private:
+        Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer) override { return {nullptr};  }
+        Net_Awaiter<int> recvfrom(char* buffer, int len , iofunction::Addr* addr) override { return {nullptr};  }
+    };
 }
 
 

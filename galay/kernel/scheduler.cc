@@ -41,6 +41,8 @@ int galay::Epoll_Scheduler::start()
                 task->exec();
                 if (task->is_destroy()) {
                     del_task(m_events[i].data.fd);
+                    del_event(m_events[i].data.fd,GY_EVENT_READ|GY_EVENT_WRITE);
+                    close(m_events[i].data.fd);
                 }
             }
         }
@@ -175,10 +177,7 @@ void galay::Epoll_Scheduler::del_task(int fd)
     std::unique_lock<std::mutex> lock(this->m_mtx);
     auto it = this->m_tasks.find(fd);
     if (it != this->m_tasks.end()){
-        it->second->destory();
         this->m_tasks.erase(fd);
-        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE);
-        close(fd);
     }
 }
 
@@ -221,10 +220,7 @@ void galay::Select_Scheduler::del_task(int fd)
     auto it = this->m_tasks.find(fd);
     if (it != this->m_tasks.end())
     {
-        it->second->destory();
         this->m_tasks.erase(fd);
-        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE);
-        close(fd);
     }
 }
 
@@ -330,6 +326,8 @@ int galay::Select_Scheduler::start()
                     if (task->is_destroy())
                     {
                         del_task(fd);
+                        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE);
+                        close(fd);
                     }
                 }
             }

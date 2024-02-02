@@ -25,8 +25,10 @@ Task<> func(Epoll_Scheduler::ptr scheduler)
     for(int i = 0 ; i <= 10000 ; i++)
     {
         std::string wbuffer = std::to_string(i) + ": hello world\n";
-        head.length = wbuffer.length();
-        memcpy(t_head,&head,sizeof(self_head));
+        head.length = htonl(wbuffer.length());
+        memcpy(t_head,&head.version,4);
+        char* m = t_head + 4;
+        memcpy(m,&head.length,sizeof(int));
         std::string sendmsg(t_head,sizeof(self_head));
         sendmsg+=wbuffer;
         ret = co_await client->send(sendmsg,sendmsg.length());
@@ -35,7 +37,7 @@ Task<> func(Epoll_Scheduler::ptr scheduler)
         self_head t_head;
         memcpy(&t_head,buffer,sizeof(self_head));
         memset(buffer,0,20);
-        ret = co_await client->recv(buffer,t_head.length);
+        ret = co_await client->recv(buffer,ntohl(t_head.length));
         if(i % 1000 == 0) std::cout << i << "  recv len :" << ret << "buffer: " << buffer << '\n';
     }
     delete[] buffer;
