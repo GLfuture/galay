@@ -42,11 +42,11 @@ namespace galay
             return nullptr;
         }
 
-        virtual Request_Base::ptr get_req()
+        virtual Tcp_Request_Base::ptr get_req()
         {
             return nullptr;
         }
-        virtual Response_Base::ptr get_resp()
+        virtual Tcp_Response_Base::ptr get_resp()
         {
             return nullptr;
         }

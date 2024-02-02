@@ -17,6 +17,8 @@ namespace galay{
     #define DEFAULT_MAX_SSL_ACCEPT_RETRY            1000
     #define DEFAULT_SSL_SLEEP_MISC_PER_RETRY        1
     #define DEFAULT_CLINET_EVENT_SIZE               1
+    #define MAX_UDP_LENGTH                          1400
+    #define MAX_UDP_WAIT_FOR_RECV_TIME              5000
 
     class Config
     {
@@ -87,6 +89,16 @@ namespace galay{
         Https_Server_Config(Https_Server_Config &&other);
     };
 
+    class Udp_Server_Config: public Config
+    {
+    public:
+        using ptr = std::shared_ptr<Udp_Server_Config>;
+        Udp_Server_Config(uint16_t port);
+        Udp_Server_Config(Udp_Server_Config&& other);
+        Udp_Server_Config(const Udp_Server_Config& other);
+
+        uint16_t m_port;
+    };
 
 
 };

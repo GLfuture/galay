@@ -126,6 +126,15 @@ galay::Https_Client::ptr galay::Client_Factory::create_https_client(Scheduler_Ba
     return std::make_shared<Https_Client>(scheduler,ssl_min_version,ssl_max_version);
 }
 
+galay::Udp_Client::ptr galay::Client_Factory::create_udp_client(Scheduler_Base::wptr scheduler)
+{
+    return std::make_shared<Udp_Client>(scheduler);
+}
+
+galay::Dns_Client::ptr galay::Client_Factory::create_dns_client(Scheduler_Base::wptr scheduler)
+{
+    return std::make_shared<Dns_Client>(scheduler);
+}
 
 //pool
 //threadpool
