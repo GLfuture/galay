@@ -155,9 +155,14 @@ namespace galay
     class Udp_Server : public Server
     {
     public:
+        //创建时socket
         Udp_Server(Udp_Server_Config::ptr config,Scheduler_Base::ptr scheduler)
         {
-            
+            this->m_fd = iofunction::Udp_Function::Sock();
+            iofunction::Simple_Fuction::IO_Set_No_Block(this->m_fd);
+            iofunction::Udp_Function::Bind(this->m_fd,config->m_port);
+            this->m_scheduler = scheduler;
+            scheduler->add_event(this->m_fd,GY_EVENT_READ);
         }
 
         void start(std::function<Task<>(std::weak_ptr<Task_Base>)> &&func)

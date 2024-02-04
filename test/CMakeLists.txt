@@ -8,9 +8,11 @@ set(SRC_LIST
     test_https_client.cc
     test_timer.cc
     test_threadpool.cc
-    test_self_define_protocol_server.cc
-    test_self_define_protocol_client.cc
+    test_tcp_self_protocol_server.cc
+    test_tcp_self_protocol_client.cc
     test_dns_client.cc
+    test_udp_self_protocol_server.cc
+    test_udp_self_protocol_client.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

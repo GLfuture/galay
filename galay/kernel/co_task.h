@@ -75,7 +75,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -121,7 +121,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -168,7 +168,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -283,7 +283,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -371,7 +371,7 @@ namespace galay
 
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -416,7 +416,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(SSL_get_fd(this->m_ssl));
-                this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl),GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl),GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -463,7 +463,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(SSL_get_fd(this->m_ssl));
-                this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl),GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl),GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -588,7 +588,7 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -650,7 +650,7 @@ namespace galay
             
             if (!this->m_handle.done()) {
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -682,7 +682,7 @@ namespace galay
             this->m_timer = scheduler.lock()->get_timer_manager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME,1,[this](){
                 if (!this->m_handle.done()) {
                     this->m_result = -1;
-                    this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                    this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                     this->m_scheduler.lock()->del_task(this->m_fd);
                     this->m_handle.resume();
                 }
@@ -711,7 +711,7 @@ namespace galay
             if (!this->m_handle.done()) {
                 this->m_timer->cancle();
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -776,7 +776,7 @@ namespace galay
                     this->m_timer = this->m_scheduler.lock()->get_timer_manager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME, 1, [this](){
                         if (!this->m_handle.done()) {
                             this->m_result = -1;
-                            this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                            this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                             this->m_scheduler.lock()->del_task(this->m_fd);
                             this->m_handle.resume();
                         } 
@@ -819,7 +819,7 @@ namespace galay
             if (!this->m_handle.done()) {
                 this->m_timer->cancle();
                 this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
