@@ -78,13 +78,13 @@ namespace galay
 
         static Tcp_SSL_Client::ptr create_tcp_ssl_client(Scheduler_Base::ptr scheduler, long ssl_min_version , long ssl_max_version);
 
-        static Http_Client::ptr create_http_client(Scheduler_Base::wptr scheduler);
+        static Tcp_Request_Client<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr create_http_client(Scheduler_Base::wptr scheduler);
 
-        static Https_Client::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
+        static Tcp_SSL_Request_Client<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
 
         static Udp_Client::ptr create_udp_client(Scheduler_Base::wptr scheduler);
 
-        static Dns_Client::ptr create_dns_client(Scheduler_Base::wptr scheduler);
+        static Udp_Request_Client<protocol::Dns_Request,protocol::Dns_Response>::ptr create_dns_client(Scheduler_Base::wptr scheduler);
 
     };
     

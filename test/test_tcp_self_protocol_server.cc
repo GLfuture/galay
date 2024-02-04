@@ -19,6 +19,7 @@ public:
     {
         memcpy(&m_head.version,buffer.substr(0,4).c_str(),sizeof(4));
         memcpy(&m_head.length,buffer.substr(4,sizeof(int)).c_str(),sizeof(int));
+        m_head.length = ntohl(m_head.length);
         return sizeof(self_head);
     }
 
@@ -34,7 +35,7 @@ public:
 
     int proto_extra_len() override
     {
-        return ntohl(m_head.length);
+        return m_head.length;
     }
 
     void set_extra_msg(std::string &&msg) 
@@ -99,6 +100,7 @@ Task<> func(Task_Base::wptr t_task)
     if(std::any_cast<int>(t_task.lock()->get_ctx()) % 1000 == 0) std::cout<< std::any_cast<int>(t_task.lock()->get_ctx()) <<" :  " <<req->get_head().version << " "<<req->get_body()<<'\n';
     t_task.lock()->control_task_behavior(Task_Status::GY_TASK_WRITE);
     resp->get_body() = req->get_body();
+    req->get_head().length = htonl(req->get_head().length);
     resp->get_head() = req->get_head();
     return {};
 }

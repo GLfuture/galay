@@ -181,12 +181,12 @@ namespace galay
         int * m_error;
     };
 
-    template<typename RESULT = int>
-    class Http_Request_Task: public Co_Task_Base<RESULT>
+    template<Tcp_Request REQ,Tcp_Response RESP, typename RESULT = int>
+    class Co_Tcp_Client_Request_Task: public Co_Task_Base<RESULT>
     {
     public:
-        using ptr = std::shared_ptr<Http_Request_Task>;
-        Http_Request_Task(int fd , Scheduler_Base::wptr scheduler , protocol::Http1_1_Request::ptr request , protocol::Http1_1_Response::ptr response , int *error)
+        using ptr = std::shared_ptr<Co_Tcp_Client_Request_Task>;
+        Co_Tcp_Client_Request_Task(int fd , Scheduler_Base::wptr scheduler , std::shared_ptr<REQ> request , std::shared_ptr<RESP> response , int *error)
             : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
@@ -248,14 +248,16 @@ namespace galay
                     if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
                 }while(ret != -1 && ret != 0);
                 if(ret == -1){
-                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                    {
-                        return -1;
-                    }else
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = error::GY_RECV_ERROR;
                         this->m_result = -1;
-                        if (!this->m_handle.done()) this->m_handle.resume();
+                        if (!this->m_handle.done())
+                        {
+                            this->m_scheduler.lock()->del_task(this->m_fd);
+                            this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                            this->m_handle.resume();
+                        }
                         return -1;
                     }
                 }
@@ -289,7 +291,7 @@ namespace galay
             return 0;
         }
 
-        ~Http_Request_Task()
+        ~Co_Tcp_Client_Request_Task()
         {
             if(m_tempbuffer){
                 delete[] m_tempbuffer;
@@ -302,8 +304,8 @@ namespace galay
         int m_fd;
         char* m_tempbuffer;
         std::string m_buffer;
-        protocol::Http1_1_Request::ptr m_request;
-        protocol::Http1_1_Response::ptr m_respnse;
+        std::shared_ptr<REQ> m_request;
+        std::shared_ptr<RESP> m_respnse;
         int* m_error;
     };
 
@@ -477,12 +479,12 @@ namespace galay
     };
 
 
-    template<typename RESULT = int>
-    class Co_Https_Client_Request_Task: public Co_Task_Base<RESULT>
+    template<Tcp_Request REQ,Tcp_Response RESP, typename RESULT = int>
+    class Co_Tcp_Client_SSL_Request_Task: public Co_Task_Base<RESULT>
     {
     public:
-        using ptr = std::shared_ptr<Co_Https_Client_Request_Task>;
-        Co_Https_Client_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , protocol::Http1_1_Request::ptr request , protocol::Http1_1_Response::ptr response , int *error)
+        using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Request_Task>;
+        Co_Tcp_Client_SSL_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , std::shared_ptr<REQ> request , std::shared_ptr<RESP> response , int *error)
             : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
@@ -511,11 +513,7 @@ namespace galay
                 } while (len != 0 && len != -1);
                 if (len == -1)
                 {
-                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                    {
-                        return -1;
-                    }
-                    else
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = error::GY_SEND_ERROR;
                         this->m_result = -1;
@@ -553,14 +551,16 @@ namespace galay
                     if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
                 }while(ret != -1 && ret != 0);
                 if(ret == -1){
-                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                    {
-                        return -1;
-                    }else
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = error::GY_RECV_ERROR;
                         this->m_result = -1;
-                        if (!this->m_handle.done()) this->m_handle.resume();
+                        if (!this->m_handle.done())
+                        {
+                            this->m_scheduler.lock()->del_task(this->m_fd);
+                            this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                            this->m_handle.resume();
+                        }
                         return -1;
                     }
                 }
@@ -594,7 +594,7 @@ namespace galay
             return 0;
         }
 
-        ~Co_Https_Client_Request_Task()
+        ~Co_Tcp_Client_SSL_Request_Task()
         {
             if(m_tempbuffer){
                 delete[] m_tempbuffer;
@@ -608,8 +608,8 @@ namespace galay
         SSL* m_ssl;
         char* m_tempbuffer;
         std::string m_buffer;
-        protocol::Http1_1_Request::ptr m_request;
-        protocol::Http1_1_Response::ptr m_respnse;
+        std::shared_ptr<REQ> m_request;
+        std::shared_ptr<RESP> m_respnse;
         int* m_error;
     };
 
@@ -725,12 +725,12 @@ namespace galay
         Timer::ptr m_timer;
     };
 
-    template<typename RESULT = int>
+    template<Udp_Request REQ,Udp_Response RESP, typename RESULT = int>
     class Co_Dns_Client_Request_Task: public Co_Task_Base<RESULT>
     {
     public:
         using ptr = std::shared_ptr<Co_Dns_Client_Request_Task>;
-        Co_Dns_Client_Request_Task(int fd, std::string ip, uint32_t port,protocol::Dns_Request::ptr request,protocol::Dns_Response::ptr response 
+        Co_Dns_Client_Request_Task(int fd, std::string ip, uint32_t port,std::shared_ptr<REQ> request,std::shared_ptr<RESP> response 
             , Scheduler_Base::wptr scheduler, int *error)
             : Co_Task_Base<RESULT>(scheduler)
         {
@@ -830,8 +830,8 @@ namespace galay
         std::string m_ip;
         uint32_t m_port;
         Timer::ptr m_timer;
-        protocol::Dns_Request::ptr m_request;
-        protocol::Dns_Response::ptr m_response;
+        std::shared_ptr<REQ> m_request;
+        std::shared_ptr<RESP> m_response;
     };
 
 }
