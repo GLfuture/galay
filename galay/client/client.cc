@@ -249,38 +249,6 @@ galay::Tcp_SSL_Client::~Tcp_SSL_Client()
     }
 }
 
-galay::Net_Awaiter<int> galay::Http_Client::request(protocol::Http1_1_Request::ptr request, protocol::Http1_1_Response::ptr response)
-{
-    if (!this->m_scheduler.expired())
-    {
-        typename Http_Request_Task<int>::ptr task = std::make_shared<Http_Request_Task<int>>(this->m_fd, this->m_scheduler, request, response, &(this->m_error));
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-        {
-            std::cout << "add event failed fd = " << this->m_fd << '\n';
-        }
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
-        return Net_Awaiter<int>{task};
-    }
-    this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
-    return {nullptr, -1};
-}
-
-galay::Net_Awaiter<int> galay::Https_Client::request(protocol::Http1_1_Request::ptr request, protocol::Http1_1_Response::ptr response)
-{
-    if (!this->m_scheduler.expired())
-    {
-        auto task = std::make_shared<Co_Https_Client_Request_Task<int>>(this->m_ssl, this->m_fd, this->m_scheduler, request, response, &(this->m_error));
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-        {
-            std::cout << "add event failed fd = " << this->m_fd << '\n';
-        }
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
-        return Net_Awaiter<int>{task};
-    }
-    this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
-    return {nullptr, -1};
-}
-
 galay::Udp_Client::Udp_Client(Scheduler_Base::wptr scheduler)
     : Client(scheduler)
 {
@@ -313,29 +281,6 @@ galay::Net_Awaiter<int> galay::Udp_Client::recvfrom(char *buffer, int len, iofun
     {
         auto task = std::make_shared<Co_Udp_Client_Recvfrom_Task<int>>(this->m_fd, addr, buffer, len, this->m_scheduler, &(this->m_error));
         if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-        {
-            std::cout << "add event failed fd = " << this->m_fd << '\n';
-        }
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
-        return Net_Awaiter<int>{task};
-    }
-    this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
-    return {nullptr, -1};
-}
-
-galay::Dns_Client::Dns_Client(Scheduler_Base::wptr scheduler)
-    :Udp_Client(scheduler)
-{
-
-}
-
-
-galay::Net_Awaiter<int> galay::Dns_Client::request(protocol::Dns_Request::ptr request,protocol::Dns_Response::ptr response , std::string ip , uint32_t port)
-{
-    if (!this->m_scheduler.expired())
-    {
-        auto task = std::make_shared<Co_Dns_Client_Request_Task<int>>(this->m_fd, ip, port,request,response,this->m_scheduler, &(this->m_error));
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
         {
             std::cout << "add event failed fd = " << this->m_fd << '\n';
         }

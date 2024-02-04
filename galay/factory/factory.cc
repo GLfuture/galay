@@ -116,14 +116,14 @@ galay::Tcp_SSL_Client::ptr galay::Client_Factory::create_tcp_ssl_client(Schedule
 }
 
 
-galay::Http_Client::ptr galay::Client_Factory::create_http_client(Scheduler_Base::wptr scheduler)
+galay::Tcp_Request_Client<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>::ptr galay::Client_Factory::create_http_client(Scheduler_Base::wptr scheduler)
 {
-    return std::make_shared<Http_Client>(scheduler);
+    return std::make_shared<Tcp_Request_Client<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>>(scheduler);
 }
 
-galay::Https_Client::ptr galay::Client_Factory::create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
+galay::Tcp_SSL_Request_Client<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>::ptr galay::Client_Factory::create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
 {
-    return std::make_shared<Https_Client>(scheduler,ssl_min_version,ssl_max_version);
+    return std::make_shared<Tcp_SSL_Request_Client<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>>(scheduler,ssl_min_version,ssl_max_version);
 }
 
 galay::Udp_Client::ptr galay::Client_Factory::create_udp_client(Scheduler_Base::wptr scheduler)
@@ -131,9 +131,9 @@ galay::Udp_Client::ptr galay::Client_Factory::create_udp_client(Scheduler_Base::
     return std::make_shared<Udp_Client>(scheduler);
 }
 
-galay::Dns_Client::ptr galay::Client_Factory::create_dns_client(Scheduler_Base::wptr scheduler)
+galay::Udp_Request_Client<galay::protocol::Dns_Request,galay::protocol::Dns_Response>::ptr galay::Client_Factory::create_dns_client(Scheduler_Base::wptr scheduler)
 {
-    return std::make_shared<Dns_Client>(scheduler);
+    return std::make_shared<Udp_Request_Client<galay::protocol::Dns_Request,galay::protocol::Dns_Response>>(scheduler);
 }
 
 //pool
