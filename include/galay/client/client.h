@@ -21,7 +21,7 @@ namespace galay
             {
                 this->m_scheduler.lock()->del_task(this->m_fd);
                 close(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ|GY_EVENT_WRITE);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ|GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_stop = true;
             }
         }

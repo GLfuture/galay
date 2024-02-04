@@ -41,7 +41,7 @@ int galay::Epoll_Scheduler::start()
                 task->exec();
                 if (task->is_destroy()) {
                     del_task(m_events[i].data.fd);
-                    del_event(m_events[i].data.fd,GY_EVENT_READ|GY_EVENT_WRITE);
+                    del_event(m_events[i].data.fd,GY_EVENT_READ|GY_EVENT_WRITE| GY_EVENT_ERROR);
                     close(m_events[i].data.fd);
                 }
             }
@@ -129,12 +129,12 @@ void galay::Epoll_Scheduler::stop()
         this->m_stop = true;
         for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
         {
-            this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE);
+            this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
             close(it->first);
             it->second.reset();
         }
         this->m_tasks.clear();
-        this->stop();
+        close(this->m_epfd);
     }
 }
 
@@ -197,7 +197,7 @@ galay::Select_Scheduler::Select_Scheduler(int timeout) // ms
     FD_ZERO(&m_wfds);
     FD_ZERO(&m_efds);
     this->m_stop = false;
-    this->m_time_out = timeout;
+    this->m_time_out = (timeout == -1 ? 0:timeout);
 }
 
 void galay::Select_Scheduler::add_task(std::pair<int, std::shared_ptr<Task_Base>> &&pair)
@@ -310,8 +310,10 @@ int galay::Select_Scheduler::start()
             break;
         if (nready == -1)
         {
-            std::cout << "select failed :" << error::GY_SCHEDULER_ENGINE_CHECK_ERROR << error::get_err_str(error::GY_SCHEDULER_ENGINE_CHECK_ERROR) << '\n';
-            continue;
+            //std::cout << "select failed :" << error::GY_SCHEDULER_ENGINE_CHECK_ERROR << error::get_err_str(error::GY_SCHEDULER_ENGINE_CHECK_ERROR) << '\n';
+            //continue;
+            std::cout << strerror(errno) << '\n';
+            break;
         }
         if (nready == 0)
             continue;
@@ -326,7 +328,7 @@ int galay::Select_Scheduler::start()
                     if (task->is_destroy())
                     {
                         del_task(fd);
-                        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE);
+                        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                         close(fd);
                     }
                 }
@@ -353,12 +355,21 @@ std::shared_ptr<galay::Timer_Manager> galay::Select_Scheduler::get_timer_manager
 
 void galay::Select_Scheduler::stop()
 {
+    FD_ZERO(&m_rfds);
+    FD_ZERO(&m_wfds);
+    FD_ZERO(&m_efds);
+    for(auto it = m_tasks.begin() ; it != m_tasks.end() ; it++)
+    {
+        this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        close(it->first);
+        it->second.reset();
+    }
+    this->m_tasks.clear();
     this->m_stop = true;
 }
 
 galay::Select_Scheduler::~Select_Scheduler()
 {
-    FD_ZERO(&m_rfds);
-    FD_ZERO(&m_wfds);
-    FD_ZERO(&m_efds);
+    if(!this->m_stop) stop();
+
 }

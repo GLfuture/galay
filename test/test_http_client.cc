@@ -32,7 +32,7 @@ Task<> func(Scheduler_Base::ptr scheduler)
 
 int main()
 {
-    auto scheduler = Scheduler_Factory::create_select_scheduler(0);
+    auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,-1);
     Task<> t = func(scheduler);
     scheduler->start();
     return 0;
