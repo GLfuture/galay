@@ -22,10 +22,13 @@ galay::Tcp_Server_Config::Tcp_Server_Config(const Tcp_Server_Config &other)
 
 void galay::Tcp_Server_Config::enable_keepalive(int t_idle, int t_interval, int retry)
 {
-    this->m_keepalive = true;
-    this->m_idle = t_idle;
-    this->m_interval = t_interval;
-    this->m_retry = retry;
+    Tcp_Keepalive_Config keepalive{
+        .m_keepalive = true,
+        .m_idle = t_idle,
+        .m_interval = t_interval,
+        .m_retry = retry
+    };
+    this->m_keepalive_conf = keepalive;
 }
 
 // tcp ssl server config

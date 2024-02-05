@@ -117,6 +117,7 @@ int main()
 {
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_tcp_server_config(8080);
+    config->enable_keepalive(10,3,3);
     auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,5);
     server = std::make_shared<Tcp_Server<Self_Request,Self_Response>>(config,scheduler);
     server->start(func);

@@ -366,9 +366,9 @@ namespace galay
             int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
             if (connfd <= 0)
                 return -1;
-            if (this->m_is_keepalive)
+            if (this->m_keepalive_conf.m_keepalive)
             {
-                int ret = iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_idle, this->m_interval, this->m_retry);
+                int ret = iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
                 if (ret == -1)
                 {
                     std::cout << strerror(errno) << '\n';
@@ -389,10 +389,13 @@ namespace galay
 
         void enable_keepalive(uint16_t idle, uint16_t interval, uint16_t retry)
         {
-            this->m_is_keepalive = true;
-            this->m_idle = idle;
-            this->m_interval = interval;
-            this->m_retry = retry;
+            Tcp_Keepalive_Config keepalive{
+                .m_keepalive = true,
+                .m_idle = idle,
+                .m_interval = interval,
+                .m_retry = retry
+            };
+            this->m_keepalive_conf = keepalive;
         }
 
         virtual ~Tcp_Main_Task()
@@ -415,10 +418,7 @@ namespace galay
         std::function<Task<>(Task_Base::wptr)> m_func;
 
         // keepalive
-        bool m_is_keepalive = false;
-        int m_idle;
-        int m_interval;
-        int m_retry;
+        Tcp_Keepalive_Config m_keepalive_conf;
     };
 
     template <Tcp_Request REQ, Tcp_Response RESP>
@@ -621,9 +621,9 @@ namespace galay
             int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
             if (connfd <= 0)
                 return -1;
-            if (this->m_is_keepalive)
+            if (this->m_keepalive_conf.m_keepalive)
             {
-                iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_idle, this->m_interval, this->m_retry);
+                iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
             }
             SSL *ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx, connfd);
             if (ssl == nullptr)
