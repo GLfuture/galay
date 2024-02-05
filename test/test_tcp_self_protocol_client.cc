@@ -124,6 +124,7 @@ Task<> func(Epoll_Scheduler::ptr scheduler)
         ret = co_await client->request(request,response);
         if(i % 1000 == 0) std::cout << i << " " << ret <<"  recv len :" << response->get_head().length << "buffer: " << response->get_body() << '\n';
     }
+    sleep(15);
     scheduler->stop();
     co_return;
 }

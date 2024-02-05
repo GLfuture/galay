@@ -27,6 +27,14 @@ namespace galay{
         virtual ~Config() {}
     };
 
+    struct Tcp_Keepalive_Config
+    {
+        bool m_keepalive = false;
+        int m_idle;                 //无包时发送保活包开始时间
+        int m_interval;             //保活包间隔
+        int m_retry;                //重试次数
+    };
+
     //tcp server配置类
     class Tcp_Server_Config: public Config
     {
@@ -43,10 +51,7 @@ namespace galay{
         uint16_t m_port;
         uint32_t m_backlog;
         uint32_t m_max_rbuffer_len;
-        bool m_keepalive = false;
-        int m_idle;
-        int m_interval;
-        int m_retry;
+        Tcp_Keepalive_Config  m_keepalive_conf;
     };
 
 

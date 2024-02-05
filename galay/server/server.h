@@ -91,9 +91,9 @@ namespace galay
             }
             auto task = std::make_shared<Tcp_Main_Task<REQ,RESP>>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len);
             auto config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
-            if (config->m_keepalive)
+            if (config->m_keepalive_conf.m_keepalive)
             {
-                task->enable_keepalive(config->m_idle, config->m_interval, config->m_retry);
+                task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
             }
             this->m_scheduler->add_task(std::make_pair(this->m_fd, task));
         }
@@ -139,9 +139,9 @@ namespace galay
             }
             Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
             auto task = std::make_shared<Tcp_SSL_Main_Task<REQ,RESP>>(this->m_fd, this->m_scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), recv_len, config->m_ssl_accept_retry, this->m_ctx);
-            if (config->m_keepalive)
+            if (config->m_keepalive_conf.m_keepalive)
             {
-                task->enable_keepalive(config->m_idle, config->m_interval, config->m_retry);
+                task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
             }
             this->m_scheduler->add_task(std::make_pair(this->m_fd, task));
         }
