@@ -49,7 +49,7 @@ void sig_handle(int sig)
 int main()
 {
     signal(SIGINT,sig_handle);
-    auto config = Config_Factory::create_http_server_config(8080);
+    auto config = Config_Factory::create_http_server_config(8080,10,1024,5000); //5s断连
     //auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,-1);
     auto scheduler = Scheduler_Factory::create_select_scheduler(0);
     http_server = Server_Factory::create_http_server(config,scheduler);
