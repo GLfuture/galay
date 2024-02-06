@@ -59,7 +59,7 @@ namespace galay
 
     public:
         using ptr = std::shared_ptr<Tcp_RW_Task>;
-        Tcp_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len)
+        Tcp_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len, int conn_timeout)
         {
             this->m_status = Task_Status::GY_TASK_READ;
             this->m_error = error::base_error::GY_SUCCESS;
@@ -69,6 +69,10 @@ namespace galay
             this->m_temp = new char[read_len];
             this->m_req = std::make_shared<REQ>();
             this->m_resp = std::make_shared<RESP>();
+            this->m_conn_timeout = conn_timeout;
+            if(conn_timeout > 0){
+                add_timeout_timer();
+            }
         }
 
         void control_task_behavior(Task_Status status) override
@@ -107,6 +111,11 @@ namespace galay
         // return -1 to delete this task from server
         int exec() override
         {
+            if (this->m_conn_timeout > 0)
+            {
+                this->m_timer->cancle();
+                add_timeout_timer();
+            }
             switch (this->m_status)
             {
             case Task_Status::GY_TASK_READ:
@@ -167,6 +176,14 @@ namespace galay
         }
 
     protected:
+        void add_timeout_timer()
+        {
+            this->m_timer = this->m_scheduler.lock()->get_timer_manager()->add_timer(this->m_conn_timeout, 1, [this]() {
+                    this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ|GY_EVENT_WRITE|GY_EVENT_ERROR);
+                    this->m_scheduler.lock()->del_task(this->m_fd);
+                    close(this->m_fd);
+                });
+        }
 
         void encode()
         {
@@ -344,6 +361,9 @@ namespace galay
         Task<> m_co_task;
         Callback m_func;
         int m_error;
+        //timer
+        int m_conn_timeout;
+        Timer::ptr m_timer;
     };
 
     template <Tcp_Request REQ, Tcp_Response RESP>
@@ -352,13 +372,14 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_Main_Task>;
         Tcp_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler,
-                        std::function<Task<>(Task_Base::wptr)> &&func, int read_len)
+                        std::function<Task<>(Task_Base::wptr)> &&func, int read_len,int conn_timeout)
         {
             this->m_fd = fd;
             this->m_status = Task_Status::GY_TASK_READ;
             this->m_scheduler = scheduler;
             this->m_func = func;
             this->m_read_len = read_len;
+            this->m_conn_timeout = conn_timeout;
         }
 
         int exec() override
@@ -406,7 +427,7 @@ namespace galay
     protected:
         virtual Task_Base::ptr create_rw_task(int connfd)
         {
-            auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len);
+            auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len,this->m_conn_timeout);
             task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }
@@ -416,7 +437,7 @@ namespace galay
         std::weak_ptr<Scheduler_Base> m_scheduler;
         uint32_t m_read_len;
         std::function<Task<>(Task_Base::wptr)> m_func;
-
+        int m_conn_timeout;
         // keepalive
         Tcp_Keepalive_Config m_keepalive_conf;
     };
@@ -426,8 +447,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len, SSL *ssl)
-            : Tcp_RW_Task<REQ,RESP>(fd, scheduler, read_len), m_ssl(ssl)
+        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len,int conn_timeout, SSL *ssl)
+            : Tcp_RW_Task<REQ,RESP>(fd, scheduler, read_len,conn_timeout), m_ssl(ssl)
         {
         }
 
@@ -610,8 +631,8 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Main_Task>;
         Tcp_SSL_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, std::function<Task<>(Task_Base::wptr)> &&func,
-                            uint32_t read_len, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
-            : Tcp_Main_Task<REQ,RESP>(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len),
+                            uint32_t read_len, int conn_timeout, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
+            : Tcp_Main_Task<REQ,RESP>(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len,conn_timeout),
               m_ctx(ctx), m_ssl_accept_retry(ssl_accept_max_retry)
         {
         }
@@ -675,7 +696,7 @@ namespace galay
     protected:
         virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl)
         {
-            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len, ssl);
+            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len,this->m_conn_timeout, ssl);
             task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }
