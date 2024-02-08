@@ -13,6 +13,7 @@ set(SRC_LIST
     test_dns_client.cc
     test_udp_self_protocol_server.cc
     test_udp_self_protocol_client.cc
+    test_smtp_client.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

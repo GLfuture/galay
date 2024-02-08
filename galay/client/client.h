@@ -72,14 +72,14 @@ namespace galay
         SSL_CTX* m_ctx;
     };
 
-    template<Tcp_Request REQ,Tcp_Response RESP>
     class Tcp_Request_Client: public Tcp_Client
     {
     public:
         using ptr = std::shared_ptr<Tcp_Request_Client>;
         Tcp_Request_Client(Scheduler_Base::wptr scheduler)
             :Tcp_Client(scheduler) {}
-
+        
+        template<Tcp_Request REQ,Tcp_Response RESP>
         Net_Awaiter<int> request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)
         {
             if (!this->m_scheduler.expired())
@@ -102,7 +102,6 @@ namespace galay
     };
 
 
-    template<Tcp_Request REQ,Tcp_Response RESP>
     class Tcp_SSL_Request_Client: public Tcp_SSL_Client
     {
     public:
@@ -110,6 +109,7 @@ namespace galay
         Tcp_SSL_Request_Client(Scheduler_Base::wptr scheduler, long ssl_min_version, long ssl_max_version)
             : Tcp_SSL_Client(scheduler, ssl_min_version, ssl_max_version) {}
 
+        template<Tcp_Request REQ,Tcp_Response RESP>
         Net_Awaiter<int> request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)
         {
             if (!this->m_scheduler.expired())
@@ -145,7 +145,6 @@ namespace galay
 
     };
 
-    template<Udp_Request REQ,Udp_Response RESP>
     class Udp_Request_Client: public Udp_Client
     {
     public:
@@ -155,6 +154,7 @@ namespace galay
         {
         }
 
+        template<Udp_Request REQ,Udp_Response RESP>
         Net_Awaiter<int> request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response, std::string ip, uint32_t port)
         {
             if (!this->m_scheduler.expired())
