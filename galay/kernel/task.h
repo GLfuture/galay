@@ -173,6 +173,9 @@ namespace galay
                 delete[] m_temp;
                 m_temp = nullptr;
             }
+            if(!m_timer->is_cancled()){
+                m_timer->cancle();
+            }
         }
 
     protected:
@@ -371,12 +374,12 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_Main_Task>;
-        Tcp_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler,
+        Tcp_Main_Task(int fd, std::vector<std::weak_ptr<Scheduler_Base>> schedulers,
                         std::function<Task<>(Task_Base::wptr)> &&func, int read_len,int conn_timeout)
         {
             this->m_fd = fd;
             this->m_status = Task_Status::GY_TASK_READ;
-            this->m_scheduler = scheduler;
+            this->m_schedulers = schedulers;
             this->m_func = func;
             this->m_read_len = read_len;
             this->m_conn_timeout = conn_timeout;
@@ -395,16 +398,23 @@ namespace galay
                     std::cout << strerror(errno) << '\n';
                 }
             }
-            if (!this->m_scheduler.expired())
+            int indx;
+            if (m_schedulers.size() == 1)
             {
-                auto task = create_rw_task(connfd);
-                this->m_scheduler.lock()->add_task({connfd, task});
-                iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-                if(this->m_scheduler.lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
-                {
-                    std::cout<< "add event failed fd = " <<connfd <<'\n';
-                }
+                indx = 0;
+            }else{
+                indx = connfd % (m_schedulers.size() - 1) + 1;
             }
+            if (!this->m_schedulers[indx].expired())
+                {
+                    auto task = create_rw_task(connfd,this->m_schedulers[indx]);
+                    this->m_schedulers[indx].lock()->add_task({connfd, task});
+                    iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+                    if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+                    {
+                        std::cout << "add event failed fd = " << connfd << '\n';
+                    }
+                }
             return 0;
         }
 
@@ -425,16 +435,16 @@ namespace galay
         }
 
     protected:
-        virtual Task_Base::ptr create_rw_task(int connfd)
+        virtual Task_Base::ptr create_rw_task(int connfd,Scheduler_Base::wptr scheduler)
         {
-            auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len,this->m_conn_timeout);
+            auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd, scheduler, this->m_read_len,this->m_conn_timeout);
             task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }
 
     protected:
         int m_fd;
-        std::weak_ptr<Scheduler_Base> m_scheduler;
+        std::vector<std::weak_ptr<Scheduler_Base>> m_schedulers;
         uint32_t m_read_len;
         std::function<Task<>(Task_Base::wptr)> m_func;
         int m_conn_timeout;
@@ -630,9 +640,9 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Main_Task>;
-        Tcp_SSL_Main_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, std::function<Task<>(Task_Base::wptr)> &&func,
+        Tcp_SSL_Main_Task(int fd, std::vector<std::weak_ptr<Scheduler_Base>> schedulers, std::function<Task<>(Task_Base::wptr)> &&func,
                             uint32_t read_len, int conn_timeout, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
-            : Tcp_Main_Task<REQ,RESP>(fd, scheduler, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len,conn_timeout),
+            : Tcp_Main_Task<REQ,RESP>(fd, schedulers, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len,conn_timeout),
               m_ctx(ctx), m_ssl_accept_retry(ssl_accept_max_retry)
         {
         }
@@ -674,14 +684,21 @@ namespace galay
                     }
                 }
             }
-
-            if (!this->m_scheduler.expired())
+            int indx;
+            if (this->m_schedulers.size() == 1)
             {
-                auto task = create_rw_task(connfd, ssl);
-                this->m_scheduler.lock()->add_task({connfd, task});
-                if(this->m_scheduler.lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
+                indx = 0;
+            }else{
+                indx = connfd % (this->m_schedulers.size() - 1) + 1;
+            }
+
+            if (!this->m_schedulers[indx].expired())
+            {
+                auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
+                this->m_schedulers[indx].lock()->add_task({connfd, task});
+                if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
-                    std::cout<< "add event failed fd = " <<connfd<<'\n';
+                    std::cout << "add event failed fd = " << connfd << '\n';
                 }
             }
             return 0;
@@ -694,9 +711,9 @@ namespace galay
         }
 
     protected:
-        virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl)
+        virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl,Scheduler_Base::wptr scheduler)
         {
-            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd, this->m_scheduler, this->m_read_len,this->m_conn_timeout, ssl);
+            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd, scheduler, this->m_read_len,this->m_conn_timeout, ssl);
             task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
             return task;
         }

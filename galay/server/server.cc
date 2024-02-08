@@ -2,8 +2,11 @@
 
 galay::Server::~Server()
 {
-    if (!this->m_scheduler->is_stop())
+    for (auto scheduler : m_schedulers)
     {
-        this->m_scheduler->stop();
+        if (!scheduler->is_stop())
+        {
+            scheduler->stop();
+        }
     }
 }

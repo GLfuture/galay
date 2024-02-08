@@ -30,6 +30,7 @@ int galay::Epoll_Scheduler::start()
         if (nready == -1)
         {
             std::cout<< error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR << ": "<< error::get_err_str(error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR) << '\n';
+            std::cout<< strerror(errno) <<'\n';
     //        std::this_thread::sleep_for(std::chrono::seconds(2));
             continue;
         }

@@ -19,14 +19,19 @@ Task<> func(Scheduler_Base::ptr scheduler)
     request->get_url_path() = "/";
     request->set_head_kv_pair({"Connection","close"});
     protocol::Http1_1_Response::ptr response = std::make_shared<protocol::Http1_1_Response>();
-    ret = co_await client->request(request,response);
+    ret = co_await client->request<protocol::Http1_1_Request,protocol::Http1_1_Response>(request,response);
     std::cout<<response->encode()<<std::endl;
     std::cout<<ret<<'\n';
-    ret = co_await client->request(request,response);
+    ret = co_await client->request<protocol::Http1_1_Request,protocol::Http1_1_Response>(request,response);
     std::cout<<ret<<'\n';
     std::cout<<response->encode()<<std::endl;
     scheduler->stop();
     co_return;
+}
+
+void sig_handle(int sig)
+{
+
 }
 
 
