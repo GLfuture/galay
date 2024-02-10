@@ -31,6 +31,8 @@ namespace galay
             GY_CONNECT_ERROR = GY_SERVER_ERROR_END,                     //connect
             GY_SSL_CONNECT_ERROR,                                       //ssl_connect
             GY_GETSOCKET_STATUS_ERROR,                                  //getsocketopt error
+            GY_SENDTO_ERROR,                                            //sendto
+            GY_RECVFROM_ERROR,                                          //recvfrom
             GY_CLIENT_ERROR_END
         };
 

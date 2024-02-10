@@ -4,17 +4,14 @@
 #include "../config/config.h"
 #include "../server/server.h"
 #include "../client/client.h"
-#include "../protocol/tcp.h"
-#include "../protocol/http.h"
+#include "../protocol/http1_1.h"
+#include "../protocol/smtp.h"
 #include "../kernel/threadpool.h"
 
 namespace galay
 {
-
-    using TcpServer = Tcp_Server<Tcp_Request,Tcp_Response>::ptr;
-    using TcpSSLServer = Tcp_SSL_Server<Tcp_Request,Tcp_Response>::ptr;
-    using HttpServer = Tcp_Server<Http_Request,Http_Response>::ptr;
-    using HttpsServer = Tcp_SSL_Server<Http_Request,Http_Response>::ptr;
+    using HttpServer = Tcp_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr;
+    using HttpsServer = Tcp_SSL_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>::ptr;
 
     class Factory_Base
     {
@@ -27,29 +24,35 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Config_Factory>;
         //tcp 
-        static Tcp_Server_Config::ptr create_tcp_server_config(int port);
+        /*
+        @param port 端口
+        @param type scheduler 类型
+        @param sche_wait_time scheduler 返回间隔时间
+        @param conn_timeout tcp连接超时时间(自动断开)
+        */
+        static Tcp_Server_Config::ptr create_tcp_server_config(int port,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1 , int threadnum = 1);
         static Tcp_Server_Config::ptr create_tcp_server_config(Tcp_Server_Config &&config);
-        static Tcp_Server_Config::ptr create_tcp_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len);
+        static Tcp_Server_Config::ptr create_tcp_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type, int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
 
         //tcp ssl
         static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(int port,long ssl_min_version,long ssl_max_version
-            , const char* cert_filepath,const char* key_filepath);
+            , const char* cert_filepath,const char* key_filepath,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
         static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(Tcp_SSL_Server_Config &&config);
-        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len
-            , long ssl_min_version , long ssl_max_version ,uint32_t ssl_max_accept_retry,const char* cert_filepath, const char* key_filepath);
+        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len, long ssl_min_version , long ssl_max_version
+             ,uint32_t ssl_max_accept_retry,const char* cert_filepath, const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
 
         //http
-        static Http_Server_Config::ptr create_http_server_config(int port);
+        static Http_Server_Config::ptr create_http_server_config(int port,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
         static Http_Server_Config::ptr create_http_server_config(Http_Server_Config &&config);
-        static Http_Server_Config::ptr create_http_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len);
+        static Http_Server_Config::ptr create_http_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum );
 
 
         //https
         static Https_Server_Config::ptr create_https_server_config(int port,long ssl_min_version,long ssl_max_version
-            , const char* cert_filepath,const char* key_filepath);
+            , const char* cert_filepath,const char* key_filepath,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
         static Https_Server_Config::ptr create_https_server_config(Https_Server_Config &&config);
-        static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len
-            , long ssl_min_version , long ssl_max_version, uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath);
+        static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len, long ssl_min_version , long ssl_max_version, 
+            uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
         
     };
 
@@ -57,14 +60,10 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Server_Factory>;
-        //tcp
-        static TcpServer create_tcp_server(Tcp_Server_Config::ptr config , Scheduler_Base::ptr scheduler);
-        //tcp ssl
-        static TcpSSLServer create_tcp_ssl_server(Tcp_SSL_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
         //http
-        static HttpServer create_http_server(Http_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
+        static HttpServer create_http_server(Http_Server_Config::ptr config );
         //https
-        static HttpsServer create_https_server(Https_Server_Config::ptr config ,Scheduler_Base::ptr scheduler);
+        static HttpsServer create_https_server(Https_Server_Config::ptr config );
     };
 
 
@@ -86,17 +85,20 @@ namespace galay
 
         static Tcp_SSL_Client::ptr create_tcp_ssl_client(Scheduler_Base::ptr scheduler, long ssl_min_version , long ssl_max_version);
 
-        static Http_Client::ptr create_http_client(Scheduler_Base::wptr scheduler);
+        static Tcp_Request_Client::ptr create_http_client(Scheduler_Base::wptr scheduler);
 
-        static Https_Client::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
+        static Tcp_SSL_Request_Client::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
+
+        static Tcp_Request_Client::ptr create_smtp_client(Scheduler_Base::wptr scheduler);
+
+        static Tcp_SSL_Request_Client::ptr create_smtps_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
+
+        static Udp_Client::ptr create_udp_client(Scheduler_Base::wptr scheduler);
+
+        static Udp_Request_Client::ptr create_dns_client(Scheduler_Base::wptr scheduler);
+
     };
-
-    class Timer_Factory: public Factory_Base
-    {
-    public:
-        static Timer::ptr create_timer(uint64_t during , uint32_t exec_times, std::function<void()> &&func);
-    };
-
+    
     //pool factory
     class Pool_Factory: public Factory_Base
     {

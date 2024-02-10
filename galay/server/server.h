@@ -124,7 +124,7 @@ namespace galay
 
         virtual void add_main_task(std::function<Task<>(Task_Base::wptr)> &&func)
         {
-            if(this->m_schedulers[0]->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
+            if(this->m_schedulers[0]->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_ERROR)==-1)
             {
                 std::cout<< "add event failed fd = " <<this->m_fd <<'\n';
             }
@@ -177,7 +177,7 @@ namespace galay
     protected:
         void add_main_task(std::function<Task<>(Task_Base::wptr)> &&func) override
         {
-            if(this->m_schedulers[0]->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
+            if(this->m_schedulers[0]->add_event(this->m_fd, GY_EVENT_READ| GY_EVENT_ERROR)==-1)
             {
                 std::cout<< "add event failed fd = " <<this->m_fd <<'\n';
             }

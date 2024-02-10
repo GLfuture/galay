@@ -13,10 +13,10 @@ namespace galay
     };
 
 
-    class Request_Base
+    class Tcp_Request_Base
     {
     public:
-        using ptr = std::shared_ptr<Request_Base>;
+        using ptr = std::shared_ptr<Tcp_Request_Base>;
         virtual int decode(const std::string &buffer , int &state) = 0;
         virtual int proto_type() = 0;
         virtual int proto_fixed_len() = 0;
@@ -24,10 +24,24 @@ namespace galay
         virtual void set_extra_msg(std::string&& msg) = 0;
     };
 
-    class Response_Base
+    class Tcp_Response_Base
     {
     public:
-        using ptr = std::shared_ptr<Response_Base>;
+        using ptr = std::shared_ptr<Tcp_Response_Base>;
+        virtual std::string encode() = 0;
+    };
+
+    class Udp_Request_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Udp_Request_Base>;
+        virtual int decode(const std::string& buffer) = 0;
+    };
+
+    class Udp_Response_Base
+    {
+    public:
+        using ptr = std::shared_ptr<Udp_Response_Base>;
         virtual std::string encode() = 0;
     };
 }
