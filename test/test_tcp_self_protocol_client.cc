@@ -1,6 +1,7 @@
 
 #include "../galay/factory/factory.h" 
-
+#include <fstream>
+#include <signal.h>
 using namespace galay;
 
 struct self_head
@@ -105,37 +106,69 @@ private:
 
 Task<> func(Epoll_Scheduler::ptr scheduler)
 {
+    auto id = std::this_thread::get_id();
     auto client = std::make_shared<Tcp_Request_Client>(scheduler);
     int ret = co_await client->connect("127.0.0.1",8080);
     if(ret == 0) {
-        std::cout<<"connect success\n";
+        std::cout<< "th :"<< *(unsigned int*)&id <<" connect success\n";
     }else{
         std::cout<<"connect failed\n";
+        scheduler->stop();
+        co_return;
     }
     auto request = std::make_shared<Self_Request>();
     auto response = std::make_shared<Self_Response>();
     self_head& head = request->get_head();
     memcpy(head.version,"1.1",4);
+    //std::ofstream out(std::to_string(*(unsigned int*)&id));
     for(int i = 0 ; i <= 10000 ; i++)
     {
-        std::string buffer = std::to_string(i) + ": hello world\n";
+        std::string buffer = std::to_string(*(unsigned int*)&id) + ": hello world\n";
         head.length = htonl(buffer.length());
         request->get_body() = buffer;
         ret = co_await client->request(request,response);
-        if(i % 1000 == 0) std::cout << i << " " << ret <<"  recv len :" << response->get_head().length << "buffer: " << response->get_body() << '\n';
+        if(ret == -1) {
+            std::cout<< *(unsigned int*)&id << " : send fialed\n";
+            break;
+        }
+        if(i % 1000 == 0){
+           std::cout << i << " : " << response->get_body() << '\n';
+        }
     }
-    sleep(15);
     scheduler->stop();
     co_return;
 }
 
+#define THREAD_NUM 4
+
+std::vector<Scheduler_Base::ptr> schedulers;
+
+void sig(int sign_)
+{
+    for(int i = 0 ; i < THREAD_NUM ; i++)
+    {
+        if(!schedulers[i]->is_stop()) schedulers[i]->stop();
+    }
+}
 
 int main()
 {
-    auto scheduler = Scheduler_Factory::create_epoll_scheduler(1,5);
-    //auto threadpool = Pool_Factory::create_threadpool(4);
-    Task<> t = func(scheduler);
-    scheduler->start();
+    signal(SIGINT,sig);
+    auto test = []()
+    {
+        auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024, -1);
+        schedulers.push_back(scheduler);
+        // auto threadpool = Pool_Factory::create_threadpool(4);
+        Task<> t = func(scheduler);
+        scheduler->start();
+    };
+    std::vector<std::thread> ths;
+    for(int i = 0 ; i < THREAD_NUM ; i ++){
+        ths.push_back(std::thread(test));
+    }
+    for(int i = 0;i < THREAD_NUM ; i++){
+        ths[i].join();
+    }
     std::cout<<"end\n";
     return 0;
 }

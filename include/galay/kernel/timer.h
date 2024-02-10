@@ -38,6 +38,14 @@ namespace galay{
 
         void exec();
 
+        //取消任务
+        void cancle();
+
+        bool is_cancled();
+        
+        //是否已经完成
+        bool is_finish();
+
     protected:
         static uint32_t m_global_timerid;
         // id
@@ -46,6 +54,8 @@ namespace galay{
         uint32_t m_exec_times;  
         uint64_t m_expired_time;
         uint64_t m_during_time;
+        bool m_cancle = false;
+        bool m_is_finish = true;
         std::function<void()> m_func;
     };
     
@@ -59,8 +69,16 @@ namespace galay{
         void update_time();
 
         Timer::ptr get_ealist_timer();
-
-        void add_timer(Timer::ptr timer);
+        
+        template<typename Func,typename ...Args,typename = std::enable_if_t<std::is_void_v<std::invoke_result_t<Func, Args...>>>>
+        Timer::ptr add_timer(uint64_t during , uint32_t exec_times, Func&& f , Args&& ...args)
+        {
+            std::function<void()> func = std::bind(std::forward<Func&&>(f),std::forward<Args>(args)...);
+            auto timer = std::make_shared<Timer>(during,exec_times,std::move(func));
+            std::unique_lock<std::shared_mutex> lock(this->m_mtx);
+            this->m_timers.push(timer);
+            return timer;
+        }
 
         //return timerfd
         int get_timerfd();

@@ -173,8 +173,12 @@ namespace galay
                 delete[] m_temp;
                 m_temp = nullptr;
             }
-            if(!m_timer->is_cancled()){
-                m_timer->cancle();
+            if (m_timer)
+            {
+                if (!m_timer->is_cancled())
+                {
+                    m_timer->cancle();
+                }
             }
         }
 
@@ -406,15 +410,15 @@ namespace galay
                 indx = connfd % (m_schedulers.size() - 1) + 1;
             }
             if (!this->m_schedulers[indx].expired())
+            {
+                auto task = create_rw_task(connfd, this->m_schedulers[indx]);
+                this->m_schedulers[indx].lock()->add_task({connfd, task});
+                iofunction::Tcp_Function::IO_Set_No_Block(connfd);
+                if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
-                    auto task = create_rw_task(connfd,this->m_schedulers[indx]);
-                    this->m_schedulers[indx].lock()->add_task({connfd, task});
-                    iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-                    if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-                    {
-                        std::cout << "add event failed fd = " << connfd << '\n';
-                    }
+                    std::cout << "add event failed fd = " << connfd << '\n';
                 }
+            }
             return 0;
         }
 

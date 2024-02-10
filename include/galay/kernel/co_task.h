@@ -2,8 +2,8 @@
 #define GALAY_CO_TASK_H
 
 #include "task.h"
-#include "../protocol/tcp.h"
-#include "../protocol/http.h"
+#include "../protocol/http1_1.h"
+#include "../protocol/dns.h"
 
 
 namespace galay
@@ -15,6 +15,10 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Task_Base>;
 
+        Co_Task_Base(Scheduler_Base::wptr scheduler)
+        {
+            this->m_scheduler = scheduler;
+        }
 
         virtual void set_co_handle(std::coroutine_handle<> handle)
         {
@@ -38,6 +42,7 @@ namespace galay
     protected:
         RESULT m_result;
         std::coroutine_handle<> m_handle;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -46,7 +51,8 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Connect_Task<RESULT>>;
 
-        Co_Tcp_Client_Connect_Task(int fd , int *error)
+        Co_Tcp_Client_Connect_Task(int fd , Scheduler_Base::wptr scheduler , int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_error = error;
@@ -67,7 +73,11 @@ namespace galay
                 *(this->m_error) = error::GY_SUCCESS;
                 this->m_result = 0;
             }
-            if(!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
@@ -82,7 +92,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Send_Task>;
-        Co_Tcp_Client_Send_Task(int fd ,const std::string &buffer , uint32_t len , int *error)
+        Co_Tcp_Client_Send_Task(int fd ,const std::string &buffer , uint32_t len ,Scheduler_Base::wptr scheduler , int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_buffer = buffer;
@@ -108,7 +119,11 @@ namespace galay
                 this->m_result = ret;
                 *(this->m_error) = error::GY_SUCCESS;
             }
-            if(!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
@@ -124,7 +139,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Recv_Task>;
-        Co_Tcp_Client_Recv_Task(int fd , char* buffer,int len , int *error)
+        Co_Tcp_Client_Recv_Task(int fd , char* buffer,int len ,Scheduler_Base::wptr scheduler , int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_buffer = buffer;
@@ -150,7 +166,11 @@ namespace galay
                 *(this->m_error) = error::GY_SUCCESS;
                 this->m_result = ret;
             }
-            if(!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
@@ -161,18 +181,18 @@ namespace galay
         int * m_error;
     };
 
-    template<typename RESULT = int>
-    class Http_Request_Task: public Co_Task_Base<RESULT>
+    template<Tcp_Request REQ,Tcp_Response RESP, typename RESULT = int>
+    class Co_Tcp_Client_Request_Task: public Co_Task_Base<RESULT>
     {
     public:
-        using ptr = std::shared_ptr<Http_Request_Task>;
-        Http_Request_Task(int fd , Scheduler_Base::wptr scheduler , Http_Request::ptr request , Http_Response::ptr response , int *error)
+        using ptr = std::shared_ptr<Co_Tcp_Client_Request_Task>;
+        Co_Tcp_Client_Request_Task(int fd , Scheduler_Base::wptr scheduler , std::shared_ptr<REQ> request , std::shared_ptr<RESP> response , int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_request = request;
             this->m_respnse = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
-            this->m_scheduler = scheduler;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
             this->m_error = error;
         }
@@ -207,8 +227,8 @@ namespace galay
                     this->m_result = ret;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
-                    if(!m_scheduler.expired()){
-                        if(m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
+                    if(!this->m_scheduler.expired()){
+                        if(this->m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                         {
                             std::cout<< "mod event failed fd = " <<this->m_fd <<'\n';
                         }
@@ -228,14 +248,16 @@ namespace galay
                     if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
                 }while(ret != -1 && ret != 0);
                 if(ret == -1){
-                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                    {
-                        return -1;
-                    }else
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = error::GY_RECV_ERROR;
                         this->m_result = -1;
-                        if (!this->m_handle.done()) this->m_handle.resume();
+                        if (!this->m_handle.done())
+                        {
+                            this->m_scheduler.lock()->del_task(this->m_fd);
+                            this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                            this->m_handle.resume();
+                        }
                         return -1;
                     }
                 }
@@ -261,11 +283,15 @@ namespace galay
             default:
                 break;
             }
-            if (!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
-        ~Http_Request_Task()
+        ~Co_Tcp_Client_Request_Task()
         {
             if(m_tempbuffer){
                 delete[] m_tempbuffer;
@@ -278,9 +304,8 @@ namespace galay
         int m_fd;
         char* m_tempbuffer;
         std::string m_buffer;
-        Http_Request::ptr m_request;
-        Http_Response::ptr m_respnse;
-        Scheduler_Base::wptr m_scheduler;
+        std::shared_ptr<REQ> m_request;
+        std::shared_ptr<RESP> m_respnse;
         int* m_error;
     };
 
@@ -290,7 +315,8 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Connect_Task<RESULT>>;
 
-        Co_Tcp_Client_SSL_Connect_Task(int fd , SSL* ssl , int *error , int init_status)
+        Co_Tcp_Client_SSL_Connect_Task(int fd , SSL* ssl , Scheduler_Base::wptr scheduler , int *error , int init_status)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_error = error;
@@ -345,7 +371,11 @@ namespace galay
             }
             }
 
-            if(!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
     protected:
@@ -359,7 +389,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Send_Task>;
-        Co_Tcp_Client_SSL_Send_Task(SSL * ssl,const std::string &buffer , uint32_t len , int *error)
+        Co_Tcp_Client_SSL_Send_Task(SSL * ssl,const std::string &buffer , uint32_t len , Scheduler_Base::wptr scheduler ,int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_ssl = ssl;
             this->m_buffer = buffer;
@@ -385,7 +416,11 @@ namespace galay
                 this->m_result = ret;
                 *(this->m_error) = error::GY_SUCCESS;
             }
-            if(!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(SSL_get_fd(this->m_ssl));
+                this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl),GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
@@ -401,7 +436,8 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Recv_Task>;
-        Co_Tcp_Client_SSL_Recv_Task(SSL* ssl , char* buffer,int len , int *error)
+        Co_Tcp_Client_SSL_Recv_Task(SSL* ssl , char* buffer,int len , Scheduler_Base::wptr scheduler ,int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_ssl = ssl;
             this->m_buffer = buffer;
@@ -427,7 +463,11 @@ namespace galay
                 *(this->m_error) = error::GY_SUCCESS;
                 this->m_result = ret;
             }
-            if(!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(SSL_get_fd(this->m_ssl));
+                this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl),GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
@@ -439,19 +479,19 @@ namespace galay
     };
 
 
-    template<typename RESULT = int>
-    class Https_Request_Task: public Co_Task_Base<RESULT>
+    template<Tcp_Request REQ,Tcp_Response RESP, typename RESULT = int>
+    class Co_Tcp_Client_SSL_Request_Task: public Co_Task_Base<RESULT>
     {
     public:
-        using ptr = std::shared_ptr<Https_Request_Task>;
-        Https_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , Http_Request::ptr request , Http_Response::ptr response , int *error)
+        using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Request_Task>;
+        Co_Tcp_Client_SSL_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , std::shared_ptr<REQ> request , std::shared_ptr<RESP> response , int *error)
+            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_ssl = ssl;
             this->m_request = request;
             this->m_respnse = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
-            this->m_scheduler = scheduler;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
             this->m_error = error;
         }
@@ -473,11 +513,7 @@ namespace galay
                 } while (len != 0 && len != -1);
                 if (len == -1)
                 {
-                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                    {
-                        return -1;
-                    }
-                    else
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = error::GY_SEND_ERROR;
                         this->m_result = -1;
@@ -493,9 +529,9 @@ namespace galay
                     this->m_result = len;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = error::GY_SUCCESS;
-                    if(!m_scheduler.expired()) 
+                    if(!this->m_scheduler.expired()) 
                     {
-                        if(m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
+                        if(this->m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                         {
                             std::cout<< "mod event failed fd = " <<this->m_fd <<'\n';
                         }
@@ -515,14 +551,16 @@ namespace galay
                     if(ret != -1 && ret != 0) this->m_buffer.append(m_tempbuffer,ret);
                 }while(ret != -1 && ret != 0);
                 if(ret == -1){
-                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-                    {
-                        return -1;
-                    }else
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = error::GY_RECV_ERROR;
                         this->m_result = -1;
-                        if (!this->m_handle.done()) this->m_handle.resume();
+                        if (!this->m_handle.done())
+                        {
+                            this->m_scheduler.lock()->del_task(this->m_fd);
+                            this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                            this->m_handle.resume();
+                        }
                         return -1;
                     }
                 }
@@ -548,11 +586,15 @@ namespace galay
             default:
                 break;
             }
-            if (!this->m_handle.done()) this->m_handle.resume();
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
             return 0;
         }
 
-        ~Https_Request_Task()
+        ~Co_Tcp_Client_SSL_Request_Task()
         {
             if(m_tempbuffer){
                 delete[] m_tempbuffer;
@@ -566,12 +608,231 @@ namespace galay
         SSL* m_ssl;
         char* m_tempbuffer;
         std::string m_buffer;
-        Http_Request::ptr m_request;
-        Http_Response::ptr m_respnse;
-        Scheduler_Base::wptr m_scheduler;
+        std::shared_ptr<REQ> m_request;
+        std::shared_ptr<RESP> m_respnse;
         int* m_error;
     };
 
+    template<typename RESULT = int>
+    class Co_Udp_Client_Sendto_Task: public Co_Task_Base<RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Co_Udp_Client_Sendto_Task>;
+        Co_Udp_Client_Sendto_Task(int fd , std::string ip , uint32_t port , std::string buffer , Scheduler_Base::wptr scheduler , int *error)
+            : Co_Task_Base<RESULT>(scheduler)
+        {
+            this->m_error = error;
+            this->m_fd = fd;
+            this->m_buffer = buffer;
+            this->m_ip = ip,
+            this->m_port = port;
+        }
+
+        int exec() override
+        {
+
+            int ret = iofunction::Udp_Function::Send_To(this->m_fd,{m_ip,static_cast<int>(m_port)},m_buffer);
+            if(ret == -1){
+                if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }else{
+                    *(this->m_error) = error::GY_SENDTO_ERROR;
+                    this->m_result = -1;
+                }
+            }else if(ret == 0){
+                *(this->m_error) = error::GY_SENDTO_ERROR;
+                this->m_result = -1;
+            }else{
+                *(this->m_error) = error::GY_SUCCESS;
+                this->m_result = ret;
+            }
+            
+            if (!this->m_handle.done()) {
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
+            return 0;
+        }
+
+
+
+    private:
+        int m_fd;
+        std::string m_ip;
+        uint32_t m_port;
+        int *m_error;
+        std::string m_buffer;
+    };
+
+    template<typename RESULT = int>
+    class Co_Udp_Client_Recvfrom_Task: public Co_Task_Base<RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Co_Udp_Client_Recvfrom_Task>;
+        Co_Udp_Client_Recvfrom_Task(int fd ,iofunction::Addr* addr, char* buffer , int len , Scheduler_Base::wptr scheduler,int *error)
+            :Co_Task_Base<RESULT>(scheduler)
+        {
+            this->m_fd = fd;
+            this->m_addr = addr;
+            this->m_buffer = buffer;
+            this->m_len = len;
+            this->m_error = error;
+            this->m_timer = scheduler.lock()->get_timer_manager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME,1,[this](){
+                if (!this->m_handle.done()) {
+                    this->m_result = -1;
+                    this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                    this->m_scheduler.lock()->del_task(this->m_fd);
+                    this->m_handle.resume();
+                }
+            });
+        }
+
+        int exec() override
+        {
+            int ret = iofunction::Udp_Function::Recv_From(this->m_fd,*m_addr,m_buffer,m_len);
+            if(ret == -1){
+                if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    return -1;
+                }else{
+                    *(this->m_error) = error::GY_SENDTO_ERROR;
+                    this->m_result = -1;
+                }
+            }else if(ret == 0){
+                *(this->m_error) = error::GY_SENDTO_ERROR;
+                this->m_result = -1;
+            }else{
+                *(this->m_error) = error::GY_SUCCESS;
+                this->m_result = ret;
+            }
+            
+            if (!this->m_handle.done()) {
+                this->m_timer->cancle();
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
+            return 0;
+        }
+    private:
+        int m_fd;
+        iofunction::Addr* m_addr;
+        char* m_buffer = nullptr;
+        int *m_error;
+        int m_len;
+        Timer::ptr m_timer;
+    };
+
+    template<Udp_Request REQ,Udp_Response RESP, typename RESULT = int>
+    class Co_Dns_Client_Request_Task: public Co_Task_Base<RESULT>
+    {
+    public:
+        using ptr = std::shared_ptr<Co_Dns_Client_Request_Task>;
+        Co_Dns_Client_Request_Task(int fd, std::string ip, uint32_t port,std::shared_ptr<REQ> request,std::shared_ptr<RESP> response 
+            , Scheduler_Base::wptr scheduler, int *error)
+            : Co_Task_Base<RESULT>(scheduler)
+        {
+            this->m_fd = fd;
+            this->m_error = error;
+            this->m_ip = ip;
+            this->m_port = port;
+
+            this->m_request = request;
+            this->m_response = response;
+            this->m_status = Task_Status::GY_TASK_WRITE;
+            this->m_error = error;
+        }
+
+        int exec() override
+        {
+            switch (this->m_status)
+            {
+            case Task_Status::GY_TASK_WRITE:
+            {
+                std::string buffer = m_request->encode();
+                int ret = iofunction::Udp_Function::Send_To(this->m_fd,{this->m_ip,static_cast<int>(this->m_port)},buffer);
+                if(ret == -1){
+                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        *(this->m_error) = error::GY_SENDTO_ERROR;
+                        this->m_result = -1;
+                    }
+                }
+                else if (ret == 0)
+                {
+                    *(this->m_error) = error::GY_SENDTO_ERROR;
+                    this->m_result = -1;
+                }
+                else
+                {
+                    this->m_status = Task_Status::GY_TASK_READ;
+                    this->m_scheduler.lock()->mod_event(this->m_fd, GY_EVENT_WRITE, GY_EVENT_READ);
+                    this->m_timer = this->m_scheduler.lock()->get_timer_manager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME, 1, [this](){
+                        if (!this->m_handle.done()) {
+                            this->m_result = -1;
+                            this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                            this->m_scheduler.lock()->del_task(this->m_fd);
+                            this->m_handle.resume();
+                        } 
+                    });
+                    return 0;
+                }
+            }
+                break;
+            case Task_Status::GY_TASK_READ:
+            {
+                char buffer[MAX_UDP_LENGTH] = {0};
+                iofunction::Addr addr;
+                int ret = iofunction::Udp_Function::Recv_From(this->m_fd, addr, buffer, MAX_UDP_LENGTH);
+                if (ret == -1)
+                {
+                    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        *(this->m_error) = error::GY_SENDTO_ERROR;
+                        this->m_result = -1;
+                    }
+                }
+                else if (ret == 0)
+                {
+                    *(this->m_error) = error::GY_SENDTO_ERROR;
+                    this->m_result = -1;
+                }
+                else
+                {
+                    *(this->m_error) = error::GY_SUCCESS;
+                    m_response->decode(std::string(buffer,ret));
+                    this->m_result = 0;
+                }
+            }
+                break;
+            }
+            if (!this->m_handle.done()) {
+                this->m_timer->cancle();
+                this->m_scheduler.lock()->del_task(this->m_fd);
+                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_handle.resume();
+            }
+            return 0;
+        }
+    private:
+        int m_fd;
+        int * m_error;
+        std::string m_ip;
+        uint32_t m_port;
+        Timer::ptr m_timer;
+        std::shared_ptr<REQ> m_request;
+        std::shared_ptr<RESP> m_response;
+    };
 
 }
 
