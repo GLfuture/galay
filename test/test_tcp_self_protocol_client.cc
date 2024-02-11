@@ -107,7 +107,7 @@ private:
 Task<> func(Epoll_Scheduler::ptr scheduler)
 {
     auto id = std::this_thread::get_id();
-    auto client = std::make_shared<Tcp_Request_Client>(scheduler);
+    auto client = Client_Factory::create_tcp_self_define_client(scheduler);
     int ret = co_await client->connect("127.0.0.1",8080);
     if(ret == 0) {
         std::cout<< "th :"<< *(unsigned int*)&id <<" connect success\n";

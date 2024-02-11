@@ -136,7 +136,17 @@ galay::Tcp_SSL_Request_Client::ptr galay::Client_Factory::create_smtps_client(Sc
     return std::make_shared<Tcp_SSL_Request_Client>(scheduler,ssl_min_version,ssl_max_version);
 }
 
+galay::Tcp_Request_Client::ptr galay::Client_Factory::create_tcp_self_define_client(Scheduler_Base::wptr scheduler)
+{
+    return std::make_shared<Tcp_Request_Client>(scheduler);
+}
 
+galay::Tcp_SSL_Request_Client::ptr galay::Client_Factory::create_tcp_ssl_self_define_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
+{
+    return std::make_shared<Tcp_SSL_Request_Client>(scheduler,ssl_min_version,ssl_max_version);
+}
+
+//udp client
 galay::Udp_Client::ptr galay::Client_Factory::create_udp_client(Scheduler_Base::wptr scheduler)
 {
     return std::make_shared<Udp_Client>(scheduler);

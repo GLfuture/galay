@@ -3,7 +3,9 @@
 
 namespace galay
 {
-    
+    namespace protocol{
+        
+    }
     
 }
 

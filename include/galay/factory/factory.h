@@ -81,20 +81,26 @@ namespace galay
     {
     public:
         using ptr = std::shared_ptr<Client_Factory>;
+        //tcp
+        //rw client
         static Tcp_Client::ptr create_tcp_client(Scheduler_Base::wptr scheduler);
-
         static Tcp_SSL_Client::ptr create_tcp_ssl_client(Scheduler_Base::ptr scheduler, long ssl_min_version , long ssl_max_version);
 
+        //request client
         static Tcp_Request_Client::ptr create_http_client(Scheduler_Base::wptr scheduler);
-
         static Tcp_SSL_Request_Client::ptr create_https_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
 
         static Tcp_Request_Client::ptr create_smtp_client(Scheduler_Base::wptr scheduler);
-
         static Tcp_SSL_Request_Client::ptr create_smtps_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
 
+        static Tcp_Request_Client::ptr create_tcp_self_define_client(Scheduler_Base::wptr scheduler);
+        static Tcp_SSL_Request_Client::ptr create_tcp_ssl_self_define_client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
+
+        //udp 
+        //rw client
         static Udp_Client::ptr create_udp_client(Scheduler_Base::wptr scheduler);
 
+        //request client
         static Udp_Request_Client::ptr create_dns_client(Scheduler_Base::wptr scheduler);
 
     };
