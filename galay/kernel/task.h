@@ -329,25 +329,29 @@ namespace galay
             int status;
             len = this->m_req->decode(this->m_rbuffer, status); //解析head 里面赋值 proto_extra_len , return head len
             remain_len = m_req->proto_extra_len() + m_req->proto_fixed_len() - this->m_rbuffer.length();
-            do{
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len,this->m_read_len));
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-                remain_len -= len;
-            }while(len != -1 && len != 0 && remain_len > 0);
-            if (len == -1)
+            if (remain_len != 0)
             {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                do
+                {
+                    memset(this->m_temp, 0, this->m_read_len);
+                    len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len, this->m_read_len));
+                    if (len != -1 && len != 0)
+                        this->m_rbuffer.append(this->m_temp, len);
+                    remain_len -= len;
+                } while (len != -1 && len != 0 && remain_len > 0);
+                if (len == -1)
+                {
+                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
+                    {
+                        Task_Base::destory();
+                        return -1;
+                    }
+                }
+                else if (len == 0)
                 {
                     Task_Base::destory();
                     return -1;
                 }
-            }
-            else if (len == 0)
-            {
-                Task_Base::destory();
-                return -1;
             }
             if(remain_len != 0) return -1;
             this->m_req->set_extra_msg(std::move(this->m_rbuffer.substr(m_req->proto_fixed_len())));
