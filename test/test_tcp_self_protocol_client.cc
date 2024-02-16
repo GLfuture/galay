@@ -121,7 +121,7 @@ Task<> func(Epoll_Scheduler::ptr scheduler)
     self_head& head = request->get_head();
     memcpy(head.version,"1.1",4);
     //std::ofstream out(std::to_string(*(unsigned int*)&id));
-    for(int i = 0 ; i <= 10000 ; i++)
+    for(int i = 0 ; i <= 40000 ; i++)
     {
         std::string buffer = std::to_string(*(unsigned int*)&id) + ": hello world\n";
         head.length = htonl(buffer.length());
