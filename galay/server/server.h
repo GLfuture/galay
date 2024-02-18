@@ -13,43 +13,15 @@ namespace galay
     class Server
     {
     public:
-        Server(Config::ptr config) 
-            : m_config(config)
-        {
-            switch (config->m_type)
-            {
-            case Engine_Type::ENGINE_EPOLL :
-            {
-                for(int i = 0 ; i < config->m_threadnum ; i ++)
-                {
-                    this->m_schedulers.push_back(std::make_shared<Epoll_Scheduler>(config->m_max_event_size,config->m_sche_wait_time));
-                }
-            }
-                break;
-            case Engine_Type::ENGINE_SELECT :
-            {
-                for(int i = 0 ; i < config->m_threadnum ; i++)
-                {
-                    this->m_schedulers.push_back(std::make_shared<Select_Scheduler>(config->m_sche_wait_time));
-                }
-            }
-                break;
-            default:
-                break;
-            }
-        }
+        Server(Config::ptr config);
 
         virtual void start(std::function<Task<>(std::weak_ptr<Task_Base>)> &&func) = 0;
 
-        virtual int get_error() { return this->m_error; }
+        virtual int get_error() ;
     
-        virtual void stop(){ 
-            for(auto scheduler: m_schedulers){
-                scheduler->stop();
-            } 
-        }
+        virtual void stop();
 
-        virtual Scheduler_Base::ptr get_scheduler(int indx) { return this->m_schedulers[indx]; }
+        virtual Scheduler_Base::ptr get_scheduler(int indx);
 
         virtual ~Server();
 
@@ -65,7 +37,7 @@ namespace galay
     class Tcp_Server : public Server
     {
     public:
-        using ptr = std::shared_ptr<Tcp_Server>;
+        using uptr = std::unique_ptr<Tcp_Server>;
         Tcp_Server() = delete;
         Tcp_Server(Tcp_Server_Config::ptr config) 
             : Server(config){}
@@ -147,6 +119,7 @@ namespace galay
     class Tcp_SSL_Server: public Tcp_Server<REQ,RESP>
     {
     public:
+        using uptr = std::unique_ptr<Tcp_SSL_Server>;
         Tcp_SSL_Server(Tcp_SSL_Server_Config::ptr config)
             : Tcp_Server<REQ,RESP>(config)
         {

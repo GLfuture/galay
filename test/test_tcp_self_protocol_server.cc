@@ -99,7 +99,7 @@ Task<> func(Task_Base::wptr t_task)
     }
     
     if(std::any_cast<int>(t_task.lock()->get_ctx()) % 1000 == 0) {
-        std::cout<< std::any_cast<int>(t_task.lock()->get_ctx()) << " " << resp->get_body() <<'\n';
+        std::cout<< std::any_cast<int>(t_task.lock()->get_ctx()) << " " << req->get_body() <<'\n';
     }
     resp->get_body() = req->get_body();
     req->get_head().length = htonl(req->get_head().length);
@@ -108,7 +108,7 @@ Task<> func(Task_Base::wptr t_task)
     return {};
 }
 
-Tcp_Server<Self_Request,Self_Response>::ptr server;
+Tcp_Server<Self_Request,Self_Response>::uptr server;
 
 void sig_handle(int sig)
 {
@@ -121,7 +121,7 @@ int main()
     signal(SIGINT,sig_handle);
     auto config = Config_Factory::create_tcp_server_config(8080,Engine_Type::ENGINE_EPOLL,5,-1,4);
     config->enable_keepalive(10,3,3);
-    server = std::make_shared<Tcp_Server<Self_Request,Self_Response>>(config);
+    server = std::make_unique<Tcp_Server<Self_Request,Self_Response>>(config);
     server->start(func);
     return 0;
 }

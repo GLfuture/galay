@@ -30,7 +30,7 @@ namespace galay
     class Tcp_Client: public Client
     {
     public:
-        using ptr = std::shared_ptr<Tcp_Client>;
+        using uptr = std::unique_ptr<Tcp_Client>;
         //创建时自动sock
         Tcp_Client(Scheduler_Base::wptr scheduler);
 
@@ -51,7 +51,7 @@ namespace galay
     class Tcp_SSL_Client: public Tcp_Client
     {
     public:
-        using ptr = std::shared_ptr<Tcp_SSL_Client>;
+        using uptr = std::unique_ptr<Tcp_SSL_Client>;
         Tcp_SSL_Client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
         
         //0 is success  -1 is failed
@@ -75,7 +75,7 @@ namespace galay
     class Tcp_Request_Client: public Tcp_Client
     {
     public:
-        using ptr = std::shared_ptr<Tcp_Request_Client>;
+        using uptr = std::unique_ptr<Tcp_Request_Client>;
         Tcp_Request_Client(Scheduler_Base::wptr scheduler)
             :Tcp_Client(scheduler) {}
         
@@ -105,7 +105,7 @@ namespace galay
     class Tcp_SSL_Request_Client: public Tcp_SSL_Client
     {
     public:
-        using ptr = std::shared_ptr<Tcp_SSL_Request_Client>;
+        using uptr = std::unique_ptr<Tcp_SSL_Request_Client>;
         Tcp_SSL_Request_Client(Scheduler_Base::wptr scheduler, long ssl_min_version, long ssl_max_version)
             : Tcp_SSL_Client(scheduler, ssl_min_version, ssl_max_version) {}
 
@@ -136,7 +136,7 @@ namespace galay
     class Udp_Client: public Client
     {
     public:
-        using ptr = std::shared_ptr<Udp_Client>;
+        using uptr = std::unique_ptr<Udp_Client>;
         Udp_Client(Scheduler_Base::wptr scheduler);
 
         virtual Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer);
@@ -148,7 +148,7 @@ namespace galay
     class Udp_Request_Client: public Udp_Client
     {
     public:
-        using ptr = std::shared_ptr<Udp_Request_Client>;
+        using uptr = std::unique_ptr<Udp_Request_Client>;
         Udp_Request_Client(Scheduler_Base::wptr scheduler)
             : Udp_Client(scheduler)
         {
