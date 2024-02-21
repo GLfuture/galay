@@ -261,7 +261,7 @@ namespace galay
                         return -1;
                     }
                 }
-                else if(ret == 0)
+                else if(ret == 0 && m_buffer.empty())
                 {
                     *(this->m_error) = error::GY_RECV_ERROR;
                     this->m_result = -1;
@@ -522,13 +522,13 @@ namespace galay
                 {
                     if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
-                        *(this->m_error) = error::GY_SEND_ERROR;
+                        *(this->m_error) = error::GY_SSL_SEND_ERROR;
                         this->m_result = -1;
                     }
                 }
                 else if (len == 0)
                 {
-                    *(this->m_error) = error::GY_SEND_ERROR;
+                    *(this->m_error) = error::GY_SSL_SEND_ERROR;
                     this->m_result = -1;
                 }
                 else if(request.empty())
@@ -560,7 +560,7 @@ namespace galay
                 if(ret == -1){
                     if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
-                        *(this->m_error) = error::GY_RECV_ERROR;
+                        *(this->m_error) = error::GY_SSL_RECV_ERROR;
                         this->m_result = -1;
                         if (!this->m_handle.done())
                         {
@@ -571,10 +571,17 @@ namespace galay
                         return -1;
                     }
                 }
-                else if(ret == 0)
+                else if(ret == 0 && m_buffer.empty())
                 {
-                    *(this->m_error) = error::GY_RECV_ERROR;
+                    *(this->m_error) = error::GY_SSL_RECV_ERROR;
                     this->m_result = -1;
+                    if (!this->m_handle.done())
+                    {
+                        this->m_scheduler.lock()->del_task(this->m_fd);
+                        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_handle.resume();
+                    }
+                    return -1;
                 }
                 int state = 0;
                 this->m_respnse->decode(this->m_buffer, state);

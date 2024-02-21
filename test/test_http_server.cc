@@ -21,21 +21,11 @@ Task<> func(Task_Base::wptr t_task)
     ret = co_await client->request(t_req,resp);
     if(client->get_error() == error::GY_SUCCESS) std::cout<<"request success\n";
     else std::cout<<"request failed error is "<<client->get_error()<<'\n';
-    //std::cout<<resp->encode();
-    // if(!task->get_ctx().has_value()){
-    //     task->get_ctx() = 1;
-    // }else{
-    //     int& ctx = std::any_cast<int&>(task->get_ctx());
-    //     if( ++ctx == 2) {
-    //         std::cout<<"task finish\n";
-    //     }
-    // }
-    // //resp->get_status() = 200;
-    //resp->get_version() = "1.1";
-    //resp->set_head_kv_pair({"Connection","close"});
-    //resp->get_body() = "Hello World!";
     task->control_task_behavior(Task_Status::GY_TASK_WRITE);
-    task->finish();
+    // if(req->get_head_value("Connection").compare("close") == 0) {
+    //     std::cout << "close\n";
+    // }
+    task->finish(); 
     co_return;
 }
 
