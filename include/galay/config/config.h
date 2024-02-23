@@ -70,7 +70,7 @@ namespace galay{
         uint32_t m_backlog;
         uint32_t m_max_rbuffer_len;
         int m_conn_timeout;
-        Tcp_Keepalive_Config  m_keepalive_conf;
+        Tcp_Keepalive_Config m_keepalive_conf;
     };
 
 

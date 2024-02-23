@@ -66,6 +66,8 @@ namespace galay
             std::string m_data;
         };
 
+    #pragma pack()
+
         class Dns_Protocol
         {
         public:
