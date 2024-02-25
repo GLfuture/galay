@@ -131,9 +131,9 @@ Task<> func(Epoll_Scheduler::ptr scheduler)
             std::cout<< *(unsigned int*)&id << " : send fialed\n";
             break;
         }
-        if(i % 1000 == 0){
-           std::cout << i << " : " << response->get_body() << '\n';
-        }
+        // if(i % 1000 == 0){
+        //    std::cout << i << " : " << response->get_body() << '\n';
+        // }
     }
     scheduler->stop();
     co_return;
@@ -163,12 +163,14 @@ int main()
         scheduler->start();
     };
     std::vector<std::thread> ths;
+    uint64_t start = Timer::get_current_time();
     for(int i = 0 ; i < THREAD_NUM ; i ++){
         ths.push_back(std::thread(test));
     }
     for(int i = 0;i < THREAD_NUM ; i++){
         ths[i].join();
     }
-    std::cout<<"end\n";
+    uint64_t end = Timer::get_current_time();
+    std::cout<<"spend : " << (end - start) << " ms\n";
     return 0;
 }

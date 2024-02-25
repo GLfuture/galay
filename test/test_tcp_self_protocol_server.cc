@@ -97,10 +97,10 @@ Task<> func(Task_Base::wptr t_task)
         int& ctx = std::any_cast<int&>(t_task.lock()->get_ctx());
         ctx ++;
     }
-    
-    if(std::any_cast<int>(t_task.lock()->get_ctx()) % 1000 == 0) {
-        std::cout<< std::any_cast<int>(t_task.lock()->get_ctx()) << " " << req->get_body() <<'\n';
-    }
+    for(int i = 0 ; i < 10000 ; i++){}
+    // if(std::any_cast<int>(t_task.lock()->get_ctx()) % 1000 == 0) {
+    //     std::cout<< std::any_cast<int>(t_task.lock()->get_ctx()) << " " << req->get_body() <<'\n';
+    // }
     resp->get_body() = req->get_body();
     req->get_head().length = htonl(req->get_head().length);
     resp->get_head() = req->get_head();
