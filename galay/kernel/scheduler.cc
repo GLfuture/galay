@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "task.h"
+#include "callback.h"
 
 galay::Epoll_Scheduler::Epoll_Scheduler(int max_event, int timeout)
 {
@@ -41,9 +42,10 @@ int galay::Epoll_Scheduler::start()
                 Task_Base::ptr task = this->m_tasks.at(m_events[i].data.fd);
                 task->exec();
                 if (task->is_destroy()) {
+                    if(!Callback_ConnClose::empty()) Callback_ConnClose::call(m_events[i].data.fd);
+                    close(m_events[i].data.fd);
                     del_task(m_events[i].data.fd);
                     del_event(m_events[i].data.fd,GY_EVENT_READ|GY_EVENT_WRITE| GY_EVENT_ERROR);
-                    close(m_events[i].data.fd);
                 }
             }
         }
@@ -130,8 +132,9 @@ void galay::Epoll_Scheduler::stop()
         this->m_stop = true;
         for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
         {
-            this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+            if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
             close(it->first);
+            this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
             it->second.reset();
         }
         this->m_tasks.clear();
@@ -328,9 +331,10 @@ int galay::Select_Scheduler::start()
                     task->exec();
                     if (task->is_destroy())
                     {
+                        if(!Callback_ConnClose::empty()) Callback_ConnClose::call(fd);
+                        close(fd);
                         del_task(fd);
                         this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
-                        close(fd);
                     }
                 }
             }
@@ -361,6 +365,7 @@ void galay::Select_Scheduler::stop()
     FD_ZERO(&m_efds);
     for(auto it = m_tasks.begin() ; it != m_tasks.end() ; it++)
     {
+        if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
         this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         close(it->first);
         it->second.reset();

@@ -1,6 +1,8 @@
 #include "../galay/factory/factory.h"
+#include "../galay/kernel/callback.h"
 #include <signal.h>
 using namespace galay;
+
 
 Task<> func(Task_Base::wptr t_task)
 {
@@ -39,6 +41,9 @@ void sig_handle(int sig)
 int main()
 {
     signal(SIGINT,sig_handle);
+    Callback_ConnClose::set([](int fd){
+        std::cout << "exit :" << fd << "\n";  
+    });
     auto config = Config_Factory::create_http_server_config(8080,Engine_Type::ENGINE_EPOLL,5,5000,5); //5s断
     http_server = Server_Factory::create_http_server(config);
     http_server->start(func);
