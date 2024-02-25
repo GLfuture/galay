@@ -12,6 +12,7 @@
 #include "error.h"
 #include "iofunction.h"
 #include "scheduler.h"
+#include "callback.h"
 
 
 namespace galay
@@ -186,9 +187,10 @@ namespace galay
         void add_timeout_timer()
         {
             this->m_timer = this->m_scheduler.lock()->get_timer_manager()->add_timer(this->m_conn_timeout, 1, [this]() {
+                    if(!Callback_ConnClose::empty()) Callback_ConnClose::call(this->m_fd);
+                    close(this->m_fd);
                     this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ|GY_EVENT_WRITE|GY_EVENT_ERROR);
                     this->m_scheduler.lock()->del_task(this->m_fd);
-                    close(this->m_fd);
                 });
         }
 
@@ -623,12 +625,14 @@ namespace galay
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
+                    iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
                     Task_Base::destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
+                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
                 Task_Base::destory();
                 return -1;
             }

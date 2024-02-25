@@ -1,10 +1,12 @@
 #include "client.h"
+#include "../kernel/callback.h"
 
 void galay::Client::stop()
 {
     if (!this->m_scheduler.expired() && !this->m_stop)
     {
         this->m_scheduler.lock()->del_task(this->m_fd);
+        if(!Callback_ConnClose::empty()) Callback_ConnClose::call(this->m_fd);
         close(this->m_fd);
         this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_stop = true;
