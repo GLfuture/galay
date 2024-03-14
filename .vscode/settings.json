@@ -75,6 +75,12 @@
         "bitset": "cpp",
         "unordered_set": "cpp",
         "set": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "charconv": "cpp",
+        "complex": "cpp",
+        "csignal": "cpp",
+        "source_location": "cpp",
+        "typeindex": "cpp",
+        "*.ipp": "cpp"
     }
 }

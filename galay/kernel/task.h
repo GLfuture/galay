@@ -201,17 +201,18 @@ namespace galay
 
         virtual int read_package()
         {
+            if(read_all_buffer() == -1) return -1;
             switch (m_req->proto_type())
             {
                 //buffer read empty
             case GY_ALL_RECIEVE_PROTOCOL_TYPE:
-                return read_all_buffer();
+                return 0;
                 //fixed proto package
             case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
-                return read_fixed_pakage();
+                return get_fixed_package();
                 //fixed head and head includes body's length
             case GY_HEAD_FIXED_PROTOCOL_TYPE:
-                return read_fixed_head();
+                return get_fixed_head_package();
             }
             return -1;
         }
@@ -272,92 +273,31 @@ namespace galay
             return 0;
         }
 
-        int read_fixed_pakage()
+        int get_fixed_package()
         {
-            uint32_t remain_len = m_req->proto_fixed_len() - this->m_rbuffer.length();
-            int len = 1;
-            do{
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len,this->m_read_len));
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-                remain_len -= len;
-            }while(len != -1 && len != 0 && remain_len > 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                Task_Base::destory();
-                return -1;
-            }
+            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) return -1;
+            std::string res = this->m_rbuffer.substr(0 , this->m_req->proto_fixed_len());
             int status;
-            len = this->m_req->decode(this->m_rbuffer, status);
+            int len = this->m_req->decode(res, status);
             if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                 return -1;
             this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + m_req->proto_fixed_len());
             return 0;
         }
 
-        int read_fixed_head()
+        int get_fixed_head_package()
         {
-            uint32_t remain_len = m_req->proto_fixed_len() - this->m_rbuffer.length();
-            int len = 1;
-            do{
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len,this->m_read_len));
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-                remain_len -= len;
-            }while(len != -1 && len != 0 && remain_len > 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                Task_Base::destory();
+            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) return -1;
+            std::string head = this->m_rbuffer.substr(0, this->m_req->proto_fixed_len());
+            int status = 0;
+            int len = m_req->decode(head,status);
+            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
                 return -1;
-            }
-            int status;
-            len = this->m_req->decode(this->m_rbuffer, status); //解析head 里面赋值 proto_extra_len , return head len
-            remain_len = m_req->proto_extra_len() + m_req->proto_fixed_len() - this->m_rbuffer.length();
-            if (remain_len != 0)
-            {
-                do
-                {
-                    memset(this->m_temp, 0, this->m_read_len);
-                    len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, std::min(remain_len, this->m_read_len));
-                    if (len != -1 && len != 0)
-                        this->m_rbuffer.append(this->m_temp, len);
-                    remain_len -= len;
-                } while (len != -1 && len != 0 && remain_len > 0);
-                if (len == -1)
-                {
-                    if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                    {
-                        Task_Base::destory();
-                        return -1;
-                    }
-                }
-                else if (len == 0)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
-            }
-            if(remain_len != 0) return -1;
-            this->m_req->set_extra_msg(std::move(this->m_rbuffer.substr(m_req->proto_fixed_len())));
-            this->m_rbuffer.clear();
+            int total_len = this->m_req->proto_fixed_len() + this->m_req->proto_extra_len();
+            if(this->m_rbuffer.length() < total_len) return -1;
+            std::string body = this->m_rbuffer.substr(this->m_req->proto_fixed_len(),this->m_req->proto_extra_len());
+            this->m_req->set_extra_msg(std::move(body));
+            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin()+total_len);
             return 0;
         }
 
