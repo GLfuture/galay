@@ -26,7 +26,7 @@ namespace galay
         virtual ~Server();
 
     protected:
-        int m_fd = 0;
+        std::vector<int> m_fds;
         Config::ptr m_config;
         int m_error = error::base_error::GY_SUCCESS; 
         std::vector<Scheduler_Base::ptr> m_schedulers;
@@ -67,51 +67,55 @@ namespace galay
     protected:
         int init(Tcp_Server_Config::ptr config)
         {
-            this->m_fd = iofunction::Tcp_Function::Sock();
-            if (this->m_fd <= 0)
+            //TO do
+            for (int i = 0; i < config->m_ports.size(); i++)
             {
-                return error::base_error::GY_SOCKET_ERROR;
+                int fd = iofunction::Tcp_Function::Sock();
+                if (fd <= 0)
+                {
+                    return error::base_error::GY_SOCKET_ERROR;
+                }
+                int ret = iofunction::Tcp_Function::Reuse_Fd(fd);
+                if (ret == -1)
+                {
+                    close(fd);
+                    return error::server_error::GY_SETSOCKOPT_ERROR;
+                }
+                ret = iofunction::Tcp_Function::Bind(fd, config->m_ports[i]);
+                if (ret == -1)
+                {
+                    close(fd);
+                    return error::server_error::GY_BIND_ERROR;
+                }
+                ret = iofunction::Tcp_Function::Listen(fd, config->m_backlog);
+                if (ret == -1)
+                {
+                    close(fd);
+                    return error::server_error::GY_LISTEN_ERROR;
+                }
+                iofunction::Tcp_Function::IO_Set_No_Block(fd);
+                this->m_fds.push_back(fd);
             }
-            int ret = iofunction::Tcp_Function::Reuse_Fd(this->m_fd);
-            if (ret == -1)
-            {
-                close(this->m_fd);
-                return error::server_error::GY_SETSOCKOPT_ERROR;
-            }
-            ret = iofunction::Tcp_Function::Bind(this->m_fd, config->m_port);
-            if (ret == -1)
-            {
-                close(this->m_fd);
-                return error::server_error::GY_BIND_ERROR;
-            }
-            ret = iofunction::Tcp_Function::Listen(this->m_fd, config->m_backlog);
-            if (ret == -1)
-            {
-                close(this->m_fd);
-                return error::server_error::GY_LISTEN_ERROR;
-            }
-            iofunction::Tcp_Function::IO_Set_No_Block(this->m_fd);
             return error::base_error::GY_SUCCESS;
         }
 
         virtual void add_main_task(std::function<Task<>(Task_Base::wptr)> &&func)
         {
-            if(this->m_schedulers[0]->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_ERROR)==-1)
-            {
-                std::cout<< "add event failed fd = " <<this->m_fd <<'\n';
+            for(int i = 0 ; i < this->m_fds.size() ; i ++){
+                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {std::cout<< "add event failed fd = " <<this->m_fds[i] <<'\n';}
+                auto config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
+                std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
+                for(auto scheduler: m_schedulers)
+                {
+                    schedulers.push_back(scheduler);
+                }
+                auto task = std::make_shared<Tcp_Main_Task<REQ,RESP>>(this->m_fds[i],schedulers, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), config->m_max_rbuffer_len,config->m_conn_timeout);
+                if (config->m_keepalive_conf.m_keepalive)
+                {
+                    task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
+                }
+                this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
             }
-            auto config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
-            std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
-            for(auto scheduler: m_schedulers)
-            {
-                schedulers.push_back(scheduler);
-            }
-            auto task = std::make_shared<Tcp_Main_Task<REQ,RESP>>(this->m_fd,schedulers, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), config->m_max_rbuffer_len,config->m_conn_timeout);
-            if (config->m_keepalive_conf.m_keepalive)
-            {
-                task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
-            }
-            this->m_schedulers[0]->add_task(std::make_pair(this->m_fd, task));
         }
     };
 
@@ -150,22 +154,24 @@ namespace galay
     protected:
         void add_main_task(std::function<Task<>(Task_Base::wptr)> &&func) override
         {
-            if(this->m_schedulers[0]->add_event(this->m_fd, GY_EVENT_READ| GY_EVENT_ERROR)==-1)
-            {
-                std::cout<< "add event failed fd = " <<this->m_fd <<'\n';
+            for(int i = 0 ; i < this->m_fds.size() ; i ++){
+                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ| GY_EVENT_ERROR)==-1)
+                {
+                    std::cout<< "add event failed fd = " <<this->m_fds[i] <<'\n';
+                }
+                std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
+                for(auto scheduler: this->m_schedulers)
+                {
+                    schedulers.push_back(scheduler);
+                }
+                Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
+                auto task = std::make_shared<Tcp_SSL_Main_Task<REQ,RESP>>(this->m_fds[i], schedulers, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), config->m_max_rbuffer_len ,config->m_conn_timeout, config->m_ssl_accept_retry, this->m_ctx);
+                if (config->m_keepalive_conf.m_keepalive)
+                {
+                    task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
+                }
+                this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
             }
-            std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
-            for(auto scheduler: this->m_schedulers)
-            {
-                schedulers.push_back(scheduler);
-            }
-            Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
-            auto task = std::make_shared<Tcp_SSL_Main_Task<REQ,RESP>>(this->m_fd, schedulers, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), config->m_max_rbuffer_len ,config->m_conn_timeout, config->m_ssl_accept_retry, this->m_ctx);
-            if (config->m_keepalive_conf.m_keepalive)
-            {
-                task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
-            }
-            this->m_schedulers[0]->add_task(std::make_pair(this->m_fd, task));
         }
 
     protected:
@@ -183,11 +189,14 @@ namespace galay
         Udp_Server(Udp_Server_Config::ptr config)
             :Server(config)
         {
-
-            this->m_fd = iofunction::Udp_Function::Sock();
-            iofunction::Simple_Fuction::IO_Set_No_Block(this->m_fd);
-            iofunction::Udp_Function::Bind(this->m_fd,config->m_port);
-            m_schedulers[0]->add_event(this->m_fd,GY_EVENT_READ);
+            for(int i = 0 ; i < config->m_ports.size() ; i ++){
+                int fd = iofunction::Udp_Function::Sock();
+                iofunction::Simple_Fuction::IO_Set_No_Block(fd);
+                iofunction::Udp_Function::Bind(fd,config->m_ports[i]);
+                m_schedulers[0]->add_event(fd,GY_EVENT_READ);
+                this->m_fds.push_back(fd);
+            }
+            
         }
 
         void start(std::function<Task<>(std::weak_ptr<Task_Base>)> &&func)

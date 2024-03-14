@@ -30,28 +30,28 @@ namespace galay
         @param sche_wait_time scheduler 返回间隔时间
         @param conn_timeout tcp连接超时时间(自动断开)
         */
-        static Tcp_Server_Config::ptr create_tcp_server_config(int port,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1 , int threadnum = 1);
+        static Tcp_Server_Config::ptr create_tcp_server_config(std::vector<uint16_t> ports,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1 , int threadnum = 1);
         static Tcp_Server_Config::ptr create_tcp_server_config(Tcp_Server_Config &&config);
-        static Tcp_Server_Config::ptr create_tcp_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type, int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
+        static Tcp_Server_Config::ptr create_tcp_server_config(std::vector<uint16_t> ports,uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type, int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
 
         //tcp ssl
-        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(int port,long ssl_min_version,long ssl_max_version
+        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(std::vector<uint16_t> ports,long ssl_min_version,long ssl_max_version
             , const char* cert_filepath,const char* key_filepath,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
         static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(Tcp_SSL_Server_Config &&config);
-        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len, long ssl_min_version , long ssl_max_version
+        static Tcp_SSL_Server_Config::ptr create_tcp_ssl_server_config(std::vector<uint16_t> ports,uint32_t backlog,uint32_t max_rbuffer_len, long ssl_min_version , long ssl_max_version
              ,uint32_t ssl_max_accept_retry,const char* cert_filepath, const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
 
         //http
-        static Http_Server_Config::ptr create_http_server_config(int port,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
+        static Http_Server_Config::ptr create_http_server_config(std::vector<uint16_t> ports,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
         static Http_Server_Config::ptr create_http_server_config(Http_Server_Config &&config);
-        static Http_Server_Config::ptr create_http_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum );
+        static Http_Server_Config::ptr create_http_server_config(std::vector<uint16_t> ports,uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum );
 
 
         //https
-        static Https_Server_Config::ptr create_https_server_config(int port,long ssl_min_version,long ssl_max_version
+        static Https_Server_Config::ptr create_https_server_config(std::vector<uint16_t> ports,long ssl_min_version,long ssl_max_version
             , const char* cert_filepath,const char* key_filepath,Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1, int threadnum = 1);
         static Https_Server_Config::ptr create_https_server_config(Https_Server_Config &&config);
-        static Https_Server_Config::ptr create_https_server_config(uint16_t port,uint32_t backlog,uint32_t max_rbuffer_len, long ssl_min_version , long ssl_max_version, 
+        static Https_Server_Config::ptr create_https_server_config(std::vector<uint16_t> ports,uint32_t backlog,uint32_t max_rbuffer_len, long ssl_min_version , long ssl_max_version, 
             uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum);
         
     };
