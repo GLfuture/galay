@@ -7,7 +7,8 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Char(const std::string &s
     {
         int beg = i;
         i = str.find(symbol, beg);
-        result.emplace_back(str.substr(beg, i - beg));
+        std::string temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(std::move(temp));
         if (i == std::string::npos)
             break;
     }
@@ -25,7 +26,8 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Str(const std::string &st
     {
         int beg = i;
         i = str.find(symbol, beg);
-        result.emplace_back(str.substr(beg, i - beg));
+        std::string temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(std::move(temp));
         if (i == std::string::npos)
             break;
         i += len - 1;
@@ -64,7 +66,10 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Char_Connect_With_char(co
             else
             {
                 if (beg != end)
-                    result.emplace_back(str.substr(beg, end - beg));
+                {
+                    std::string temp = str.substr(beg, end - beg);
+                    if(!temp.empty()) result.emplace_back();
+                }
                 end++;
                 beg = end;
                 status = 0;
@@ -74,14 +79,20 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Char_Connect_With_char(co
         else if (str[i] == partition && status == 0)
         {
             if (beg != end)
-                result.emplace_back(str.substr(beg, end - beg));
+            {
+                std::string temp = str.substr(beg, end - beg);
+                if(!temp.empty()) result.emplace_back();
+            }
             beg = end + 1;
         }
         end++;
         if (i == str.size() - 1)
         {
             if (beg != end)
-                result.emplace_back(str.substr(beg, end - beg));
+            {
+                std::string temp = str.substr(beg, end - beg);
+                if(!temp.empty()) result.emplace_back();
+            }
         }
     }
     if (status)
@@ -101,7 +112,8 @@ std::vector<std::string_view> galay::StringUtil::Spilt_With_Char(std::string_vie
     {
         int beg = i;
         i = str.find(symbol, beg);
-        result.emplace_back(str.substr(beg, i - beg));
+        std::string_view temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(std::move(temp));
         if (i == std::string::npos)
             break;
     }
@@ -118,7 +130,8 @@ std::vector<std::string_view> galay::StringUtil::Spilt_With_Str(std::string_view
     {
         int beg = i;
         i = str.find(symbol, beg);
-        result.emplace_back(str.substr(beg, i - beg));
+        std::string_view temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(temp);
         if (i == std::string::npos)
             break;
         i += len - 1;
@@ -156,7 +169,10 @@ std::vector<std::string_view> galay::StringUtil::Spilt_With_Char_Connect_With_ch
             else
             {
                 if (beg != end)
-                    result.emplace_back(str.substr(beg, end - beg));
+                {
+                    std::string_view temp = str.substr(beg, end - beg);
+                    if(!temp.empty()) result.emplace_back();;
+                }
                 end++;
                 beg = end;
                 status = 0;
@@ -166,14 +182,20 @@ std::vector<std::string_view> galay::StringUtil::Spilt_With_Char_Connect_With_ch
         else if (str[i] == partition && status == 0)
         {
             if (beg != end)
-                result.emplace_back(str.substr(beg, end - beg));
+            {
+                std::string_view temp = str.substr(beg, end - beg);
+                if(!temp.empty()) result.emplace_back();;
+            }
             beg = end + 1;
         }
         end++;
         if (i == str.size() - 1)
         {
             if (beg != end)
-                result.emplace_back(str.substr(beg, end - beg));
+            {
+                std::string_view temp = str.substr(beg, end - beg);
+                if(!temp.empty()) result.emplace_back();;
+            }
         }
     }
     if (status)
