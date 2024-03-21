@@ -28,7 +28,7 @@ int galay::Conf_Parser::parse(const char *content, uintmax_t len)
                 continue;
             if (line[i] == '#')
                 break;
-            if (line[i] == '=' || line[i] == ':')
+            if ((line[i] == '=' || line[i] == ':') && state == Conf_Type::CONF_KEY)
             {
                 state = Conf_Type::CONF_VALUE;
                 continue;
