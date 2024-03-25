@@ -6,8 +6,7 @@ uint32_t galay::Timer::m_global_timerid = 0;
 //timer
 galay::Timer::Timer(uint64_t during_time, uint32_t exec_times, std::function<void()> &&func)
 {
-    m_global_timerid++;
-    this->m_timerid = m_global_timerid;
+    this->m_timerid = m_global_timerid++;
     this->m_exec_times = exec_times;
     this->m_func = func;
     set_during_time(during_time);

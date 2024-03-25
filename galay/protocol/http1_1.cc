@@ -69,12 +69,12 @@ std::string& galay::protocol::Http1_1_Request::get_url_path()
 
 int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& state)
 {
-    state = error::base_error::GY_SUCCESS;
+    state = Error::NoError::GY_SUCCESS;
     int beg = 0;
     int end = buffer.find("\r\n\r\n");
     if (end == std::string::npos)
     {
-        state = error::protocol_error::GY_PROTOCOL_INCOMPLETE;
+        state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
         return -1;
     }
     std::string head = buffer.substr(beg, end);
@@ -96,7 +96,7 @@ int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& sta
         this->m_version = sub_match[3];
     }
     else {
-        state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+        state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
         return -1;
     }
 
@@ -113,7 +113,7 @@ int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& sta
         }
         else
         {
-            state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+            state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
             return -1;
         }
     }
@@ -124,7 +124,7 @@ int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& sta
         std::string other = buffer.substr(beg);
         if (content_len > other.length())
         {
-            state = error::protocol_error::GY_PROTOCOL_INCOMPLETE;
+            state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
             return -1;
         }
         this->m_body = buffer.substr(beg, content_len);
@@ -138,7 +138,7 @@ int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& sta
     end = buffer.find("\r\n\r\n", beg);
     if (end == std::string::npos)
     {
-        state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+        state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
         return -1;
     }
     this->m_body = buffer.substr(beg, end - beg);
@@ -445,7 +445,7 @@ std::string galay::protocol::Http1_1_Response::encode()
 
 int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& state)
 {
-    state = error::base_error::GY_SUCCESS;
+    state = Error::NoError::GY_SUCCESS;
     int beg = 0;
     int end = buffer.find("\r\n\r\n");
     if (end == std::string::npos)
@@ -486,7 +486,7 @@ int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& st
             }
             else
             {
-                state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+                state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
                 return -1;
             }
         }
@@ -501,7 +501,7 @@ int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& st
         std::string other = buffer.substr(beg);
         if (content_len > other.length())
         {
-            state = error::protocol_error::GY_PROTOCOL_INCOMPLETE;
+            state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
             return -1;
         }
         this->m_body = buffer.substr(beg, content_len);
@@ -512,7 +512,7 @@ int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& st
     end = buffer.find("\r\n\r\n", beg);
     if (end == std::string::npos)
     {
-        state = error::protocol_error::GY_PROTOCOL_BAD_REQUEST;
+        state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
         return -1;
     }
     this->m_body = buffer.substr(beg, end - beg);

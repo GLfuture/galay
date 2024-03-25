@@ -8,7 +8,7 @@ Task<> func(Scheduler_Base::wptr scheduler)
 {
     auto client = Client_Factory::create_dns_client(scheduler);
     char buffer[1024] = {0};
-    iofunction::Addr addr;
+    IOFuntion::Addr addr;
     protocol::Dns_Request::ptr request = std::make_shared<protocol::Dns_Request>();
     protocol::Dns_Response::ptr response = std::make_shared<protocol::Dns_Response>();
     auto& header = request->get_header();
@@ -23,7 +23,6 @@ Task<> func(Scheduler_Base::wptr scheduler)
         question.m_qname = hostname[i];
         request->get_question_queue().push(question);
         int ret = co_await client->request(request, response, "114.114.114.114", 53);
-        std::cout<<ret<<'\n';
     }
     auto& q = response->get_answer_queue();
     while(!q.empty())

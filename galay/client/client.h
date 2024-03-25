@@ -92,7 +92,7 @@ namespace galay
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 return Net_Awaiter<int>{task};
             }
-            this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
+            this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
             return {nullptr, -1};
         }
 
@@ -122,7 +122,7 @@ namespace galay
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 return Net_Awaiter<int>{task};
             }
-            this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
+            this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
             return {nullptr, -1};
         }
 
@@ -141,7 +141,7 @@ namespace galay
 
         virtual Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer);
 
-        virtual Net_Awaiter<int> recvfrom(char* buffer, int len , iofunction::Addr* addr);
+        virtual Net_Awaiter<int> recvfrom(char* buffer, int len , IOFuntion::Addr* addr);
 
     };
 
@@ -167,13 +167,13 @@ namespace galay
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 return Net_Awaiter<int>{task};
             }
-            this->m_error = error::scheduler_error::GY_SCHDULER_IS_EXPIRED;
+            this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
             return {nullptr, -1};
         }
 
     private:
         Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer) override { return {nullptr};  }
-        Net_Awaiter<int> recvfrom(char* buffer, int len , iofunction::Addr* addr) override { return {nullptr};  }
+        Net_Awaiter<int> recvfrom(char* buffer, int len , IOFuntion::Addr* addr) override { return {nullptr};  }
     };
 }
 

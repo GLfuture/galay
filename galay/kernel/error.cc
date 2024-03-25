@@ -1,6 +1,6 @@
 #include "error.h"
 
-const char *galay::error::global_err_str[] = {
+const char *galay::Error::global_err_str[] = {
     "no error",
     "socket function error",
     "send function error",
@@ -15,20 +15,22 @@ const char *galay::error::global_err_str[] = {
     "ssl_ctx_new function error",
     "ssl_obj_new function error",
     "ssl certification or server's key file error",
-    "choose error engine",
     "connect function error",
     "ssl_connect function error",
     "the getsockopt function in client has some error",
     "sendto function error",
     "recvfrom function error",
+    "set no block error",
+    "scheduler engine choose error",
+    "incorrect function size",
     "scheduler's engine check events error",
     "scheduler is expired",
-    "epoll engine's epoll_wait function has error",
+    "scheduler modify event's status fail",
     "protocol is incomplete",
     "the request is a bad request",
 };
 
-const char *galay::error::get_err_str(int errcode)
+const char *galay::Error::get_err_str(int errcode)
 {
-    return galay::error::global_err_str[errcode];
+    return galay::Error::global_err_str[errcode];
 }

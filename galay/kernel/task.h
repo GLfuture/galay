@@ -7,9 +7,9 @@
 #include <thread>
 #include <chrono>
 #include <algorithm>
+#include <spdlog/spdlog.h>
 #include "base.h"
 #include "coroutine.h"
-#include "error.h"
 #include "iofunction.h"
 #include "scheduler.h"
 #include "callback.h"
@@ -63,7 +63,7 @@ namespace galay
         Tcp_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len, int conn_timeout)
         {
             this->m_status = Task_Status::GY_TASK_READ;
-            this->m_error = error::base_error::GY_SUCCESS;
+            this->m_error = Error::NoError::GY_SUCCESS;
             this->m_scheduler = scheduler;
             this->m_fd = fd;
             this->m_read_len = read_len;
@@ -85,9 +85,9 @@ namespace galay
                 {
                 case Task_Status::GY_TASK_WRITE:
                 {
-                    if(scheduler->mod_event(this->m_fd, GY_EVENT_READ , GY_EVENT_WRITE)==-1)
+                    if(scheduler->mod_event(this->m_fd, GY_EVENT_READ , GY_EVENT_WRITE) == -1)
                     {
-                        std::cout<< "mod event failed fd = " <<this->m_fd <<'\n';
+                        spdlog::error("{} {} {} {}",__TIME__,__FILE__,__LINE__,Error::get_err_str(this->m_error));
                     }
                     this->m_status = Task_Status::GY_TASK_WRITE;
                     break;
@@ -96,7 +96,7 @@ namespace galay
                 {
                     if(scheduler->mod_event(this->m_fd, GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                     {
-                        std::cout<< "mod event failed fd = " <<this->m_fd <<'\n';
+                        spdlog::error("{} {} {} {}",__TIME__,__FILE__,__LINE__,Error::get_err_str(this->m_error));
                     }
                     this->m_status = Task_Status::GY_TASK_READ;
                     break;
@@ -202,11 +202,12 @@ namespace galay
         virtual int read_package()
         {
             if(read_all_buffer() == -1) return -1;
+            this->m_error = Error::NoError::GY_SUCCESS;
             switch (m_req->proto_type())
             {
                 //buffer read empty
             case GY_ALL_RECIEVE_PROTOCOL_TYPE:
-                return 0;
+                return get_all_buffer();
                 //fixed proto package
             case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
                 return get_fixed_package();
@@ -220,22 +221,30 @@ namespace galay
         virtual int send_package()
         {
             int len;
-            if(this->m_wbuffer.empty()) return 0;
+            if(this->m_wbuffer.empty()) {
+                spdlog::warn("{} {} {} send(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,0);
+                return 0;
+            }
             do{
-                len = iofunction::Tcp_Function::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
-                if (len != -1 && len != 0) this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+                len = IOFuntion::TcpFunction::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
+                if (len != -1 && len != 0) {
+                    spdlog::info("{} {} {} send(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+                    this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+                }
                 if(this->m_wbuffer.empty()) break;
             }while(len != 0 && len != -1);
             if (len == -1)
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
+                    spdlog::error("{} {} {} send(fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                     Task_Base::destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
+                spdlog::error("{} {} {} SSL_Send (fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                 Task_Base::destory();
                 return -1;
             } 
@@ -248,56 +257,85 @@ namespace galay
             do
             {
                 memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::Recv(this->m_fd, this->m_temp, this->m_read_len);
-                if (len != -1 && len != 0)
+                len = IOFuntion::TcpFunction::Recv(this->m_fd, this->m_temp, this->m_read_len);
+                if (len != -1 && len != 0){
+                    spdlog::info("{} {} {} recv(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
                     this->m_rbuffer.append(this->m_temp, len);
+                }
             } while (len != -1 && len != 0);
             if (len == -1)
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
+                    spdlog::error("{} {} {} recv(fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                     Task_Base::destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
+                spdlog::error("{} {} {} recv(fd: {}) The peer closes the connection, error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                 Task_Base::destory();
                 return -1;
             }
-            int status;
-            len = this->m_req->decode(this->m_rbuffer, status);
-            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+            return 0;
+        }
+
+        int get_all_buffer()
+        {
+            int len = this->m_req->decode(this->m_rbuffer, this->m_error);
+            spdlog::info("{} {} {} decode protocol (fd: {}) len: {}",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+            if (this->m_error == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE){
+                spdlog::warn("{} {} {} decode protocol error(fd: {}): {}",__TIME__,__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
                 return -1;
+            }
             this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
+            spdlog::info("{} {} {} read buffer clear(fd: {}) len: {}",__TIME__,__FILE__,__LINE__,this->m_fd,len);
             return 0;
         }
 
         int get_fixed_package()
         {
-            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) return -1;
-            std::string res = this->m_rbuffer.substr(0 , this->m_req->proto_fixed_len());
-            int status;
-            int len = this->m_req->decode(res, status);
-            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) {
+                spdlog::warn("{} {} {} protocol data incomplete (fd: {}) require len: {} , real len: {}",__TIME__,__FILE__,__LINE__,this->m_fd,this->m_req->proto_fixed_len(),this->m_rbuffer.length());
                 return -1;
+            }
+            std::string res = this->m_rbuffer.substr(0 , this->m_req->proto_fixed_len());
+            int len = this->m_req->decode(res, this->m_error);
+            spdlog::info("{} {} {} decode protocol (fd: {}) len: {}",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+            if (this->m_error == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE){
+                spdlog::warn("{} {} {} decode protocol error(fd: {}): {}",__TIME__,__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
+                return -1;
+            }
             this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + m_req->proto_fixed_len());
+            spdlog::info("{} {} {} read buffer clear(fd: {}) len: {}",__TIME__,__FILE__,__LINE__,this->m_fd, m_req->proto_fixed_len());
             return 0;
         }
 
         int get_fixed_head_package()
         {
-            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) return -1;
-            std::string head = this->m_rbuffer.substr(0, this->m_req->proto_fixed_len());
-            int status = 0;
-            int len = m_req->decode(head,status);
-            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
+            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) {
+                spdlog::warn("{} {} {} protocol data incomplete (fd: {}) require len: {} , real len: {}",__TIME__,__FILE__,__LINE__,this->m_fd,this->m_req->proto_fixed_len(),this->m_rbuffer.length());
                 return -1;
+            }
+            std::string head = this->m_rbuffer.substr(0, this->m_req->proto_fixed_len());
+            int len = m_req->decode(head,this->m_error);
+            spdlog::info("{} {} {} decode protocol (fd: {}) len: {}",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+            if (this->m_error == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE)
+            {
+                spdlog::warn("{} {} {} decode protocol error(fd: {}): {}",__TIME__,__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
+                return -1;
+            }
             int total_len = this->m_req->proto_fixed_len() + this->m_req->proto_extra_len();
-            if(this->m_rbuffer.length() < total_len) return -1;
+            if(this->m_rbuffer.length() < total_len) {
+                this->m_error = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
+                spdlog::warn("{} {} {} decode protocol error(fd: {}): {}",__TIME__,__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
+                return -1;
+            }
             std::string body = this->m_rbuffer.substr(this->m_req->proto_fixed_len(),this->m_req->proto_extra_len());
             this->m_req->set_extra_msg(std::move(body));
             this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin()+total_len);
+            spdlog::info("{} {} {} read buffer clear(fd: {}) len: {}",__TIME__,__FILE__,__LINE__,this->m_fd, total_len);
             return 0;
         }
 
@@ -337,16 +375,33 @@ namespace galay
 
         int exec() override
         {
-            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
+            int connfd = IOFuntion::TcpFunction::Accept(this->m_fd);
             if (connfd <= 0)
+            {
+                spdlog::error("{} {} {} accept fail:{}",__TIME__,__FILE__,__LINE__,strerror(errno));
                 return -1;
+            }else{
+                spdlog::info("{} {} {} accept success(fd: {})",__TIME__,__FILE__,__LINE__,connfd);
+            }
+
             if (this->m_keepalive_conf.m_keepalive)
             {
-                int ret = iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
+                int ret = IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
                 if (ret == -1)
                 {
-                    std::cout << strerror(errno) << '\n';
-                }
+                    close(connfd);
+                    this->m_error = Error::NetError::GY_SETSOCKOPT_ERROR;
+                    spdlog::error("{} {} {} socket set keepalive fail(fd: {} ):{} , close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                    return -1;
+                }else spdlog::info("{} {} {} socket set keepalive success (fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
+            }
+            if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
+                this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
+                spdlog::error("{} {} {} SetNoBlock fail(fd: {} ):{} , close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                close(connfd);
+                return -1;
+            }else {
+                spdlog::info("{} {} {} SetNoBlock success (fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
             }
             int indx;
             if (m_schedulers.size() == 1)
@@ -357,13 +412,14 @@ namespace galay
             }
             if (!this->m_schedulers[indx].expired())
             {
-                auto task = create_rw_task(connfd, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->add_task({connfd, task});
-                iofunction::Tcp_Function::IO_Set_No_Block(connfd);
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
-                    std::cout << "add event failed fd = " << connfd << '\n';
-                }
+                    spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                    close(connfd);
+                    return -1;
+                }else spdlog::info("{} {} {} scheduler add success(fd: {})",__TIME__,__FILE__,__LINE__,connfd);
+                auto task = create_rw_task(connfd, this->m_schedulers[indx]);
+                this->m_schedulers[indx].lock()->add_task({connfd, task});
             }
             return 0;
         }
@@ -416,7 +472,7 @@ namespace galay
         {
             if (this->m_ssl)
             {
-                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
+                IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
                 this->m_ssl = nullptr;
             }
         }
@@ -424,17 +480,19 @@ namespace galay
     protected:
         int read_package() override
         {
+            if(read_all_buffer() == -1) return -1;
+            this->m_error = Error::NoError::GY_SUCCESS;
             switch (this->m_req->proto_type())
             {
                 //buffer read empty
             case GY_ALL_RECIEVE_PROTOCOL_TYPE:
-                return read_all_buffer();
+                return this->get_all_buffer();
                 //fixed proto package
             case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
-                return read_fixed_pakage();
+                return this->get_fixed_package();
                 //fixed head and head includes body's length
             case GY_HEAD_FIXED_PROTOCOL_TYPE:
-                return read_fixed_head();
+                return this->get_fixed_head_package();
             }
             return -1;
         }
@@ -444,20 +502,29 @@ namespace galay
             int len;
             if(this->m_wbuffer.empty()) return 0;
             do{
-                len = iofunction::Tcp_Function::SSL_Send(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
-                if (len != -1 && len != 0) this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+                len = IOFuntion::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
+                if (len != -1 && len != 0) {
+                    spdlog::info("{} {} {} SSL_Send (fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+                    this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
+                }
                 if(this->m_wbuffer.empty()) break;
             }while(len != 0 && len != -1);
             if (len == -1)
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
+                    spdlog::error("{} {} {} SSL_Send (fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
+                    this->m_ssl = nullptr;
                     Task_Base::destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
+                spdlog::error("{} {} {} SSL_Send (fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
+                IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
+                this->m_ssl = nullptr;
                 Task_Base::destory();
                 return -1;
             } 
@@ -470,115 +537,31 @@ namespace galay
             do
             {
                 memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, this->m_read_len);
-                if (len != -1 && len != 0)
+                len = IOFuntion::TcpFunction::SSLRecv(this->m_ssl, this->m_temp, this->m_read_len);
+                if (len != -1 && len != 0){
+                    spdlog::info("{} {} {} SSL_Recv (fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
                     this->m_rbuffer.append(this->m_temp, len);
+                }
             } while (len != -1 && len != 0);
             if (len == -1)
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
+                    spdlog::error("{} {} {} SSL_Recv (fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                     Task_Base::destory();
+                    IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
+                    this->m_ssl = nullptr;
                     return -1;
                 }
             }
             else if (len == 0)
             {
+                spdlog::error("{} {} {} SSL_Recv (fd: {}) The peer closes the connection, error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                 Task_Base::destory();
+                IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
+                this->m_ssl = nullptr;
                 return -1;
             }
-            int status;
-            len = this->m_req->decode(this->m_rbuffer, status);
-            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
-                return -1;
-            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
-            return 0;
-        }
-
-        int read_fixed_pakage()
-        {
-            uint32_t remain_len = this->m_req->proto_fixed_len();
-            int len ;
-            do{
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, std::min(remain_len,this->m_read_len));
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-                remain_len -= len;
-            }while(len != -1 && len != 0 && remain_len > 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                Task_Base::destory();
-                return -1;
-            }
-            int status;
-            len = this->m_req->decode(this->m_rbuffer, status);
-            if (status == error::protocol_error::GY_PROTOCOL_INCOMPLETE)
-                return -1;
-            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
-            return 0;
-        }
-
-        int read_fixed_head()
-        {
-            uint32_t remain_len = this->m_req->proto_fixed_len() - this->m_rbuffer.length();
-            int len = 1;
-            do{
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, std::min(remain_len,this->m_read_len));
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-                remain_len -= len;
-            }while(len != -1 && len != 0 && remain_len > 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    Task_Base::destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                Task_Base::destory();
-                return -1;
-            }
-            int status;
-            len = this->m_req->decode(this->m_rbuffer, status); //解析head 里面赋值 proto_extra_len , return head len
-            remain_len = this->m_req->proto_extra_len() + this->m_req->proto_fixed_len() - this->m_rbuffer.length();
-            do{
-                memset(this->m_temp, 0, this->m_read_len);
-                len = iofunction::Tcp_Function::SSL_Recv(this->m_ssl, this->m_temp, std::min(remain_len,this->m_read_len));
-                if (len != -1 && len != 0)
-                    this->m_rbuffer.append(this->m_temp, len);
-                remain_len -= len;
-            }while(len != -1 && len != 0 && remain_len > 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
-                    Task_Base::destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                iofunction::Tcp_Function::SSL_Destory(this->m_ssl);
-                Task_Base::destory();
-                return -1;
-            }
-            if(remain_len != 0) return -1;
-            this->m_req->set_extra_msg(std::move(this->m_rbuffer.substr(this->m_req->proto_fixed_len())));
-            this->m_rbuffer.clear();
             return 0;
         }
 
@@ -601,26 +584,43 @@ namespace galay
 
         int exec() override
         {
-            int connfd = iofunction::Tcp_Function::Accept(this->m_fd);
-            if (connfd <= 0)
+            int connfd = IOFuntion::TcpFunction::Accept(this->m_fd);
+            if (connfd <= 0){
+                spdlog::error("{} {} {} accept fail:{} ",__TIME__,__FILE__,__LINE__,strerror(errno));
                 return -1;
+            }
             if (this->m_keepalive_conf.m_keepalive)
             {
-                iofunction::Tcp_Function::Sock_Keepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
+                if( IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry) == -1){
+                    close(connfd);
+                    spdlog::error("{} {} {} socket set keepalive fail(fd: {} ):{} , close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                    return -1;
+                }else spdlog::info("{} {} {} socket set keepalive success (fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
             }
-            SSL *ssl = iofunction::Tcp_Function::SSL_Create_Obj(this->m_ctx, connfd);
+            SSL *ssl = IOFuntion::TcpFunction::SSLCreateObj(this->m_ctx, connfd);
             if (ssl == nullptr)
             {
+                this->m_error = Error::NetError::GY_SSL_OBJ_INIT_ERROR;
+                spdlog::error("{} {} {} SSLCreateObj fail(fd: {} ):{} , close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
                 close(connfd);
                 return -1;
+            }else{
+                spdlog::info("{} {} {} SSLCreateObj success (fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
             }
-            iofunction::Tcp_Function::IO_Set_No_Block(connfd);
-            int ret = iofunction::Tcp_Function::SSL_Accept(ssl);
+            if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
+                this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
+                spdlog::error("{} {} {} SetNoBlock fail(fd: {} ):{} , close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                close(connfd);
+                return -1;
+            }else {
+                spdlog::info("{} {} {} SetNoBlock success (fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
+            }
+            int ret = IOFuntion::TcpFunction::SSLAccept(ssl);
             uint32_t retry = 0;
             while (ret <= 0 && retry++ <= this->m_ssl_accept_retry)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SSL_SLEEP_MISC_PER_RETRY));
-                ret = iofunction::Tcp_Function::SSL_Accept(ssl);
+                ret = IOFuntion::TcpFunction::SSLAccept(ssl);
                 if (ret <= 0)
                 {
                     int ssl_err = SSL_get_error(ssl, ret);
@@ -630,12 +630,18 @@ namespace galay
                     }
                     else
                     {
-                        iofunction::Tcp_Function::SSL_Destory(ssl);
+                        this->m_error = Error::NetError::GY_SSL_ACCEPT_ERROR;
+                        char msg[256];
+                        ERR_error_string(ssl_err,msg);
+                        spdlog::error("{} {} {} SSL_Accept fail(fd: {} ):{} , retry: {} , close connection",__TIME__,__FILE__,__LINE__,connfd,msg,retry);
+                        IOFuntion::TcpFunction::SSLDestory(ssl);
+                        ssl = nullptr;
                         close(connfd);
                         return -1;
                     }
                 }
             }
+            spdlog::info("{} {} {} SSL_Accept success (fd: {} ) , retry: {}",__TIME__,__FILE__,__LINE__,connfd,retry);
             int indx;
             if (this->m_schedulers.size() == 1)
             {
@@ -646,12 +652,16 @@ namespace galay
 
             if (!this->m_schedulers[indx].expired())
             {
-                auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->add_task({connfd, task});
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
-                    std::cout << "add event failed fd = " << connfd << '\n';
-                }
+                    spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                    IOFuntion::TcpFunction::SSLDestory(ssl);
+                    ssl = nullptr;
+                    close(connfd);
+                    return -1;
+                }else spdlog::info("{} {} {} scheduler add success(fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
+                auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
+                this->m_schedulers[indx].lock()->add_task({connfd, task});
             }
             return 0;
         }

@@ -16,9 +16,9 @@
 #include <netinet/tcp.h>
 
 namespace galay{
-    namespace iofunction
+    namespace IOFuntion
     {
-        class Simple_Fuction
+        class BlockFuction
         {
         public:
             static int IO_Set_No_Block(int fd);
@@ -32,21 +32,21 @@ namespace galay{
             int port;
         };
 
-        class Net_Function: public Simple_Fuction
+        class NetFunction: public BlockFuction
         {
         public:
             static int Reuse_Fd(int fd);
         };
 
-        class Tcp_Function:public Net_Function
+        class TcpFunction:public NetFunction
         {
         public:
             using SSL_Tup = std::tuple<SSL *, SSL_CTX *>;
-            using ptr = std::shared_ptr<Tcp_Function>;
+            using ptr = std::shared_ptr<TcpFunction>;
 
             static int Sock();
             
-            static int Sock_Keepalive(int fd , int t_idle , int t_interval , int retry);
+            static int SockKeepalive(int fd , int t_idle , int t_interval , int retry);
 
             static int Conncet(int fd , std::string sip, uint32_t sport);
 
@@ -69,22 +69,22 @@ namespace galay{
             static int SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath);
 
             // 修改ssl的绑定
-            static int SSL_Reset(SSL *ssl, int fd);
+            static int SSLReset(SSL *ssl, int fd);
 
             // 创建一个ssl对象并绑定fd
-            static SSL *SSL_Create_Obj(SSL_CTX *ctx, int fd);
+            static SSL *SSLCreateObj(SSL_CTX *ctx, int fd);
 
-            static int SSL_Accept(SSL *ssl);
+            static int SSLAccept(SSL *ssl);
 
-            static int SSL_Connect(SSL *ssl);
+            static int SSLConnect(SSL *ssl);
 
-            static int SSL_Recv(SSL* ssl,char* buffer,int len);
+            static int SSLRecv(SSL* ssl,char* buffer,int len);
 
-            static int SSL_Send(SSL *ssl, const std::string &buffer, int len);
+            static int SSLSend(SSL *ssl, const std::string &buffer, int len);
 
-            static void SSL_Destory(SSL* ssl);
+            static void SSLDestory(SSL* ssl);
 
-            static void SSL_Destory(std::vector<SSL *> ssls, SSL_CTX *ctx);
+            static void SSLDestory(std::vector<SSL *> ssls, SSL_CTX *ctx);
 
         private:
             static void SSL_Init_Env();
@@ -95,20 +95,20 @@ namespace galay{
 
             static void SSL_Destory_CTX(SSL_CTX *ctx);
 
-            static void SSL_Destory_Env();
+            static void SSLDestoryEnv();
         };
 
 
-        class Udp_Function:public Net_Function
+        class UdpFunction:public NetFunction
         {
         public:
             static int Sock();
 
             static int Bind(int fd, uint32_t port);
 
-            static ssize_t Recv_From(int fd , Addr& addr , char* buffer , int len);
+            static ssize_t RecvFrom(int fd , Addr& addr , char* buffer , int len);
 
-            static ssize_t Send_To(int fd,const Addr& addr,const std::string& buffer);
+            static ssize_t SendTo(int fd,const Addr& addr,const std::string& buffer);
         };
     }
 }

@@ -3,19 +3,19 @@
 
 namespace galay
 {
-    namespace error{
-        enum base_error{
+    namespace Error{
+        enum NoError{
             GY_SUCCESS,
-            GY_SOCKET_ERROR,
+            GY_NOERROR_END,
+        };
+
+        enum NetError{
+            GY_SOCKET_ERROR = GY_NOERROR_END,   //socket error
             GY_SEND_ERROR,                      //send
             GY_RECV_ERROR,                      //recv
             GY_SSL_RECV_ERROR,                  //ssl_recv
             GY_SSL_SEND_ERROR,                  //ssl_send
-            GY_BASE_ERROR_END
-        };
-
-        enum server_error{
-            GY_BIND_ERROR = GY_BASE_ERROR_END,  //bind
+            GY_BIND_ERROR,                      //bind
             GY_SETSOCKOPT_ERROR,                //setsockopt
             GY_LISTEN_ERROR,                    //listen
             GY_ACCEPT_ERROR,                    //accept
@@ -23,32 +23,30 @@ namespace galay
             GY_SSL_CTX_INIT_ERROR,              //ssl_ctx_new
             GY_SSL_OBJ_INIT_ERROR,              //ssl_new
             GY_SSL_CRT_OR_KEY_FILE_ERROR,       //ssl certifaction and key file error
-            GY_ENGINE_CHOOSE_ERROR,             //engine choose error
-            GY_SERVER_ERROR_END
+            GY_CONNECT_ERROR,                   //connect
+            GY_SSL_CONNECT_ERROR,               //ssl_connect
+            GY_GETSOCKET_STATUS_ERROR,          //getsocketopt error
+            GY_SENDTO_ERROR,                    //sendto
+            GY_RECVFROM_ERROR,                  //recvfrom
+            GY_SET_NOBLOCK_ERROR,               //fcntl no block
+            GY_NETERROR_END
         };
 
-        enum client_error{
-            GY_CONNECT_ERROR = GY_SERVER_ERROR_END,                     //connect
-            GY_SSL_CONNECT_ERROR,                                       //ssl_connect
-            GY_GETSOCKET_STATUS_ERROR,                                  //getsocketopt error
-            GY_SENDTO_ERROR,                                            //sendto
-            GY_RECVFROM_ERROR,                                          //recvfrom
-            GY_CLIENT_ERROR_END
+        enum ConfigError{
+            GY_ENGINE_CHOOSE_ERROR = GY_NETERROR_END,             //engine choose error
+            GY_INVALID_FUNCTIONS_ERROR,                           //func's size is incorrect 
+            GY_CONFIGERROR_END
         };
 
-        enum scheduler_error{
-            GY_SCHEDULER_ENGINE_CHECK_ERROR = GY_CLIENT_ERROR_END,  //scheduler's engine check error
-            GY_SCHDULER_IS_EXPIRED,
-            GY_SCHEDULER_ERROR_END,
+        enum SchedulerError{
+            GY_SCHEDULER_ENGINE_CHECK_ERROR = GY_CONFIGERROR_END,  //scheduler's engine check error
+            GY_SCHDULER_EXPIRED_ERROR,
+            GY_SCHDULER_MOD_EVENT_ERROR,                                   //mod event error
+            GY_SCHEDULERERROR_END,
         };
 
-        enum engine_error{
-            GY_ENGINE_EPOLL_WAIT_ERROR = GY_SCHEDULER_ERROR_END,                //epoll egine epoll_wait error
-            GY_ENGINE_ERROR_END
-        };
-
-        enum protocol_error{
-            GY_PROTOCOL_INCOMPLETE = GY_ENGINE_ERROR_END,             //incomplete package
+        enum ProtocolError{
+            GY_PROTOCOL_INCOMPLETE = GY_SCHEDULERERROR_END,                                    //incomplete package
             GY_PROTOCOL_BAD_REQUEST,                                  //bad request
             GY_PROTOCOL_ERROR_END
         };

@@ -3,7 +3,7 @@
 int galay::protocol::Smtp_Protocol::decode(const std::string &buffer, int &state)
 {
     this->m_content = buffer;
-    state = error::base_error::GY_SUCCESS;
+    state = Error::NoError::GY_SUCCESS;
     return 0;
 }
 
