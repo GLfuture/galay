@@ -1,34 +1,34 @@
 #include "iofunction.h"
 
 //io simple function
-int galay::iofunction::Simple_Fuction::IO_Set_No_Block(int fd)
+int galay::IOFuntion::BlockFuction::IO_Set_No_Block(int fd)
 {
     int flag = fcntl(fd, F_GETFL, 0);
     flag |= O_NONBLOCK;
     return fcntl(fd, F_SETFL, flag);
 }
 
-int galay::iofunction::Simple_Fuction::IO_Set_Block(int fd)
+int galay::IOFuntion::BlockFuction::IO_Set_Block(int fd)
 {
     int flag = fcntl(fd, F_GETFL, 0);
     flag &= ~O_NONBLOCK;
     return fcntl(fd, F_SETFL, flag);
 }
 
-int galay::iofunction::Net_Function::Reuse_Fd(int fd)
+int galay::IOFuntion::NetFunction::Reuse_Fd(int fd)
 {
     int option = 1;
     return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&option, sizeof(option));
 }
 
 //tcp
-int galay::iofunction::Tcp_Function::Sock()
+int galay::IOFuntion::TcpFunction::Sock()
 {
     return socket(AF_INET, SOCK_STREAM, 0);
 }
 
 
-int galay::iofunction::Tcp_Function::Sock_Keepalive(int fd , int t_idle , int t_interval , int retry)
+int galay::IOFuntion::TcpFunction::SockKeepalive(int fd , int t_idle , int t_interval , int retry)
 {
     int optval = 1;
     int ret ;
@@ -43,7 +43,7 @@ int galay::iofunction::Tcp_Function::Sock_Keepalive(int fd , int t_idle , int t_
 }
 
 
-int galay::iofunction::Tcp_Function::Conncet(int fd , std::string sip, uint32_t sport)
+int galay::IOFuntion::TcpFunction::Conncet(int fd , std::string sip, uint32_t sport)
 {
     sockaddr_in sin = {0};
     memset(&sin, 0, sizeof(sin));
@@ -55,7 +55,7 @@ int galay::iofunction::Tcp_Function::Conncet(int fd , std::string sip, uint32_t 
     return 0;
 }
 
-int galay::iofunction::Tcp_Function::Bind(int fd, uint32_t port)
+int galay::IOFuntion::TcpFunction::Bind(int fd, uint32_t port)
 {
     sockaddr_in sin = {0};
     memset(&sin, 0, sizeof(sin));
@@ -65,12 +65,12 @@ int galay::iofunction::Tcp_Function::Bind(int fd, uint32_t port)
     return bind(fd, (sockaddr *)&sin, sizeof(sin));
 }
 
-int galay::iofunction::Tcp_Function::Listen(int fd,uint32_t backlog)
+int galay::IOFuntion::TcpFunction::Listen(int fd,uint32_t backlog)
 {
     return listen(fd, backlog);
 }
 
-int galay::iofunction::Tcp_Function::Accept(int fd)
+int galay::IOFuntion::TcpFunction::Accept(int fd)
 {
     sockaddr_in sin = {0};
     memset(&sin, 0, sizeof(sin));
@@ -78,30 +78,30 @@ int galay::iofunction::Tcp_Function::Accept(int fd)
     return accept(fd, (sockaddr *)&sin, &len);
 }
 
-ssize_t galay::iofunction::Tcp_Function::Recv(int fd , char *buffer , uint32_t len)
+ssize_t galay::IOFuntion::TcpFunction::Recv(int fd , char *buffer , uint32_t len)
 {
     return recv(fd, buffer, len, 0);
 }
 
-ssize_t galay::iofunction::Tcp_Function::Send(int fd,const std::string& buffer , uint32_t len)
+ssize_t galay::IOFuntion::TcpFunction::Send(int fd,const std::string& buffer , uint32_t len)
 {
     return send(fd, buffer.c_str() ,len,0);
 }
 
-SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_Server(long min_version, long max_version)
+SSL_CTX* galay::IOFuntion::TcpFunction::SSL_Init_Server(long min_version, long max_version)
 {
     SSL_Init_Env();
     return SSL_Init_CTX_Server(min_version,max_version);
 }
 
 
-SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_Client(long min_version, long max_version)
+SSL_CTX* galay::IOFuntion::TcpFunction::SSL_Init_Client(long min_version, long max_version)
 {
     SSL_Init_Env();
     return SSL_Init_CTX_Client(min_version,max_version);
 }
 
-int galay::iofunction::Tcp_Function::SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath)
+int galay::IOFuntion::TcpFunction::SSL_Config_Cert_And_Key(SSL_CTX *ctx , const char* cert_filepath , const char* key_filepath)
 {
     if (SSL_CTX_use_certificate_file(ctx, cert_filepath, SSL_FILETYPE_PEM) <= 0) {
         return -1;
@@ -114,46 +114,46 @@ int galay::iofunction::Tcp_Function::SSL_Config_Cert_And_Key(SSL_CTX *ctx , cons
 }
 
 
-SSL* galay::iofunction::Tcp_Function::SSL_Create_Obj( SSL_CTX* ctx , int fd)
+SSL* galay::IOFuntion::TcpFunction::SSLCreateObj( SSL_CTX* ctx , int fd)
 {
     SSL* ssl = SSL_new(ctx);
     SSL_set_fd(ssl,fd);
     return ssl;
 }
 
-int galay::iofunction::Tcp_Function::SSL_Reset(SSL *ssl, int fd)
+int galay::IOFuntion::TcpFunction::SSLReset(SSL *ssl, int fd)
 {
     return SSL_set_fd(ssl,fd);
 }
 
-int galay::iofunction::Tcp_Function::SSL_Connect(SSL* ssl)
+int galay::IOFuntion::TcpFunction::SSLConnect(SSL* ssl)
 {
     return SSL_connect(ssl);
 }
 
-int galay::iofunction::Tcp_Function::SSL_Recv(SSL* ssl,char* buffer,int len)
+int galay::IOFuntion::TcpFunction::SSLRecv(SSL* ssl,char* buffer,int len)
 {
     return SSL_read(ssl,buffer,len);
 }
 
 
-int galay::iofunction::Tcp_Function::SSL_Send(SSL* ssl,const std::string& buffer,int len)
+int galay::IOFuntion::TcpFunction::SSLSend(SSL* ssl,const std::string& buffer,int len)
 {
     return SSL_write(ssl,buffer.c_str(),len);
 }
 
-int galay::iofunction::Tcp_Function::SSL_Accept(SSL* ssl)
+int galay::IOFuntion::TcpFunction::SSLAccept(SSL* ssl)
 {
     return SSL_accept(ssl);
 }
 
-void galay::iofunction::Tcp_Function::SSL_Destory(SSL* ssl)
+void galay::IOFuntion::TcpFunction::SSLDestory(SSL* ssl)
 {
     SSL_shutdown(ssl);
     SSL_free(ssl);
 }
 
-void galay::iofunction::Tcp_Function::SSL_Destory(std::vector<SSL*> ssls, SSL_CTX *ctx) 
+void galay::IOFuntion::TcpFunction::SSLDestory(std::vector<SSL*> ssls, SSL_CTX *ctx) 
 {
     for(auto ssl:ssls)
     {
@@ -161,18 +161,18 @@ void galay::iofunction::Tcp_Function::SSL_Destory(std::vector<SSL*> ssls, SSL_CT
         SSL_free(ssl);
     }
     SSL_Destory_CTX(ctx);
-    SSL_Destory_Env();
+    SSLDestoryEnv();
 }
 
 
-void galay::iofunction::Tcp_Function::SSL_Init_Env()
+void galay::IOFuntion::TcpFunction::SSL_Init_Env()
 {
     SSL_library_init();
     ERR_load_crypto_strings();
     SSL_load_error_strings();
 }
 
-SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX_Server(long min_version,long max_version)
+SSL_CTX* galay::IOFuntion::TcpFunction::SSL_Init_CTX_Server(long min_version,long max_version)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_server_method()); // 创建客户端 SSL 上下文对象
     SSL_CTX_set_min_proto_version(ctx, min_version); // 最小支持 TLSv1.3 协议
@@ -180,7 +180,7 @@ SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX_Server(long min_version,l
     return ctx;
 }
 
-SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX_Client(long min_version,long max_version)
+SSL_CTX* galay::IOFuntion::TcpFunction::SSL_Init_CTX_Client(long min_version,long max_version)
 {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method()); // 创建客户端 SSL 上下文对象
     SSL_CTX_set_min_proto_version(ctx, min_version); // 最小支持 TLSv1.3 协议
@@ -189,24 +189,24 @@ SSL_CTX* galay::iofunction::Tcp_Function::SSL_Init_CTX_Client(long min_version,l
 }
 
 
-void galay::iofunction::Tcp_Function::SSL_Destory_CTX(SSL_CTX* ctx)
+void galay::IOFuntion::TcpFunction::SSL_Destory_CTX(SSL_CTX* ctx)
 {
     SSL_CTX_free(ctx);
 }
 
-void galay::iofunction::Tcp_Function::SSL_Destory_Env()
+void galay::IOFuntion::TcpFunction::SSLDestoryEnv()
 {
     ERR_free_strings();
     EVP_cleanup();
 }
 
 //udp
-int galay::iofunction::Udp_Function::Sock()
+int galay::IOFuntion::UdpFunction::Sock()
 {
     return socket(AF_INET,SOCK_DGRAM,0);
 }
 
-int galay::iofunction::Udp_Function::Bind(int fd, uint32_t port)
+int galay::IOFuntion::UdpFunction::Bind(int fd, uint32_t port)
 {
     sockaddr_in sin = {0};
     memset(&sin, 0, sizeof(sin));
@@ -216,7 +216,7 @@ int galay::iofunction::Udp_Function::Bind(int fd, uint32_t port)
     return bind(fd,(sockaddr*)&sin,sizeof(sin));
 }
 
-ssize_t galay::iofunction::Udp_Function::Recv_From(int fd , Addr& addr , char* buffer , int len)
+ssize_t galay::IOFuntion::UdpFunction::RecvFrom(int fd , Addr& addr , char* buffer , int len)
 {
     sockaddr_in sin = {0};
     socklen_t slen = sizeof(sin);
@@ -232,7 +232,7 @@ ssize_t galay::iofunction::Udp_Function::Recv_From(int fd , Addr& addr , char* b
     return ret;
 }
 
-ssize_t galay::iofunction::Udp_Function::Send_To(int fd,const Addr& addr,const std::string& buffer)
+ssize_t galay::IOFuntion::UdpFunction::SendTo(int fd,const Addr& addr,const std::string& buffer)
 {
     sockaddr_in sin = {0};
     sin.sin_family = AF_INET;

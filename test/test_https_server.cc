@@ -155,6 +155,6 @@ int main()
     });
     auto config = Config_Factory::create_https_server_config({8010,8011}, TLS1_2_VERSION, TLS1_3_VERSION, "../server.crt", "../server.key",Engine_Type::ENGINE_SELECT,5,5000);
     https_server = Server_Factory::create_https_server(config);
-    https_server->start(func);
+    https_server->start({func,func});
     return 0;
 }

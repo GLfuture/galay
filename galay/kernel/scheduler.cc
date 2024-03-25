@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "task.h"
 #include "callback.h"
+#include <spdlog/spdlog.h>
 
 galay::Epoll_Scheduler::Epoll_Scheduler(int max_event, int timeout)
 {
@@ -16,10 +17,13 @@ int galay::Epoll_Scheduler::start()
     if(!m_timer_manager){
         this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
         auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        if(this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
+        if (this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
         {
-            std::cout<< "add event failed fd = " <<this->m_timer_manager->get_timerfd() <<'\n';
+            spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
+            close(this->m_timer_manager->get_timerfd());
+            return -1;
         }
+        else spdlog::info("{} {} {} scheduler add success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd());
         add_task({this->m_timer_manager->get_timerfd(), time_task});
     }
     while (1)
@@ -30,27 +34,27 @@ int galay::Epoll_Scheduler::start()
             break;
         if (nready == -1)
         {
-            std::cout<< error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR << ": "<< error::get_err_str(error::scheduler_error::GY_SCHEDULER_ENGINE_CHECK_ERROR) << '\n';
-            std::cout<< strerror(errno) <<'\n';
-    //        std::this_thread::sleep_for(std::chrono::seconds(2));
+            spdlog::error("{} {} {} scheduler check fail : {}", __TIME__, __FILE__, __LINE__,strerror(errno));
             continue;
         }
         for (int i = 0; i < nready; i++)
         {
-            if (this->m_tasks.contains(m_events[i].data.fd))
+            int fd = m_events[i].data.fd;
+            if (this->m_tasks.contains(fd))
             {
-                Task_Base::ptr task = this->m_tasks.at(m_events[i].data.fd);
+                Task_Base::ptr task = this->m_tasks.at(fd);
                 task->exec();
                 if (task->is_destroy()) {
-                    if(!Callback_ConnClose::empty()) Callback_ConnClose::call(m_events[i].data.fd);
-                    close(m_events[i].data.fd);
-                    del_task(m_events[i].data.fd);
-                    del_event(m_events[i].data.fd,GY_EVENT_READ|GY_EVENT_WRITE| GY_EVENT_ERROR);
+                    if(!Callback_ConnClose::empty()) Callback_ConnClose::call(fd);
+                    spdlog::info("{} {} {} task(fd :{}) destory", __TIME__, __FILE__, __LINE__,fd);
+                    close(fd);
+                    del_task(fd);
+                    del_event(fd,GY_EVENT_READ|GY_EVENT_WRITE| GY_EVENT_ERROR);
                 }
             }
         }
     }
-    return error::base_error::GY_SUCCESS;
+    return Error::NoError::GY_SUCCESS;
 }
 
 int galay::Epoll_Scheduler::get_epoll_fd() const
@@ -133,6 +137,7 @@ void galay::Epoll_Scheduler::stop()
         for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
         {
             if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
+            spdlog::info("{} {} {} task(fd :{}) destory", __TIME__, __FILE__, __LINE__,it->first);
             close(it->first);
             this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
             it->second.reset();
@@ -150,8 +155,11 @@ galay::Timer_Manager::ptr galay::Epoll_Scheduler::get_timer_manager()
         auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
         if(this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
         {
-            std::cout<< "add event failed fd = " <<this->m_timer_manager->get_timerfd() <<'\n';
+            spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
+            close(this->m_timer_manager->get_timerfd());
+            return nullptr;
         }
+        else spdlog::info("{} {} {} scheduler add success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd());
         add_task({this->m_timer_manager->get_timerfd(), time_task});
     }
     return this->m_timer_manager;
@@ -297,8 +305,11 @@ int galay::Select_Scheduler::start()
         auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
         if(this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR)==-1)
         {
-            std::cout<< "add event failed fd = " <<this->m_timer_manager->get_timerfd() <<'\n';
+            spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
+            close(this->m_timer_manager->get_timerfd());
+            return -1;
         }
+        else spdlog::info("{} {} {} scheduler add success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd());
         add_task({this->m_timer_manager->get_timerfd(), time_task});
     }
     while (1)
@@ -314,10 +325,8 @@ int galay::Select_Scheduler::start()
             break;
         if (nready == -1)
         {
-            //std::cout << "select failed :" << error::GY_SCHEDULER_ENGINE_CHECK_ERROR << error::get_err_str(error::GY_SCHEDULER_ENGINE_CHECK_ERROR) << '\n';
-            //continue;
-            std::cout << strerror(errno) << '\n';
-            break;
+            spdlog::error("{} {} {} scheduler check fail : {}", __TIME__, __FILE__, __LINE__,strerror(errno));
+            continue;
         }
         if (nready == 0)
             continue;
@@ -351,8 +360,11 @@ std::shared_ptr<galay::Timer_Manager> galay::Select_Scheduler::get_timer_manager
         auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
         if(this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR)==-1)
         {
-            std::cout<< "add event failed fd = " <<this->m_timer_manager->get_timerfd() <<'\n';
+            spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
+            close(this->m_timer_manager->get_timerfd());
+            return nullptr;
         }
+        else spdlog::info("{} {} {} scheduler add success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_timer_manager->get_timerfd());
         add_task({this->m_timer_manager->get_timerfd(), time_task});
     }
     return this->m_timer_manager;

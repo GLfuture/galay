@@ -6,6 +6,7 @@
 #include "basic_concepts.h"
 #include "../protocol/basic_protocol.h"
 #include "../config/config.h"
+#include "error.h"
 #include "timer.h"
 
 namespace galay
@@ -63,11 +64,14 @@ namespace galay
 
         virtual bool is_destroy() { return this->m_destroy; }
 
+        virtual int get_error() {   return this->m_error;   }
+
         virtual ~Task_Base() {
             
         }
 
     protected:
+        int m_error = Error::NoError::GY_SUCCESS;
         int m_status;
         bool m_is_finish = false;
         bool m_destroy = false;

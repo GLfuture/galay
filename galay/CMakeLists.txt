@@ -6,11 +6,11 @@ set(SHARED_LIB ${PROJECT_NAME}-shared)
 
 # 创建静态库
 add_library(${STATIC_LIB} STATIC "")
-target_link_libraries(${STATIC_LIB} PRIVATE ${DEPEND_LIBS})
+target_link_libraries(${STATIC_LIB} PRIVATE ${DEPEND_LIBS} spdlog)
 
 # 创建共享库
 add_library(${SHARED_LIB} SHARED "")
-target_link_libraries(${SHARED_LIB} PRIVATE ${DEPEND_LIBS})
+target_link_libraries(${SHARED_LIB} PRIVATE ${DEPEND_LIBS} spdlog)
 
 # 添加依赖库的源文件到静态库和共享库
 foreach(depend_lib ${DEPEND_LIBS})

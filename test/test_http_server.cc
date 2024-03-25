@@ -12,7 +12,7 @@ Task<> func(Task_Base::wptr t_task)
     if(task->get_scheduler() ==nullptr) std::cout<<"NULL\n";
     auto client = Client_Factory::create_http_client(task->get_scheduler());
     int ret = co_await client->connect("39.156.66.14",80);
-    if(client->get_error() == error::GY_SUCCESS) std::cout<<"connect success\n";
+    if(client->get_error() == Error::GY_SUCCESS) std::cout<<"connect success\n";
     else std::cout<<"connect failed error is "<<client->get_error()<<'\n';
     //std::cout<<req->encode()<<'\n';
     auto t_req = std::make_shared<protocol::Http1_1_Request>();
@@ -21,7 +21,7 @@ Task<> func(Task_Base::wptr t_task)
     t_req->get_url_path() = "/";
     t_req->set_head_kv_pair({"Connection","close"});
     ret = co_await client->request(t_req,resp);
-    if(client->get_error() == error::GY_SUCCESS) std::cout<<"request success\n";
+    if(client->get_error() == Error::GY_SUCCESS) std::cout<<"request success\n";
     else std::cout<<"request failed error is "<<client->get_error()<<'\n';
     task->control_task_behavior(Task_Status::GY_TASK_WRITE);
     // if(req->get_head_value("Connection").compare("close") == 0) {
@@ -46,6 +46,6 @@ int main()
     });
     auto config = Config_Factory::create_http_server_config({8010,8011},Engine_Type::ENGINE_EPOLL,5,5000,5); //5s断
     http_server = Server_Factory::create_http_server(config);
-    http_server->start(func);
+    http_server->start({func,func});
     return 0;
 }
