@@ -22,15 +22,14 @@ Task<> func(Scheduler_Base::wptr scheduler)
     if(ret != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->mailfrom("bigdata_C1004@163.com"),response->resp());
     if(ret != 0) std::cout<<response->resp()->get_content();
-    ret = co_await smtp_client->request(request->rcptto("3370978221@qq.com"),response->resp());
+    ret = co_await smtp_client->request(request->rcptto("123@qq.com"),response->resp());
     if(ret != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->data(),response->resp());
     if(ret != 0) std::cout<<response->resp()->get_content();
-    ret = co_await smtp_client->request(request->msg("Verify","Hello,Baby,到点了还不找我打电话\n"),response->resp());
+    ret = co_await smtp_client->request(request->msg("Verify","It is a demo\n"),response->resp());
     if(ret != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->quit(),response->resp());
     if(ret != 0) std::cout<<response->resp()->get_content();
-    std::cout << "finish\n";
     co_return;
 }
 

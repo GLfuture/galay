@@ -222,13 +222,13 @@ namespace galay
         {
             int len;
             if(this->m_wbuffer.empty()) {
-                spdlog::warn("{} {} {} send(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,0);
+                spdlog::warn("{} {} {} Send(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,0);
                 return 0;
             }
             do{
                 len = IOFuntion::TcpFunction::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
                 if (len != -1 && len != 0) {
-                    spdlog::info("{} {} {} send(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+                    spdlog::info("{} {} {} Send(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
                     this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
                 }
                 if(this->m_wbuffer.empty()) break;
@@ -237,7 +237,7 @@ namespace galay
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
-                    spdlog::error("{} {} {} send(fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    spdlog::error("{} {} {} Send(fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                     Task_Base::destory();
                     return -1;
                 }
@@ -259,7 +259,7 @@ namespace galay
                 memset(this->m_temp, 0, this->m_read_len);
                 len = IOFuntion::TcpFunction::Recv(this->m_fd, this->m_temp, this->m_read_len);
                 if (len != -1 && len != 0){
-                    spdlog::info("{} {} {} recv(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
+                    spdlog::info("{} {} {} Recv(fd: {}) {} Bytes",__TIME__,__FILE__,__LINE__,this->m_fd,len);
                     this->m_rbuffer.append(this->m_temp, len);
                 }
             } while (len != -1 && len != 0);
@@ -267,14 +267,14 @@ namespace galay
             {
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
-                    spdlog::error("{} {} {} recv(fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    spdlog::error("{} {} {} Recv(fd: {}) occurs error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                     Task_Base::destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
-                spdlog::error("{} {} {} recv(fd: {}) The peer closes the connection, error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
+                spdlog::error("{} {} {} Recv(fd: {}) The peer closes the connection, error: {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
                 Task_Base::destory();
                 return -1;
             }

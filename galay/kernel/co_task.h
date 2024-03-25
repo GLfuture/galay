@@ -111,20 +111,20 @@ namespace galay
             if(ret == -1){
                 if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                 {
-                    spdlog::warn("{} {} {} send (fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::warn("{} {} {} Send (fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     return -1;
                 }else{
-                    spdlog::error("{} {} {} send fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Send fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_SEND_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
-                spdlog::error("{} {} {} send fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                spdlog::error("{} {} {} Send fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                 *(this->m_error) = Error::GY_SEND_ERROR;
                 this->m_result = -1;
             }else{
-                spdlog::info("{} {} {} send (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret);
-                spdlog::info("{} {} {} send success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
+                spdlog::info("{} {} {} Send (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret);
+                spdlog::info("{} {} {} Send success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                 this->m_result = ret;
                 *(this->m_error) = Error::GY_SUCCESS;
             }
@@ -163,20 +163,20 @@ namespace galay
             if(ret == -1){
                 if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                 {
-                    spdlog::warn("{} {} {} recv (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::warn("{} {} {} Recv (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     return -1;
                 }else{
-                    spdlog::error("{} {} {} recv fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Recv fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_RECV_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
-                spdlog::error("{} {} {} recv fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                spdlog::error("{} {} {} Recv fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                 *(this->m_error) = Error::GY_RECV_ERROR;
                 this->m_result = -1;
             }else{
                 spdlog::info("{} {} {} SSL_Send (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret );
-                spdlog::info("{} {} {} recv success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
+                spdlog::info("{} {} {} Recv success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                 *(this->m_error) = Error::GY_SUCCESS;
                 this->m_result = ret;
             }
@@ -223,26 +223,26 @@ namespace galay
                 {
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                     {
-                        spdlog::warn("{} {} {} send (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::warn("{} {} {} Send (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         return -1;
                     }
                     else
                     {
-                        spdlog::error("{} {} {} send fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::error("{} {} {} Send fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         *(this->m_error) = Error::GY_SEND_ERROR;
                         this->m_result = -1;
                     }
                 }
                 else if (ret == 0)
                 {
-                    spdlog::error("{} {} {} send fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Send fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_SEND_ERROR;
                     this->m_result = -1;
                 }
                 else if( ret == request.length())
                 {
-                    spdlog::info("{} {} {} send (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret);
-                    spdlog::info("{} {} {} send success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
+                    spdlog::info("{} {} {} Send (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret);
+                    spdlog::info("{} {} {} Send success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                     this->m_result = ret;
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = Error::GY_SUCCESS;
@@ -265,7 +265,7 @@ namespace galay
                     memset(m_tempbuffer,0,DEFAULT_RECV_LENGTH);
                     ret = IOFuntion::TcpFunction::Recv(this->m_fd, m_tempbuffer, DEFAULT_RECV_LENGTH);
                     if(ret != -1 && ret != 0){
-                        spdlog::info("{} {} {} recv (fd: {}) {} Bytes" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd ,ret);
+                        spdlog::info("{} {} {} Recv (fd: {}) {} Bytes" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd ,ret);
                         this->m_buffer.append(m_tempbuffer,ret);
                     }
                 }while(ret != -1 && ret != 0);
@@ -273,7 +273,7 @@ namespace galay
                     if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                     {
                         *(this->m_error) = Error::GY_RECV_ERROR;
-                        spdlog::error("{} {} {} recv fail (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::error("{} {} {} Recv fail (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         this->m_result = -1;
                         if (!this->m_handle.done())
                         {
@@ -287,7 +287,7 @@ namespace galay
                 else if(ret == 0 && m_buffer.empty())
                 {
                     *(this->m_error) = Error::GY_RECV_ERROR;
-                    spdlog::warn("{} {} {} recv fail (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::warn("{} {} {} Recv fail (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     this->m_result = -1;
                     if (!this->m_handle.done())
                     {
@@ -305,7 +305,7 @@ namespace galay
                     return -1;
                 }
                 *(this->m_error) = Error::GY_SUCCESS;
-                spdlog::info("{} {} {} decode protocol success (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                spdlog::info("{} {} {} decode protocol success (fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                 this->m_result = 0;
                 break;
             }
@@ -694,20 +694,20 @@ namespace galay
             if(ret == -1){
                 if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                 {
-                    spdlog::warn("{} {} {} sendto (fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::warn("{} {} {} Sendto (fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     return -1;
                 }else{
-                    spdlog::error("{} {} {} sendto fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Sendto fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_SENDTO_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
-                spdlog::error("{} {} {} sendto fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                spdlog::error("{} {} {} Sendto fail(fd: {}): {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                 *(this->m_error) = Error::GY_SENDTO_ERROR;
                 this->m_result = -1;
             }else{
-                spdlog::info("{} {} {} sendto (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret);
-                spdlog::info("{} {} {} sendto success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
+                spdlog::info("{} {} {} Sendto (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret);
+                spdlog::info("{} {} {} Sendto success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                 *(this->m_error) = Error::GY_SUCCESS;
                 this->m_result = ret;
             }
@@ -759,20 +759,20 @@ namespace galay
             if(ret == -1){
                 if(errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                 {
-                    spdlog::warn("{} {} {} recvfrom (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::warn("{} {} {} Recvfrom (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     return -1;
                 }else{
-                    spdlog::error("{} {} {} recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_SENDTO_ERROR;
                     this->m_result = -1;
                 }
             }else if(ret == 0){
-                spdlog::error("{} {} {} recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                spdlog::error("{} {} {} Recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                 *(this->m_error) = Error::GY_SENDTO_ERROR;
                 this->m_result = -1;
             }else{
-                spdlog::info("{} {} {} recvfrom (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret );
-                spdlog::info("{} {} {} recvfrom success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
+                spdlog::info("{} {} {} Recvfrom (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret );
+                spdlog::info("{} {} {} Recvfrom success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                 *(this->m_error) = Error::GY_SUCCESS;
                 this->m_result = ret;
             }
@@ -825,19 +825,19 @@ namespace galay
                 if(ret == -1){
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                     {
-                        spdlog::warn("{} {} {} sendto (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::warn("{} {} {} Sendto (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         return -1;
                     }
                     else
                     {
-                        spdlog::error("{} {} {} sendto fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::error("{} {} {} Sendto fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         *(this->m_error) = Error::GY_SENDTO_ERROR;
                         this->m_result = -1;
                     }
                 }
                 else if (ret == 0)
                 {
-                    spdlog::error("{} {} {} sendto fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Sendto fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_SENDTO_ERROR;
                     this->m_result = -1;
                 }
@@ -868,26 +868,26 @@ namespace galay
                 {
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
                     {
-                        spdlog::warn("{} {} {} recvfrom (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::warn("{} {} {} Recvfrom (fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         return -1;
                     }
                     else
                     {
-                        spdlog::error("{} {} {} recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                        spdlog::error("{} {} {} Recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         *(this->m_error) = Error::GY_SENDTO_ERROR;
                         this->m_result = -1;
                     }
                 }
                 else if (ret == 0)
                 {
-                    spdlog::error("{} {} {} recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                    spdlog::error("{} {} {} Recvfrom fail(fd: {}) {}" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                     *(this->m_error) = Error::GY_SENDTO_ERROR;
                     this->m_result = -1;
                 }
                 else
                 {
-                    spdlog::info("{} {} {} recvfrom (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret );
-                    spdlog::info("{} {} {} recvfrom success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
+                    spdlog::info("{} {} {} Recvfrom (fd :{}) {} Bytes",__TIME__ , __FILE__ , __LINE__ , this->m_fd , ret );
+                    spdlog::info("{} {} {} Recvfrom success(fd: {})" , __TIME__ , __FILE__ , __LINE__ ,this->m_fd);
                     *(this->m_error) = Error::GY_SUCCESS;
                     m_response->decode(std::string(buffer,ret));
                     this->m_result = 0;
