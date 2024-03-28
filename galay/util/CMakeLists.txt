@@ -7,6 +7,7 @@ set(SRC_LIST
     md5.cc
     sha256.cc
     conf_parser.cc
+    file.cc
     )
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})

@@ -1,20 +1,14 @@
 #include "conf_parser.h"
+#include "file.h"
 
 int galay::Conf_Parser::parse(const std::string &filename)
 {
-    std::fstream stream(filename);
-    if (stream.fail())
-        return -1;
-    uintmax_t size = std::filesystem::file_size(filename);
-    char *buffer = new char[size];
-    stream.read(buffer, size);
-    stream.close();
-    int ret = parse(buffer, size);
-    delete[] buffer;
+    std::string buffer = FileOP::ReadFile(filename);
+    int ret = ParseContent(buffer);
     return ret;
 }
 
-int galay::Conf_Parser::parse(const char *content, uintmax_t len)
+int galay::Conf_Parser::ParseContent(const std::string& content)
 {
     std::stringstream stream(content);
     std::string line;
