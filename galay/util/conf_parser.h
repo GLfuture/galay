@@ -19,13 +19,12 @@ namespace galay{
 
     public:
         int parse(const std::string& filename) override;
-
-        int parse(const char* content , uintmax_t len) override;
-
 #if __cplusplus >= 201703L
         std::string_view get_value(std::string_view key);
 #endif
         std::string get_value(const std::string &key);
+    private:
+        int ParseContent(const std::string& content) override;
     private:
         std::unordered_map<std::string,std::string> m_fields;
     };

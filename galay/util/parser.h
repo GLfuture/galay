@@ -8,7 +8,8 @@ namespace galay{
     {
     public:
         virtual int parse(const std::string& filename) = 0;
-        virtual int parse(const char* content , uintmax_t len) = 0;
+    protected:    
+        virtual int ParseContent(const std::string& content) = 0;
     };
 }
 

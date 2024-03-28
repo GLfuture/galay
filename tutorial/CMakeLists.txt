@@ -1,5 +1,4 @@
 project(test_server)
-include_directories(../src)
 set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     test_http_server.cc
@@ -14,11 +13,17 @@ set(SRC_LIST
     test_udp_self_protocol_server.cc
     test_udp_self_protocol_client.cc
     test_smtp_client.cc
+    test_conf_parse.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
-    target_link_directories(${EXECUTABLE_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/build/src)
-    target_link_libraries(${EXECUTABLE_NAME} galay-static ssl crypto)
+    target_link_directories(${EXECUTABLE_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
+    target_link_libraries(${EXECUTABLE_NAME} galay-static)
 endforeach()
 
+if(MYSQL_FOUND)
+    add_executable(test_mysql_client test_msyql_client.cc)
+    target_link_directories(test_mysql_client PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
+    target_link_libraries(test_mysql_client galay-static)
+endif()
