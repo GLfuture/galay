@@ -18,15 +18,15 @@ find_package(OpenSSL REQUIRED)
 find_package(spdlog REQUIRED)
 
 if(OPENSSL_FOUND)
-  message(STATUS "OpenSSL found")
+  message(STATUS "openssl found")
 else()
-  message(FATAL_ERROR "OpenSSL not found")
+  message(FATAL_ERROR "openssl not found")
 endif()
 
 if(SPDLOG_FOUND)
-  message(STATUS "Spdlog found")
+  message(STATUS "spdlog found")
 else()
-  message(FATAL_ERROR "Spdlog not found")
+  message(FATAL_ERROR "spdlog not found")
 endif()
 
 #find mysql
@@ -38,10 +38,26 @@ if(MYSQL_INCLUDE_DIR AND MYSQL_LIBRARY)
 endif()
 
 if(MYSQL_FOUND)
-  message(STATUS "MySQL found")
+  message(STATUS "mysql found")
 else()
-  message(FATAL_ERROR "MySQL not found")
+  message(FATAL_ERROR "mysql not found")
 endif()
+
+#find etcd
+find_path(ETCD_INCLUDE_DIR NAMES etcd/Client.hpp)
+find_library(ETCD_LIBRARY NAMES etcd-cpp-api)
+find_library(CPPREST_LIBRARY NAMES cpprest)
+
+if(ETCD_INCLUDE_DIR AND ETCD_LIBRARY AND CPPREST_LIBRARY)
+  set(ETCD_FOUND TRUE)
+endif()
+
+if(ETCD_FOUND)
+  message(STATUS "etcd found")
+else()
+  message(FATAL_ERROR "etcd not found")
+endif()
+
 
 #添加子目录
 add_subdirectory(galay)

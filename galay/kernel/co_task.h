@@ -16,11 +16,6 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Task_Base>;
 
-        Co_Task_Base(Scheduler_Base::wptr scheduler)
-        {
-            this->m_scheduler = scheduler;
-        }
-
         virtual void set_co_handle(std::coroutine_handle<> handle)
         {
             this->m_handle = handle;
@@ -43,7 +38,6 @@ namespace galay
     protected:
         RESULT m_result;
         std::coroutine_handle<> m_handle;
-        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -53,10 +47,10 @@ namespace galay
         using ptr = std::shared_ptr<Co_Tcp_Client_Connect_Task<RESULT>>;
 
         Co_Tcp_Client_Connect_Task(int fd , Scheduler_Base::wptr scheduler , int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -88,6 +82,7 @@ namespace galay
     protected:
         int m_fd;
         int *m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
 
@@ -97,12 +92,12 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Send_Task>;
         Co_Tcp_Client_Send_Task(int fd ,const std::string &buffer , uint32_t len ,Scheduler_Base::wptr scheduler , int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_buffer = buffer;
             this->m_len = len;
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -141,6 +136,7 @@ namespace galay
         std::string m_buffer;
         uint32_t m_len;
         int * m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -149,12 +145,12 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Recv_Task>;
         Co_Tcp_Client_Recv_Task(int fd , char* buffer,int len ,Scheduler_Base::wptr scheduler , int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_buffer = buffer;
             this->m_len = len;
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
  
         int exec() override
@@ -193,6 +189,7 @@ namespace galay
         char* m_buffer = nullptr;
         int m_len;
         int * m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<Tcp_Request REQ,Tcp_Response RESP, typename RESULT = int>
@@ -201,7 +198,6 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Request_Task>;
         Co_Tcp_Client_Request_Task(int fd , Scheduler_Base::wptr scheduler , std::shared_ptr<REQ> request , std::shared_ptr<RESP> response , int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_request = request;
@@ -209,6 +205,7 @@ namespace galay
             this->m_status = Task_Status::GY_TASK_WRITE;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -297,7 +294,7 @@ namespace galay
                     }
                     return -1;
                 }
-                spdlog::info("{} {} {} SSL_Send success (fd :{})",__TIME__ , __FILE__ , __LINE__ , this->m_fd );
+                spdlog::info("{} {} {} Send success (fd :{})",__TIME__ , __FILE__ , __LINE__ , this->m_fd );
                 this->m_respnse->decode(this->m_buffer, *(this->m_error));
                 if ( *(this->m_error) == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE)
                 {
@@ -336,6 +333,7 @@ namespace galay
         std::shared_ptr<REQ> m_request;
         std::shared_ptr<RESP> m_respnse;
         int* m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -345,12 +343,12 @@ namespace galay
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Connect_Task<RESULT>>;
 
         Co_Tcp_Client_SSL_Connect_Task(int fd , SSL* ssl , Scheduler_Base::wptr scheduler , int *error , int init_status)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_error = error;
             this->m_status = init_status;
             this->m_ssl = ssl;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -417,6 +415,7 @@ namespace galay
         int m_fd;
         int *m_error;
         SSL* m_ssl;
+        Scheduler_Base::wptr m_scheduler;
     };
     
     template<typename RESULT = int>
@@ -425,12 +424,12 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Send_Task>;
         Co_Tcp_Client_SSL_Send_Task(SSL * ssl,const std::string &buffer , uint32_t len , Scheduler_Base::wptr scheduler ,int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_ssl = ssl;
             this->m_buffer = buffer;
             this->m_len = len;
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -469,6 +468,7 @@ namespace galay
         std::string m_buffer;
         uint32_t m_len;
         int * m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -477,12 +477,12 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Recv_Task>;
         Co_Tcp_Client_SSL_Recv_Task(SSL* ssl , char* buffer,int len , Scheduler_Base::wptr scheduler ,int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_ssl = ssl;
             this->m_buffer = buffer;
             this->m_len = len;
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
  
         int exec() override
@@ -521,6 +521,7 @@ namespace galay
         char* m_buffer = nullptr;
         int m_len;
         int * m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
 
@@ -530,7 +531,6 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Request_Task>;
         Co_Tcp_Client_SSL_Request_Task(SSL* ssl , int fd , Scheduler_Base::wptr scheduler , std::shared_ptr<REQ> request , std::shared_ptr<RESP> response , int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_ssl = ssl;
@@ -539,6 +539,7 @@ namespace galay
             this->m_status = Task_Status::GY_TASK_WRITE;
             this->m_tempbuffer = new char[DEFAULT_RECV_LENGTH];
             this->m_error = error;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -670,6 +671,7 @@ namespace galay
         std::shared_ptr<REQ> m_request;
         std::shared_ptr<RESP> m_respnse;
         int* m_error;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -678,13 +680,13 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Udp_Client_Sendto_Task>;
         Co_Udp_Client_Sendto_Task(int fd , std::string ip , uint32_t port , std::string buffer , Scheduler_Base::wptr scheduler , int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_error = error;
             this->m_fd = fd;
             this->m_buffer = buffer;
             this->m_ip = ip,
             this->m_port = port;
+            this->m_scheduler = scheduler;
         }
 
         int exec() override
@@ -728,6 +730,7 @@ namespace galay
         uint32_t m_port;
         int *m_error;
         std::string m_buffer;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<typename RESULT = int>
@@ -736,8 +739,8 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Udp_Client_Recvfrom_Task>;
         Co_Udp_Client_Recvfrom_Task(int fd ,IOFuntion::Addr* addr, char* buffer , int len , Scheduler_Base::wptr scheduler,int *error)
-            :Co_Task_Base<RESULT>(scheduler)
         {
+            this->m_scheduler = scheduler;
             this->m_fd = fd;
             this->m_addr = addr;
             this->m_buffer = buffer;
@@ -792,6 +795,7 @@ namespace galay
         int *m_error;
         int m_len;
         Timer::ptr m_timer;
+        Scheduler_Base::wptr m_scheduler;
     };
 
     template<Udp_Request REQ,Udp_Response RESP, typename RESULT = int>
@@ -801,13 +805,12 @@ namespace galay
         using ptr = std::shared_ptr<Co_Dns_Client_Request_Task>;
         Co_Dns_Client_Request_Task(int fd, std::string ip, uint32_t port,std::shared_ptr<REQ> request,std::shared_ptr<RESP> response 
             , Scheduler_Base::wptr scheduler, int *error)
-            : Co_Task_Base<RESULT>(scheduler)
         {
             this->m_fd = fd;
             this->m_error = error;
             this->m_ip = ip;
             this->m_port = port;
-
+            this->m_scheduler = scheduler;
             this->m_request = request;
             this->m_response = response;
             this->m_status = Task_Status::GY_TASK_WRITE;
@@ -911,6 +914,7 @@ namespace galay
         Timer::ptr m_timer;
         std::shared_ptr<REQ> m_request;
         std::shared_ptr<RESP> m_response;
+        Scheduler_Base::wptr m_scheduler;
     };
 
 }

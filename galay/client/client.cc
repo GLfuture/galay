@@ -1,5 +1,6 @@
 #include "client.h"
 #include "../kernel/callback.h"
+#include <spdlog/spdlog.h>
 
 void galay::Client::stop()
 {
@@ -55,8 +56,8 @@ galay::Net_Awaiter<int> galay::Tcp_Client::connect(std::string ip, uint32_t port
         this->m_scheduler.lock()->add_task({this->m_fd, task});
         if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
         {
-            std::cout << "add event failed fd = " << this->m_fd << '\n';
-        }
+            spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fd,strerror(errno));
+        }else spdlog::info("{} {} {} scheduler add event success(fd: {})",__TIME__,__FILE__,__LINE__,this->m_fd);
     }
     return Net_Awaiter<int>{task};
 }

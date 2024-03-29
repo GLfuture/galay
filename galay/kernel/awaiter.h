@@ -66,7 +66,6 @@ namespace galay
         {
             this->m_result = result;
         }
-        
     };
 }
 
