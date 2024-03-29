@@ -27,3 +27,14 @@ if(MYSQL_FOUND)
     target_link_directories(test_mysql_client PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
     target_link_libraries(test_mysql_client galay-static)
 endif()
+
+if(ETCD_FOUND)
+    add_executable(test_etcd_discover test_etcd_discover.cc)
+    target_link_directories(test_etcd_discover PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
+    target_link_libraries(test_etcd_discover  galay-static)
+    add_executable(test_etcd_register test_etcd_register.cc)
+    target_link_directories(test_etcd_register PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
+    target_link_libraries(test_etcd_register  galay-static)
+
+
+endif()
