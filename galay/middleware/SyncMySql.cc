@@ -1,16 +1,16 @@
 #include "SyncMySql.h"
 
-galay::MiddleWare::MySqlException::MySqlException(std::string message) 
+galay::MiddleWare::MySql::MySqlException::MySqlException(std::string message) 
     : m_message(message) 
 {}
 
 const char*
-galay::MiddleWare::MySqlException::what() const noexcept 
+galay::MiddleWare::MySql::MySqlException::what() const noexcept 
 {
     return m_message.c_str();
 }
 
-galay::MiddleWare::SyncMySql::SyncMySql(std::string charset)
+galay::MiddleWare::MySql::SyncMySql::SyncMySql(std::string charset)
 {
     this->m_handle=mysql_init(NULL);
     if(this->m_handle==NULL) {
@@ -24,7 +24,7 @@ galay::MiddleWare::SyncMySql::SyncMySql(std::string charset)
 }
 
 int 
-galay::MiddleWare::SyncMySql::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port)
+galay::MiddleWare::MySql::SyncMySql::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port)
 {
     if (!mysql_real_connect(this->m_handle, Remote.c_str(), UserName.c_str(), Password.c_str(), DBName.c_str(), Port, NULL, 0))
     {
@@ -36,7 +36,7 @@ galay::MiddleWare::SyncMySql::Connect(const std::string& Remote,const std::strin
 }
 
 void 
-galay::MiddleWare::SyncMySql::DisConnect()
+galay::MiddleWare::MySql::SyncMySql::DisConnect()
 {
     if(this->m_connected) {
         mysql_close(this->m_handle);
@@ -45,7 +45,7 @@ galay::MiddleWare::SyncMySql::DisConnect()
 }
 
 int 
-galay::MiddleWare::SyncMySql::CreateTable(std::string TableName, const std::vector<std::tuple<std::string,std::string,std::string>>& Field_Type_Key)
+galay::MiddleWare::MySql::SyncMySql::CreateTable(std::string TableName, const std::vector<std::tuple<std::string,std::string,std::string>>& Field_Type_Key)
 {
     if(TableName.empty() || Field_Type_Key.empty())
     {
@@ -75,7 +75,7 @@ galay::MiddleWare::SyncMySql::CreateTable(std::string TableName, const std::vect
 }
 
 int 
-galay::MiddleWare::SyncMySql::DropTable(std::string TableName)
+galay::MiddleWare::MySql::SyncMySql::DropTable(std::string TableName)
 {
     if(TableName.empty()){
         spdlog::error("{} {} {} Arg: [TableName] empty",__TIME__, __FILE__,__LINE__);
@@ -97,7 +97,7 @@ galay::MiddleWare::SyncMySql::DropTable(std::string TableName)
 }
 
 std::vector<std::vector<std::string>> 
-galay::MiddleWare::SyncMySql::Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond)
+galay::MiddleWare::MySql::SyncMySql::Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond)
 {
     if (Fields.empty() || TableName.empty())
     {
@@ -165,7 +165,7 @@ galay::MiddleWare::SyncMySql::Select(const std::string& TableName,const std::vec
 }
 
 int 
-galay::MiddleWare::SyncMySql::Insert(const std::string& TableName , const std::vector<std::pair<std::string,std::string>>& Field_Value)
+galay::MiddleWare::MySql::SyncMySql::Insert(const std::string& TableName , const std::vector<std::pair<std::string,std::string>>& Field_Value)
 {
     if (TableName.empty() || Field_Value.empty())
     {
@@ -201,7 +201,7 @@ galay::MiddleWare::SyncMySql::Insert(const std::string& TableName , const std::v
 }
 
 int
-galay::MiddleWare::SyncMySql::Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond)
+galay::MiddleWare::MySql::SyncMySql::Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond)
 {
     if(TableName.empty() || Field_Value.empty()){
         spdlog::error("{} {} {} Arg: [TableName] or [Field_Value] empty",__TIME__ ,__FILE__,__LINE__);
@@ -230,7 +230,7 @@ galay::MiddleWare::SyncMySql::Update(const std::string& TableName,const std::vec
 }
 
 int 
-galay::MiddleWare::SyncMySql::Delete(const std::string& TableName, const std::string& Cond)
+galay::MiddleWare::MySql::SyncMySql::Delete(const std::string& TableName, const std::string& Cond)
 {
     if(TableName.empty() || Cond.empty())
     {
@@ -254,7 +254,7 @@ galay::MiddleWare::SyncMySql::Delete(const std::string& TableName, const std::st
 
 
 int 
-galay::MiddleWare::SyncMySql::AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
+galay::MiddleWare::MySql::SyncMySql::AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
 {
     if (TableName.empty())
     {
@@ -278,7 +278,7 @@ galay::MiddleWare::SyncMySql::AddField(const std::string& TableName, const std::
 }
 
 int 
-galay::MiddleWare::SyncMySql::ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
+galay::MiddleWare::MySql::SyncMySql::ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
 {
     if (TableName.empty())
     {
@@ -302,7 +302,7 @@ galay::MiddleWare::SyncMySql::ModFieldType(const std::string& TableName, const s
 }
 
 int 
-galay::MiddleWare::SyncMySql::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
+galay::MiddleWare::MySql::SyncMySql::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
 {
     if(TableName.empty() || OldFieldName.empty() ){
         spdlog::error("{} {} {} Arg: [TableName] of [OldFieldName] empty", __TIME__, __FILE__, __LINE__);
@@ -326,7 +326,7 @@ galay::MiddleWare::SyncMySql::ModFieldName(const std::string& TableName,const st
 
 
 int 
-galay::MiddleWare::SyncMySql::DelField(const std::string& TableName,const std::string& FieldName)
+galay::MiddleWare::MySql::SyncMySql::DelField(const std::string& TableName,const std::string& FieldName)
 {
     if(TableName.empty() || FieldName.empty()){
         spdlog::error("{} {} {} Arg: [TableName] of [OldFieldName] empty", __TIME__, __FILE__, __LINE__);
@@ -350,7 +350,7 @@ galay::MiddleWare::SyncMySql::DelField(const std::string& TableName,const std::s
 
 // 发送二进制数据
 int 
-galay::MiddleWare::SyncMySql::ParamSendBinaryData(const std::string &ParamQuery, const std::string& Data)
+galay::MiddleWare::MySql::SyncMySql::ParamSendBinaryData(const std::string &ParamQuery, const std::string& Data)
 {
     if (Data.empty() || ParamQuery.empty())
     {
@@ -407,7 +407,7 @@ galay::MiddleWare::SyncMySql::ParamSendBinaryData(const std::string &ParamQuery,
 }
 // 接收二进制数据
 int
-galay::MiddleWare::SyncMySql::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
+galay::MiddleWare::MySql::SyncMySql::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
 {
     if (ParamQuery.empty())
     {
@@ -485,7 +485,7 @@ galay::MiddleWare::SyncMySql::ParamRecvBinaryData(const std::string &ParamQuery,
 
 
 bool 
-galay::MiddleWare::SyncMySql::StartTransaction()
+galay::MiddleWare::MySql::SyncMySql::StartTransaction()
 {
     if (mysql_ping(this->m_handle))
     {
@@ -501,7 +501,7 @@ galay::MiddleWare::SyncMySql::StartTransaction()
 }
 
 bool 
-galay::MiddleWare::SyncMySql::Commit()
+galay::MiddleWare::MySql::SyncMySql::Commit()
 {
     if (mysql_ping(this->m_handle))
     {
@@ -516,7 +516,7 @@ galay::MiddleWare::SyncMySql::Commit()
 }
 
 bool 
-galay::MiddleWare::SyncMySql::Rollback()
+galay::MiddleWare::MySql::SyncMySql::Rollback()
 {
     if (mysql_ping(this->m_handle))
     {
@@ -530,7 +530,7 @@ galay::MiddleWare::SyncMySql::Rollback()
     return true;
 }
 
-galay::MiddleWare::SyncMySql::~SyncMySql()
+galay::MiddleWare::MySql::SyncMySql::~SyncMySql()
 {
     if(this->m_connected) {
         mysql_close(this->m_handle); // 关闭数据库连接

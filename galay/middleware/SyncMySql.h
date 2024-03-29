@@ -17,69 +17,73 @@ namespace galay
 {
     namespace MiddleWare
     {
-        class MySqlException: public std::exception
+        namespace MySql
         {
-        public:
-            MySqlException(std::string message);
+            class MySqlException : public std::exception
+            {
+            public:
+                MySqlException(std::string message);
 
-            virtual const char* what() const noexcept override;
-        private:
-            std::string m_message;
-        };
+                virtual const char *what() const noexcept override;
 
-        class SyncMySql //: public std::exception
-        {
-        private:
-            bool m_connected = false;
-            MYSQL *m_handle;              // mysql连接句柄结构体
-        public:
-            using ptr = std::shared_ptr<SyncMySql>;
-            using uptr = std::unique_ptr<SyncMySql>;
+            private:
+                std::string m_message;
+            };
 
-            SyncMySql(const SyncMySql& ) = delete;
-            SyncMySql(SyncMySql &&) = delete;
-            SyncMySql &operator=(const SyncMySql &) = delete;
-            SyncMySql &operator=(const SyncMySql &&) = delete;
+            class SyncMySql //: public std::exception
+            {
+            private:
+                bool m_connected = false;
+                MYSQL *m_handle; // mysql连接句柄结构体
+            public:
+                using ptr = std::shared_ptr<SyncMySql>;
+                using uptr = std::unique_ptr<SyncMySql>;
 
-            SyncMySql(std::string charset = "utf8mb4");
+                SyncMySql(const SyncMySql &) = delete;
+                SyncMySql(SyncMySql &&) = delete;
+                SyncMySql &operator=(const SyncMySql &) = delete;
+                SyncMySql &operator=(const SyncMySql &&) = delete;
 
-            int Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port = 3306);
+                SyncMySql(std::string charset = "utf8mb4");
 
-            void DisConnect();
+                int Connect(const std::string &Remote, const std::string &UserName, const std::string &Password, const std::string &DBName, uint16_t Port = 3306);
 
-            int CreateTable(std::string TableName, const std::vector<std::tuple<std::string,std::string,std::string>>& Field_Type_Key);
+                void DisConnect();
 
-            int DropTable(std::string TableName);
+                int CreateTable(std::string TableName, const std::vector<std::tuple<std::string, std::string, std::string>> &Field_Type_Key);
 
-            std::vector<std::vector<std::string>> Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond = "");
+                int DropTable(std::string TableName);
 
-            int Insert(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value);
+                std::vector<std::vector<std::string>> Select(const std::string &TableName, const std::vector<std::string> &Fields, const std::string &Cond = "");
 
-            int Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond = "");
+                int Insert(const std::string &TableName, const std::vector<std::pair<std::string, std::string>> &Field_Value);
 
-            int Delete(const std::string& TableName, const std::string& Cond);
+                int Update(const std::string &TableName, const std::vector<std::pair<std::string, std::string>> &Field_Value, const std::string &Cond = "");
 
-            int AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type);
+                int Delete(const std::string &TableName, const std::string &Cond);
 
-            int ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type);
+                int AddField(const std::string &TableName, const std::pair<std::string, std::string> &Field_Type);
 
-            int ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type);
+                int ModFieldType(const std::string &TableName, const std::pair<std::string, std::string> &Field_Type);
 
-            int DelField(const std::string& TableName,const std::string& FieldName);
+                int ModFieldName(const std::string &TableName, const std::string &OldFieldName, const std::pair<std::string, std::string> &Field_Type);
 
-            // 发送二进制数据
-            int ParamSendBinaryData(const std::string& ParamQuery, const std::string& Data);
-            // 接收二进制数据
-            int ParamRecvBinaryData(const std::string& ParamQuery, std::string& Data );
-            // 开启事务
-            bool StartTransaction();
-            // 提交事务
-            bool Commit();
-            // 回滚事务
-            bool Rollback();
+                int DelField(const std::string &TableName, const std::string &FieldName);
 
-            ~SyncMySql();
-        };
+                // 发送二进制数据
+                int ParamSendBinaryData(const std::string &ParamQuery, const std::string &Data);
+                // 接收二进制数据
+                int ParamRecvBinaryData(const std::string &ParamQuery, std::string &Data);
+                // 开启事务
+                bool StartTransaction();
+                // 提交事务
+                bool Commit();
+                // 回滚事务
+                bool Rollback();
+
+                ~SyncMySql();
+            };
+        }
     }
 
 }
