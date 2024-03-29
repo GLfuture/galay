@@ -412,14 +412,15 @@ namespace galay
             }
             if (!this->m_schedulers[indx].expired())
             {
+                auto task = create_rw_task(connfd, this->m_schedulers[indx]);
+                this->m_schedulers[indx].lock()->add_task({connfd, task});
+                spdlog::info("{} {} {} scheduler(indx: {}) add task success(fd: {})",__TIME__,__FILE__,__LINE__ , indx, connfd);
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
                     close(connfd);
                     return -1;
-                }else spdlog::info("{} {} {} scheduler add success(fd: {})",__TIME__,__FILE__,__LINE__,connfd);
-                auto task = create_rw_task(connfd, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->add_task({connfd, task});
+                }else spdlog::info("{} {} {} scheduler(indx: {}) add event success(fd: {})",__TIME__,__FILE__,__LINE__,indx,connfd);
             }
             return 0;
         }
@@ -652,6 +653,8 @@ namespace galay
 
             if (!this->m_schedulers[indx].expired())
             {
+                auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
+                this->m_schedulers[indx].lock()->add_task({connfd, task});
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
@@ -660,8 +663,6 @@ namespace galay
                     close(connfd);
                     return -1;
                 }else spdlog::info("{} {} {} scheduler add success(fd: {} )",__TIME__,__FILE__,__LINE__,connfd);
-                auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->add_task({connfd, task});
             }
             return 0;
         }
