@@ -22,7 +22,7 @@ Task<> func(Scheduler_Base::wptr scheduler)
     {
         question.m_qname = hostname[i];
         request->get_question_queue().push(question);
-        int ret = co_await client->request(request, response, "114.114.114.114", 53);
+        auto ret = co_await client->request(request, response, "114.114.114.114", 53);
     }
     auto& q = response->get_answer_queue();
     while(!q.empty())

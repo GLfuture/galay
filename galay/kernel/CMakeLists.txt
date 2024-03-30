@@ -5,6 +5,7 @@ set(SRC_LIST
     callback.cc
     iofunction.cc
     error.cc
+    co_task.cc
     task.cc
     timer.cc
     threadpool.cc

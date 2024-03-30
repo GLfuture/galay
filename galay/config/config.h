@@ -59,7 +59,7 @@ namespace galay{
     public:
         using ptr = std::shared_ptr<Tcp_Server_Config>;
         //port 端口 backlog 全连接队列大小 recv_len 默认接收缓冲区大小  conn_timeout 超时断连时间(-1 为不开启)
-        Tcp_Server_Config(std::vector<uint16_t> ports,uint32_t backlog,uint32_t recv_len,int conn_timeout,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
+        Tcp_Server_Config(uint32_t backlog,uint32_t recv_len,int conn_timeout,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
 
         Tcp_Server_Config(Tcp_Server_Config&& other);
 
@@ -67,7 +67,6 @@ namespace galay{
 
         void enable_keepalive(int t_idle,int t_interval,int retry);
 
-        std::vector<uint16_t> m_ports;
         uint32_t m_backlog;
         uint32_t m_max_rbuffer_len;
         int m_conn_timeout;
@@ -80,7 +79,7 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Tcp_SSL_Server_Config>;
-        Tcp_SSL_Server_Config(std::vector<uint16_t> ports,uint32_t backlog ,uint32_t recv_len , int conn_timeout , long ssl_min_version , long ssl_max_version
+        Tcp_SSL_Server_Config(uint32_t backlog ,uint32_t recv_len , int conn_timeout , long ssl_min_version , long ssl_max_version
             , uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
 
         Tcp_SSL_Server_Config(const Tcp_SSL_Server_Config &other);
@@ -99,7 +98,7 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Http_Server_Config>;
-        Http_Server_Config(std::vector<uint16_t> ports,uint32_t backlog ,uint32_t recv_len,int conn_timeout,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
+        Http_Server_Config(uint32_t backlog ,uint32_t recv_len,int conn_timeout,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
         Http_Server_Config(const Http_Server_Config &other);
         Http_Server_Config(Http_Server_Config &&other);
     };
@@ -108,7 +107,7 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Https_Server_Config>;
-        Https_Server_Config(std::vector<uint16_t> ports,uint32_t backlog ,uint32_t recv_len ,int conn_timeout , long ssl_min_version , long ssl_max_version
+        Https_Server_Config(uint32_t backlog ,uint32_t recv_len ,int conn_timeout , long ssl_min_version , long ssl_max_version
             , uint32_t ssl_accept_max_retry ,const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
         Https_Server_Config(const Https_Server_Config &other);
         Https_Server_Config(Https_Server_Config &&other);
@@ -118,11 +117,10 @@ namespace galay{
     {
     public:
         using ptr = std::shared_ptr<Udp_Server_Config>;
-        Udp_Server_Config(std::vector<uint16_t> ports,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
+        Udp_Server_Config(Engine_Type type,int sche_wait_time,int max_event_size,int threadnum);
         Udp_Server_Config(Udp_Server_Config&& other);
         Udp_Server_Config(const Udp_Server_Config& other);
 
-        std::vector<uint16_t> m_ports;
     };
 
 

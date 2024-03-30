@@ -16,7 +16,7 @@ namespace galay
     public:
         Server(Config::ptr config);
 
-        virtual void start(std::vector<std::function<Task<>(std::weak_ptr<Task_Base>)>> funcs) = 0;
+        virtual void start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Func) = 0;
 
         virtual int get_error() ;
     
@@ -43,16 +43,9 @@ namespace galay
         Tcp_Server(Tcp_Server_Config::ptr config) 
             : Server(config){}
 
-        void start(std::vector<std::function<Task<>(Task_Base::wptr)>> funcs) override
+        void start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) override
         {
-            Tcp_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
-            this->m_error = init(config);
-            if (this->m_error != Error::NoError::GY_SUCCESS){
-                spdlog::error("{} {} {} {}",__TIME__,__FILE__,__LINE__,Error::get_err_str(this->m_error));
-                return;
-            }
-            if(add_main_task(funcs) == -1) {
-                spdlog::error("{} {} {} {}",__TIME__,__FILE__,__LINE__,Error::get_err_str(this->m_error));
+            if(add_main_tasks(Port_Funcs) == -1) {
                 return;
             }
             std::vector<std::thread> threads;
@@ -71,60 +64,71 @@ namespace galay
 
         virtual ~Tcp_Server(){}
     protected:
-        int init(Tcp_Server_Config::ptr config)
+        virtual int InitSock(uint16_t port) 
         {
-            //TO do
-            for (int i = 0; i < config->m_ports.size(); i++)
+            int fd = IOFuntion::TcpFunction::Sock();
+            if (fd <= 0)
             {
-                int fd = IOFuntion::TcpFunction::Sock();
-                if (fd <= 0)
-                {
-                    return Error::NetError::GY_SOCKET_ERROR;
-                }
-                int ret = IOFuntion::TcpFunction::Reuse_Fd(fd);
-                if (ret == -1)
-                {
-                    close(fd);
-                    return Error::NetError::GY_SETSOCKOPT_ERROR;
-                }
-                ret = IOFuntion::TcpFunction::Bind(fd, config->m_ports[i]);
-                if (ret == -1)
-                {
-                    close(fd);
-                    return Error::NetError::GY_BIND_ERROR;
-                }
-                ret = IOFuntion::TcpFunction::Listen(fd, config->m_backlog);
-                if (ret == -1)
-                {
-                    close(fd);
-                    return Error::NetError::GY_LISTEN_ERROR;
-                }
-                IOFuntion::TcpFunction::IO_Set_No_Block(fd);
-                this->m_fds.push_back(fd);
+                spdlog::error("{} {} {} Sock fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                return Error::NetError::GY_SOCKET_ERROR;
             }
+            int ret = IOFuntion::TcpFunction::Reuse_Fd(fd);
+            if (ret == -1)
+            {
+                spdlog::error("{} {} {} Reuse_Fd fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                close(fd);
+                return Error::NetError::GY_SETSOCKOPT_ERROR;
+            }
+            ret = IOFuntion::TcpFunction::Bind(fd, port);
+            if (ret == -1)
+            {
+                spdlog::error("{} {} {} Bind fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                close(fd);
+                return Error::NetError::GY_BIND_ERROR;
+            }
+            ret = IOFuntion::TcpFunction::Listen(fd, std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config)->m_backlog);
+            if (ret == -1)
+            {
+                spdlog::error("{} {} {} Listen fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                close(fd);
+                return Error::NetError::GY_LISTEN_ERROR;
+            }
+            IOFuntion::TcpFunction::IO_Set_No_Block(fd);
+            this->m_fds.push_back(fd); 
             return Error::NoError::GY_SUCCESS;
         }
 
-        virtual int add_main_task(std::vector<std::function<Task<>(Task_Base::wptr)>> funcs)
+        virtual int add_main_tasks(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Func)
         {
-            if(funcs.size() != this->m_fds.size()) {
-                this->m_error = Error::ConfigError::GY_INVALID_FUNCTIONS_ERROR;
-                return -1;
-            }
-            for(int i = 0 ; i < this->m_fds.size() ; i ++){
-                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {std::cout<< "add event failed fd = " <<this->m_fds[i] <<'\n';}
+            int n = Port_Func.size();
+            for(int i = 0 ; i < n ; ++i){
+                if(InitSock(Port_Func[i].first) != Error::NoError::GY_SUCCESS) {
+                    for(auto& v: m_fds) {
+                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        close(v);
+                        return -1;
+                    }
+                }
                 auto config = std::dynamic_pointer_cast<Tcp_Server_Config>(this->m_config);
                 std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
                 for(auto scheduler: m_schedulers)
                 {
                     schedulers.push_back(scheduler);
                 }
-                auto task = std::make_shared<Tcp_Main_Task<REQ,RESP>>(this->m_fds[i],schedulers, std::move(funcs[i]), config->m_max_rbuffer_len,config->m_conn_timeout);
+                auto task = std::make_shared<Tcp_Main_Task<REQ,RESP>>(this->m_fds[i],schedulers, std::move(Port_Func[i].second), config->m_max_rbuffer_len,config->m_conn_timeout);
                 if (config->m_keepalive_conf.m_keepalive)
                 {
                     task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
                 }
                 this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
+                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
+                    spdlog::error("{} {} {} scheduler add event fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fds[i],strerror(errno));
+                    for(auto& v: m_fds) {
+                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        close(v);
+                        return -1;
+                    }
+                }
             }
             return 0;
         }
@@ -163,16 +167,16 @@ namespace galay
         }
 
     protected:
-        int add_main_task(std::vector<std::function<Task<>(Task_Base::wptr)>> funcs) override
+        int add_main_tasks(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) override
         {
-            if(funcs.size() != this->m_fds.size()) {
-                this->m_error = Error::ConfigError::GY_INVALID_FUNCTIONS_ERROR;
-                return -1;
-            }
-            for(int i = 0 ; i < this->m_fds.size() ; i ++){
-                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ| GY_EVENT_ERROR)==-1)
-                {
-                    std::cout<< "add event failed fd = " <<this->m_fds[i] <<'\n';
+            int n = Port_Funcs.size();
+            for(int i = 0 ; i < n ; ++ i){
+                if(Tcp_Server<REQ,RESP>::InitSock(Port_Funcs[i].first) != Error::NoError::GY_SUCCESS) {
+                    for(auto& v: this->m_fds) {
+                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        close(v);
+                        return -1;
+                    }
                 }
                 std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
                 for(auto scheduler: this->m_schedulers)
@@ -180,12 +184,20 @@ namespace galay
                     schedulers.push_back(scheduler);
                 }
                 Tcp_SSL_Server_Config::ptr config = std::dynamic_pointer_cast<Tcp_SSL_Server_Config>(this->m_config);
-                auto task = std::make_shared<Tcp_SSL_Main_Task<REQ,RESP>>(this->m_fds[i], schedulers, std::move(funcs[i]), config->m_max_rbuffer_len ,config->m_conn_timeout, config->m_ssl_accept_retry, this->m_ctx);
+                auto task = std::make_shared<Tcp_SSL_Main_Task<REQ,RESP>>(this->m_fds[i], schedulers, std::move(Port_Funcs[i].second), config->m_max_rbuffer_len ,config->m_conn_timeout, config->m_ssl_accept_retry, this->m_ctx);
                 if (config->m_keepalive_conf.m_keepalive)
                 {
                     task->enable_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
                 }
                 this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
+                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
+                    spdlog::error("{} {} {} scheduler add event fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fds[i],strerror(errno));
+                    for(auto& v: this->m_fds) {
+                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        close(v);
+                        return -1;
+                    }
+                }
             }
             return 0;
         }
@@ -205,13 +217,13 @@ namespace galay
         Udp_Server(Udp_Server_Config::ptr config)
             :Server(config)
         {
-            for(int i = 0 ; i < config->m_ports.size() ; i ++){
-                int fd = IOFuntion::UdpFunction::Sock();
-                IOFuntion::BlockFuction::IO_Set_No_Block(fd);
-                IOFuntion::UdpFunction::Bind(fd,config->m_ports[i]);
-                m_schedulers[0]->add_event(fd,GY_EVENT_READ);
-                this->m_fds.push_back(fd);
-            }
+            // for(int i = 0 ; i < config->m_ports.size() ; i ++){
+            //     int fd = IOFuntion::UdpFunction::Sock();
+            //     IOFuntion::BlockFuction::IO_Set_No_Block(fd);
+            //     IOFuntion::UdpFunction::Bind(fd,config->m_ports[i]);
+            //     m_schedulers[0]->add_event(fd,GY_EVENT_READ);
+            //     this->m_fds.push_back(fd);
+            // }
             
         }
 

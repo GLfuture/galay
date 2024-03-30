@@ -153,8 +153,8 @@ int main()
     Callback_ConnClose::set([](int fd){
         std::cout << "exit :" << fd << "\n";  
     });
-    auto config = Config_Factory::create_https_server_config({8010,8011}, TLS1_2_VERSION, TLS1_3_VERSION, "../server.crt", "../server.key",Engine_Type::ENGINE_SELECT,5,5000);
+    auto config = Config_Factory::create_https_server_config(TLS1_2_VERSION, TLS1_3_VERSION, "../server.crt", "../server.key",Engine_Type::ENGINE_SELECT,5,5000);
     https_server = Server_Factory::create_https_server(config);
-    https_server->start({func,func});
+    https_server->start({{8010,func},{8011,func}});
     return 0;
 }

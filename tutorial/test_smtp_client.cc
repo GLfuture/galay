@@ -8,28 +8,28 @@ using namespace galay;
 Task<> func(Scheduler_Base::wptr scheduler)
 {
     auto smtp_client = Client_Factory::create_smtp_client(scheduler);
-    int ret = co_await smtp_client->connect(IP,25);
-    if(ret == 0) std::cout<<"connect success\n";
+    auto ret = co_await smtp_client->connect(IP,25);
+    if(std::any_cast<int>(ret) == 0) std::cout<<"connect success\n";
     auto request = std::make_shared<protocol::Smtp_Request>();
     auto response = std::make_shared<protocol::Smtp_Response>();
     ret = co_await smtp_client->request(request->hello(),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->auth(),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->account("bigdata_C1004@163.com"),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->password("EPOXVZMINXCXHXUO"),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->mailfrom("bigdata_C1004@163.com"),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->rcptto("123@qq.com"),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->data(),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->msg("Verify","It is a demo\n"),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->quit(),response->resp());
-    if(ret != 0) std::cout<<response->resp()->get_content();
+    if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     co_return;
 }
 

@@ -417,7 +417,7 @@ namespace galay
                 spdlog::info("{} {} {} scheduler(indx: {}) add task success(fd: {})",__TIME__,__FILE__,__LINE__ , indx, connfd);
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
-                    spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                    spdlog::error("{} {} {} scheduler add event fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
                     close(connfd);
                     return -1;
                 }else spdlog::info("{} {} {} scheduler(indx: {}) add event success(fd: {})",__TIME__,__FILE__,__LINE__,indx,connfd);
@@ -657,7 +657,7 @@ namespace galay
                 this->m_schedulers[indx].lock()->add_task({connfd, task});
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
-                    spdlog::error("{} {} {} scheduler add fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
+                    spdlog::error("{} {} {} scheduler add event fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,connfd,strerror(errno));
                     IOFuntion::TcpFunction::SSLDestory(ssl);
                     ssl = nullptr;
                     close(connfd);

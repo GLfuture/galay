@@ -11,7 +11,7 @@ Task<> func(Task_Base::wptr t_task)
     auto resp = std::dynamic_pointer_cast<protocol::Http1_1_Response>(task->get_resp());
     if(task->get_scheduler() == nullptr) std::cout<<"NULL\n";
     auto client = Client_Factory::create_http_client(task->get_scheduler());
-    int ret = co_await client->connect("39.156.66.14",80);
+    auto ret = co_await client->connect("39.156.66.14",80);
     if(client->get_error() == Error::GY_SUCCESS) std::cout<<"connect success\n";
     else std::cout<<"connect failed error is "<<client->get_error()<<'\n';
     //std::cout<<req->encode()<<'\n';
@@ -44,8 +44,8 @@ int main()
     Callback_ConnClose::set([](int fd){
         std::cout << "exit :" << fd << "\n";  
     });
-    auto config = Config_Factory::create_http_server_config({8010,8011},Engine_Type::ENGINE_EPOLL,5,-1,3); //5s断
+    auto config = Config_Factory::create_http_server_config(Engine_Type::ENGINE_EPOLL,5,-1,3); //5s断
     http_server = Server_Factory::create_http_server(config);
-    http_server->start({func,func});
+    http_server->start({{8010,func},{8011,func}});
     return 0;
 }

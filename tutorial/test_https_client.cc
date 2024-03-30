@@ -7,8 +7,8 @@ using namespace galay;
 Task<> func(Scheduler_Base::ptr scheduler)
 {
     auto client = Client_Factory::create_https_client(scheduler,TLS1_1_VERSION,TLS1_3_VERSION);
-    int ret = co_await client->connect("39.156.66.14",443);
-    if(ret == 0) {
+    auto ret = co_await client->connect("39.156.66.14",443);
+    if(std::any_cast<int>(ret) == 0) {
         std::cout<<"connect success\n";
     }else{
         std::cout<<"connect failed\n";
