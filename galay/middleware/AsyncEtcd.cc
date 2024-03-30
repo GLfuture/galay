@@ -73,3 +73,20 @@ galay::MiddleWare::AsyncEtcd::ServiceDiscovery::Discovery(const std::string& Ser
     });
 }
 
+galay::MiddleWare::AsyncEtcd::DistributedLock::DistributedLock(const std::string& EtcdAddrs)
+{
+    m_client = std::make_unique<etcd::Client>(EtcdAddrs);
+}
+
+void
+galay::MiddleWare::AsyncEtcd::DistributedLock::Lock(const std::string& key , int TTL)
+{
+    auto resp = m_client->lock(key,TTL).get();
+    m_lock_key = resp.lock_key();
+}
+
+void 
+galay::MiddleWare::AsyncEtcd::DistributedLock::UnLock()
+{
+    m_client->unlock(m_lock_key).wait();
+}

@@ -58,6 +58,8 @@ else()
   message(FATAL_ERROR "etcd not found")
 endif()
 
+#find kafka
+
 
 #添加子目录
 add_subdirectory(galay)

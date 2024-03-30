@@ -59,9 +59,17 @@ namespace galay
 
             //分布式锁
             class DistributedLock{
+            private:
+                std::unique_ptr<etcd::Client> m_client;
+                std::string m_lock_key;
             public:
                 using ptr = std::shared_ptr<DistributedLock>;
                 using uptr = std::unique_ptr<DistributedLock>;
+                DistributedLock(const std::string& EtcdAddrs);
+
+                void Lock(const std::string& key , int TTL);
+
+                void UnLock();
             };
         }
     }
