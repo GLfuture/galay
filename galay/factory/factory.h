@@ -28,7 +28,7 @@ namespace galay
         @param port 端口
         @param type scheduler 类型
         @param sche_wait_time scheduler 返回间隔时间
-        @param conn_timeout tcp连接超时时间(自动断开)
+        @param conn_timeout tcp连接超时时间(自动断开) ms
         */
         static Tcp_Server_Config::ptr create_tcp_server_config(Engine_Type type, int sche_wait_time = -1,int conn_timeout = -1 , int threadnum = 1);
         static Tcp_Server_Config::ptr create_tcp_server_config(Tcp_Server_Config &&config);

@@ -70,6 +70,7 @@ namespace galay{
 
         Timer::ptr get_ealist_timer();
         
+        // during (ms) exec_times (exec times)
         template<typename Func,typename ...Args,typename = std::enable_if_t<std::is_void_v<std::invoke_result_t<Func, Args...>>>>
         Timer::ptr add_timer(uint64_t during , uint32_t exec_times, Func&& f , Args&& ...args)
         {

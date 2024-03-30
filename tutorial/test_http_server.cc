@@ -44,7 +44,7 @@ int main()
     Callback_ConnClose::set([](int fd){
         std::cout << "exit :" << fd << "\n";  
     });
-    auto config = Config_Factory::create_http_server_config(Engine_Type::ENGINE_EPOLL,5,-1,3); //5s断
+    auto config = Config_Factory::create_http_server_config(Engine_Type::ENGINE_EPOLL,5000,-1,3); //5s断
     http_server = Server_Factory::create_http_server(config);
     http_server->start({{8010,func},{8011,func}});
     return 0;
