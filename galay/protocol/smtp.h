@@ -3,7 +3,7 @@
 
 #include "../kernel/error.h"
 #include "basic_protocol.h"
-#include "../util/base64.h"
+#include "../security/base64.h"
 #include <queue>
 
 namespace galay

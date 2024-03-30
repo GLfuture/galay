@@ -1,7 +1,8 @@
 #include "sha256.h"
 
 
-std::string galay::Sha256Util::sha256_encode(std::string const& str)
+std::string 
+galay::Security::Sha256Util::encode(const std::string & str)
 {
     EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
     EVP_DigestInit(md_ctx, EVP_sha256());
@@ -22,7 +23,8 @@ std::string galay::Sha256Util::sha256_encode(std::string const& str)
 }
 
 
-std::string galay::Sha256Util::sha256_encode(std::string_view str)
+std::string 
+galay::Security::Sha256Util::encode(std::string_view str)
 {
     EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
     EVP_DigestInit(md_ctx, EVP_sha256());

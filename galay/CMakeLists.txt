@@ -1,6 +1,6 @@
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(DEPEND_LIBS kernel util factory protocol config server client middleware)
+set(DEPEND_LIBS kernel util factory protocol config server client middleware security)
 set(STATIC_LIB ${PROJECT_NAME}-static)
 set(SHARED_LIB ${PROJECT_NAME}-shared)
 

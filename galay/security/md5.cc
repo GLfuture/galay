@@ -1,6 +1,7 @@
 #include "md5.h"
 
-std::string galay::Md5Util::md5_encode(std::string const& str)
+std::string 
+galay::Security::Md5Util::encode(std::string const& str)
 {
     unsigned char digest[MD5_DIGEST_LENGTH];
     memset(digest,0,MD5_DIGEST_LENGTH);
@@ -17,7 +18,8 @@ std::string galay::Md5Util::md5_encode(std::string const& str)
 }
 
 #if __cplusplus >= 201703L
-std::string galay::Md5Util::md5_encode(std::string_view str)
+std::string 
+galay::Security::Md5Util::encode(std::string_view str)
 {
     unsigned char digest[MD5_DIGEST_LENGTH];
     memset(digest,0,MD5_DIGEST_LENGTH);

@@ -1,6 +1,8 @@
 #include "../galay/factory/factory.h"
-#include "../galay/util/md5.h"
-#include "../galay/util/sha256.h"
+#include "../galay/security/md5.h"
+#include "../galay/security/sha256.h"
+#include "../galay/security/sha512.h"
+#include "../galay/security/salt.h"
 #include <fstream>
 #include <signal.h>
 
@@ -18,17 +20,15 @@ int main()
 {
     signal(SIGINT,sig_handle);
     scheduler = Scheduler_Factory::create_select_scheduler(0);
-    auto timer = scheduler->get_timer_manager()->add_timer(1000, 1, []() ->void {
-        std::ifstream in("/home/gong/projects/galay/1.txt");
-        if(in.fail()){
-            std::cout<<"fail\n";
-        }
-        char buffer[1024] = {0};
-        in.read(buffer,1024);
-        int byte = in.gcount();
-        std::string str(buffer,byte);
-        std::cout<<Md5Util::md5_encode(str)<<'\n';
-        std::cout << Sha256Util::sha256_encode(str) << '\n';
+    auto timer = scheduler->get_timer_manager()->add_timer(100, 1, []() ->void {
+        std::string salt = Security::Salt::create(10,20);
+        std::string password = "123456";
+        // std::cout << "origin: " <<  str << '\n';
+        // std::cout << "md5 :" << Security::Md5Util::encode(str)<<'\n';
+        // std::cout << "sha256 :" << Security::Sha256Util::encode(str) << '\n';
+        // std::cout << "sha512 :" << Security::Sha512Util::encode(str)<<'\n';
+        std::cout << salt << '\n';
+        std::cout << Security::Sha256Util::encode(Security::Md5Util::encode(password) + salt);
 
     });
     scheduler->get_timer_manager()->add_timer(100,1,[timer](){
