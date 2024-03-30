@@ -35,15 +35,15 @@ namespace galay
         Tcp_Client(Scheduler_Base::wptr scheduler);
 
         //0 is success  -1 is failed
-        virtual Net_Awaiter<int> connect(std::string ip , uint32_t port);
+        virtual Net_Awaiter connect(std::string ip , uint32_t port);
 
         //-1 is failed >0 is successful
         //if >0 return the value that send's length
-        virtual Net_Awaiter<int> send(const std::string &buffer,uint32_t len);
+        virtual Net_Awaiter send(const std::string &buffer,uint32_t len);
         
         //-1 is failed >0 is success 
         //if >0 return the value that recv's length
-        virtual Net_Awaiter<int> recv(char* buffer,int len);
+        virtual Net_Awaiter recv(char* buffer,int len);
 
         virtual ~Tcp_Client();
     };
@@ -55,15 +55,15 @@ namespace galay
         Tcp_SSL_Client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version);
         
         //0 is success  -1 is failed
-        virtual Net_Awaiter<int> connect(std::string ip , uint32_t port);
+        virtual Net_Awaiter connect(std::string ip , uint32_t port);
 
         //-1 is failed >0 is successful
         //if >0 return the value that send's length
-        virtual Net_Awaiter<int> send(const std::string &buffer,uint32_t len);
+        virtual Net_Awaiter send(const std::string &buffer,uint32_t len);
         
         //-1 is failed >0 is success 
         //if >0 return the value that recv's length
-        virtual Net_Awaiter<int> recv(char* buffer,int len);
+        virtual Net_Awaiter recv(char* buffer,int len);
 
 
         virtual ~Tcp_SSL_Client();
@@ -80,25 +80,25 @@ namespace galay
             :Tcp_Client(scheduler) {}
         
         template<Tcp_Request REQ,Tcp_Response RESP>
-        Net_Awaiter<int> request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)
+        Net_Awaiter request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)
         {
             if (!this->m_scheduler.expired())
             {
-                typename Co_Tcp_Client_Request_Task<REQ,RESP,int>::ptr task = std::make_shared<Co_Tcp_Client_Request_Task<REQ,RESP,int>>(this->m_fd, this->m_scheduler, request, response, &(this->m_error));
+                typename Co_Tcp_Client_Request_Task<REQ,RESP>::ptr task = std::make_shared<Co_Tcp_Client_Request_Task<REQ,RESP>>(this->m_fd, this->m_scheduler, request, response, &(this->m_error));
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     std::cout << "add event failed fd = " << this->m_fd << '\n';
                 }
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
-                return Net_Awaiter<int>{task};
+                return Net_Awaiter{task};
             }
             this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
             return {nullptr, -1};
         }
 
     private:
-        Net_Awaiter<int> send(const std::string &buffer,uint32_t len) override { return {nullptr} ;}
-        Net_Awaiter<int> recv(char* buffer,int len) override { return {nullptr} ;}
+        Net_Awaiter send(const std::string &buffer,uint32_t len) override { return {nullptr} ;}
+        Net_Awaiter recv(char* buffer,int len) override { return {nullptr} ;}
     };
 
 
@@ -110,25 +110,25 @@ namespace galay
             : Tcp_SSL_Client(scheduler, ssl_min_version, ssl_max_version) {}
 
         template<Tcp_Request REQ,Tcp_Response RESP>
-        Net_Awaiter<int> request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)
+        Net_Awaiter request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response)
         {
             if (!this->m_scheduler.expired())
             {
-                auto task = std::make_shared<Co_Tcp_Client_SSL_Request_Task<REQ, RESP, int>>(this->m_ssl, this->m_fd, this->m_scheduler, request, response, &(this->m_error));
+                auto task = std::make_shared<Co_Tcp_Client_SSL_Request_Task<REQ, RESP>>(this->m_ssl, this->m_fd, this->m_scheduler, request, response, &(this->m_error));
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     std::cout << "add event failed fd = " << this->m_fd << '\n';
                 }
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
-                return Net_Awaiter<int>{task};
+                return Net_Awaiter{task};
             }
             this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
             return {nullptr, -1};
         }
 
     private:
-        Net_Awaiter<int> send(const std::string &buffer,uint32_t len) override { return {nullptr} ;}
-        Net_Awaiter<int> recv(char* buffer,int len) override { return {nullptr} ;}
+        Net_Awaiter send(const std::string &buffer,uint32_t len) override { return {nullptr} ;}
+        Net_Awaiter recv(char* buffer,int len) override { return {nullptr} ;}
     };
 
 
@@ -139,9 +139,9 @@ namespace galay
         using uptr = std::unique_ptr<Udp_Client>;
         Udp_Client(Scheduler_Base::wptr scheduler);
 
-        virtual Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer);
+        virtual Net_Awaiter sendto(std::string ip,uint32_t port,std::string buffer);
 
-        virtual Net_Awaiter<int> recvfrom(char* buffer, int len , IOFuntion::Addr* addr);
+        virtual Net_Awaiter recvfrom(char* buffer, int len , IOFuntion::Addr* addr);
 
     };
 
@@ -155,25 +155,25 @@ namespace galay
         }
 
         template<Udp_Request REQ,Udp_Response RESP>
-        Net_Awaiter<int> request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response, std::string ip, uint32_t port)
+        Net_Awaiter request(std::shared_ptr<REQ> request, std::shared_ptr<RESP> response, std::string ip, uint32_t port)
         {
             if (!this->m_scheduler.expired())
             {
-                auto task = std::make_shared<Co_Dns_Client_Request_Task<REQ,RESP,int>>(this->m_fd, ip, port, request, response, this->m_scheduler, &(this->m_error));
+                auto task = std::make_shared<Co_Dns_Client_Request_Task<REQ,RESP>>(this->m_fd, ip, port, request, response, this->m_scheduler, &(this->m_error));
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     std::cout << "add event failed fd = " << this->m_fd << '\n';
                 }
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
-                return Net_Awaiter<int>{task};
+                return Net_Awaiter{task};
             }
             this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
             return {nullptr, -1};
         }
 
     private:
-        Net_Awaiter<int> sendto(std::string ip,uint32_t port,std::string buffer) override { return {nullptr};  }
-        Net_Awaiter<int> recvfrom(char* buffer, int len , IOFuntion::Addr* addr) override { return {nullptr};  }
+        Net_Awaiter sendto(std::string ip,uint32_t port,std::string buffer) override { return {nullptr};  }
+        Net_Awaiter recvfrom(char* buffer, int len , IOFuntion::Addr* addr) override { return {nullptr};  }
     };
 }
 
