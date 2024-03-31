@@ -13,15 +13,15 @@ std::string& galay::protocol::Http1_1_Protocol::get_body()
 
 std::string galay::protocol::Http1_1_Protocol::get_head_value(const std::string& key)
 {
-    auto it = this->m_filed_list.find(key);
-    if (it == this->m_filed_list.end())
+    auto it = this->m_headers.find(key);
+    if (it == this->m_headers.end())
         return "";
     return it->second;
 }
 
 void galay::protocol::Http1_1_Protocol::set_head_kv_pair(std::pair<std::string, std::string>&& p_head)
 {
-    this->m_filed_list[p_head.first] = p_head.second;
+    this->m_headers[p_head.first] = p_head.second;
 }
 
 std::string galay::protocol::Http1_1_Request::get_arg_value(const std::string& key)
@@ -64,85 +64,106 @@ std::string& galay::protocol::Http1_1_Request::get_method()
 
 std::string& galay::protocol::Http1_1_Request::get_url_path()
 {
-    return this->m_url_path;
+    return this->m_uri;
 }
 
 int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& state)
 {
     state = Error::NoError::GY_SUCCESS;
-    int beg = 0;
-    int end = buffer.find("\r\n\r\n");
-    if (end == std::string::npos)
-    {
-        state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
-        return -1;
-    }
-    std::string head = buffer.substr(beg, end);
-    int hbeg = 0, hend = 0;
-    std::vector<std::string> lines;
-    do
-    {
-        hend = head.find("\r\n", hbeg);
-        std::string temp = head.substr(hbeg, hend - hbeg);
-        if (!temp.empty())
-            lines.emplace_back(temp);
-        hbeg = hend + 2;
-    } while (hend != std::string::npos);
-    std::regex e("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
-    std::smatch sub_match;
-    if (std::regex_match(lines[0], sub_match, e)) {
-        this->m_method = sub_match[1];
-        decode_url(std::move(sub_match[2]));
-        this->m_version = sub_match[3];
-    }
-    else {
-        state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
-        return -1;
+    int n = buffer.length();
+    HttpHeadStatus status = HttpHeadStatus::HTTP_METHOD;
+    std::string key,value;
+    int i;
+    for(i = 0 ; i < n ; ++i){
+        if(status == HttpHeadStatus::HTTP_BODY) break;
+        switch (status)
+        {
+        case HTTP_METHOD:
+        {
+            if(buffer[i] != ' '){
+                m_method += buffer[i];
+            }else{
+                status = HttpHeadStatus::HTTP_URI;
+            }
+        }
+            break;
+        case HTTP_URI:
+        {
+            if(buffer[i] != ' '){
+                m_uri += buffer[i];
+            }else{
+                convert_uri(m_uri);
+                status = HttpHeadStatus::HTTP_VERSION;
+            }
+        }
+            break;
+        case HTTP_VERSION:
+        {
+            if(buffer[i] != '\r'){
+                m_version += buffer[i];
+            }else{
+                m_version = m_version.substr(m_version.find('/')+1);
+                status = HttpHeadStatus::HTTP_KEY;
+                ++i;
+            }
+        }
+            break;
+        case HTTP_KEY:
+        {
+            if(buffer[i] == '\r')  {
+                ++i;
+                status = HttpHeadStatus::HTTP_BODY;
+            }
+            else{
+                if(buffer[i] != ':'){
+                    key += std::tolower(buffer[i]);
+                }
+                else
+                {
+                    if (i + 1 < n && buffer[i + 1] == ' ') ++i;
+                    status = HttpHeadStatus::HTTP_VALUE;
+                }
+            }
+        }
+            break;
+        case HTTP_VALUE:
+        {
+            if(buffer[i] != '\r'){
+                value += buffer[i];
+            }else{
+                m_headers[key] = value;
+                key.clear();
+                value.clear();
+                ++i;
+                status = HttpHeadStatus::HTTP_KEY;
+            }
+        }
+            break;
+        default:
+            break;
+        }
     }
 
-    e = "^([^:]*): ?(.*)$";
-    for (int i = 1; i < lines.size(); i++)
-    {
-        if (std::regex_match(lines[i], sub_match, e))
-        {
-            std::string key = std::move(sub_match[1]);
-            std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) {
-                return std::tolower(c);
-                });
-            this->m_filed_list.emplace(std::make_pair(std::move(key), std::move(sub_match[2])));
-        }
-        else
-        {
-            state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
-            return -1;
-        }
-    }
-    std::string len_str = get_head_value("content-length");
-    if (!len_str.empty())
-    {
-        int content_len = atoi(len_str.c_str());
-        std::string other = buffer.substr(beg);
-        if (content_len > other.length())
-        {
+    if(m_headers.contains("content-length")){
+        size_t length = std::stoul(m_headers["content-length"]);
+        if(length + i > n) {
             state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
             return -1;
         }
-        this->m_body = buffer.substr(beg, content_len);
-        int ret_len = beg + content_len;
-        if (buffer.length() == ret_len) return ret_len;
-        if (buffer.length() - 2 >= ret_len && buffer.substr(ret_len, 2).compare("\r\n") == 0) return ret_len + 2;
-        if (buffer.length() - 4 >= ret_len && buffer.substr(ret_len, 4).compare("\r\n\r\n") == 0) return ret_len + 4;
+        m_body = buffer.substr(i,length);
+        int invaild_len = 0;
+        for( int k = i + length ; k < n - 1 ; ++k ){
+            if(isalpha(buffer[k+1])) break;
+            else ++invaild_len;
+        }
+        return i + length + invaild_len;
     }
-    if (beg >= buffer.length() - 1)
-        return beg;
-    end = buffer.find("\r\n\r\n", beg);
-    if (end == std::string::npos)
-    {
-        state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
-        return -1;
+
+    for(; i < n ; ++i ){
+        if(isalpha(buffer[i])) break;
+        else m_body += buffer[i];
     }
-    this->m_body = buffer.substr(beg, end - beg);
-    return end + 4;
+    return i;
 }
 
 std::string galay::protocol::Http1_1_Request::encode()
@@ -156,18 +177,18 @@ std::string galay::protocol::Http1_1_Request::encode()
     if (!m_arg_list.empty())
     {
         args.erase(--args.end());
-        res += encode_url(std::move(this->m_url_path + '?' + args));
+        res += encode_url(std::move(this->m_uri + '?' + args));
     }
     else
     {
-        res += encode_url(std::move(this->m_url_path));
+        res += encode_url(std::move(this->m_uri));
     }
     res = res + " HTTP/" + this->m_version + "\r\n";
-    for (auto& [k, v] : m_filed_list)
+    for (auto& [k, v] : m_headers)
     {
         res = res + k + ": " + v + "\r\n";
     }
-    if (!m_filed_list.contains("content-length")&& !m_filed_list.contains("Content-Length"))
+    if (!m_headers.contains("content-length")&& !m_headers.contains("Content-Length"))
     {
         res = res + "content-length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
@@ -180,15 +201,15 @@ std::string galay::protocol::Http1_1_Request::encode()
     return res;
 }
 
-int galay::protocol::Http1_1_Request::decode_url(std::string aurl)
+int galay::protocol::Http1_1_Request::convert_uri(std::string aurl)
 {
-    std::string url = decode_url(std::move(aurl), false);
-    int argindx = url.find('?');
+    std::string uri = convert_uri(std::move(aurl), false);
+    int argindx = uri.find('?');
     if (argindx != std::string::npos)
     {
         int cur = 0;
-        this->m_url_path = url.substr(cur, argindx - cur);
-        std::string args = url.substr(argindx + 1);
+        this->m_uri = uri.substr(cur, argindx - cur);
+        std::string args = uri.substr(argindx + 1);
         std::string key = "", value = "";
         int status = 0;
         for (int i = 0; i < args.length(); i++)
@@ -224,7 +245,7 @@ int galay::protocol::Http1_1_Request::decode_url(std::string aurl)
         }
         return -1;
     }
-    this->m_url_path = url;
+    this->m_uri = uri;
     return 0;
 }
 
@@ -279,7 +300,7 @@ std::string galay::protocol::Http1_1_Request::encode_url(const std::string& s)
     return result;
 }
 
-std::string galay::protocol::Http1_1_Request::decode_url(const std::string& s, bool convert_plus_to_space)
+std::string galay::protocol::Http1_1_Request::convert_uri(const std::string& s, bool convert_plus_to_space)
 {
     std::string result;
 
@@ -430,11 +451,11 @@ std::string galay::protocol::Http1_1_Response::encode()
 {
     std::string res = "HTTP/";
     res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + status_message(this->m_status) + "\r\n";
-    for (auto& [k, v] : this->m_filed_list)
+    for (auto& [k, v] : this->m_headers)
     {
         res = res + k + ": " + v + "\r\n";
     }
-    if (!this->m_filed_list.contains("content-length") && !this->m_filed_list.contains("Content-Length")) {
+    if (!this->m_headers.contains("Content-Length")) {
         res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
@@ -446,77 +467,99 @@ std::string galay::protocol::Http1_1_Response::encode()
 int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& state)
 {
     state = Error::NoError::GY_SUCCESS;
-    int beg = 0;
-    int end = buffer.find("\r\n\r\n");
-    if (end == std::string::npos)
-    {
-        state = 1;
-        return -1;
-    }
-    std::string head = buffer.substr(beg, end);
-    int hbeg = 0, hend = 0;
-    std::vector<std::string> lines;
-    do
-    {
-        hend = head.find("\r\n", hbeg);
-        std::string temp = head.substr(hbeg, hend - hbeg);
-        if (!temp.empty())
-            lines.emplace_back(temp);
-        hbeg = hend + 2;
-    } while (hend != std::string::npos);
-    std::regex e("^([^:]*): ?(.*)$");
-    std::smatch sub_match;
-    for (int i = 0; i < lines.size(); i++)
-    {
-        if (i == 0)
+    int n = buffer.length();
+    HttpHeadStatus status = HttpHeadStatus::HTTP_VERSION;
+    std::string status_code;
+    std::string key,value;
+    int i;
+    for(i = 0 ; i < n ; ++i){
+        if(status == HttpHeadStatus::HTTP_BODY) break;
+        switch (status)
         {
-            int indx = lines[i].find_first_of(' ');
-            this->m_version = lines[i].substr(5, indx);
-            std::string status = lines[i].substr(indx + 1, lines[i].find(' ', indx + 1) - indx - 1);
-            this->m_status = atoi(status.c_str());
+        case HTTP_VERSION:
+        {
+            if(buffer[i] != ' '){
+                m_version += buffer[i];
+            }else{
+                m_version = m_version.substr(m_version.find('/')+1);
+                status = HttpHeadStatus::HTTP_STATUS_CODE;
+            }
         }
-        else
+            break;
+        case HTTP_STATUS_CODE:
         {
-            if (std::regex_match(lines[i], sub_match, e))
-            {
-                std::string key = std::move(sub_match[1]);
-                std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c)
-                    { return std::tolower(c); });
-                this->m_filed_list.emplace(std::make_pair(std::move(key), std::move(sub_match[2])));
+            if(buffer[i] != ' '){
+                status_code += buffer[i];
+            }else{
+                m_status = std::stoi(status_code);
+                status = HttpHeadStatus::HTTP_STATUS_MSG;
             }
-            else
-            {
-                state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
-                return -1;
+        }
+            break;
+        case HTTP_STATUS_MSG:
+        {
+            if(buffer[i] == '\r'){
+                status = HttpHeadStatus::HTTP_KEY;
+                ++i;
             }
+        }
+            break;
+        case HTTP_KEY:
+        {
+            if(buffer[i] == '\r')  {
+                ++i;
+                status = HttpHeadStatus::HTTP_BODY;
+            }
+            else{
+                if(buffer[i] != ':'){
+                    key += std::tolower(buffer[i]);
+                }
+                else
+                {
+                    if (i + 1 < n && buffer[i + 1] == ' ') ++i;
+                    status = HttpHeadStatus::HTTP_VALUE;
+                }
+            }
+        }
+            break;
+        case HTTP_VALUE:
+        {
+            if(buffer[i] != '\r'){
+                value += buffer[i];
+            }else{
+                m_headers[key] = value;
+                key.clear();
+                value.clear();
+                ++i;
+                status = HttpHeadStatus::HTTP_KEY;
+            }
+        }
+            break;
+        default:
+            break;
         }
     }
 
-    //
-    beg = end + 4;
-    std::string len_str = get_head_value("content-length");
-    if (!len_str.empty())
-    {
-        int content_len = atoi(len_str.c_str());
-        std::string other = buffer.substr(beg);
-        if (content_len > other.length())
-        {
+    if(m_headers.contains("content-length")){
+        size_t length = std::stoul(m_headers["content-length"]);
+        if(length + i > n) {
             state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
             return -1;
         }
-        this->m_body = buffer.substr(beg, content_len);
-        return beg + content_len + 2;
+        m_body = buffer.substr(i,length);
+        int invaild_len = 0;
+        for( int k = i + length ; k < n - 1 ; ++k ){
+            if(isalpha(buffer[k+1])) break;
+            else ++invaild_len;
+        }
+        return i + length + invaild_len;
     }
-    if (beg >= buffer.length() - 1)
-        return beg;
-    end = buffer.find("\r\n\r\n", beg);
-    if (end == std::string::npos)
-    {
-        state = Error::ProtocolError::GY_PROTOCOL_BAD_REQUEST;
-        return -1;
+
+    for(; i < n ; ++i ){
+        if(isalpha(buffer[i])) break;
+        else m_body += buffer[i];
     }
-    this->m_body = buffer.substr(beg, end - beg);
-    return end + 4;
+    return i;
 }
 
 int galay::protocol::Http1_1_Response::proto_type()

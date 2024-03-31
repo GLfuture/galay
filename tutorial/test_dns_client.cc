@@ -17,7 +17,7 @@ Task<> func(Scheduler_Base::wptr scheduler)
     header.m_questions = 1;
     galay::protocol::Dns_Question question;
     question.m_class = 1;
-    question.m_type = galay::protocol::DNS_QUERY_A;
+    question.m_type = galay::protocol::DNS_QUERY_CNAME;
     for(int i = 0 ; i < hostname.size() ; i ++)
     {
         question.m_qname = hostname[i];

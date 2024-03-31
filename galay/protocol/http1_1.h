@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <assert.h>
 #include <algorithm>
-#include <regex>
 
 namespace galay
 {
@@ -15,19 +14,26 @@ namespace galay
     {
         class Http1_1_Protocol
         {
+        protected:
+            enum HttpHeadStatus{
+                HTTP_METHOD,
+                HTTP_URI,
+                HTTP_VERSION,
+                HTTP_KEY,
+                HTTP_VALUE,
+                HTTP_BODY,
+                HTTP_STATUS_CODE,
+                HTTP_STATUS_MSG,
+            };
         public:
             using Ptr = std::shared_ptr<Http1_1_Protocol>;
             std::string &get_version();
-
             std::string &get_body();
-
             std::string get_head_value(const std::string &key);
-
             void set_head_kv_pair(std::pair<std::string, std::string> &&p_head);
-
         protected:
             std::string m_version;                                     // 版本号
-            std::unordered_map<std::string, std::string> m_filed_list; // 字段
+            std::unordered_map<std::string, std::string> m_headers; // 字段
             std::string m_body = "";                                   // body
         };
 
@@ -59,11 +65,12 @@ namespace galay
             void set_extra_msg(std::string &&msg) override;
 
         private:
-            int decode_url(std::string aurl);
+
+            int convert_uri(std::string aurl);
 
             std::string encode_url(const std::string &s);
 
-            std::string decode_url(const std::string &s, bool convert_plus_to_space);
+            std::string convert_uri(const std::string &s, bool convert_plus_to_space);
 
             bool is_hex(char c, int &v);
 
@@ -74,7 +81,7 @@ namespace galay
         private:
             std::string m_method;                                    // http协议类型
             std::string m_target;                                    //?后的内容
-            std::string m_url_path;                                  // urlpath
+            std::string m_uri;                                       // uri
             std::unordered_map<std::string, std::string> m_arg_list; // 参数
         };
 
