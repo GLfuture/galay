@@ -176,7 +176,7 @@ std::string galay::protocol::Dns_Response::deal_answer(unsigned short type, char
     {
         char ip[20] = {0};
         inet_ntop(AF_INET, data.c_str(), ip, 20);
-        res.append(ip, 20);
+        res.append(ip);
     }
     break;
     case DNS_QUERY_CNAME:
@@ -191,7 +191,7 @@ std::string galay::protocol::Dns_Response::deal_answer(unsigned short type, char
     {
         char ip6[40] = {0};
         inet_ntop(AF_INET6, data.c_str(), ip6, 40);
-        res.append(ip6, 40);
+        res.append(ip6);
     }
     break;
     default:
