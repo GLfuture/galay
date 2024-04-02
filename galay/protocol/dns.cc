@@ -67,7 +67,7 @@ std::string galay::protocol::Dns_Request::encode()
 
 std::string galay::protocol::Dns_Request::modify_hostname(std::string hostname)
 {
-    std::vector<std::string> temp = StringUtil::Spilt_With_Char(hostname, '.');
+    std::vector<std::string> temp = Helper::StringUtil::Spilt_With_Char(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {

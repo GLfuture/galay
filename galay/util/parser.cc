@@ -2,7 +2,7 @@
 #include "file.h"
 
 int 
-galay::Parser::ConfigParser::parse(const std::string &filename)
+galay::Helper::ConfigParser::parse(const std::string &filename)
 {
     std::string buffer = FileOP::ReadFile(filename);
     int ret = ParseContent(buffer);
@@ -10,7 +10,7 @@ galay::Parser::ConfigParser::parse(const std::string &filename)
 }
 
 int 
-galay::Parser::ConfigParser::ParseContent(const std::string& content)
+galay::Helper::ConfigParser::ParseContent(const std::string& content)
 {
     std::stringstream stream(content);
     std::string line;
@@ -47,7 +47,7 @@ galay::Parser::ConfigParser::ParseContent(const std::string& content)
 }
 
 std::string_view 
-galay::Parser::ConfigParser::get_value(std::string_view key)
+galay::Helper::ConfigParser::get_value(std::string_view key)
 {
     auto it = m_fields.find(std::string(key));
     if (it == m_fields.end())
@@ -56,7 +56,7 @@ galay::Parser::ConfigParser::get_value(std::string_view key)
 }
 
 std::string 
-galay::Parser::ConfigParser::get_value(const std::string &key)
+galay::Helper::ConfigParser::get_value(const std::string &key)
 {
     auto it = m_fields.find(key);
     if (it == m_fields.end())

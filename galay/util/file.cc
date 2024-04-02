@@ -4,7 +4,8 @@
 #include <spdlog/spdlog.h>
 
 
-std::string galay::FileOP::ReadFile(const std::string& FileName)
+std::string 
+galay::Helper::FileOP::ReadFile(const std::string& FileName)
 {
     std::ifstream in(FileName);
     if(in.fail()) {
@@ -21,7 +22,8 @@ std::string galay::FileOP::ReadFile(const std::string& FileName)
     return res;
 }
 
-void galay::FileOP::WriteFile(const std::string& FileName,const std::string& Content)
+void 
+galay::Helper::FileOP::WriteFile(const std::string& FileName,const std::string& Content)
 {
     std::ofstream out(FileName);
     if(out.fail()){

@@ -6,7 +6,7 @@
 std::string 
 galay::Security::Salt::create(int SaltLenMin,int SaltLenMax)
 {
-    int saltlen = Random::random(SaltLenMin,SaltLenMax);
+    int saltlen = Helper::Random::random(SaltLenMin,SaltLenMax);
     unsigned char* salt = new unsigned char[saltlen];
     bzero(salt,saltlen);
     RAND_bytes(salt,saltlen);

@@ -16,12 +16,12 @@ int main()
         std::cout << '\n';
     }
     mysqlclient.CreateTable("images",{{"uid","int","primary key"},{"image","longblob","not null"}});
-    std::string indata1 = galay::FileOP::ReadFile("1.jpeg") , indata2 = galay::FileOP::ReadFile("2.jpeg");
+    std::string indata1 = galay::Helper::FileOP::ReadFile("1.jpeg") , indata2 = galay::Helper::FileOP::ReadFile("2.jpeg");
     std::cout << indata1.length() << " " << indata2.length() << '\n';
     mysqlclient.ParamSendBinaryData("insert into images(uid,image) values (1,?);",indata1);
     mysqlclient.ParamSendBinaryData("insert into images(uid,image) values (2,?);",indata2);
     std::string outdata;
     mysqlclient.ParamRecvBinaryData("select image from images where uid = 2;",outdata);
-    galay::FileOP::WriteFile("out1.jpeg",outdata);
+    galay::Helper::FileOP::WriteFile("out1.jpeg",outdata);
     return 0;
 }

@@ -1,6 +1,7 @@
 #include "stringutil.h"
 
-std::vector<std::string> galay::StringUtil::Spilt_With_Char(const std::string &str, const char symbol)
+std::vector<std::string> 
+galay::Helper::StringUtil::Spilt_With_Char(const std::string &str, const char symbol)
 {
     std::vector<std::string> result;
     for (int i = 0; i < str.size(); i++)
@@ -16,7 +17,8 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Char(const std::string &s
 }
 
 
-std::vector<std::string> galay::StringUtil::Spilt_With_Str(const std::string &str, const std::string& symbol)
+std::vector<std::string>
+galay::Helper::StringUtil::Spilt_With_Str(const std::string &str, const std::string& symbol)
 {
     std::vector<std::string> result;
     if (symbol.empty())
@@ -36,7 +38,8 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Str(const std::string &st
 }
 
 
-std::vector<std::string> galay::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &str, const char partition, const char connction)
+std::vector<std::string> 
+galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;
@@ -105,7 +108,8 @@ std::vector<std::string> galay::StringUtil::Spilt_With_Char_Connect_With_char(co
 
 
 #if __cplusplus >= 201703L
-std::vector<std::string_view> galay::StringUtil::Spilt_With_Char(std::string_view str, const char symbol)
+std::vector<std::string_view> 
+galay::Helper::StringUtil::Spilt_With_Char(std::string_view str, const char symbol)
 {
     std::vector<std::string_view> result;
     for (int i = 0; i < str.size(); i++)
@@ -120,7 +124,8 @@ std::vector<std::string_view> galay::StringUtil::Spilt_With_Char(std::string_vie
     return result;
 }
 
-std::vector<std::string_view> galay::StringUtil::Spilt_With_Str(std::string_view str, std::string_view symbol)
+std::vector<std::string_view> 
+galay::Helper::StringUtil::Spilt_With_Str(std::string_view str, std::string_view symbol)
 {
     std::vector<std::string_view> result;
     if (symbol.empty())
@@ -139,7 +144,8 @@ std::vector<std::string_view> galay::StringUtil::Spilt_With_Str(std::string_view
     return result;
 }
 
-std::vector<std::string_view> galay::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view str, const char partition, const char connction)
+std::vector<std::string_view> 
+galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;

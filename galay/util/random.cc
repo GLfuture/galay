@@ -2,7 +2,7 @@
 #include <random>
 
 int 
-galay::Random::random(int RandomMin,int RandomMax)
+galay::Helper::Random::random(int RandomMin,int RandomMax)
 {
     std::random_device rd;
     std::mt19937_64 gen(rd());
@@ -12,7 +12,7 @@ galay::Random::random(int RandomMin,int RandomMax)
 
 
 double 
-galay::Random::random(double RandomMin, double RandomMax)
+galay::Helper::Random::random(double RandomMin, double RandomMax)
 {
     std::random_device rd;
     std::mt19937_64 gen(rd());

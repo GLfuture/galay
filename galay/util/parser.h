@@ -10,7 +10,7 @@
 
 namespace galay
 {
-    namespace Parser
+    namespace Helper
     {
         class ParserBase
         {
