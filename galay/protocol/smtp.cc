@@ -1,7 +1,7 @@
 #include "smtp.h"
 
 int 
-galay::protocol::Smtp_Protocol::decode(const std::string &buffer, int &state)
+galay::Protocol::Smtp_Protocol::decode(const std::string &buffer, int &state)
 {
     this->m_content = buffer;
     state = Error::NoError::GY_SUCCESS;
@@ -9,52 +9,52 @@ galay::protocol::Smtp_Protocol::decode(const std::string &buffer, int &state)
 }
 
 std::string 
-galay::protocol::Smtp_Protocol::encode()
+galay::Protocol::Smtp_Protocol::encode()
 {
     return this->m_content;
 }
 
 std::string&
-galay::protocol::Smtp_Protocol::get_content()
+galay::Protocol::Smtp_Protocol::get_content()
 {
     return this->m_content;
 }
 
-galay::protocol::Smtp_Request::Smtp_Request()
+galay::Protocol::Smtp_Request::Smtp_Request()
 {
     m_smtp_str = std::make_shared<Smtp_Protocol>();
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::hello()
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::hello()
 {
     m_smtp_str->get_content() = "HELO MSG\r\n";
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::auth()
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::auth()
 {
     m_smtp_str->get_content() = "AUTH LOGIN\r\n";
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::account(std::string t_account)
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::account(std::string t_account)
 {
     m_smtp_str->get_content() = Security::Base64Util::base64_encode(t_account) + "\r\n";
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::password(std::string t_password)
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::password(std::string t_password)
 {
     m_smtp_str->get_content() = Security::Base64Util::base64_encode(t_password)+ "\r\n";
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::mailfrom(std::string from_mail)
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::mailfrom(std::string from_mail)
 {
     m_frommail = from_mail;
     std::string res = "MAIL FROM: <";
@@ -62,8 +62,8 @@ galay::protocol::Smtp_Request::mailfrom(std::string from_mail)
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::rcptto(std::string to_mail)
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::rcptto(std::string to_mail)
 {
     m_tomails.push(to_mail);
     std::string res = "RCPT TO: <";
@@ -71,15 +71,15 @@ galay::protocol::Smtp_Request::rcptto(std::string to_mail)
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::data()
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::data()
 {
     m_smtp_str->get_content() = "DATA\r\n";
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::msg(std::string subject, std::string content, std::string content_type, std::string charset)
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::msg(std::string subject, std::string content, std::string content_type, std::string charset)
 {
     std::string res = "From: <";
     res += m_frommail + ">\r\nTo: ";
@@ -101,8 +101,8 @@ galay::protocol::Smtp_Request::msg(std::string subject, std::string content, std
     return m_smtp_str;
 }
 
-galay::protocol::Smtp_Protocol::ptr 
-galay::protocol::Smtp_Request::quit()
+galay::Protocol::Smtp_Protocol::ptr 
+galay::Protocol::Smtp_Request::quit()
 {
     m_smtp_str->get_content() = "QUIT\r\n\r\n";
     return m_smtp_str;

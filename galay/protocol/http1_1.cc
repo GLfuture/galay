@@ -1,17 +1,17 @@
 #include "http1_1.h"
 #include <iostream>
 
-std::string& galay::protocol::Http1_1_Protocol::get_version()
+std::string& galay::Protocol::Http1_1_Protocol::get_version()
 {
     return this->m_version;
 }
 
-std::string& galay::protocol::Http1_1_Protocol::get_body()
+std::string& galay::Protocol::Http1_1_Protocol::get_body()
 {
     return this->m_body;
 }
 
-std::string galay::protocol::Http1_1_Protocol::get_head_value(const std::string& key)
+std::string galay::Protocol::Http1_1_Protocol::get_head_value(const std::string& key)
 {
     auto it = this->m_headers.find(key);
     if (it == this->m_headers.end())
@@ -19,12 +19,12 @@ std::string galay::protocol::Http1_1_Protocol::get_head_value(const std::string&
     return it->second;
 }
 
-void galay::protocol::Http1_1_Protocol::set_head_kv_pair(std::pair<std::string, std::string>&& p_head)
+void galay::Protocol::Http1_1_Protocol::set_head_kv_pair(std::pair<std::string, std::string>&& p_head)
 {
     this->m_headers[p_head.first] = p_head.second;
 }
 
-std::string galay::protocol::Http1_1_Request::get_arg_value(const std::string& key)
+std::string galay::Protocol::Http1_1_Request::get_arg_value(const std::string& key)
 {
     auto it = this->m_arg_list.find(key);
     if (it == this->m_arg_list.end())
@@ -32,42 +32,42 @@ std::string galay::protocol::Http1_1_Request::get_arg_value(const std::string& k
     return it->second;
 }
 
-int galay::protocol::Http1_1_Request::proto_type()
+int galay::Protocol::Http1_1_Request::proto_type()
 {
     return GY_ALL_RECIEVE_PROTOCOL_TYPE;
 }
 
-int galay::protocol::Http1_1_Request::proto_fixed_len()
+int galay::Protocol::Http1_1_Request::proto_fixed_len()
 {
     return 0;
 }
 
-int galay::protocol::Http1_1_Request::proto_extra_len()
+int galay::Protocol::Http1_1_Request::proto_extra_len()
 {
     return 0;
 }
 
-void galay::protocol::Http1_1_Request::set_extra_msg(std::string&& msg)
+void galay::Protocol::Http1_1_Request::set_extra_msg(std::string&& msg)
 {
 
 }
 
-void galay::protocol::Http1_1_Request::set_arg_kv_pair(std::pair<std::string, std::string>&& p_arg)
+void galay::Protocol::Http1_1_Request::set_arg_kv_pair(std::pair<std::string, std::string>&& p_arg)
 {
     this->m_arg_list[p_arg.first] = p_arg.second;
 }
 
-std::string& galay::protocol::Http1_1_Request::get_method()
+std::string& galay::Protocol::Http1_1_Request::get_method()
 {
     return this->m_method;
 }
 
-std::string& galay::protocol::Http1_1_Request::get_url_path()
+std::string& galay::Protocol::Http1_1_Request::get_url_path()
 {
     return this->m_uri;
 }
 
-int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& state)
+int galay::Protocol::Http1_1_Request::decode(const std::string& buffer, int& state)
 {
     state = Error::NoError::GY_SUCCESS;
     int n = buffer.length();
@@ -166,7 +166,7 @@ int galay::protocol::Http1_1_Request::decode(const std::string& buffer, int& sta
     return i;
 }
 
-std::string galay::protocol::Http1_1_Request::encode()
+std::string galay::Protocol::Http1_1_Request::encode()
 {
     std::string res = this->m_method + " ";
     std::string args;
@@ -201,7 +201,7 @@ std::string galay::protocol::Http1_1_Request::encode()
     return res;
 }
 
-int galay::protocol::Http1_1_Request::convert_uri(std::string aurl)
+int galay::Protocol::Http1_1_Request::convert_uri(std::string aurl)
 {
     std::string uri = convert_uri(std::move(aurl), false);
     int argindx = uri.find('?');
@@ -249,7 +249,7 @@ int galay::protocol::Http1_1_Request::convert_uri(std::string aurl)
     return 0;
 }
 
-std::string galay::protocol::Http1_1_Request::encode_url(const std::string& s)
+std::string galay::Protocol::Http1_1_Request::encode_url(const std::string& s)
 {
     std::string result;
     result.reserve(s.size());
@@ -300,7 +300,7 @@ std::string galay::protocol::Http1_1_Request::encode_url(const std::string& s)
     return result;
 }
 
-std::string galay::protocol::Http1_1_Request::convert_uri(const std::string& s, bool convert_plus_to_space)
+std::string galay::Protocol::Http1_1_Request::convert_uri(const std::string& s, bool convert_plus_to_space)
 {
     std::string result;
 
@@ -353,7 +353,7 @@ std::string galay::protocol::Http1_1_Request::convert_uri(const std::string& s, 
     return result;
 }
 
-bool galay::protocol::Http1_1_Request::is_hex(char c, int& v)
+bool galay::Protocol::Http1_1_Request::is_hex(char c, int& v)
 {
     if (0x20 <= c && isdigit(c))
     {
@@ -373,7 +373,7 @@ bool galay::protocol::Http1_1_Request::is_hex(char c, int& v)
     return false;
 }
 
-size_t galay::protocol::Http1_1_Request::to_utf8(int code, char* buff)
+size_t galay::Protocol::Http1_1_Request::to_utf8(int code, char* buff)
 {
     if (code < 0x0080)
     {
@@ -415,7 +415,7 @@ size_t galay::protocol::Http1_1_Request::to_utf8(int code, char* buff)
     return 0;
 }
 
-bool galay::protocol::Http1_1_Request::from_hex_to_i(const std::string& s, size_t i, size_t cnt, int& val)
+bool galay::Protocol::Http1_1_Request::from_hex_to_i(const std::string& s, size_t i, size_t cnt, int& val)
 {
     if (i >= s.size())
     {
@@ -442,12 +442,12 @@ bool galay::protocol::Http1_1_Request::from_hex_to_i(const std::string& s, size_
     return true;
 }
 
-int& galay::protocol::Http1_1_Response::get_status()
+int& galay::Protocol::Http1_1_Response::get_status()
 {
     return this->m_status;
 }
 
-std::string galay::protocol::Http1_1_Response::encode()
+std::string galay::Protocol::Http1_1_Response::encode()
 {
     std::string res = "HTTP/";
     res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + status_message(this->m_status) + "\r\n";
@@ -464,7 +464,7 @@ std::string galay::protocol::Http1_1_Response::encode()
     return res;
 }
 
-int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& state)
+int galay::Protocol::Http1_1_Response::decode(const std::string& buffer, int& state)
 {
     state = Error::NoError::GY_SUCCESS;
     int n = buffer.length();
@@ -562,27 +562,27 @@ int galay::protocol::Http1_1_Response::decode(const std::string& buffer, int& st
     return i;
 }
 
-int galay::protocol::Http1_1_Response::proto_type()
+int galay::Protocol::Http1_1_Response::proto_type()
 {
     return GY_ALL_RECIEVE_PROTOCOL_TYPE;
 }
 
-int galay::protocol::Http1_1_Response::proto_fixed_len()
+int galay::Protocol::Http1_1_Response::proto_fixed_len()
 {
     return 0;
 }
 
-int galay::protocol::Http1_1_Response::proto_extra_len()
+int galay::Protocol::Http1_1_Response::proto_extra_len()
 {
     return 0;
 }
 
-void galay::protocol::Http1_1_Response::set_extra_msg(std::string&& msg)
+void galay::Protocol::Http1_1_Response::set_extra_msg(std::string&& msg)
 {
 
 }
 
-const char* galay::protocol::Http1_1_Response::status_message(int status)
+const char* galay::Protocol::Http1_1_Response::status_message(int status)
 {
     switch (status)
     {

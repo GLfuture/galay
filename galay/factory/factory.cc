@@ -1,94 +1,88 @@
 #include "factory.h"
 
 //tcp
-galay::Tcp_Server_Config::ptr galay::Config_Factory::create_tcp_server_config(Engine_Type type,int sche_wait_time,int conn_timeout, int threadnum )
+galay::TcpServerConf::ptr galay::Config_Factory::create_tcp_server_config(Engine_Type type,int sche_wait_time, int threadnum )
 {
-    return std::make_shared<Tcp_Server_Config>(DEFAULT_BACKLOG, DEFAULT_RECV_LENGTH,conn_timeout,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
+    return std::make_shared<TcpServerConf>(DEFAULT_BACKLOG, DEFAULT_RECV_LENGTH,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
 }
 
 
-galay::Tcp_Server_Config::ptr galay::Config_Factory::create_tcp_server_config(Tcp_Server_Config &&config)
+galay::TcpServerConf::ptr galay::Config_Factory::create_tcp_server_config(TcpServerConf &&config)
 {
-    return std::make_shared<Tcp_Server_Config>(config);
+    return std::make_shared<TcpServerConf>(config);
 }
 
-galay::Tcp_Server_Config::ptr galay::Config_Factory::create_tcp_server_config(uint32_t backlog,uint32_t max_rbuffer_len
-    ,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum)
+galay::TcpServerConf::ptr galay::Config_Factory::create_tcp_server_config(uint32_t backlog,uint32_t max_rbuffer_len
+    ,Engine_Type type,int sche_wait_time,int max_event_size, int threadnum)
 {
-    return std::make_shared<Tcp_Server_Config>(backlog,max_rbuffer_len,conn_timeout,type,sche_wait_time,max_event_size,threadnum);
+    return std::make_shared<TcpServerConf>(backlog,max_rbuffer_len,type,sche_wait_time,max_event_size,threadnum);
 }
 
 //tcp ssl
-galay::Tcp_SSL_Server_Config::ptr galay::Config_Factory::create_tcp_ssl_server_config(long ssl_min_version,long ssl_max_version
-            ,const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int conn_timeout, int threadnum)
+galay::TcpSSLServerConf::ptr galay::Config_Factory::create_tcp_ssl_server_config(Engine_Type type,int sche_wait_time,int threadnum)
 {
-    return std::make_shared<Tcp_SSL_Server_Config>(DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,conn_timeout
-        ,DEFAULT_MAX_SSL_ACCEPT_RETRY,ssl_min_version,ssl_max_version,cert_filepath,key_filepath,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
+    return std::make_shared<TcpSSLServerConf>(DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
 }
 
 
-galay::Tcp_SSL_Server_Config::ptr galay::Config_Factory::create_tcp_ssl_server_config(Tcp_SSL_Server_Config &&config)
+galay::TcpSSLServerConf::ptr galay::Config_Factory::create_tcp_ssl_server_config(TcpSSLServerConf &&config)
 {
-    return std::make_shared<Tcp_SSL_Server_Config>(config);
+    return std::make_shared<TcpSSLServerConf>(config);
 }
 
-galay::Tcp_SSL_Server_Config::ptr galay::Config_Factory::create_tcp_ssl_server_config(uint32_t backlog,uint32_t max_rbuffer_len,long ssl_min_version , long ssl_max_version
-    , uint32_t ssl_max_accept_retry , const char* cert_filepath, const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum)
+galay::TcpSSLServerConf::ptr galay::Config_Factory::create_tcp_ssl_server_config(uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type,int sche_wait_time,int max_event_size, int threadnum)
 {
-    return std::make_shared<Tcp_SSL_Server_Config>(backlog,max_rbuffer_len,conn_timeout,ssl_min_version,ssl_max_version,ssl_max_accept_retry ,cert_filepath,key_filepath,type,sche_wait_time,max_event_size,threadnum);
+    return std::make_shared<TcpSSLServerConf>(backlog,max_rbuffer_len,type,sche_wait_time,max_event_size,threadnum);
 }
 
 
 //http
-galay::Http_Server_Config::ptr galay::Config_Factory::create_http_server_config(Engine_Type type,int sche_wait_time,int conn_timeout, int threadnum)
+galay::HttpServerConf::ptr galay::Config_Factory::create_http_server_config(Engine_Type type,int sche_wait_time, int threadnum)
 {
-    return std::make_shared<Http_Server_Config>(DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,conn_timeout,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
+    return std::make_shared<HttpServerConf>(DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
 }
 
 
-galay::Http_Server_Config::ptr galay::Config_Factory::create_http_server_config(Http_Server_Config &&config)
+galay::HttpServerConf::ptr galay::Config_Factory::create_http_server_config(HttpServerConf &&config)
 {
-    return std::make_shared<Http_Server_Config>(config);
+    return std::make_shared<HttpServerConf>(config);
 }
 
-galay::Http_Server_Config::ptr galay::Config_Factory::create_http_server_config(uint32_t backlog,uint32_t max_rbuffer_len
-    ,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum)
+galay::HttpServerConf::ptr galay::Config_Factory::create_http_server_config(uint32_t backlog,uint32_t max_rbuffer_len
+    ,Engine_Type type,int sche_wait_time,int max_event_size, int threadnum)
 {
-    return std::make_shared<Http_Server_Config>(backlog,max_rbuffer_len,conn_timeout,type,sche_wait_time,max_event_size,threadnum);
+    return std::make_shared<HttpServerConf>(backlog,max_rbuffer_len,type,sche_wait_time,max_event_size,threadnum);
 }
 
 //https
 
-galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_config(long ssl_min_version,long ssl_max_version
-            , const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int conn_timeout, int threadnum)
+galay::HttpSSLServerConf::ptr galay::Config_Factory::create_https_server_config(Engine_Type type,int sche_wait_time, int threadnum)
 {
-    return std::make_shared<Https_Server_Config>(DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,conn_timeout,ssl_min_version,ssl_max_version
-        ,DEFAULT_MAX_SSL_ACCEPT_RETRY,cert_filepath,key_filepath,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
+    return std::make_shared<HttpSSLServerConf>(DEFAULT_BACKLOG,DEFAULT_RECV_LENGTH,type,sche_wait_time,DEFAULT_EVENT_SIZE,threadnum);
 }
 
-galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_config(Https_Server_Config &&config)
+galay::HttpSSLServerConf::ptr galay::Config_Factory::create_https_server_config(HttpSSLServerConf &&config)
 {
-    return std::make_shared<Https_Server_Config>(config);
+    return std::make_shared<HttpSSLServerConf>(config);
 }
 
-galay::Https_Server_Config::ptr galay::Config_Factory::create_https_server_config(uint32_t backlog,uint32_t max_rbuffer_len,long ssl_min_version,long ssl_max_version
-    , uint32_t ssl_accept_max_retry,const char* cert_filepath,const char* key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int conn_timeout, int threadnum)
+galay::HttpSSLServerConf::ptr galay::Config_Factory::create_https_server_config(uint32_t backlog,uint32_t max_rbuffer_len,Engine_Type type,int sche_wait_time,int max_event_size, int threadnum)
 {
-    return std::make_shared<Https_Server_Config>(backlog,max_rbuffer_len,conn_timeout,ssl_min_version,ssl_max_version,ssl_accept_max_retry,cert_filepath,key_filepath,type,sche_wait_time,max_event_size,threadnum);
+    return std::make_shared<HttpSSLServerConf>(backlog,max_rbuffer_len,type,sche_wait_time,max_event_size,threadnum);
 }
 
 
 
 
 //server
-galay::Tcp_Server<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>::uptr galay::Server_Factory::create_http_server(Http_Server_Config::ptr config)
+galay::Tcp_Server<galay::Protocol::Http1_1_Request,galay::Protocol::Http1_1_Response>::uptr galay::Server_Factory::create_http_server(HttpServerConf::ptr config)
 {
-    return std::make_unique<Tcp_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>>(config);
+    return std::make_unique<Tcp_Server<Protocol::Http1_1_Request,Protocol::Http1_1_Response>>(config);
 }
 
-galay::Tcp_SSL_Server<galay::protocol::Http1_1_Request,galay::protocol::Http1_1_Response>::uptr galay::Server_Factory::create_https_server(Https_Server_Config::ptr config)
+galay::Tcp_SSL_Server<galay::Protocol::Http1_1_Request,galay::Protocol::Http1_1_Response>::uptr galay::Server_Factory::create_https_server(HttpSSLServerConf::ptr config)
 {
-    return std::make_unique<Tcp_SSL_Server<protocol::Http1_1_Request,protocol::Http1_1_Response>>(config);
+    return std::make_unique<Tcp_SSL_Server<Protocol::Http1_1_Request,Protocol::Http1_1_Response>>(config);
 }
 
 //scheduler

@@ -25,12 +25,12 @@ galay::Config::Config(const Config &other)
 }
 
 // tcp server config
-galay::Tcp_Server_Config::Tcp_Server_Config(uint32_t backlog, uint32_t recv_len,int conn_timeout,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
-    : m_backlog(backlog), m_max_rbuffer_len(recv_len),m_conn_timeout(conn_timeout),Config(type,sche_wait_time,max_event_size,threadnum)
+galay::TcpServerConf::TcpServerConf(uint32_t backlog, uint32_t recv_len,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
+    : m_backlog(backlog), m_max_rbuffer_len(recv_len),Config(type,sche_wait_time,max_event_size,threadnum)
 {
 }
 
-galay::Tcp_Server_Config::Tcp_Server_Config(Tcp_Server_Config &&other)
+galay::TcpServerConf::TcpServerConf(TcpServerConf &&other)
     :Config(other)
 {
     this->m_backlog = other.m_backlog;
@@ -38,7 +38,7 @@ galay::Tcp_Server_Config::Tcp_Server_Config(Tcp_Server_Config &&other)
     this->m_conn_timeout = other.m_conn_timeout;
 }
 
-galay::Tcp_Server_Config::Tcp_Server_Config(const Tcp_Server_Config &other)
+galay::TcpServerConf::TcpServerConf(const TcpServerConf &other)
     :Config(other)
 {
     this->m_backlog = other.m_backlog;
@@ -46,9 +46,9 @@ galay::Tcp_Server_Config::Tcp_Server_Config(const Tcp_Server_Config &other)
     this->m_conn_timeout = other.m_conn_timeout;
 }
 
-void galay::Tcp_Server_Config::enable_keepalive(int t_idle, int t_interval, int retry)
+void galay::TcpServerConf::set_keepalive(int t_idle, int t_interval, int retry)
 {
-    Tcp_Keepalive_Config keepalive{
+    TcpKeepaliveConf keepalive{
         .m_keepalive = true,
         .m_idle = t_idle,
         .m_interval = t_interval,
@@ -57,80 +57,83 @@ void galay::Tcp_Server_Config::enable_keepalive(int t_idle, int t_interval, int 
     this->m_keepalive_conf = keepalive;
 }
 
+void galay::TcpServerConf::set_conn_timeout(int t_timeout)
+{
+    this->m_conn_timeout.m_timeout = t_timeout;
+}
+
 // tcp ssl server config
-galay::Tcp_SSL_Server_Config::Tcp_SSL_Server_Config( uint32_t backlog, uint32_t recv_len,int conn_timeout,long ssl_min_version,long ssl_max_version
-, uint32_t ssl_accept_max_retry, const char *cert_filepath, const char *key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
-        : Tcp_Server_Config(backlog, recv_len,conn_timeout,type,sche_wait_time,max_event_size,threadnum)
-            , m_ssl_min_version(ssl_min_version), m_ssl_max_version(ssl_max_version), m_ssl_accept_retry(ssl_accept_max_retry), m_cert_filepath(cert_filepath), m_key_filepath(key_filepath)
+galay::TcpSSLServerConf::TcpSSLServerConf( uint32_t backlog, uint32_t recv_len,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
+        : TcpServerConf(backlog, recv_len,type,sche_wait_time,max_event_size,threadnum)
 {
 }
 
-galay::Tcp_SSL_Server_Config::Tcp_SSL_Server_Config(const Tcp_SSL_Server_Config &other)
-    : Tcp_Server_Config(other)
+galay::TcpSSLServerConf::TcpSSLServerConf(const TcpSSLServerConf &other)
+    : TcpServerConf(other)
 {
-    this->m_ssl_min_version = other.m_ssl_min_version;
-    this->m_ssl_max_version = other.m_ssl_max_version;
-    this->m_cert_filepath = other.m_cert_filepath;
-    this->m_key_filepath = other.m_key_filepath;
-    this->m_ssl_accept_retry = other.m_ssl_accept_retry;
+   this->m_ssl_conf = other.m_ssl_conf;
 }
 
-galay::Tcp_SSL_Server_Config::Tcp_SSL_Server_Config(Tcp_SSL_Server_Config &&other)
-    : Tcp_Server_Config(std::forward<Tcp_SSL_Server_Config>(other))
+galay::TcpSSLServerConf::TcpSSLServerConf(TcpSSLServerConf &&other)
+    : TcpServerConf(std::forward<TcpSSLServerConf>(other))
 {
-    this->m_ssl_min_version = other.m_ssl_min_version;
-    this->m_ssl_max_version = other.m_ssl_max_version;
-    this->m_cert_filepath = std::move(other.m_cert_filepath);
-    this->m_key_filepath = std::move(other.m_key_filepath);
-    this->m_ssl_accept_retry = other.m_ssl_accept_retry;
+    this->m_ssl_conf = other.m_ssl_conf;
+}
+
+void galay::TcpSSLServerConf::set_ssl_conf(long min_version,long max_version,uint32_t max_accept_retry,uint32_t sleep_misc_per_retry,const char* cert_filepath,const char* key_filepath)
+{
+    this->m_ssl_conf.m_min_version = min_version;
+    this->m_ssl_conf.m_max_version = max_version;
+    this->m_ssl_conf.m_max_accept_retry = max_accept_retry;
+    this->m_ssl_conf.m_sleep_misc_per_retry = sleep_misc_per_retry;
+    this->m_ssl_conf.m_cert_filepath = cert_filepath;
+    this->m_ssl_conf.m_key_filepath = key_filepath;
 }
 
 // http server config
-galay::Http_Server_Config::Http_Server_Config(uint32_t backlog, uint32_t recv_len,int conn_timeout,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
-    : Tcp_Server_Config(backlog, recv_len,conn_timeout,type,sche_wait_time,max_event_size,threadnum)
+galay::HttpServerConf::HttpServerConf(uint32_t backlog, uint32_t recv_len,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
+    : TcpServerConf(backlog, recv_len,type,sche_wait_time,max_event_size,threadnum)
 {
 }
 
-galay::Http_Server_Config::Http_Server_Config(const Http_Server_Config &other)
-    : Tcp_Server_Config(other)
+galay::HttpServerConf::HttpServerConf(const HttpServerConf &other)
+    : TcpServerConf(other)
 {
 }
 
-galay::Http_Server_Config::Http_Server_Config(Http_Server_Config &&other)
-    : Tcp_Server_Config(std::forward<Http_Server_Config>(other))
+galay::HttpServerConf::HttpServerConf(HttpServerConf &&other)
+    : TcpServerConf(std::forward<HttpServerConf>(other))
 {
 }
 
-galay::Https_Server_Config::Https_Server_Config(uint32_t backlog, uint32_t recv_len , int conn_timeout,long ssl_min_version,long ssl_max_version
-    ,uint32_t ssl_accept_max_retry, const char *cert_filepath, const char *key_filepath,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
-    : Tcp_SSL_Server_Config(backlog, recv_len , conn_timeout, ssl_min_version, ssl_max_version, ssl_accept_max_retry
-        , cert_filepath, key_filepath,type,sche_wait_time,max_event_size,threadnum)
+galay::HttpSSLServerConf::HttpSSLServerConf(uint32_t backlog, uint32_t recv_len,Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
+    : TcpSSLServerConf(backlog, recv_len,type,sche_wait_time,max_event_size,threadnum)
 {
 }
 
-galay::Https_Server_Config::Https_Server_Config(const Https_Server_Config &other)
-    : Tcp_SSL_Server_Config(other)
+galay::HttpSSLServerConf::HttpSSLServerConf(const HttpSSLServerConf &other)
+    : TcpSSLServerConf(other)
 {
 }
 
-galay::Https_Server_Config::Https_Server_Config(Https_Server_Config &&other)
-    : Tcp_SSL_Server_Config(std::forward<Https_Server_Config>(other))
+galay::HttpSSLServerConf::HttpSSLServerConf(HttpSSLServerConf &&other)
+    : TcpSSLServerConf(std::forward<HttpSSLServerConf>(other))
 {
 }
 
 //udp server
 
-galay::Udp_Server_Config::Udp_Server_Config(Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
+galay::UdpServerConf::UdpServerConf(Engine_Type type,int sche_wait_time,int max_event_size,int threadnum)
     :Config(type,sche_wait_time,max_event_size,threadnum)
 {
 }
 
-galay::Udp_Server_Config::Udp_Server_Config(Udp_Server_Config&& other)
+galay::UdpServerConf::UdpServerConf(UdpServerConf&& other)
     :Config(other)
 {
 }
 
-galay::Udp_Server_Config::Udp_Server_Config(const Udp_Server_Config& other)
+galay::UdpServerConf::UdpServerConf(const UdpServerConf& other)
     :Config(other)
 {
 }

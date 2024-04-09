@@ -90,6 +90,7 @@ namespace galay
         virtual int add_event(int fd, int event_type) = 0;
         virtual int del_event(int fd, int event_type) = 0;
         virtual int mod_event(int fd, int from , int to) = 0;
+        virtual void close_connection(int fd) = 0;
         //is stoped?
         virtual bool is_stop() = 0;
         virtual int start() = 0;

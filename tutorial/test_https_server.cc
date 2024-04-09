@@ -91,8 +91,8 @@ const char* global_picture_id[] = {
 Task<> func(Task_Base::wptr task)
 {
     auto t_task = task.lock();
-    auto req = std::dynamic_pointer_cast<protocol::Http1_1_Request>(t_task->get_req());
-    auto resp = std::dynamic_pointer_cast<protocol::Http1_1_Response>(t_task->get_resp());
+    auto req = std::dynamic_pointer_cast<Protocol::Http1_1_Request>(t_task->get_req());
+    auto resp = std::dynamic_pointer_cast<Protocol::Http1_1_Response>(t_task->get_resp());
 
     if (req->get_method().compare("GET") == 0)
     {
@@ -153,7 +153,11 @@ int main()
     Callback_ConnClose::set([](int fd){
         std::cout << "exit :" << fd << "\n";  
     });
-    auto config = Config_Factory::create_https_server_config(TLS1_2_VERSION, TLS1_3_VERSION, "../server.crt", "../server.key",Engine_Type::ENGINE_SELECT,5,5000);
+    auto config = Config_Factory::create_https_server_config(Engine_Type::ENGINE_SELECT,5,5);
+    config->set_ssl_conf(DEFAULT_SSL_MIN_VERSION,DEFAULT_SSL_MAX_VERSION,5,1,"../server.crt","../server.key");
+    config->set_conn_timeout(5000);
+    std::cout << config->m_ssl_conf.m_cert_filepath << "\n";
+    std::cout << config->m_ssl_conf.m_key_filepath << "\n";
     https_server = Server_Factory::create_https_server(config);
     https_server->start({{8010,func},{8011,func}});
     return 0;

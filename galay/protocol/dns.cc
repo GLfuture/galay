@@ -1,21 +1,21 @@
 #include "dns.h"
 
-galay::protocol::Dns_Header &galay::protocol::Dns_Protocol::get_header()
+galay::Protocol::Dns_Header &galay::Protocol::Dns_Protocol::get_header()
 {
     return this->m_header;
 }
 
-std::queue<galay::protocol::Dns_Question> &galay::protocol::Dns_Protocol::get_question_queue()
+std::queue<galay::Protocol::Dns_Question> &galay::Protocol::Dns_Protocol::get_question_queue()
 {
     return this->m_questions;
 }
 
-std::queue<galay::protocol::Dns_Answer> &galay::protocol::Dns_Protocol::get_answer_queue()
+std::queue<galay::Protocol::Dns_Answer> &galay::Protocol::Dns_Protocol::get_answer_queue()
 {
     return this->m_answers;
 }
 
-std::string galay::protocol::Dns_Request::encode()
+std::string galay::Protocol::Dns_Request::encode()
 {
     unsigned char buffer[MAX_UDP_LENGTH];
     bzero(buffer, MAX_UDP_LENGTH);
@@ -65,7 +65,7 @@ std::string galay::protocol::Dns_Request::encode()
     return std::string(begin, len);
 }
 
-std::string galay::protocol::Dns_Request::modify_hostname(std::string hostname)
+std::string galay::Protocol::Dns_Request::modify_hostname(std::string hostname)
 {
     std::vector<std::string> temp = Helper::StringUtil::Spilt_With_Char(hostname, '.');
     std::string res;
@@ -76,7 +76,7 @@ std::string galay::protocol::Dns_Request::modify_hostname(std::string hostname)
     return res + static_cast<char>(0);
 }
 
-int galay::protocol::Dns_Response::decode(const std::string &buffer)
+int galay::Protocol::Dns_Response::decode(const std::string &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
@@ -162,12 +162,12 @@ int galay::protocol::Dns_Response::decode(const std::string &buffer)
     return 0;
 }
 
-bool galay::protocol::Dns_Response::is_pointer(int in)
+bool galay::Protocol::Dns_Response::is_pointer(int in)
 {
     return ((in & 0xC0) == 0xC0);
 }
 
-std::string galay::protocol::Dns_Response::deal_answer(unsigned short type, char *buffer, std::string data)
+std::string galay::Protocol::Dns_Response::deal_answer(unsigned short type, char *buffer, std::string data)
 {
     std::string res;
     switch (type)

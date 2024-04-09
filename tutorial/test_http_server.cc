@@ -7,8 +7,8 @@ using namespace galay;
 Task<> func(Task_Base::wptr t_task)
 {
     auto task = t_task.lock();
-    auto req = std::dynamic_pointer_cast<protocol::Http1_1_Request>(task->get_req());
-    auto resp = std::dynamic_pointer_cast<protocol::Http1_1_Response>(task->get_resp());
+    auto req = std::dynamic_pointer_cast<Protocol::Http1_1_Request>(task->get_req());
+    auto resp = std::dynamic_pointer_cast<Protocol::Http1_1_Response>(task->get_resp());
     std::cout << req->get_body() <<'\n';
     if(task->get_scheduler() == nullptr) std::cout<<"NULL\n";
     auto client = Client_Factory::create_http_client(task->get_scheduler());
@@ -16,7 +16,7 @@ Task<> func(Task_Base::wptr t_task)
     if(client->get_error() == Error::GY_SUCCESS) std::cout<<"connect success\n";
     else std::cout<<"connect failed error is "<<client->get_error()<<'\n';
     //std::cout<<req->encode()<<'\n';
-    auto t_req = std::make_shared<protocol::Http1_1_Request>();
+    auto t_req = std::make_shared<Protocol::Http1_1_Request>();
     t_req->get_version() = "1.1";
     t_req->get_method() = "GET";
     t_req->get_url_path() = "/";
@@ -45,8 +45,9 @@ int main()
     Callback_ConnClose::set([](int fd){
         std::cout << "exit :" << fd << "\n";  
     });
-    auto config = Config_Factory::create_http_server_config(Engine_Type::ENGINE_EPOLL,5000,-1,3); //5s断
+    auto config = Config_Factory::create_http_server_config(Engine_Type::ENGINE_EPOLL,5,3); //5s断
+    config->set_conn_timeout(5000);     //5s断
     http_server = Server_Factory::create_http_server(config);
-    http_server->start({{8010,func},{8011,func}});
+    http_server->start({{8010,func}});
     return 0;
 }

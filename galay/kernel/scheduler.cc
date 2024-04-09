@@ -6,8 +6,8 @@
 galay::Epoll_Scheduler::Epoll_Scheduler(int max_event, int timeout)
 {
     this->m_epfd = epoll_create(1);
-    this->m_time_out = timeout;
-    this->m_events_size = max_event;
+    this->m_check_timeout = timeout;
+    this->m_event_num = max_event;
     this->m_events = new epoll_event[max_event];
 }
 
@@ -29,7 +29,7 @@ int galay::Epoll_Scheduler::start()
     while (1)
     {
         this->m_timer_manager->update_time();
-        int nready = epoll_wait(m_epfd, m_events, m_events_size, m_time_out);
+        int nready = epoll_wait(m_epfd, m_events, m_event_num, m_check_timeout);
         if (this->m_stop)
             break;
         if (nready == -1)
@@ -45,11 +45,7 @@ int galay::Epoll_Scheduler::start()
                 Task_Base::ptr task = this->m_tasks.at(fd);
                 task->exec();
                 if (task->is_destroy()) {
-                    if(!Callback_ConnClose::empty()) Callback_ConnClose::call(fd);
-                    spdlog::info("{} {} {} task(fd :{}) destory", __TIME__, __FILE__, __LINE__,fd);
-                    close(fd);
-                    del_task(fd);
-                    del_event(fd,GY_EVENT_READ|GY_EVENT_WRITE| GY_EVENT_ERROR);
+                    close_connection(fd);
                 }
             }
         }
@@ -65,7 +61,7 @@ int galay::Epoll_Scheduler::get_epoll_fd() const
 
 int galay::Epoll_Scheduler::get_event_size() const 
 {
-    return m_events_size;
+    return m_event_num;
 }
 
 int galay::Epoll_Scheduler::add_event(int fd , int event_type)
@@ -137,7 +133,7 @@ void galay::Epoll_Scheduler::stop()
         for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
         {
             if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
-            spdlog::info("{} {} {} task(fd :{}) destory", __TIME__, __FILE__, __LINE__,it->first);
+            spdlog::info("{} {} {} destory task(fd :{}) ", __TIME__, __FILE__, __LINE__, it->first);
             close(it->first);
             this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
             it->second.reset();
@@ -193,6 +189,16 @@ void galay::Epoll_Scheduler::del_task(int fd)
     }
 }
 
+void galay::Epoll_Scheduler::close_connection(int fd)
+{
+    if (!Callback_ConnClose::empty())
+        Callback_ConnClose::call(fd);
+    spdlog::info("{} {} {} close_connection(fd :{}) ", __TIME__, __FILE__, __LINE__, fd);
+    close(fd);
+    del_task(fd);
+    del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+}
+
 galay::Epoll_Scheduler::~Epoll_Scheduler() 
 {
     if(this->m_events){
@@ -209,7 +215,7 @@ galay::Select_Scheduler::Select_Scheduler(int timeout) // ms
     FD_ZERO(&m_wfds);
     FD_ZERO(&m_efds);
     this->m_stop = false;
-    this->m_time_out = (timeout == -1 ? 0:timeout);
+    this->m_check_timeout = (timeout == -1 ? 0:timeout);
 }
 
 void galay::Select_Scheduler::add_task(std::pair<int, std::shared_ptr<Task_Base>> &&pair)
@@ -296,8 +302,8 @@ int galay::Select_Scheduler::start()
 {
     fd_set read_set, write_set, excep_set;
     timeval tv;
-    tv.tv_sec = this->m_time_out / 1000;
-    tv.tv_usec = this->m_time_out % 1000 * 1000;
+    tv.tv_sec = this->m_check_timeout / 1000;
+    tv.tv_usec = this->m_check_timeout % 1000 * 1000;
     std::unique_lock<std::mutex> lock(this->m_mtx, std::defer_lock);
     if (!m_timer_manager)
     {
@@ -340,10 +346,7 @@ int galay::Select_Scheduler::start()
                     task->exec();
                     if (task->is_destroy())
                     {
-                        if(!Callback_ConnClose::empty()) Callback_ConnClose::call(fd);
-                        close(fd);
-                        del_task(fd);
-                        this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                        close_connection(fd);
                     }
                 }
             }
@@ -379,6 +382,7 @@ void galay::Select_Scheduler::stop()
     {
         if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
         this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        spdlog::info("{} {} {} destory task(fd :{}) ", __TIME__, __FILE__, __LINE__, it->first);
         close(it->first);
         it->second.reset();
     }
@@ -386,8 +390,18 @@ void galay::Select_Scheduler::stop()
     this->m_stop = true;
 }
 
+
+void galay::Select_Scheduler::close_connection(int fd)
+{
+    if (!Callback_ConnClose::empty())
+        Callback_ConnClose::call(fd);
+    spdlog::info("{} {} {} close_connection(fd :{}) ", __TIME__, __FILE__, __LINE__, fd);
+    close(fd);
+    del_task(fd);
+    this->del_event(fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+}
+
 galay::Select_Scheduler::~Select_Scheduler()
 {
     if(!this->m_stop) stop();
-
 }

@@ -46,6 +46,9 @@ namespace galay{
         int get_event_size() const;
 
         virtual ~Epoll_Scheduler() ;
+
+    private:
+        void close_connection(int fd) override;
     private: 
         std::mutex m_mtx;
         std::unordered_map<int, std::shared_ptr<Task_Base>> m_tasks;
@@ -55,8 +58,8 @@ namespace galay{
         //epoll
         int m_epfd = 0;
         epoll_event *m_events = nullptr;
-        int m_events_size;
-        int m_time_out;
+        int m_event_num;
+        int m_check_timeout;
     };
 #endif
     class Select_Scheduler: public Scheduler_Base , public std::enable_shared_from_this<Select_Scheduler>
@@ -87,7 +90,8 @@ namespace galay{
         void stop() override;
 
         virtual ~Select_Scheduler();
-
+    private:
+        void close_connection(int fd) override;
     private:
         int m_maxfd = INT32_MIN;
         int m_minfd = INT32_MAX;
@@ -96,7 +100,7 @@ namespace galay{
         fd_set m_wfds;
         fd_set m_efds;
         bool m_stop;
-        int m_time_out;
+        int m_check_timeout;
         std::unordered_map<int,std::shared_ptr<Task_Base>> m_tasks;
         std::shared_ptr<Timer_Manager> m_timer_manager = nullptr;
     };

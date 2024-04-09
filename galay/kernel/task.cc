@@ -12,7 +12,7 @@ int galay::Time_Task::exec()
     {
         auto timer = m_manager.lock()->get_ealist_timer();
         if(timer && !timer->is_cancled()) {
-            spdlog::info("{} {} {} Timer exec (timerid: {} )",__TIME__,__FILE__,__LINE__,timer->get_timerid());
+            spdlog::info("{} {} {} Timer task exec (timerid: {} )",__TIME__,__FILE__,__LINE__,timer->get_timerid());
             timer->exec();
         }
     }

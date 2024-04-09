@@ -119,8 +119,9 @@ void sig_handle(int sig)
 int main()
 {
     signal(SIGINT,sig_handle);
-    auto config = Config_Factory::create_tcp_server_config(Engine_Type::ENGINE_EPOLL,5,-1,4);
-    config->enable_keepalive(10,3,3);
+    auto config = Config_Factory::create_tcp_server_config(Engine_Type::ENGINE_EPOLL,-1,4);
+    config->set_conn_timeout(5000);
+    config->set_keepalive(10,3,3);
     server = std::make_unique<Tcp_Server<Self_Request,Self_Response>>(config);
     server->start({{8010,func},{8011,func}});
     return 0;

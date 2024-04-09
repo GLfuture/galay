@@ -10,8 +10,8 @@ Task<> func(Scheduler_Base::wptr scheduler)
     auto smtp_client = Client_Factory::create_smtp_client(scheduler);
     auto ret = co_await smtp_client->connect(IP,25);
     if(std::any_cast<int>(ret) == 0) std::cout<<"connect success\n";
-    auto request = std::make_shared<protocol::Smtp_Request>();
-    auto response = std::make_shared<protocol::Smtp_Response>();
+    auto request = std::make_shared<Protocol::Smtp_Request>();
+    auto response = std::make_shared<Protocol::Smtp_Response>();
     ret = co_await smtp_client->request(request->hello(),response->resp());
     if(std::any_cast<int>(ret) != 0) std::cout<<response->resp()->get_content();
     ret = co_await smtp_client->request(request->auth(),response->resp());

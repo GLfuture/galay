@@ -10,7 +10,7 @@
 
 namespace galay
 {
-    namespace protocol{
+    namespace Protocol{
     #pragma pack(push,1)
 
         enum DNS_Query_Type{

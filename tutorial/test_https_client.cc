@@ -13,12 +13,12 @@ Task<> func(Scheduler_Base::ptr scheduler)
     }else{
         std::cout<<"connect failed\n";
     }
-    protocol::Http1_1_Request::ptr request = std::make_shared<protocol::Http1_1_Request>();
+    Protocol::Http1_1_Request::ptr request = std::make_shared<Protocol::Http1_1_Request>();
     request->get_version() = "1.1";
     request->get_method() = "GET";
     request->get_url_path() = "/";
     //request->set_head_kv_pair({"Connection","close"});
-    protocol::Http1_1_Response::ptr response = std::make_shared<protocol::Http1_1_Response>();
+    Protocol::Http1_1_Response::ptr response = std::make_shared<Protocol::Http1_1_Response>();
     ret = co_await client->request(request,response);
     std::string resp_str = response->encode();
     std::cout<< resp_str << '\n' << resp_str.length() <<std::endl;

@@ -9,15 +9,15 @@ Task<> func(Scheduler_Base::wptr scheduler)
     auto client = Client_Factory::create_dns_client(scheduler);
     char buffer[1024] = {0};
     IOFuntion::Addr addr;
-    protocol::Dns_Request::ptr request = std::make_shared<protocol::Dns_Request>();
-    protocol::Dns_Response::ptr response = std::make_shared<protocol::Dns_Response>();
+    Protocol::Dns_Request::ptr request = std::make_shared<Protocol::Dns_Request>();
+    Protocol::Dns_Response::ptr response = std::make_shared<Protocol::Dns_Response>();
     auto& header = request->get_header();
     header.m_flags.m_rd = 1;
     header.m_id = 100;
     header.m_questions = 1;
-    galay::protocol::Dns_Question question;
+    galay::Protocol::Dns_Question question;
     question.m_class = 1;
-    question.m_type = galay::protocol::DNS_QUERY_A;
+    question.m_type = galay::Protocol::DNS_QUERY_A;
     for(int i = 0 ; i < hostname.size() ; i ++)
     {
         question.m_qname = hostname[i];
@@ -27,11 +27,11 @@ Task<> func(Scheduler_Base::wptr scheduler)
     auto& q = response->get_answer_queue();
     while(!q.empty())
     {
-        galay::protocol::Dns_Answer answer = q.front();
+        galay::Protocol::Dns_Answer answer = q.front();
         q.pop();
-        if(answer.m_type == protocol::DNS_QUERY_CNAME){
+        if(answer.m_type == Protocol::DNS_QUERY_CNAME){
             std::cout << answer.m_aname << " has cname : " << answer.m_data << '\n';
-        }else if(answer.m_type == protocol::DNS_QUERY_A){
+        }else if(answer.m_type == Protocol::DNS_QUERY_A){
             std::cout << answer.m_aname << " has ipv4 : "<< answer.m_data <<'\n';
         }
     }

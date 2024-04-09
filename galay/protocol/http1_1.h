@@ -10,7 +10,7 @@
 
 namespace galay
 {
-    namespace protocol
+    namespace Protocol
     {
         class Http1_1_Protocol
         {

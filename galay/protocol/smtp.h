@@ -8,7 +8,7 @@
 
 namespace galay
 {
-    namespace protocol{
+    namespace Protocol{
         class Smtp_Protocol: public Tcp_Request_Base,public Tcp_Response_Base
         {
         public:
