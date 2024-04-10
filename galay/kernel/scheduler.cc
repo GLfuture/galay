@@ -20,6 +20,7 @@ int galay::Epoll_Scheduler::start()
         if (this->add_event(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
         {
             spdlog::error("[{}:{}] [add scheduler(fd: {}) error: {}]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
+            spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
             close(this->m_timer_manager->get_timerfd());
             return -1;
         }
@@ -134,11 +135,13 @@ void galay::Epoll_Scheduler::stop()
         {
             if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
             spdlog::info("[{}:{}] [task(fd :{}) destory]",__FILE__, __LINE__, it->first);
+            spdlog::info("[{}:{}] [socket(fd :{}) close]",__FILE__, __LINE__, it->first);
             close(it->first);
             this->del_event(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
             it->second.reset();
         }
         this->m_tasks.clear();
+        spdlog::info("[{}:{}] [socket(epfd :{}) close]",__FILE__, __LINE__, this->m_epfd);
         close(this->m_epfd);
     }
 }
@@ -331,7 +334,7 @@ int galay::Select_Scheduler::start()
             break;
         if (nready == -1)
         {
-            spdlog::error("[{}:{}] [scheduler check(tid: {}) error: {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(th.get_id()),strerror(errno));
+            spdlog::error("[{}:{}] [scheduler check(tid: {}) error: {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()),strerror(errno));
             continue;
         }
         if (nready == 0)

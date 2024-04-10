@@ -8,6 +8,7 @@ void galay::Client::stop()
     {
         this->m_scheduler.lock()->del_task(this->m_fd);
         if(!Callback_ConnClose::empty()) Callback_ConnClose::call(this->m_fd);
+        spdlog::info("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
         close(this->m_fd);
         this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_stop = true;
@@ -23,13 +24,19 @@ galay::Client::~Client()
     }
 }
 
+
+//to do throw
 galay::Tcp_Client::Tcp_Client(Scheduler_Base::wptr scheduler)
     : Client(scheduler)
 {
-    if (!this->m_scheduler.expired())
-    {
-        this->m_fd = IOFuntion::TcpFunction::Sock();
-        IOFuntion::BlockFuction::IO_Set_No_Block(this->m_fd);
+    this->m_fd = IOFuntion::TcpFunction::Sock();
+    if(this->m_fd < 0) {
+        spdlog::error("[{}:{}] [Sock error: {}]",__FILE__,__LINE__,strerror(errno));
+    }
+    int ret = IOFuntion::BlockFuction::IO_Set_No_Block(this->m_fd);
+    if(ret == -1){
+        spdlog::error("[{}:{}] [IO_Set_No_Block error: {}]",__FILE__,__LINE__,strerror(errno));
+        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
     }
 }
 
@@ -40,6 +47,7 @@ galay::Net_Awaiter galay::Tcp_Client::connect(std::string ip, uint32_t port)
     if (ret == 0)
     {
         this->m_error = Error::GY_SUCCESS;
+        spdlog::info("[{}:{}] [socket(fd :{}) connect {}:{} Success]",__FILE__,__LINE__,this->m_fd ,ip,port);
         return Net_Awaiter{nullptr, ret};
     }
     else if (ret == -1)
@@ -47,6 +55,7 @@ galay::Net_Awaiter galay::Tcp_Client::connect(std::string ip, uint32_t port)
         if (errno != EINPROGRESS && errno != EINTR && errno != EWOULDBLOCK)
         {
             this->m_error = Error::GY_CONNECT_ERROR;
+            spdlog::error("[{}:{}] [socket(fd: {}) connect {}:{} error: {}]",__FILE__,__LINE__ , this->m_fd , ip , port , strerror(errno));
             return Net_Awaiter{nullptr, ret};
         }
     }
@@ -55,7 +64,8 @@ galay::Net_Awaiter galay::Tcp_Client::connect(std::string ip, uint32_t port)
         this->m_scheduler.lock()->add_task({this->m_fd, task});
         if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
         {
-            spdlog::error("[{}:{}] [scheduler add fail(fd: {} ) {}, close connection]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+            spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+            return Net_Awaiter{nullptr,-1};
         }else spdlog::info("[{}:{}] [scheduler add event success(fd: {})]",__FILE__,__LINE__,this->m_fd);
     }
     return Net_Awaiter{task};
@@ -66,6 +76,7 @@ galay::Net_Awaiter galay::Tcp_Client::send(const std::string &buffer, uint32_t l
     int ret = IOFuntion::TcpFunction::Send(this->m_fd, buffer, len);
     if (ret == 0)
     {
+        spdlog::error("[{}:{}] [socket(fd: {}) send error: {}]",__FILE__,__LINE__ , this->m_fd,strerror(errno));
         this->m_error = Error::GY_SEND_ERROR;
         return Net_Awaiter{nullptr, -1};
     }
@@ -79,7 +90,8 @@ galay::Net_Awaiter galay::Tcp_Client::send(const std::string &buffer, uint32_t l
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
                 {
-                    std::cout << "add event failed fd = " << this->m_fd << '\n';
+                    spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    return Net_Awaiter{nullptr,-1};
                 }
             }
             return Net_Awaiter{task};
@@ -87,6 +99,7 @@ galay::Net_Awaiter galay::Tcp_Client::send(const std::string &buffer, uint32_t l
         else
         {
             this->m_error = Error::GY_SEND_ERROR;
+            spdlog::error("[{}:{}] [socket(fd: {}) send error: {}]",__FILE__,__LINE__ , this->m_fd,strerror(errno));
             return Net_Awaiter{nullptr, ret};
         }
     }
@@ -100,6 +113,7 @@ galay::Net_Awaiter galay::Tcp_Client::recv(char *buffer, int len)
     if (ret == 0)
     {
         this->m_error = Error::GY_RECV_ERROR;
+        spdlog::error("[{}:{}] [socket(fd: {}) recv error: {}]",__FILE__,__LINE__ , this->m_fd,strerror(errno));
         return Net_Awaiter{nullptr, -1};
     }
     else if (ret == -1)
@@ -112,7 +126,8 @@ galay::Net_Awaiter galay::Tcp_Client::recv(char *buffer, int len)
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_READ) == -1)
                 {
-                    std::cout << "add event failed fd = " << this->m_fd << '\n';
+                    spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    return Net_Awaiter{nullptr,-1};
                 }
             }
             return Net_Awaiter{task};
@@ -120,6 +135,7 @@ galay::Net_Awaiter galay::Tcp_Client::recv(char *buffer, int len)
         else
         {
             this->m_error = Error::GY_RECV_ERROR;
+            spdlog::error("[{}:{}] [socket(fd: {}) recv error: {}]",__FILE__,__LINE__ , this->m_fd,strerror(errno));
             return Net_Awaiter{nullptr, -1};
         }
     }
@@ -132,22 +148,25 @@ galay::Tcp_Client::~Tcp_Client()
 
 }
 
-galay::Tcp_SSL_Client::Tcp_SSL_Client(Scheduler_Base::wptr scheduler, long ssl_min_version, long ssl_max_version)
+galay::Tcp_SSL_Client::Tcp_SSL_Client(Scheduler_Base::wptr scheduler, long ssl_min_version , long ssl_max_version)
     : Tcp_Client(scheduler)
 {
     this->m_ctx = IOFuntion::TcpFunction::SSL_Init_Client(ssl_min_version, ssl_max_version);
     if (this->m_ctx == nullptr)
     {
+        spdlog::error("[{}:{}] [SSL_Init_Client(fd: {}) error: {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
         this->m_error = Error::NetError::GY_SSL_CTX_INIT_ERROR;
         ERR_print_errors_fp(stderr);
-        exit(-1);
+        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
+        close(this->m_fd);
     }
     this->m_ssl = IOFuntion::TcpFunction::SSLCreateObj(this->m_ctx, this->m_fd);
     if (this->m_ssl == nullptr)
     {
+        spdlog::error("[{}:{}] [SSLCreateObj(fd: {}) error: {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
         this->m_error = Error::NetError::GY_SSL_OBJ_INIT_ERROR;
+        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
         close(this->m_fd);
-        exit(-1);
     }
 }
 
@@ -157,12 +176,14 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::connect(std::string ip, uint32_t port)
     int status = Task_Status::GY_TASK_CONNECT;
     if (ret == 0)
     {
+        spdlog::info("[{}:{}] [socket(fd: {}) connect {}:{} Success]",__FILE__,__LINE__,this->m_fd,ip,port);
         status = Task_Status::GY_TASK_SSL_CONNECT;
     }
     else if (ret == -1)
     {
-        if (errno != EINPROGRESS && errno != EINTR)
+        if (errno != EINPROGRESS && errno != EINTR && errno != EWOULDBLOCK)
         {
+            spdlog::error("[{}:{}] [socket(fd: {}) connect {}:{} error: {}]",__FILE__,__LINE__,this->m_fd,ip,port, strerror(errno));
             this->m_error = Error::GY_SSL_CONNECT_ERROR;
             return {nullptr, ret};
         }
@@ -173,7 +194,8 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::connect(std::string ip, uint32_t port)
         this->m_scheduler.lock()->add_task({this->m_fd, task});
         if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
         {
-            std::cout << "add event failed fd = " << this->m_fd << '\n';
+            spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+            return Net_Awaiter{nullptr,-1};
         }
     }
     return Net_Awaiter{task};
@@ -192,19 +214,22 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::send(const std::string &buffer, uint32
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
                 {
-                    std::cout << "add event failed fd = " << this->m_fd << '\n';
+                    spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    return Net_Awaiter{nullptr,-1};
                 }
             }
             return {task};
         }
         else
         {
+            spdlog::error("[{}:{}] [socket(fd: {}) ssl_send error: {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
             this->m_error = Error::GY_SSL_SEND_ERROR;
             return {nullptr, ret};
         }
     }
     else if (ret == 0)
     {
+        spdlog::error("[{}:{}] [socket(fd: {}) ssl_send error: {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
         this->m_error = Error::GY_SSL_SEND_ERROR;
         return {nullptr, -1};
     }
@@ -230,13 +255,15 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::recv(char *buffer, int len)
                 this->m_scheduler.lock()->add_task({this->m_fd, task});
                 if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_READ) == -1)
                 {
-                    std::cout << "add event failed fd = " << this->m_fd << '\n';
+                    spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
+                    return Net_Awaiter{nullptr,-1};
                 }
             }
             return Net_Awaiter{task};
         }
         else
         {
+            spdlog::error("[{}:{}] [socket(fd: {}) ssl_recv error: {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
             this->m_error = Error::GY_RECV_ERROR;
             return Net_Awaiter{nullptr, -1};
         }
@@ -259,7 +286,14 @@ galay::Udp_Client::Udp_Client(Scheduler_Base::wptr scheduler)
     if (!scheduler.expired())
     {
         this->m_fd = IOFuntion::UdpFunction::Sock();
-        IOFuntion::BlockFuction::IO_Set_No_Block(this->m_fd);
+        if(this->m_fd < 0) {
+            spdlog::error("[{}:{}] [Sock error: {}]",__FILE__,__LINE__,strerror(errno));
+        }
+        int ret = IOFuntion::BlockFuction::IO_Set_No_Block(this->m_fd);
+        if(ret == -1){
+            spdlog::error("[{}:{}] [IO_Set_No_Block error: {}]",__FILE__,__LINE__,strerror(errno));
+            spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
+        }
     }
 }
 

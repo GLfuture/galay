@@ -118,7 +118,7 @@ namespace galay
                     spdlog::error("[{}:{}] [InitSock(port: {}) has some error, ready to close all sockets]",__FILE__,__LINE__,Port_Funcs[i].first);
                     for(auto& v: m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
-                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
                     }
@@ -142,7 +142,7 @@ namespace galay
                     spdlog::error("[{}:{}] [scheduler add event(fd: {} ) {}, ready to close all sockets]",__FILE__,__LINE__,this->m_fds[i],strerror(errno));
                     for(auto& v: m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
-                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
                     }
@@ -193,7 +193,7 @@ namespace galay
                     spdlog::error("[{}:{}] [InitSock(port: {}) has some error, ready to close all sockets]",__FILE__,__LINE__,Port_Funcs[i].first);
                     for(auto& v: this->m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
-                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
                     }
@@ -216,7 +216,7 @@ namespace galay
                     spdlog::error("[{}:{}] [scheduler add event(fd: {} ) {}, ready to close all sockets]",__FILE__,__LINE__,this->m_fds[i],strerror(errno));
                     for(auto& v: this->m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
-                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
                     }

@@ -96,7 +96,7 @@ namespace galay
                 {
                     if(scheduler->mod_event(this->m_fd, GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                     {
-                        spdlog::error("[{}:{}] [mod_event(fd: {}) error: '{}']",__FILE__,__LINE__,Error::get_err_str(this->m_error));
+                        spdlog::error("[{}:{}] [mod_event(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
                     }
                     this->m_status = Task_Status::GY_TASK_READ;
                     break;
@@ -389,14 +389,14 @@ namespace galay
                     close(connfd);
                     this->m_error = Error::NetError::GY_SETSOCKOPT_ERROR;
                     spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [socket(fd: {}) setkeepalive Success]",__FILE__,__LINE__,connfd);
             }
             if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
                 this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
                 spdlog::error("[{}:{}] [socket(fd: {}) SetNoBlock error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                 close(connfd);
                 return -1;
             }else {
@@ -417,7 +417,7 @@ namespace galay
                 if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {}) error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [scheduler(indx: {}) add event(fd: {}) Success]",__FILE__,__LINE__,indx,connfd);
@@ -594,7 +594,7 @@ namespace galay
             {
                 if( IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry) == -1){
                     spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [socket(fd: {}) SetKeepalive Success]",__FILE__,__LINE__,connfd);
@@ -604,7 +604,7 @@ namespace galay
             {
                 this->m_error = Error::NetError::GY_SSL_OBJ_INIT_ERROR;
                 spdlog::error("[{}:{}] [socket(fd: {}) SSLCreateObj error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                 close(connfd);
                 return -1;
             }else{
@@ -613,7 +613,7 @@ namespace galay
             if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
                 this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
                 spdlog::error("[{}:{}] [socket(fd: {}) SetNoBlock error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                 close(connfd);
                 return -1;
             }else {
@@ -640,7 +640,7 @@ namespace galay
                         spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}' , retry: {}]",__FILE__,__LINE__,connfd,msg,retry);
                         IOFuntion::TcpFunction::SSLDestory(ssl);
                         ssl = nullptr;
-                        spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                         close(connfd);
                         return -1;
                     }
@@ -664,7 +664,7 @@ namespace galay
                     spdlog::error("[{}:{}] scheduler [add event(fd: {}) error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
                     IOFuntion::TcpFunction::SSLDestory(ssl);
                     ssl = nullptr;
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection:{}]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [scheduler add event(fd: {}) Success]",__FILE__,__LINE__,connfd);
