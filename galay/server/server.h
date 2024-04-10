@@ -45,7 +45,7 @@ namespace galay
 
         void start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) override
         {
-            spdlog::info("{} {} {} start main thread {}",__TIME__,__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()));
+            spdlog::info("[{}:{}] [start main thread {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()));
             if(add_main_tasks(Port_Funcs) == -1) {
                 return;
             }
@@ -53,7 +53,7 @@ namespace galay
             for(int i = 1 ; i < m_schedulers.size(); i ++)
             {
                 std::thread th(&Scheduler_Base::start,m_schedulers[i].get());
-                spdlog::info("{} {} {} start thread {}",__TIME__,__FILE__,__LINE__,std::hash<std::thread::id>{}(th.get_id()));
+                spdlog::info("[{}:{}] [start thread {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(th.get_id()));
                 threads.push_back(std::move(th));
             }
             m_schedulers[0]->start();
@@ -72,31 +72,40 @@ namespace galay
             int fd = IOFuntion::TcpFunction::Sock();
             if (fd <= 0)
             {
-                spdlog::error("{} {} {} Sock fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                spdlog::error("[{}:{}] [socket create error: '{}']",__FILE__,__LINE__,strerror(errno));
                 return Error::NetError::GY_SOCKET_ERROR;
             }
             int ret = IOFuntion::TcpFunction::Reuse_Fd(fd);
             if (ret == -1)
             {
-                spdlog::error("{} {} {} Reuse_Fd fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                spdlog::error("[{}:{}] [Reuse_Fd(fd: {}) error: '{}']",__FILE__,__LINE__,fd,strerror(errno));
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                 close(fd);
                 return Error::NetError::GY_SETSOCKOPT_ERROR;
             }
             ret = IOFuntion::TcpFunction::Bind(fd, port);
             if (ret == -1)
             {
-                spdlog::error("{} {} {} Bind fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                spdlog::error("[{}:{}] [Bind(fd: {}) error: '{}']",__FILE__,__LINE__,fd,strerror(errno));
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                 close(fd);
                 return Error::NetError::GY_BIND_ERROR;
             }
             ret = IOFuntion::TcpFunction::Listen(fd, std::dynamic_pointer_cast<TcpServerConf>(this->m_config)->m_backlog);
             if (ret == -1)
             {
-                spdlog::error("{} {} {} Listen fail {}, close connection",__TIME__,__FILE__,__LINE__,strerror(errno));
+                spdlog::error("[{}:{}] [Listen(fd: {}) error: '{}']",__FILE__,__LINE__,fd,strerror(errno));
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                 close(fd);
                 return Error::NetError::GY_LISTEN_ERROR;
             }
-            IOFuntion::TcpFunction::IO_Set_No_Block(fd);
+            ret = IOFuntion::TcpFunction::IO_Set_No_Block(fd);
+            if(ret == -1){
+                spdlog::error("[{}:{}] [IO_Set_No_Block(fd: {}) error: '{}']",__FILE__,__LINE__,fd,strerror(errno));
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
+                close(fd);
+                return Error::NetError::GY_SET_NOBLOCK_ERROR;
+            }
             this->m_fds.push_back(fd); 
             return Error::NoError::GY_SUCCESS;
         }
@@ -106,14 +115,15 @@ namespace galay
             int n = Port_Funcs.size();
             for(int i = 0 ; i < n ; ++i){
                 if(InitSock(Port_Funcs[i].first) != Error::NoError::GY_SUCCESS) {
-                    spdlog::error("{} {} {} InitSock fail(port: {})",__TIME__,__FILE__,__LINE__,Port_Funcs[i].first);
+                    spdlog::error("[{}:{}] [InitSock(port: {}) has some error, ready to close all sockets]",__FILE__,__LINE__,Port_Funcs[i].first);
                     for(auto& v: m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                         close(v);
                         return -1;
                     }
                 }
-                spdlog::info("{} {} {} Listen success(port: {})",__TIME__,__FILE__,__LINE__,Port_Funcs[i].first);
+                spdlog::info("[{}:{}] [socket(fd: {}) listen(port: {}) Success]",__FILE__,__LINE__,this->m_fds[this->m_fds.size()-1],Port_Funcs[i].first);
                 auto config = std::dynamic_pointer_cast<TcpServerConf>(this->m_config);
                 std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
                 for(auto scheduler: m_schedulers)
@@ -129,9 +139,10 @@ namespace galay
                 }
                 this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
                 if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
-                    spdlog::error("{} {} {} scheduler add event fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fds[i],strerror(errno));
+                    spdlog::error("[{}:{}] [scheduler add event(fd: {} ) {}, ready to close all sockets]",__FILE__,__LINE__,this->m_fds[i],strerror(errno));
                     for(auto& v: m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                         close(v);
                         return -1;
                     }
@@ -153,13 +164,13 @@ namespace galay
             if (m_ctx == nullptr)
             {
                 this->m_error = Error::NetError::GY_SSL_CTX_INIT_ERROR;
-                spdlog::error("{} {} {} {}",__TIME__,__FILE__,__LINE__,strerror(errno));
+                spdlog::error("[{}:{}] [SSL_Init_Server error: '{}']",__FILE__,__LINE__,strerror(errno));
                 exit(-1);
             }
             if (IOFuntion::TcpFunction::SSL_Config_Cert_And_Key(m_ctx, config->m_ssl_conf.m_cert_filepath.c_str(), config->m_ssl_conf.m_key_filepath.c_str()) == -1)
             {
                 this->m_error = Error::NetError::GY_SSL_CRT_OR_KEY_FILE_ERROR;
-                spdlog::error("{} {} {} SSL_Config_Cert_And_Key: {}",__TIME__,__FILE__,__LINE__,strerror(errno));
+                spdlog::error("[{}:{}] [SSL_Config_Cert_And_Key error: '{}']",__FILE__,__LINE__,strerror(errno));
                 exit(-1);
             }
         }
@@ -179,14 +190,15 @@ namespace galay
             int n = Port_Funcs.size();
             for(int i = 0 ; i < n ; ++ i){
                 if(Tcp_Server<REQ,RESP>::InitSock(Port_Funcs[i].first) != Error::NoError::GY_SUCCESS) {
-                    spdlog::error("{} {} {} InitSock fail(port: {})",__TIME__,__FILE__,__LINE__,Port_Funcs[i].first);
+                    spdlog::error("[{}:{}] [InitSock(port: {}) has some error, ready to close all sockets]",__FILE__,__LINE__,Port_Funcs[i].first);
                     for(auto& v: this->m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                         close(v);
                         return -1;
                     }
                 }
-                spdlog::info("{} {} {} Listen success(port: {})",__TIME__,__FILE__,__LINE__,Port_Funcs[i].first);
+                spdlog::info("[{}:{}] [socket(fd: {}) listen(port: {}) Success]",__FILE__,__LINE__,this->m_fds[this->m_fds.size()-1],Port_Funcs[i].first);
                 std::vector<std::weak_ptr<Scheduler_Base>> schedulers;
                 for(auto scheduler: this->m_schedulers)
                 {
@@ -201,9 +213,10 @@ namespace galay
                 }
                 this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
                 if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
-                    spdlog::error("{} {} {} scheduler add event fail(fd: {} ) {}, close connection",__TIME__,__FILE__,__LINE__,this->m_fds[i],strerror(errno));
+                    spdlog::error("[{}:{}] [scheduler add event(fd: {} ) {}, ready to close all sockets]",__FILE__,__LINE__,this->m_fds[i],strerror(errno));
                     for(auto& v: this->m_fds) {
                         this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                         close(v);
                         return -1;
                     }

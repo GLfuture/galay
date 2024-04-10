@@ -36,18 +36,18 @@ galay::Co_Tcp_Client_Connect_Task::exec()
     if (getsockopt(this->m_fd, SOL_SOCKET, SO_ERROR, (void *)&status, &slen) < 0)
     {
         *(this->m_error) = Error::GY_CONNECT_ERROR;
-        spdlog::error("{} {} {} getsocketopt(fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [getsocketopt(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         this->m_result = -1;
     }
     if (status != 0)
     {
         *(this->m_error) = Error::GY_CONNECT_ERROR;
-        spdlog::error("{} {} {} connect fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [connect(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} connect success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+        spdlog::info("[{}:{}] [connect(fd: {}) success]", __FILE__, __LINE__, this->m_fd);
         *(this->m_error) = Error::GY_SUCCESS;
         this->m_result = 0;
     }
@@ -77,26 +77,26 @@ galay::Co_Tcp_Client_Send_Task::exec()
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            spdlog::warn("{} {} {} Send (fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::warn("[{}:{}] [Send(fd: {}) warn: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             return -1;
         }
         else
         {
-            spdlog::error("{} {} {} Send fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::error("[{}:{}] [Send(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             *(this->m_error) = Error::GY_SEND_ERROR;
             this->m_result = -1;
         }
     }
     else if (ret == 0)
     {
-        spdlog::error("{} {} {} Send fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [Send(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         *(this->m_error) = Error::GY_SEND_ERROR;
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} Send (fd :{}) {} Bytes", __TIME__, __FILE__, __LINE__, this->m_fd, ret);
-        spdlog::info("{} {} {} Send success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+        spdlog::info("[{}:{}] [Send(fd :{}): {} Bytes]", __FILE__, __LINE__, this->m_fd, ret);
+        spdlog::info("[{}:{}] [Send(fd: {}) Success]", __FILE__, __LINE__, this->m_fd);
         this->m_result = ret;
         *(this->m_error) = Error::GY_SUCCESS;
     }
@@ -126,26 +126,26 @@ galay::Co_Tcp_Client_Recv_Task::exec()
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            spdlog::warn("{} {} {} Recv (fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::warn("[{}:{}] [Recv(fd: {}) warn: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             return -1;
         }
         else
         {
-            spdlog::error("{} {} {} Recv fail(fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::error("[{}:{}] [Recv(fd: {}) error: {}", __FILE__, __LINE__, this->m_fd, strerror(errno));
             *(this->m_error) = Error::GY_RECV_ERROR;
             this->m_result = -1;
         }
     }
     else if (ret == 0)
     {
-        spdlog::error("{} {} {} Recv fail(fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [Recv(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         *(this->m_error) = Error::GY_RECV_ERROR;
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} SSL_Send (fd :{}) {} Bytes", __TIME__, __FILE__, __LINE__, this->m_fd, ret);
-        spdlog::info("{} {} {} Recv success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+        spdlog::info("[{}:{}] [SSL_Send(fd :{}): {} Bytes]", __FILE__, __LINE__, this->m_fd, ret);
+        spdlog::info("[{}:{}] [Recv(fd: {}) Success]", __FILE__, __LINE__, this->m_fd);
         *(this->m_error) = Error::GY_SUCCESS;
         this->m_result = ret;
     }
@@ -179,19 +179,19 @@ galay::Co_Tcp_Client_SSL_Connect_Task::exec()
         socklen_t slen = sizeof(status);
         if (getsockopt(this->m_fd, SOL_SOCKET, SO_ERROR, (void *)&status, &slen) < 0)
         {
-            spdlog::error("{} {} {} getsocketopt(fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::error("[{}:{}] [getsocketopt(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             *(this->m_error) = Error::GY_CONNECT_ERROR;
             this->m_result = -1;
         }
         if (status != 0)
         {
-            spdlog::error("{} {} {} connect fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::error("[{}:{}] [connect(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             *(this->m_error) = Error::GY_CONNECT_ERROR;
             this->m_result = -1;
         }
         else
         {
-            spdlog::info("{} {} {} first: connect success(fd : {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+            spdlog::info("[{}:{}] [connect(fd : {}) Success]", __FILE__, __LINE__, this->m_fd);
             this->m_status = Task_Status::GY_TASK_SSL_CONNECT;
             return -1;
         }
@@ -205,19 +205,19 @@ galay::Co_Tcp_Client_SSL_Connect_Task::exec()
             int status = SSL_get_error(this->m_ssl, ret);
             if (status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE || status == SSL_ERROR_WANT_CONNECT)
             {
-                spdlog::warn("{} {} {} ssl_connect (fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+                spdlog::warn("[{}:{}] [SSL_connect(fd: {}) warn: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 return -1;
             }
             else
             {
-                spdlog::error("{} {} {} ssl_connect fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+                spdlog::error("[{}:{}] [SSL_connect(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 *(this->m_error) = Error::GY_SSL_CONNECT_ERROR;
                 this->m_result = -1;
             }
         }
         else
         {
-            spdlog::info("{} {} {} second: ssl_connect success(fd : {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+            spdlog::info("[{}:{}] [SSL_connect(fd : {}) Success]", __FILE__, __LINE__, this->m_fd);
             *(this->m_error) = Error::GY_SUCCESS;
             this->m_result = 0;
         }
@@ -251,26 +251,26 @@ galay::Co_Tcp_Client_SSL_Send_Task::exec()
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            spdlog::warn("{} {} {} SSL_Send (fd: {}): {}", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
+            spdlog::warn("[{}:{}] [SSL_Send(fd: {}) warn: {}]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
             return -1;
         }
         else
         {
-            spdlog::error("{} {} {} SSL_Send fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
+            spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: {}]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
             *(this->m_error) = Error::GY_SSL_SEND_ERROR;
             this->m_result = -1;
         }
     }
     else if (ret == 0)
     {
-        spdlog::error("{} {} {} SSL_Send fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
+        spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: {}]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
         *(this->m_error) = Error::GY_SSL_SEND_ERROR;
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} SSL_Send (fd :{}) {} Bytes", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), ret);
-        spdlog::info("{} {} {} SSL_Send success(fd: {})", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl));
+        spdlog::info("[{}:{}] [SSL_Send(fd :{}): {} Bytes]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), ret);
+        spdlog::info("[{}:{}] [SSL_Send(fd: {}) Success]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl));
         this->m_result = ret;
         *(this->m_error) = Error::GY_SUCCESS;
     }
@@ -300,26 +300,26 @@ galay::Co_Tcp_Client_SSL_Recv_Task::exec()
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            spdlog::warn("{} {} {} SSL_Recv (fd: {}) {}", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
+            spdlog::warn("[{}:{}] [SSL_Recv(fd: {}) warn: {}]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
             return -1;
         }
         else
         {
-            spdlog::error("{} {} {} SSL_Recv fail(fd: {}) {}", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
+            spdlog::error("[{}:{}] [SSL_Recv(fd: {}) error: {}]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
             *(this->m_error) = Error::GY_SSL_RECV_ERROR;
             this->m_result = -1;
         }
     }
     else if (ret == 0)
     {
-        spdlog::error("{} {} {} SSL_Recv fail(fd: {}) {}", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
+        spdlog::error("[{}:{}] [SSL_Recv(fd: {}) error: {}]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), strerror(errno));
         *(this->m_error) = Error::GY_SSL_RECV_ERROR;
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} SSL_Recv (fd :{}) {} Bytes", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl), ret);
-        spdlog::info("{} {} {} SSL_Recv success(fd: {})", __TIME__, __FILE__, __LINE__, SSL_get_fd(this->m_ssl));
+        spdlog::info("[{}:{}] [SSL_Recv(fd :{}): {} Bytes]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl), ret);
+        spdlog::info("[{}:{}] [SSL_Recv(fd: {}) Succcess]", __FILE__, __LINE__, SSL_get_fd(this->m_ssl));
         *(this->m_error) = Error::GY_SUCCESS;
         this->m_result = ret;
     }
@@ -350,26 +350,26 @@ int galay::Co_Udp_Client_Sendto_Task::exec()
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            spdlog::warn("{} {} {} Sendto (fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::warn("[{}:{}] [Sendto(fd: {}) warn: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             return -1;
         }
         else
         {
-            spdlog::error("{} {} {} Sendto fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::error("[{}:{}] [Sendto(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             *(this->m_error) = Error::GY_SENDTO_ERROR;
             this->m_result = -1;
         }
     }
     else if (ret == 0)
     {
-        spdlog::error("{} {} {} Sendto fail(fd: {}): {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [Sendto(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         *(this->m_error) = Error::GY_SENDTO_ERROR;
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} Sendto (fd :{}) {} Bytes", __TIME__, __FILE__, __LINE__, this->m_fd, ret);
-        spdlog::info("{} {} {} Sendto success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+        spdlog::info("[{}:{}] [Sendto(fd :{}): {} Bytes]", __FILE__, __LINE__, this->m_fd, ret);
+        spdlog::info("[{}:{}] [Sendto(fd: {}) Success]", __FILE__, __LINE__, this->m_fd);
         *(this->m_error) = Error::GY_SUCCESS;
         this->m_result = ret;
     }
@@ -408,26 +408,26 @@ int galay::Co_Udp_Client_Recvfrom_Task::exec()
     {
         if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         {
-            spdlog::warn("{} {} {} Recvfrom (fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::warn("[{}:{}] [Recvfrom(fd: {}) warn: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             return -1;
         }
         else
         {
-            spdlog::error("{} {} {} Recvfrom fail(fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+            spdlog::error("[{}:{}] [Recvfrom(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             *(this->m_error) = Error::GY_SENDTO_ERROR;
             this->m_result = -1;
         }
     }
     else if (ret == 0)
     {
-        spdlog::error("{} {} {} Recvfrom fail(fd: {}) {}", __TIME__, __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [Recvfrom(fd: {}) error: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         *(this->m_error) = Error::GY_SENDTO_ERROR;
         this->m_result = -1;
     }
     else
     {
-        spdlog::info("{} {} {} Recvfrom (fd :{}) {} Bytes", __TIME__, __FILE__, __LINE__, this->m_fd, ret);
-        spdlog::info("{} {} {} Recvfrom success(fd: {})", __TIME__, __FILE__, __LINE__, this->m_fd);
+        spdlog::info("[{}:{}] [Recvfrom(fd :{}): {} Bytes]", __FILE__, __LINE__, this->m_fd, ret);
+        spdlog::info("[{}:{}] [Recvfrom(fd: {}) Success]", __FILE__, __LINE__, this->m_fd);
         *(this->m_error) = Error::GY_SUCCESS;
         this->m_result = ret;
     }

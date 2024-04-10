@@ -1,6 +1,11 @@
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(DEPEND_LIBS kernel util factory protocol config server client middleware security)
+set(MIDDLEWARE)
+if(MYSQL_FOUND OR ETCD_FOUND)
+    list(APPEND MIDDLEWARE middleware)
+endif()
+
+set(DEPEND_LIBS kernel util factory protocol config server client ${MIDDLEWARE} security)
 set(STATIC_LIB ${PROJECT_NAME}-static)
 set(SHARED_LIB ${PROJECT_NAME}-shared)
 

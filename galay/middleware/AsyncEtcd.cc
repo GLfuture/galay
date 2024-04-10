@@ -33,11 +33,12 @@ int
 galay::MiddleWare::AsyncEtcd::ServiceRegister::Register(const std::string& ServicePathAndNode, const std::string& ServiceAddr,int TTL)
 {
     if(!CheckNotExist(ServicePathAndNode)) {
-        spdlog::error("{} {} {} CheckNotExist error is Service is already exist",__TIME__,__FILE__,__LINE__);
+        spdlog::error("[{}:{}] [CheckNotExist error: Service is already exist]",__FILE__,__LINE__);
         return -1;
     }
     m_keepalive = m_client->leasekeepalive(TTL).get();
     int64_t leaseid = m_keepalive->Lease();
+    spdlog::info("[{}:{}] [lease(leaseid: {}) Success]",__FILE__,__LINE__,leaseid);
     m_client->put(ServicePathAndNode,ServiceAddr,leaseid);
     return 0;
 }

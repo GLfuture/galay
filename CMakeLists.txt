@@ -40,7 +40,7 @@ endif()
 if(MYSQL_FOUND)
   message(STATUS "mysql found")
 else()
-  message(FATAL_ERROR "mysql not found")
+  message(WARNING "mysql not found")
 endif()
 
 #find etcd
@@ -55,7 +55,7 @@ endif()
 if(ETCD_FOUND)
   message(STATUS "etcd found")
 else()
-  message(FATAL_ERROR "etcd not found")
+  message(WARNING "etcd not found")
 endif()
 
 #find kafka
@@ -68,6 +68,6 @@ add_subdirectory(tutorial)
 install(DIRECTORY ${HEADER_SRC_DIR}
         DESTINATION ${HEADER_DST_DIR}
         FILES_MATCHING
-        PATTERN "*.h"
+        PATTERN "*.h*"
 )
 
