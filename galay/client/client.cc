@@ -2,15 +2,15 @@
 #include "../kernel/callback.h"
 #include <spdlog/spdlog.h>
 
-void galay::Client::stop()
+void galay::Client::Stop()
 {
     if (!this->m_scheduler.expired() && !this->m_stop)
     {
-        this->m_scheduler.lock()->del_task(this->m_fd);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
         if(!Callback_ConnClose::empty()) Callback_ConnClose::call(this->m_fd);
         spdlog::info("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
         close(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_stop = true;
     }
 }
@@ -19,7 +19,7 @@ galay::Client::~Client()
 {
     if (!this->m_scheduler.expired() && !this->m_stop)
     {
-        stop();
+        Stop();
         this->m_stop = true;
     }
 }
@@ -37,6 +37,7 @@ galay::Tcp_Client::Tcp_Client(Scheduler_Base::wptr scheduler)
     if(ret == -1){
         spdlog::error("[{}:{}] [IO_Set_No_Block error: {}]",__FILE__,__LINE__,strerror(errno));
         spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
+        close(this->m_fd);
     }
 }
 
@@ -61,8 +62,8 @@ galay::Net_Awaiter galay::Tcp_Client::connect(std::string ip, uint32_t port)
     }
     if (!m_scheduler.expired())
     {
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
+        this->m_scheduler.lock()->AddTask({this->m_fd, task});
+        if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE) == -1)
         {
             spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
             return Net_Awaiter{nullptr,-1};
@@ -87,8 +88,8 @@ galay::Net_Awaiter galay::Tcp_Client::send(const std::string &buffer, uint32_t l
             Co_Tcp_Client_Send_Task::ptr task = std::make_shared<Co_Tcp_Client_Send_Task>(this->m_fd, buffer, len, this->m_scheduler, &(this->m_error));
             if (!this->m_scheduler.expired())
             {
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE) == -1)
                 {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
                     return Net_Awaiter{nullptr,-1};
@@ -123,8 +124,8 @@ galay::Net_Awaiter galay::Tcp_Client::recv(char *buffer, int len)
             Co_Tcp_Client_Recv_Task::ptr task = std::make_shared<Co_Tcp_Client_Recv_Task>(this->m_fd, buffer, len, this->m_scheduler, &(this->m_error));
             if (!this->m_scheduler.expired())
             {
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_READ) == -1)
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_READ) == -1)
                 {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
                     return Net_Awaiter{nullptr,-1};
@@ -191,8 +192,8 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::connect(std::string ip, uint32_t port)
     Co_Tcp_Client_SSL_Connect_Task::ptr task = std::make_shared<Co_Tcp_Client_SSL_Connect_Task>(this->m_fd, this->m_ssl, this->m_scheduler, &(this->m_error), status);
     if (!m_scheduler.expired())
     {
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
+        this->m_scheduler.lock()->AddTask({this->m_fd, task});
+        if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE) == -1)
         {
             spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
             return Net_Awaiter{nullptr,-1};
@@ -211,8 +212,8 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::send(const std::string &buffer, uint32
             auto task = std::make_shared<Co_Tcp_Client_SSL_Send_Task>(this->m_ssl, buffer, len, this->m_scheduler, &(this->m_error));
             if (!m_scheduler.expired())
             {
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE) == -1)
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE) == -1)
                 {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
                     return Net_Awaiter{nullptr,-1};
@@ -252,8 +253,8 @@ galay::Net_Awaiter galay::Tcp_SSL_Client::recv(char *buffer, int len)
             auto task = std::make_shared<Co_Tcp_Client_SSL_Recv_Task>(this->m_ssl, buffer, len, this->m_scheduler, &(this->m_error));
             if (!this->m_scheduler.expired())
             {
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_READ) == -1)
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_READ) == -1)
                 {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {}) {}]",__FILE__,__LINE__,this->m_fd,strerror(errno));
                     return Net_Awaiter{nullptr,-1};
@@ -293,6 +294,7 @@ galay::Udp_Client::Udp_Client(Scheduler_Base::wptr scheduler)
         if(ret == -1){
             spdlog::error("[{}:{}] [IO_Set_No_Block error: {}]",__FILE__,__LINE__,strerror(errno));
             spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,this->m_fd);
+            close(this->m_fd);
         }
     }
 }
@@ -302,11 +304,11 @@ galay::Net_Awaiter galay::Udp_Client::sendto(std::string ip, uint32_t port, std:
     if (!this->m_scheduler.expired())
     {
         auto task = std::make_shared<Co_Udp_Client_Sendto_Task>(this->m_fd, ip, port, buffer, this->m_scheduler, &(this->m_error));
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+        if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
         {
             std::cout << "add event failed fd = " << this->m_fd << '\n';
         }
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
+        this->m_scheduler.lock()->AddTask({this->m_fd, task});
         return Net_Awaiter{task};
     }
     this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
@@ -318,11 +320,11 @@ galay::Net_Awaiter galay::Udp_Client::recvfrom(char *buffer, int len, IOFuntion:
     if (!this->m_scheduler.expired())
     {
         auto task = std::make_shared<Co_Udp_Client_Recvfrom_Task>(this->m_fd, addr, buffer, len, this->m_scheduler, &(this->m_error));
-        if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+        if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
         {
             std::cout << "add event failed fd = " << this->m_fd << '\n';
         }
-        this->m_scheduler.lock()->add_task({this->m_fd, task});
+        this->m_scheduler.lock()->AddTask({this->m_fd, task});
         return Net_Awaiter{task};
     }
     this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;

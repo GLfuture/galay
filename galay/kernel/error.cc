@@ -28,6 +28,7 @@ const char *galay::Error::global_err_str[] = {
     "scheduler modify event's status fail",
     "protocol is incomplete",
     "the request is a bad request",
+    "protocol is illegal",
 };
 
 const char *galay::Error::get_err_str(int errcode)

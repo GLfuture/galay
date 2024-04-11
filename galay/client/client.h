@@ -14,9 +14,9 @@ namespace galay
         Client(Scheduler_Base::wptr scheduler)
             :m_scheduler(scheduler){}
 
-        int get_error() { return this->m_error; }
+        int GetError() { return this->m_error; }
 
-        void stop();
+        void Stop();
 
         virtual ~Client();
 
@@ -85,11 +85,11 @@ namespace galay
             if (!this->m_scheduler.expired())
             {
                 typename Co_Tcp_Client_Request_Task<REQ,RESP>::ptr task = std::make_shared<Co_Tcp_Client_Request_Task<REQ,RESP>>(this->m_fd, this->m_scheduler, request, response, &(this->m_error));
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     std::cout << "add event failed fd = " << this->m_fd << '\n';
                 }
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
                 return Net_Awaiter{task};
             }
             this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
@@ -115,11 +115,11 @@ namespace galay
             if (!this->m_scheduler.expired())
             {
                 auto task = std::make_shared<Co_Tcp_Client_SSL_Request_Task<REQ, RESP>>(this->m_ssl, this->m_fd, this->m_scheduler, request, response, &(this->m_error));
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     std::cout << "add event failed fd = " << this->m_fd << '\n';
                 }
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
                 return Net_Awaiter{task};
             }
             this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;
@@ -160,11 +160,11 @@ namespace galay
             if (!this->m_scheduler.expired())
             {
                 auto task = std::make_shared<Co_Dns_Client_Request_Task<REQ,RESP>>(this->m_fd, ip, port, request, response, this->m_scheduler, &(this->m_error));
-                if (this->m_scheduler.lock()->add_event(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+                if (this->m_scheduler.lock()->AddEvent(this->m_fd, GY_EVENT_WRITE | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     std::cout << "add event failed fd = " << this->m_fd << '\n';
                 }
-                this->m_scheduler.lock()->add_task({this->m_fd, task});
+                this->m_scheduler.lock()->AddTask({this->m_fd, task});
                 return Net_Awaiter{task};
             }
             this->m_error = Error::SchedulerError::GY_SCHDULER_EXPIRED_ERROR;

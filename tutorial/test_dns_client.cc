@@ -35,7 +35,7 @@ Task<> func(Scheduler_Base::wptr scheduler)
             std::cout << answer.m_aname << " has ipv4 : "<< answer.m_data <<'\n';
         }
     }
-    scheduler.lock()->stop();
+    scheduler.lock()->Stop();
     
 }
 
@@ -51,7 +51,7 @@ int main()
     auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,5);
     //一定要用变量接收协程帧，不然会销毁
     Task<> t = func(scheduler);
-    scheduler->start();
+    scheduler->Start();
 
     return 0;
 }

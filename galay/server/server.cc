@@ -26,20 +26,20 @@ galay::Server::Server(Config::ptr config)
     }
 }
 
-void galay::Server::stop()
+void galay::Server::Stop()
 {
     for (auto scheduler : m_schedulers)
     {
-        scheduler->stop();
+        scheduler->Stop();
     }
 }
 
-int galay::Server::get_error() 
+int galay::Server::GetError() 
 { 
     return this->m_error; 
 }
 
-galay::Scheduler_Base::ptr galay::Server::get_scheduler(int indx) 
+galay::Scheduler_Base::ptr galay::Server::GetScheduler(int indx) 
 { 
     return this->m_schedulers[indx]; 
 }
@@ -48,9 +48,9 @@ galay::Server::~Server()
 {
     for (auto scheduler : m_schedulers)
     {
-        if (!scheduler->is_stop())
+        if (!scheduler->IsStop())
         {
-            scheduler->stop();
+            scheduler->Stop();
         }
     }
 }

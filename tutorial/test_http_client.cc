@@ -13,18 +13,18 @@ Task<> func(Scheduler_Base::ptr scheduler)
         std::cout<<"connect failed\n";
     }
     Protocol::Http1_1_Request::ptr request = std::make_shared<Protocol::Http1_1_Request>();
-    request->get_version() = "1.1";
-    request->get_method() = "GET";
-    request->get_url_path() = "/";
+    request->GetVersion() = "1.1";
+    request->GetMethod() = "GET";
+    request->GetUri() = "/";
     Protocol::Http1_1_Response::ptr response = std::make_shared<Protocol::Http1_1_Response>();
     ret = co_await client->request<Protocol::Http1_1_Request,Protocol::Http1_1_Response>(request,response);
-    std::cout<<response->encode()<<std::endl;
+    std::cout<<response->EncodePdu()<<std::endl;
     std::cout<<std::any_cast<int>(ret)<<'\n';
-    request->set_head_kv_pair({"Connection","close"});
+    request->SetHeadPair({"Connection","close"});
     ret = co_await client->request<Protocol::Http1_1_Request,Protocol::Http1_1_Response>(request,response);
     std::cout<<std::any_cast<int>(ret)<<'\n';
-    std::cout<<response->encode()<<std::endl;
-    scheduler->stop();
+    std::cout<<response->EncodePdu()<<std::endl;
+    scheduler->Stop();
     co_return;
 }
 
@@ -38,6 +38,6 @@ int main()
 {
     auto scheduler = Scheduler_Factory::create_epoll_scheduler(1024,-1);
     Task<> t = func(scheduler);
-    scheduler->start();
+    scheduler->Start();
     return 0;
 }

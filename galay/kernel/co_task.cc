@@ -29,7 +29,7 @@ galay::Co_Tcp_Client_Connect_Task::Co_Tcp_Client_Connect_Task(int fd, Scheduler_
 }
 
 int 
-galay::Co_Tcp_Client_Connect_Task::exec()
+galay::Co_Tcp_Client_Connect_Task::Exec()
 {
     int status = 0;
     socklen_t slen = sizeof(status);
@@ -53,8 +53,8 @@ galay::Co_Tcp_Client_Connect_Task::exec()
     }
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -70,7 +70,7 @@ galay::Co_Tcp_Client_Send_Task::Co_Tcp_Client_Send_Task(int fd, const std::strin
 }
 
 int 
-galay::Co_Tcp_Client_Send_Task::exec()
+galay::Co_Tcp_Client_Send_Task::Exec()
 {
     int ret = IOFuntion::TcpFunction::Send(this->m_fd, this->m_buffer, this->m_len);
     if (ret == -1)
@@ -102,8 +102,8 @@ galay::Co_Tcp_Client_Send_Task::exec()
     }
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -119,7 +119,7 @@ galay::Co_Tcp_Client_Recv_Task::Co_Tcp_Client_Recv_Task(int fd, char *buffer, in
 }
 
 int 
-galay::Co_Tcp_Client_Recv_Task::exec()
+galay::Co_Tcp_Client_Recv_Task::Exec()
 {
     int ret = IOFuntion::TcpFunction::Recv(this->m_fd, this->m_buffer, this->m_len);
     if (ret == -1)
@@ -151,8 +151,8 @@ galay::Co_Tcp_Client_Recv_Task::exec()
     }
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -168,7 +168,7 @@ galay::Co_Tcp_Client_SSL_Connect_Task::Co_Tcp_Client_SSL_Connect_Task(int fd, SS
 }
 
 int 
-galay::Co_Tcp_Client_SSL_Connect_Task::exec()
+galay::Co_Tcp_Client_SSL_Connect_Task::Exec()
 {
 
     switch (this->m_status)
@@ -227,8 +227,8 @@ galay::Co_Tcp_Client_SSL_Connect_Task::exec()
 
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -244,7 +244,7 @@ galay::Co_Tcp_Client_SSL_Send_Task::Co_Tcp_Client_SSL_Send_Task(SSL *ssl, const 
 }
 
 int 
-galay::Co_Tcp_Client_SSL_Send_Task::exec()
+galay::Co_Tcp_Client_SSL_Send_Task::Exec()
 {
     int ret = IOFuntion::TcpFunction::SSLSend(this->m_ssl, this->m_buffer, this->m_len);
     if (ret == -1)
@@ -276,8 +276,8 @@ galay::Co_Tcp_Client_SSL_Send_Task::exec()
     }
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(SSL_get_fd(this->m_ssl));
-        this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl), GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(SSL_get_fd(this->m_ssl));
+        this->m_scheduler.lock()->DelEvent(SSL_get_fd(this->m_ssl), GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -293,7 +293,7 @@ galay::Co_Tcp_Client_SSL_Recv_Task::Co_Tcp_Client_SSL_Recv_Task(SSL *ssl, char *
 }
 
 int 
-galay::Co_Tcp_Client_SSL_Recv_Task::exec()
+galay::Co_Tcp_Client_SSL_Recv_Task::Exec()
 {
     int ret = IOFuntion::TcpFunction::SSLRecv(this->m_ssl, this->m_buffer, this->m_len);
     if (ret == -1)
@@ -325,8 +325,8 @@ galay::Co_Tcp_Client_SSL_Recv_Task::exec()
     }
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(SSL_get_fd(this->m_ssl));
-        this->m_scheduler.lock()->del_event(SSL_get_fd(this->m_ssl), GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(SSL_get_fd(this->m_ssl));
+        this->m_scheduler.lock()->DelEvent(SSL_get_fd(this->m_ssl), GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -342,7 +342,7 @@ galay::Co_Udp_Client_Sendto_Task::Co_Udp_Client_Sendto_Task(int fd, std::string 
     this->m_scheduler = scheduler;
 }
 
-int galay::Co_Udp_Client_Sendto_Task::exec()
+int galay::Co_Udp_Client_Sendto_Task::Exec()
 {
 
     int ret = IOFuntion::UdpFunction::SendTo(this->m_fd, {m_ip, static_cast<int>(m_port)}, m_buffer);
@@ -376,8 +376,8 @@ int galay::Co_Udp_Client_Sendto_Task::exec()
 
     if (!this->m_handle.done())
     {
-        this->m_scheduler.lock()->del_task(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;
@@ -391,17 +391,17 @@ galay::Co_Udp_Client_Recvfrom_Task::Co_Udp_Client_Recvfrom_Task(int fd, IOFuntio
     this->m_buffer = buffer;
     this->m_len = len;
     this->m_error = error;
-    this->m_timer = scheduler.lock()->get_timer_manager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME, 1, [this]()
+    this->m_timer = scheduler.lock()->GetTimerManager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME, 1, [this]()
                                                                      {
                 if (!this->m_handle.done()) {
                     this->m_result = -1;
-                    this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
-                    this->m_scheduler.lock()->del_task(this->m_fd);
+                    this->m_scheduler.lock()->DelEvent(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                    this->m_scheduler.lock()->DelTask(this->m_fd);
                     this->m_handle.resume();
                 } });
 }
 
-int galay::Co_Udp_Client_Recvfrom_Task::exec()
+int galay::Co_Udp_Client_Recvfrom_Task::Exec()
 {
     int ret = IOFuntion::UdpFunction::RecvFrom(this->m_fd, *m_addr, m_buffer, m_len);
     if (ret == -1)
@@ -435,8 +435,8 @@ int galay::Co_Udp_Client_Recvfrom_Task::exec()
     if (!this->m_handle.done())
     {
         this->m_timer->cancle();
-        this->m_scheduler.lock()->del_task(this->m_fd);
-        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+        this->m_scheduler.lock()->DelTask(this->m_fd);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
         this->m_handle.resume();
     }
     return 0;

@@ -19,7 +19,7 @@ void galay::ThreadPool::run()
         std::shared_ptr<Thread_Task> task = m_tasks.front();
         m_tasks.pop();
         lock.unlock();
-        task->exec();
+        task->Exec();
     }
 }
 

@@ -49,7 +49,7 @@ uint32_t &galay::Timer::get_exec_times()
     return this->m_exec_times;
 }
 
-void galay::Timer::exec()
+void galay::Timer::Exec()
 {
     this->m_is_finish = false;
     this->m_func();

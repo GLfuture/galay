@@ -13,15 +13,15 @@ Task<> func(Scheduler_Base::ptr scheduler)
         std::cout<<"connect failed\n";
     }
     Protocol::Http1_1_Request::ptr request = std::make_shared<Protocol::Http1_1_Request>();
-    request->get_version() = "1.1";
-    request->get_method() = "GET";
-    request->get_url_path() = "/";
-    //request->set_head_kv_pair({"Connection","close"});
+    request->GetVersion() = "1.1";
+    request->GetMethod() = "GET";
+    request->GetUri() = "/";
+    //request->SetHeadPair({"Connection","close"});
     Protocol::Http1_1_Response::ptr response = std::make_shared<Protocol::Http1_1_Response>();
     ret = co_await client->request(request,response);
-    std::string resp_str = response->encode();
+    std::string resp_str = response->EncodePdu();
     std::cout<< resp_str << '\n' << resp_str.length() <<std::endl;
-    scheduler->stop();
+    scheduler->Stop();
     co_return;
 }
 
@@ -31,7 +31,7 @@ int main()
     //auto scheduler = Scheduler_Factory::create_epoll_scheduler(1,5);
     auto scheduler = Scheduler_Factory::create_select_scheduler(5);
     Task<> t = func(scheduler);
-    scheduler->start();
+    scheduler->Start();
     std::cout<<"end\n";
     return 0;
 }

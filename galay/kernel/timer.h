@@ -33,10 +33,10 @@ namespace galay{
 
         void set_during_time(uint64_t during_time);
 
-        //get remained exec times
+        //get remained Exec times
         uint32_t &get_exec_times();
 
-        void exec();
+        void Exec();
 
         //取消任务
         void cancle();
@@ -50,7 +50,7 @@ namespace galay{
         static uint32_t m_global_timerid;
         // id
         uint32_t m_timerid; 
-        //the times to exec timer
+        //the times to Exec timer
         uint32_t m_exec_times;  
         uint64_t m_expired_time;
         uint64_t m_during_time;
@@ -70,7 +70,7 @@ namespace galay{
 
         Timer::ptr get_ealist_timer();
         
-        // during (ms) exec_times (exec times)
+        // during (ms) exec_times (Exec times)
         template<typename Func,typename ...Args,typename = std::enable_if_t<std::is_void_v<std::invoke_result_t<Func, Args...>>>>
         Timer::ptr add_timer(uint64_t during , uint32_t exec_times, Func&& f , Args&& ...args)
         {

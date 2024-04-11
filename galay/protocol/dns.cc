@@ -15,7 +15,7 @@ std::queue<galay::Protocol::Dns_Answer> &galay::Protocol::Dns_Protocol::get_answ
     return this->m_answers;
 }
 
-std::string galay::Protocol::Dns_Request::encode()
+std::string galay::Protocol::Dns_Request::EncodePdu()
 {
     unsigned char buffer[MAX_UDP_LENGTH];
     bzero(buffer, MAX_UDP_LENGTH);
@@ -76,7 +76,7 @@ std::string galay::Protocol::Dns_Request::modify_hostname(std::string hostname)
     return res + static_cast<char>(0);
 }
 
-int galay::Protocol::Dns_Response::decode(const std::string &buffer)
+int galay::Protocol::Dns_Response::DecodePdu(const std::string &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;

@@ -89,9 +89,9 @@ namespace galay
         public:
             using ptr = std::shared_ptr<Dns_Request>;
             //ignore
-            int decode(const std::string& buffer) override {return 0;}
+            int DecodePdu(const std::string& buffer) override {return 0;}
 
-            std::string encode() override;
+            std::string EncodePdu() override;
         protected:
             std::string modify_hostname(std::string hostname);
         };
@@ -102,10 +102,10 @@ namespace galay
         public:
             using ptr = std::shared_ptr<Dns_Response>;
             //ignore
-            std::string encode() override {return "";}
+            std::string EncodePdu() override {return "";}
 
 
-            int decode(const std::string& buffer) override;
+            int DecodePdu(const std::string& buffer) override;
 
         protected:
             static bool is_pointer(int in);

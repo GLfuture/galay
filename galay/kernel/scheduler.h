@@ -20,24 +20,24 @@ namespace galay{
         using wptr = std::weak_ptr<Epoll_Scheduler>;
         Epoll_Scheduler(int max_event,int timeout);
 
-        int start() override;
+        int Start() override;
         
-        std::shared_ptr<Timer_Manager> get_timer_manager() override;
+        std::shared_ptr<Timer_Manager> GetTimerManager() override;
 
-        void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair) override;
+        void AddTask(std::pair<int,std::shared_ptr<Task_Base>>&& pair) override;
 
-        void del_task(int fd) override;
+        void DelTask(int fd) override;
         
-        int add_event(int fd ,int event_type) override; 
+        int AddEvent(int fd ,int event_type) override; 
         
-        int del_event(int fd, int event_type) override;
+        int DelEvent(int fd, int event_type) override;
 
         //from is unuse
-        int mod_event(int fd, int from , int to) override;
+        int ModEvent(int fd, int from , int to) override;
 
-        void stop() override;
+        void Stop() override;
 
-        bool is_stop() override;
+        bool IsStop() override;
 
         // return epollfd
         int get_epoll_fd() const;
@@ -48,7 +48,7 @@ namespace galay{
         virtual ~Epoll_Scheduler() ;
 
     private:
-        void close_connection(int fd) override;
+        void CloseConn(int fd) override;
     private: 
         std::mutex m_mtx;
         std::unordered_map<int, std::shared_ptr<Task_Base>> m_tasks;
@@ -69,29 +69,29 @@ namespace galay{
         using wptr = std::weak_ptr<Select_Scheduler>;
         Select_Scheduler(int timeout);//ms
 
-        void add_task(std::pair<int, std::shared_ptr<Task_Base>> &&pair) override;
+        void AddTask(std::pair<int, std::shared_ptr<Task_Base>> &&pair) override;
 
-        void del_task(int fd) override;
+        void DelTask(int fd) override;
 
-        int add_event(int fd, int event_type) override;
-
-
-        int del_event(int fd, int event_type) override;
+        int AddEvent(int fd, int event_type) override;
 
 
-        int mod_event(int fd, int from ,int to) override;
+        int DelEvent(int fd, int event_type) override;
+
+
+        int ModEvent(int fd, int from ,int to) override;
         //is stoped?
-        bool is_stop() override;
+        bool IsStop() override;
 
-        int start() override;
+        int Start() override;
 
-        std::shared_ptr<Timer_Manager> get_timer_manager() override;
+        std::shared_ptr<Timer_Manager> GetTimerManager() override;
 
-        void stop() override;
+        void Stop() override;
 
         virtual ~Select_Scheduler();
     private:
-        void close_connection(int fd) override;
+        void CloseConn(int fd) override;
     private:
         int m_maxfd = INT32_MIN;
         int m_minfd = INT32_MAX;

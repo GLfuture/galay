@@ -46,7 +46,7 @@ galay::TcpServerConf::TcpServerConf(const TcpServerConf &other)
     this->m_conn_timeout = other.m_conn_timeout;
 }
 
-void galay::TcpServerConf::set_keepalive(int t_idle, int t_interval, int retry)
+void galay::TcpServerConf::SetKeepalive(int t_idle, int t_interval, int retry)
 {
     TcpKeepaliveConf keepalive{
         .m_keepalive = true,
@@ -57,7 +57,7 @@ void galay::TcpServerConf::set_keepalive(int t_idle, int t_interval, int retry)
     this->m_keepalive_conf = keepalive;
 }
 
-void galay::TcpServerConf::set_conn_timeout(int t_timeout)
+void galay::TcpServerConf::SetConnTimeout(int t_timeout)
 {
     this->m_conn_timeout.m_timeout = t_timeout;
 }
@@ -80,7 +80,7 @@ galay::TcpSSLServerConf::TcpSSLServerConf(TcpSSLServerConf &&other)
     this->m_ssl_conf = other.m_ssl_conf;
 }
 
-void galay::TcpSSLServerConf::set_ssl_conf(long min_version,long max_version,uint32_t max_accept_retry,uint32_t sleep_misc_per_retry,const char* cert_filepath,const char* key_filepath)
+void galay::TcpSSLServerConf::SetSSLConf(long min_version,long max_version,uint32_t max_accept_retry,uint32_t sleep_misc_per_retry,const char* cert_filepath,const char* key_filepath)
 {
     this->m_ssl_conf.m_min_version = min_version;
     this->m_ssl_conf.m_max_version = max_version;

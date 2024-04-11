@@ -16,13 +16,13 @@ namespace galay
     public:
         Server(Config::ptr config);
 
-        virtual void start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) = 0;
+        virtual void Start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) = 0;
 
-        virtual int get_error() ;
+        virtual int GetError() ;
     
-        virtual void stop();
+        virtual void Stop();
 
-        virtual Scheduler_Base::ptr get_scheduler(int indx);
+        virtual Scheduler_Base::ptr GetScheduler(int indx);
 
         virtual ~Server();
 
@@ -43,7 +43,7 @@ namespace galay
         Tcp_Server(TcpServerConf::ptr config) 
             : Server(config){}
 
-        void start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) override
+        void Start(std::vector<std::pair<uint16_t,std::function<Task<>(Task_Base::wptr)>>> Port_Funcs) override
         {
             spdlog::info("[{}:{}] [start main thread {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()));
             if(add_main_tasks(Port_Funcs) == -1) {
@@ -52,11 +52,11 @@ namespace galay
             std::vector<std::thread> threads;
             for(int i = 1 ; i < m_schedulers.size(); i ++)
             {
-                std::thread th(&Scheduler_Base::start,m_schedulers[i].get());
+                std::thread th(&Scheduler_Base::Start,m_schedulers[i].get());
                 spdlog::info("[{}:{}] [start thread {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(th.get_id()));
                 threads.push_back(std::move(th));
             }
-            m_schedulers[0]->start();
+            m_schedulers[0]->Start();
             for(int i = 0 ; i < threads.size();i++)
             {
                 if(threads[i].joinable()){
@@ -117,7 +117,7 @@ namespace galay
                 if(InitSock(Port_Funcs[i].first) != Error::NoError::GY_SUCCESS) {
                     spdlog::error("[{}:{}] [InitSock(port: {}) has some error, ready to close all sockets]",__FILE__,__LINE__,Port_Funcs[i].first);
                     for(auto& v: m_fds) {
-                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_schedulers[0]->DelEvent(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                         spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
@@ -134,14 +134,14 @@ namespace galay
                     , config->m_max_rbuffer_len,config->m_conn_timeout);
                 if (config->m_keepalive_conf.m_keepalive)
                 {
-                    task->set_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval
+                    task->SetKeepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval
                         , config->m_keepalive_conf.m_retry);
                 }
-                this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
-                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
+                this->m_schedulers[0]->AddTask(std::make_pair(this->m_fds[i], task));
+                if(this->m_schedulers[0]->AddEvent(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {} ) {}, ready to close all sockets]",__FILE__,__LINE__,this->m_fds[i],strerror(errno));
                     for(auto& v: m_fds) {
-                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_schedulers[0]->DelEvent(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                         spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
@@ -192,7 +192,7 @@ namespace galay
                 if(Tcp_Server<REQ,RESP>::InitSock(Port_Funcs[i].first) != Error::NoError::GY_SUCCESS) {
                     spdlog::error("[{}:{}] [InitSock(port: {}) has some error, ready to close all sockets]",__FILE__,__LINE__,Port_Funcs[i].first);
                     for(auto& v: this->m_fds) {
-                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_schedulers[0]->DelEvent(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                         spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
@@ -209,13 +209,13 @@ namespace galay
                     ,config->m_conn_timeout, config->m_ssl_conf.m_max_accept_retry, this->m_ctx);
                 if (config->m_keepalive_conf.m_keepalive)
                 {
-                    task->set_keepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
+                    task->SetKeepalive(config->m_keepalive_conf.m_idle, config->m_keepalive_conf.m_interval, config->m_keepalive_conf.m_retry);
                 }
-                this->m_schedulers[0]->add_task(std::make_pair(this->m_fds[i], task));
-                if(this->m_schedulers[0]->add_event(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
+                this->m_schedulers[0]->AddTask(std::make_pair(this->m_fds[i], task));
+                if(this->m_schedulers[0]->AddEvent(this->m_fds[i], GY_EVENT_READ | GY_EVENT_ERROR)==-1) {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {} ) {}, ready to close all sockets]",__FILE__,__LINE__,this->m_fds[i],strerror(errno));
                     for(auto& v: this->m_fds) {
-                        this->m_schedulers[0]->del_event(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_schedulers[0]->DelEvent(v,GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                         spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,v);
                         close(v);
                         return -1;
@@ -244,13 +244,13 @@ namespace galay
             //     int fd = IOFuntion::UdpFunction::Sock();
             //     IOFuntion::BlockFuction::IO_Set_No_Block(fd);
             //     IOFuntion::UdpFunction::Bind(fd,config->m_ports[i]);
-            //     m_schedulers[0]->add_event(fd,GY_EVENT_READ);
+            //     m_schedulers[0]->AddEvent(fd,GY_EVENT_READ);
             //     this->m_fds.push_back(fd);
             // }
             
         }
 
-        void start(std::vector<std::function<Task<>(std::weak_ptr<Task_Base>)>> funcs) override
+        void Start(std::vector<std::function<Task<>(std::weak_ptr<Task_Base>)>> funcs) override
         {
 
         }

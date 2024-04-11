@@ -14,11 +14,11 @@ galay::MiddleWare::MySql::SyncMySql::SyncMySql(std::string charset)
 {
     this->m_handle=mysql_init(NULL);
     if(this->m_handle==NULL) {
-        spdlog::error("[{}:{}] [mysql_init error: '{}']", __LINE__ , mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [mysql_init error: '{}']",__FILE__, __LINE__, mysql_error(this->m_handle));
         throw MySqlException(mysql_error(this->m_handle));
     }
     if(mysql_options(this->m_handle,MYSQL_SET_CHARSET_NAME,charset.c_str()) == -1){
-        spdlog::error("[{}:{}] [mysql_options error: '{}']", __LINE__ , mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [mysql_options error: '{}']", __FILE__, __LINE__ , mysql_error(this->m_handle));
         throw MySqlException( mysql_error(this->m_handle));
     }
 }

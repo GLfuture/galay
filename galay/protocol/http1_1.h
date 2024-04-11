@@ -7,11 +7,14 @@
 #include <unordered_map>
 #include <assert.h>
 #include <algorithm>
+#include <unordered_set>
 
 namespace galay
 {
     namespace Protocol
     {
+        #define HTTP_HEADER_MAX_LEN 4096    // 头部最大长度4k
+        #define HTTP_URI_MAX_LEN    2048    // uri最大长度2k
         class Http1_1_Protocol
         {
         protected:
@@ -27,58 +30,43 @@ namespace galay
             };
         public:
             using Ptr = std::shared_ptr<Http1_1_Protocol>;
-            std::string &get_version();
-            std::string &get_body();
-            std::string get_head_value(const std::string &key);
-            void set_head_kv_pair(std::pair<std::string, std::string> &&p_head);
+            std::string &GetVersion();
+            std::string &GetBody();
+            std::string GetHeadValue(const std::string &key);
+            void SetHeadPair(std::pair<std::string, std::string> &&p_head);
         protected:
             std::string m_version;                                     // 版本号
-            std::unordered_map<std::string, std::string> m_headers; // 字段
+            std::unordered_map<std::string, std::string> m_headers;    // 字段
             std::string m_body = "";                                   // body
         };
 
         class Http1_1_Request : public Http1_1_Protocol, public Tcp_Request_Base, public Tcp_Response_Base
         {
+        private:
+            static std::unordered_set<std::string> m_std_methods;
         public:
             using ptr = std::shared_ptr<Http1_1_Request>;
-
-            std::string get_arg_value(const std::string &key);
-
-            void set_arg_kv_pair(std::pair<std::string, std::string> &&p_arg);
-
-            std::string &get_method();
-
+            std::string GetArgValue(const std::string &key);
+            void SetArgPair(std::pair<std::string, std::string> &&p_arg);
+            std::string &GetMethod();
             // for server
-            std::string &get_url_path();
+            std::string &GetUri();
+            //判读是否为达到一个pdu和协议合法性
+            Proto_Judge_Type IsPduAndLegal(const std::string& buffer) override;
             // for server
-            int decode(const std::string &buffer, int &state) override;
-
+            int DecodePdu(const std::string &buffer) override;
             // for  client
-            std::string encode() override;
-
-            int proto_type() override;
-
-            int proto_fixed_len() override;
-
-            int proto_extra_len() override;
-
-            void set_extra_msg(std::string &&msg) override;
+            std::string EncodePdu() override;
+        private:
+            int ConvertUri(std::string aurl);
+            std::string EncodeUri(const std::string &s);
+            std::string ConvertUri(const std::string &s, bool convert_plus_to_space);
+            bool IsHex(char c, int &v);
+            size_t ToUtf8(int code, char *buff);
+            bool FromHexToI(const std::string &s, size_t i, size_t cnt, int &val);
 
         private:
-
-            int convert_uri(std::string aurl);
-
-            std::string encode_url(const std::string &s);
-
-            std::string convert_uri(const std::string &s, bool convert_plus_to_space);
-
-            bool is_hex(char c, int &v);
-
-            size_t to_utf8(int code, char *buff);
-
-            bool from_hex_to_i(const std::string &s, size_t i, size_t cnt, int &val);
-
-        private:
+            uint32_t m_header_len = 0;                               //头长度
             std::string m_method;                                    // http协议类型
             std::string m_target;                                    //?后的内容
             std::string m_uri;                                       // uri
@@ -166,24 +154,18 @@ namespace galay
                 NetworkAuthenticationRequired_511 = 511,
             };
 
-            int &get_status();
+            int &GetStatus();
 
-            std::string encode();
+            std::string EncodePdu() override;
 
-            int decode(const std::string &buffer, int &state) override;
+            int DecodePdu(const std::string &buffer) override;
 
-            int proto_type() override;
-
-            int proto_fixed_len() override;
-
-            int proto_extra_len() override;
-
-            void set_extra_msg(std::string &&msg) override;
-
+            Proto_Judge_Type IsPduAndLegal(const std::string& buffer) override;
             // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
-            const char *status_message(int status);
+            const char *StatusMessage(int status);
 
         private:
+            int m_header_len = 0;
             int m_status = 0;
         };
     }

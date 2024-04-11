@@ -14,7 +14,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Task_Base>;
         virtual void set_co_handle(std::coroutine_handle<> handle);
-        virtual int exec() = 0 ;
+        virtual int Exec() = 0 ;
         std::any result();
         virtual ~Co_Task_Base();
 
@@ -30,7 +30,7 @@ namespace galay
 
         Co_Tcp_Client_Connect_Task(int fd , Scheduler_Base::wptr scheduler , int *error);
 
-        virtual int exec() override;
+        virtual int Exec() override;
 
     protected:
         int m_fd;
@@ -45,7 +45,7 @@ namespace galay
         using ptr = std::shared_ptr<Co_Tcp_Client_Send_Task>;
         Co_Tcp_Client_Send_Task(int fd ,const std::string &buffer , uint32_t len ,Scheduler_Base::wptr scheduler , int *error);
 
-        virtual int exec() override;
+        virtual int Exec() override;
     protected:
         int m_fd;
         std::string m_buffer;
@@ -59,7 +59,7 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Co_Tcp_Client_Recv_Task>;
         Co_Tcp_Client_Recv_Task(int fd , char* buffer,int len ,Scheduler_Base::wptr scheduler , int *error);
-        virtual int exec() override;
+        virtual int Exec() override;
         
     protected:
         int m_fd;
@@ -85,13 +85,13 @@ namespace galay
             this->m_scheduler = scheduler;
         }
 
-        int exec() override
+        int Exec() override
         {
             switch (this->m_status)
             {
             case Task_Status::GY_TASK_WRITE :
             {
-                std::string request = m_request->encode();
+                std::string request = m_request->EncodePdu();
                 int ret = IOFuntion::TcpFunction::Send(this->m_fd, request, request.length());
                 if (ret == -1)
                 {
@@ -121,9 +121,9 @@ namespace galay
                     this->m_status = Task_Status::GY_TASK_READ;
                     *(this->m_error) = Error::GY_SUCCESS;
                     if(!this->m_scheduler.expired()){
-                        if(this->m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
+                        if(this->m_scheduler.lock()->ModEvent(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                         {
-                            spdlog::error("[{}:{}] [mod_event(fd: {}) error: {}]" ,  __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                            spdlog::error("[{}:{}] [ModEvent(fd: {}) error: {}]" ,  __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         }
                     }
                     return -1;
@@ -151,8 +151,8 @@ namespace galay
                         this->m_result = -1;
                         if (!this->m_handle.done())
                         {
-                            this->m_scheduler.lock()->del_task(this->m_fd);
-                            this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                            this->m_scheduler.lock()->DelTask(this->m_fd);
+                            this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                             this->m_handle.resume();
                         }
                         return -1;
@@ -165,21 +165,31 @@ namespace galay
                     this->m_result = -1;
                     if (!this->m_handle.done())
                     {
-                        this->m_scheduler.lock()->del_task(this->m_fd);
-                        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_scheduler.lock()->DelTask(this->m_fd);
+                        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                         this->m_handle.resume();
                     }
                     return -1;
                 }
-                spdlog::info("[{}:{}] [Recv(fd :{}) Success]", __FILE__ , __LINE__ , this->m_fd );
-                this->m_respnse->decode(this->m_buffer, *(this->m_error));
-                if ( *(this->m_error) == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE)
-                {
-                    spdlog::warn("[{}:{}] [decode protocol(fd: {}) warn: {}]" ,  __FILE__ , __LINE__ ,this->m_fd , Error::get_err_str(*(this->m_error)) );
-                    return -1;
+                spdlog::info("[{}:{}] [Recv(fd :{}) Success, Total: {} Bytes]", __FILE__ , __LINE__ , this->m_fd , this->m_buffer.length());
+                switch(this->m_respnse->IsPduAndLegal(this->m_buffer)){
+                    case Proto_Judge_Type::PROTOCOL_INCOMPLETE :
+                    {
+                        *(this->m_error) = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
+                        return -1;
+                    }
+                        break;
+                    case Proto_Judge_Type::PROTOCOL_ILLEGAL :
+                        *(this->m_error) = Error::ProtocolError::GY_PROTOCOL_ILLEGAL;
+                        break;
+                    case Proto_Judge_Type::PROTOCOL_LEGAL :
+                    {
+                        int len = this->m_respnse->DecodePdu(this->m_buffer);
+                        this->m_buffer.erase(0,len);
+                        *(this->m_error) = Error::GY_SUCCESS;
+                    }
+                        break;
                 }
-                *(this->m_error) = Error::GY_SUCCESS;
-                spdlog::info("[{}:{}] decode protocol(fd: {}) Success" ,  __FILE__ , __LINE__ ,this->m_fd);
                 this->m_result = 0;
                 break;
             }
@@ -187,8 +197,8 @@ namespace galay
                 break;
             }
             if (!this->m_handle.done()) {
-                this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd , GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                this->m_scheduler.lock()->DelTask(this->m_fd);
+                this->m_scheduler.lock()->DelEvent(this->m_fd , GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -221,7 +231,7 @@ namespace galay
 
         Co_Tcp_Client_SSL_Connect_Task(int fd , SSL* ssl , Scheduler_Base::wptr scheduler , int *error , int init_status);
 
-        virtual int exec() override;
+        virtual int Exec() override;
 
     protected:
         int m_fd;
@@ -237,7 +247,7 @@ namespace galay
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Send_Task>;
         Co_Tcp_Client_SSL_Send_Task(SSL * ssl,const std::string &buffer , uint32_t len , Scheduler_Base::wptr scheduler ,int *error);
 
-        virtual int exec() override;
+        virtual int Exec() override;
 
     protected:
         SSL* m_ssl;
@@ -253,7 +263,7 @@ namespace galay
         using ptr = std::shared_ptr<Co_Tcp_Client_SSL_Recv_Task>;
         Co_Tcp_Client_SSL_Recv_Task(SSL* ssl , char* buffer,int len , Scheduler_Base::wptr scheduler ,int *error);
  
-        virtual int exec() override;
+        virtual int Exec() override;
 
     protected:
         SSL* m_ssl;
@@ -281,13 +291,13 @@ namespace galay
             this->m_scheduler = scheduler;
         }
 
-        int exec() override
+        int Exec() override
         {
             switch (this->m_status)
             {
             case Task_Status::GY_TASK_WRITE :
             {
-                std::string request = m_request->encode();
+                std::string request = m_request->EncodePdu();
                 int len;
                 do{
                     len = IOFuntion::TcpFunction::SSLSend(this->m_ssl, request, request.length());
@@ -321,9 +331,9 @@ namespace galay
                     *(this->m_error) = Error::GY_SUCCESS;
                     if(!this->m_scheduler.expired()) 
                     {
-                        if(this->m_scheduler.lock()->mod_event(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
+                        if(this->m_scheduler.lock()->ModEvent(this->m_fd , GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                         {
-                            spdlog::error("[{}:{}] [mod_event(fd: {}) error: {}]" ,  __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
+                            spdlog::error("[{}:{}] [ModEvent(fd: {}) error: {}]" ,  __FILE__ , __LINE__ ,this->m_fd , strerror(errno));
                         }
                     }
                     return -1;
@@ -351,8 +361,8 @@ namespace galay
                         this->m_result = -1;
                         if (!this->m_handle.done())
                         {
-                            this->m_scheduler.lock()->del_task(this->m_fd);
-                            this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                            this->m_scheduler.lock()->DelTask(this->m_fd);
+                            this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                             this->m_handle.resume();
                         }
                         return -1;
@@ -365,20 +375,31 @@ namespace galay
                     this->m_result = -1;
                     if (!this->m_handle.done())
                     {
-                        this->m_scheduler.lock()->del_task(this->m_fd);
-                        this->m_scheduler.lock()->del_event(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+                        this->m_scheduler.lock()->DelTask(this->m_fd);
+                        this->m_scheduler.lock()->DelEvent(this->m_fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
                         this->m_handle.resume();
                     }
                     return -1;
                 }
-                this->m_respnse->decode(this->m_buffer, *(this->m_error));
-                if ( *(this->m_error) == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE)
-                {
-                    spdlog::warn("[{}:{}] [decode protocol(fd: {}) warn: {}]" ,  __FILE__ , __LINE__ ,this->m_fd , Error::get_err_str(*(this->m_error)) );
-                    return -1;
+                spdlog::info("[{}:{}] [Recv(fd :{}) Success, Total: {} Bytes]", __FILE__ , __LINE__ , this->m_fd , this->m_buffer.length());
+                switch(this->m_respnse->IsPduAndLegal(this->m_buffer)){
+                    case Proto_Judge_Type::PROTOCOL_INCOMPLETE :
+                    {
+                        *(this->m_error) = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
+                        return -1;
+                    }
+                        break;
+                    case Proto_Judge_Type::PROTOCOL_ILLEGAL :
+                        *(this->m_error) = Error::ProtocolError::GY_PROTOCOL_ILLEGAL;
+                        break;
+                    case Proto_Judge_Type::PROTOCOL_LEGAL :
+                    {
+                        int len = this->m_respnse->DecodePdu(this->m_buffer);
+                        this->m_buffer.erase(0,len);
+                        *(this->m_error) = Error::GY_SUCCESS;
+                    }
+                        break;
                 }
-                spdlog::info("[{}:{}] [SSL_Recv(fd: {}) Success]" ,  __FILE__ , __LINE__ ,this->m_fd);
-                *(this->m_error) = Error::GY_SUCCESS;
                 this->m_result = 0;
                 break;
             }
@@ -386,8 +407,8 @@ namespace galay
                 break;
             }
             if (!this->m_handle.done()) {
-                this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_scheduler.lock()->DelTask(this->m_fd);
+                this->m_scheduler.lock()->DelEvent(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;
@@ -420,7 +441,7 @@ namespace galay
         using ptr = std::shared_ptr<Co_Udp_Client_Sendto_Task>;
         Co_Udp_Client_Sendto_Task(int fd , std::string ip , uint32_t port , std::string buffer , Scheduler_Base::wptr scheduler , int *error);
 
-        virtual int exec() override;
+        virtual int Exec() override;
 
     private:
         int m_fd;
@@ -438,7 +459,7 @@ namespace galay
         using ptr = std::shared_ptr<Co_Udp_Client_Recvfrom_Task>;
         Co_Udp_Client_Recvfrom_Task(int fd ,IOFuntion::Addr* addr, char* buffer , int len , Scheduler_Base::wptr scheduler,int *error);
 
-        int exec() override;
+        int Exec() override;
     private:
         int m_fd;
         IOFuntion::Addr* m_addr;
@@ -468,13 +489,13 @@ namespace galay
             this->m_error = error;
         }
 
-        int exec() override
+        int Exec() override
         {
             switch (this->m_status)
             {
             case Task_Status::GY_TASK_WRITE:
             {
-                std::string buffer = m_request->encode();
+                std::string buffer = m_request->EncodePdu();
                 int ret = IOFuntion::UdpFunction::SendTo(this->m_fd,{this->m_ip,static_cast<int>(this->m_port)},buffer);
                 if(ret == -1){
                     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
@@ -500,12 +521,12 @@ namespace galay
                     spdlog::info("[{}:{}] [Sendto(fd: {}): {} Bytes]" ,  __FILE__ , __LINE__ ,this->m_fd , ret);
                     spdlog::info("[{}:{}] [Sendto(fd: {}) Success]" ,  __FILE__ , __LINE__ ,this->m_fd);
                     this->m_status = Task_Status::GY_TASK_READ;
-                    this->m_scheduler.lock()->mod_event(this->m_fd, GY_EVENT_WRITE, GY_EVENT_READ);
-                    this->m_timer = this->m_scheduler.lock()->get_timer_manager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME, 1, [this](){
+                    this->m_scheduler.lock()->ModEvent(this->m_fd, GY_EVENT_WRITE, GY_EVENT_READ);
+                    this->m_timer = this->m_scheduler.lock()->GetTimerManager()->add_timer(MAX_UDP_WAIT_FOR_RECV_TIME, 1, [this](){
                         if (!this->m_handle.done()) {
                             this->m_result = -1;
-                            this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
-                            this->m_scheduler.lock()->del_task(this->m_fd);
+                            this->m_scheduler.lock()->DelEvent(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                            this->m_scheduler.lock()->DelTask(this->m_fd);
                             this->m_handle.resume();
                         } 
                     });
@@ -543,7 +564,7 @@ namespace galay
                     spdlog::info("[{}:{}] [Recvfrom(fd :{}): {} Bytes]", __FILE__ , __LINE__ , this->m_fd , ret );
                     spdlog::info("[{}:{}] [Recvfrom(fd: {}) Success]" ,  __FILE__ , __LINE__ ,this->m_fd);
                     *(this->m_error) = Error::GY_SUCCESS;
-                    m_response->decode(std::string(buffer,ret));
+                    m_response->DecodePdu(std::string(buffer,ret));
                     this->m_result = 0;
                 }
             }
@@ -551,8 +572,8 @@ namespace galay
             }
             if (!this->m_handle.done()) {
                 this->m_timer->cancle();
-                this->m_scheduler.lock()->del_task(this->m_fd);
-                this->m_scheduler.lock()->del_event(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
+                this->m_scheduler.lock()->DelTask(this->m_fd);
+                this->m_scheduler.lock()->DelEvent(this->m_fd,GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
                 this->m_handle.resume();
             }
             return 0;

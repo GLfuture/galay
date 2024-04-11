@@ -87,10 +87,10 @@ namespace galay{
         //t_idle  单位：s
         //t_interval 单位：s
         //retry 重试次数
-        void set_keepalive(int t_idle,int t_interval,int retry);
+        void SetKeepalive(int t_idle,int t_interval,int retry);
         //设置连接超时
         //t_timeout 单位：ms
-        void set_conn_timeout(int t_timeout);
+        void SetConnTimeout(int t_timeout);
 
         uint32_t m_backlog;
         uint32_t m_max_rbuffer_len;
@@ -110,7 +110,7 @@ namespace galay{
 
         TcpSSLServerConf(TcpSSLServerConf &&other);
 
-        void set_ssl_conf(long min_version,long max_version,uint32_t max_accept_retry,uint32_t sleep_misc_per_retry,const char* cert_filepath,const char* key_filepath);
+        void SetSSLConf(long min_version,long max_version,uint32_t max_accept_retry,uint32_t sleep_misc_per_retry,const char* cert_filepath,const char* key_filepath);
         
         TcpSSLConf m_ssl_conf;
     };

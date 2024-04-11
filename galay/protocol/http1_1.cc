@@ -1,17 +1,19 @@
 #include "http1_1.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 
-std::string& galay::Protocol::Http1_1_Protocol::get_version()
+
+std::string& galay::Protocol::Http1_1_Protocol::GetVersion()
 {
     return this->m_version;
 }
 
-std::string& galay::Protocol::Http1_1_Protocol::get_body()
+std::string& galay::Protocol::Http1_1_Protocol::GetBody()
 {
     return this->m_body;
 }
 
-std::string galay::Protocol::Http1_1_Protocol::get_head_value(const std::string& key)
+std::string galay::Protocol::Http1_1_Protocol::GetHeadValue(const std::string& key)
 {
     auto it = this->m_headers.find(key);
     if (it == this->m_headers.end())
@@ -19,12 +21,16 @@ std::string galay::Protocol::Http1_1_Protocol::get_head_value(const std::string&
     return it->second;
 }
 
-void galay::Protocol::Http1_1_Protocol::set_head_kv_pair(std::pair<std::string, std::string>&& p_head)
+void galay::Protocol::Http1_1_Protocol::SetHeadPair(std::pair<std::string, std::string>&& p_head)
 {
     this->m_headers[p_head.first] = p_head.second;
 }
 
-std::string galay::Protocol::Http1_1_Request::get_arg_value(const std::string& key)
+std::unordered_set<std::string> galay::Protocol::Http1_1_Request::m_std_methods = {
+    "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" , "PATCH"
+};
+
+std::string galay::Protocol::Http1_1_Request::GetArgValue(const std::string& key)
 {
     auto it = this->m_arg_list.find(key);
     if (it == this->m_arg_list.end())
@@ -32,141 +38,168 @@ std::string galay::Protocol::Http1_1_Request::get_arg_value(const std::string& k
     return it->second;
 }
 
-int galay::Protocol::Http1_1_Request::proto_type()
-{
-    return GY_ALL_RECIEVE_PROTOCOL_TYPE;
-}
-
-int galay::Protocol::Http1_1_Request::proto_fixed_len()
-{
-    return 0;
-}
-
-int galay::Protocol::Http1_1_Request::proto_extra_len()
-{
-    return 0;
-}
-
-void galay::Protocol::Http1_1_Request::set_extra_msg(std::string&& msg)
-{
-
-}
-
-void galay::Protocol::Http1_1_Request::set_arg_kv_pair(std::pair<std::string, std::string>&& p_arg)
+void galay::Protocol::Http1_1_Request::SetArgPair(std::pair<std::string, std::string>&& p_arg)
 {
     this->m_arg_list[p_arg.first] = p_arg.second;
 }
 
-std::string& galay::Protocol::Http1_1_Request::get_method()
+std::string& galay::Protocol::Http1_1_Request::GetMethod()
 {
     return this->m_method;
 }
 
-std::string& galay::Protocol::Http1_1_Request::get_url_path()
+std::string& galay::Protocol::Http1_1_Request::GetUri()
 {
     return this->m_uri;
 }
 
-int galay::Protocol::Http1_1_Request::decode(const std::string& buffer, int& state)
+galay::Proto_Judge_Type galay::Protocol::Http1_1_Request::IsPduAndLegal(const std::string& buffer)
 {
-    state = Error::NoError::GY_SUCCESS;
-    int n = buffer.length();
+    if(buffer.find("\r\n\r\n") == std::string::npos) {
+        if(buffer.length() > HTTP_HEADER_MAX_LEN) {
+            spdlog::error("[{}:{}] [error: 'header is too long']",__FILE__,__LINE__);
+            return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+        }
+        spdlog::warn("[{}:{}] [warn: 'header is incomplete']",__FILE__,__LINE__);
+        return Proto_Judge_Type::PROTOCOL_INCOMPLETE;
+    }
+    size_t n = buffer.length();
     HttpHeadStatus status = HttpHeadStatus::HTTP_METHOD;
-    std::string key,value;
-    int i;
-    for(i = 0 ; i < n ; ++i){
-        if(status == HttpHeadStatus::HTTP_BODY) break;
-        switch (status)
+    std::string key, value;
+    if (m_header_len == 0)
+    {
+        size_t i;
+        for (i = 0; i < n; ++i)
         {
-        case HTTP_METHOD:
-        {
-            if(buffer[i] != ' '){
-                m_method += buffer[i];
-            }else{
-                status = HttpHeadStatus::HTTP_URI;
-            }
-        }
-            break;
-        case HTTP_URI:
-        {
-            if(buffer[i] != ' '){
-                m_uri += buffer[i];
-            }else{
-                convert_uri(m_uri);
-                status = HttpHeadStatus::HTTP_VERSION;
-            }
-        }
-            break;
-        case HTTP_VERSION:
-        {
-            if(buffer[i] != '\r'){
-                m_version += buffer[i];
-            }else{
-                m_version = m_version.substr(m_version.find('/')+1);
-                status = HttpHeadStatus::HTTP_KEY;
-                ++i;
-            }
-        }
-            break;
-        case HTTP_KEY:
-        {
-            if(buffer[i] == '\r')  {
-                ++i;
-                status = HttpHeadStatus::HTTP_BODY;
-            }
-            else{
-                if(buffer[i] != ':'){
-                    key += std::tolower(buffer[i]);
+            if (status == HttpHeadStatus::HTTP_BODY)
+                break;
+            switch (status)
+            {
+            case HTTP_METHOD:
+            {
+                if (buffer[i] != ' ')
+                {
+                    m_method += buffer[i];
                 }
                 else
                 {
-                    if (i + 1 < n && buffer[i + 1] == ' ') ++i;
-                    status = HttpHeadStatus::HTTP_VALUE;
+                    if(!m_std_methods.contains(m_method)) {
+                        spdlog::error("[{}:{}] [error: 'method is not standard']",__FILE__,__LINE__);
+                        return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+                    }
+                    status = HttpHeadStatus::HTTP_URI;
                 }
             }
-        }
             break;
-        case HTTP_VALUE:
-        {
-            if(buffer[i] != '\r'){
-                value += buffer[i];
-            }else{
-                m_headers[key] = value;
-                key.clear();
-                value.clear();
-                ++i;
-                status = HttpHeadStatus::HTTP_KEY;
+            case HTTP_URI:
+            {
+                if (buffer[i] != ' ')
+                {
+                    m_uri += buffer[i];
+                }
+                else
+                {
+                    if(m_uri.length() > HTTP_URI_MAX_LEN) {
+                        spdlog::error("[{}:{}] [error: 'uri is too long']",__FILE__,__LINE__);
+                        return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+                    }
+                    ConvertUri(m_uri);
+                    status = HttpHeadStatus::HTTP_VERSION;
+                }
+            }
+            break;
+            case HTTP_VERSION:
+            {
+                if (buffer[i] != '\r')
+                {
+                    m_version += buffer[i];
+                }
+                else
+                {
+                    if(m_version.substr(0,5) != "HTTP/") return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+                    m_version = m_version.substr(m_version.find('/') + 1);
+                    status = HttpHeadStatus::HTTP_KEY;
+                    ++i;
+                }
+            }
+            break;
+            case HTTP_KEY:
+            {
+                if (buffer[i] == '\r')
+                {
+                    ++i;
+                    status = HttpHeadStatus::HTTP_BODY;
+                }
+                else
+                {
+                    if (buffer[i] != ':')
+                    {
+                        key += std::tolower(buffer[i]);
+                    }
+                    else
+                    {
+                        if (i + 1 < n && buffer[i + 1] == ' ')
+                            ++i;
+                        status = HttpHeadStatus::HTTP_VALUE;
+                    }
+                }
+            }
+            break;
+            case HTTP_VALUE:
+            {
+                if (buffer[i] != '\r')
+                {
+                    value += buffer[i];
+                }
+                else
+                {
+                    m_headers[key] = value;
+                    key.clear();
+                    value.clear();
+                    ++i;
+                    status = HttpHeadStatus::HTTP_KEY;
+                }
+            }
+            break;
+            default:
+                break;
             }
         }
-            break;
-        default:
-            break;
-        }
+        m_header_len = i;
     }
-
     if(m_headers.contains("content-length")){
         size_t length = std::stoul(m_headers["content-length"]);
-        if(length + i > n) {
-            state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
-            return -1;
+        if(length + m_header_len > n) {
+            spdlog::warn("[{}:{}] [warn: 'body is incomplete']",__FILE__,__LINE__);
+            return Proto_Judge_Type::PROTOCOL_INCOMPLETE;
         }
-        m_body = buffer.substr(i,length);
+    }
+    spdlog::info("[{}:{}] [info: 'request is legal']",__FILE__,__LINE__);
+    return Proto_Judge_Type::PROTOCOL_LEGAL;
+}
+
+int galay::Protocol::Http1_1_Request::DecodePdu(const std::string& buffer)
+{
+    size_t n = buffer.length();
+    if(m_headers.contains("content-length")){
+        size_t length = std::stoul(m_headers["content-length"]);
+        m_body = buffer.substr(m_header_len,length);
         int invaild_len = 0;
-        for( int k = i + length ; k < n - 1 ; ++k ){
+        for( int k = m_header_len + length ; k < n - 1 ; ++k ){
             if(isalpha(buffer[k+1])) break;
             else ++invaild_len;
         }
-        return i + length + invaild_len;
-    }
-
-    for(; i < n ; ++i ){
-        if(isalpha(buffer[i])) break;
-        else m_body += buffer[i];
-    }
-    return i;
+        size_t res = m_header_len + length + invaild_len;
+        spdlog::info("[{}:{}] [info: 'Pdu is {} Bytes']",__FILE__,__LINE__,res);
+        m_header_len = 0;
+        return res;
+    }else m_body = buffer.substr(m_header_len);
+    spdlog::info("[{}:{}] [info: 'Pdu is {} Bytes']",__FILE__,__LINE__,n);
+    m_header_len = 0;
+    return n;
 }
 
-std::string galay::Protocol::Http1_1_Request::encode()
+std::string galay::Protocol::Http1_1_Request::EncodePdu()
 {
     std::string res = this->m_method + " ";
     std::string args;
@@ -177,11 +210,11 @@ std::string galay::Protocol::Http1_1_Request::encode()
     if (!m_arg_list.empty())
     {
         args.erase(--args.end());
-        res += encode_url(std::move(this->m_uri + '?' + args));
+        res += EncodeUri(std::move(this->m_uri + '?' + args));
     }
     else
     {
-        res += encode_url(std::move(this->m_uri));
+        res += EncodeUri(std::move(this->m_uri));
     }
     res = res + " HTTP/" + this->m_version + "\r\n";
     for (auto& [k, v] : m_headers)
@@ -201,9 +234,9 @@ std::string galay::Protocol::Http1_1_Request::encode()
     return res;
 }
 
-int galay::Protocol::Http1_1_Request::convert_uri(std::string aurl)
+int galay::Protocol::Http1_1_Request::ConvertUri(std::string aurl)
 {
-    std::string uri = convert_uri(std::move(aurl), false);
+    std::string uri = ConvertUri(std::move(aurl), false);
     int argindx = uri.find('?');
     if (argindx != std::string::npos)
     {
@@ -249,7 +282,7 @@ int galay::Protocol::Http1_1_Request::convert_uri(std::string aurl)
     return 0;
 }
 
-std::string galay::Protocol::Http1_1_Request::encode_url(const std::string& s)
+std::string galay::Protocol::Http1_1_Request::EncodeUri(const std::string& s)
 {
     std::string result;
     result.reserve(s.size());
@@ -300,7 +333,7 @@ std::string galay::Protocol::Http1_1_Request::encode_url(const std::string& s)
     return result;
 }
 
-std::string galay::Protocol::Http1_1_Request::convert_uri(const std::string& s, bool convert_plus_to_space)
+std::string galay::Protocol::Http1_1_Request::ConvertUri(const std::string& s, bool convert_plus_to_space)
 {
     std::string result;
 
@@ -311,10 +344,10 @@ std::string galay::Protocol::Http1_1_Request::convert_uri(const std::string& s, 
             if (s[i + 1] == 'u')
             {
                 auto val = 0;
-                if (from_hex_to_i(s, i + 2, 4, val))
+                if (FromHexToI(s, i + 2, 4, val))
                 {
                     char buff[4];
-                    size_t len = to_utf8(val, buff);
+                    size_t len = ToUtf8(val, buff);
                     if (len > 0)
                     {
                         result.append(buff, len);
@@ -329,7 +362,7 @@ std::string galay::Protocol::Http1_1_Request::convert_uri(const std::string& s, 
             else
             {
                 auto val = 0;
-                if (from_hex_to_i(s, i + 1, 2, val))
+                if (FromHexToI(s, i + 1, 2, val))
                 {
                     result += static_cast<char>(val);
                     i += 2;
@@ -353,7 +386,7 @@ std::string galay::Protocol::Http1_1_Request::convert_uri(const std::string& s, 
     return result;
 }
 
-bool galay::Protocol::Http1_1_Request::is_hex(char c, int& v)
+bool galay::Protocol::Http1_1_Request::IsHex(char c, int& v)
 {
     if (0x20 <= c && isdigit(c))
     {
@@ -373,7 +406,7 @@ bool galay::Protocol::Http1_1_Request::is_hex(char c, int& v)
     return false;
 }
 
-size_t galay::Protocol::Http1_1_Request::to_utf8(int code, char* buff)
+size_t galay::Protocol::Http1_1_Request::ToUtf8(int code, char* buff)
 {
     if (code < 0x0080)
     {
@@ -415,7 +448,7 @@ size_t galay::Protocol::Http1_1_Request::to_utf8(int code, char* buff)
     return 0;
 }
 
-bool galay::Protocol::Http1_1_Request::from_hex_to_i(const std::string& s, size_t i, size_t cnt, int& val)
+bool galay::Protocol::Http1_1_Request::FromHexToI(const std::string& s, size_t i, size_t cnt, int& val)
 {
     if (i >= s.size())
     {
@@ -430,7 +463,7 @@ bool galay::Protocol::Http1_1_Request::from_hex_to_i(const std::string& s, size_
             return false;
         }
         auto v = 0;
-        if (is_hex(s[i], v))
+        if (IsHex(s[i], v))
         {
             val = val * 16 + v;
         }
@@ -442,15 +475,15 @@ bool galay::Protocol::Http1_1_Request::from_hex_to_i(const std::string& s, size_
     return true;
 }
 
-int& galay::Protocol::Http1_1_Response::get_status()
+int& galay::Protocol::Http1_1_Response::GetStatus()
 {
     return this->m_status;
 }
 
-std::string galay::Protocol::Http1_1_Response::encode()
+std::string galay::Protocol::Http1_1_Response::EncodePdu()
 {
     std::string res = "HTTP/";
-    res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + status_message(this->m_status) + "\r\n";
+    res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + StatusMessage(this->m_status) + "\r\n";
     for (auto& [k, v] : this->m_headers)
     {
         res = res + k + ": " + v + "\r\n";
@@ -464,125 +497,159 @@ std::string galay::Protocol::Http1_1_Response::encode()
     return res;
 }
 
-int galay::Protocol::Http1_1_Response::decode(const std::string& buffer, int& state)
+
+galay::Proto_Judge_Type galay::Protocol::Http1_1_Response::IsPduAndLegal(const std::string& buffer)
 {
-    state = Error::NoError::GY_SUCCESS;
-    int n = buffer.length();
+    if(buffer.find("\r\n\r\n") == std::string::npos) {
+        if(buffer.length() > HTTP_HEADER_MAX_LEN) {
+            spdlog::error("[{}:{}] [error: 'header is too long']",__FILE__,__LINE__);
+            return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+        }
+        spdlog::warn("[{}:{}] [warn: 'header is incomplete']",__FILE__,__LINE__);
+        return Proto_Judge_Type::PROTOCOL_INCOMPLETE;
+    }
+    size_t n = buffer.length();
     HttpHeadStatus status = HttpHeadStatus::HTTP_VERSION;
     std::string status_code;
     std::string key,value;
-    int i;
-    for(i = 0 ; i < n ; ++i){
-        if(status == HttpHeadStatus::HTTP_BODY) break;
-        switch (status)
+    if (m_header_len == 0)
+    {
+        size_t i;
+        for (i = 0; i < n; ++i)
         {
-        case HTTP_VERSION:
-        {
-            if(buffer[i] != ' '){
-                m_version += buffer[i];
-            }else{
-                m_version = m_version.substr(m_version.find('/')+1);
-                status = HttpHeadStatus::HTTP_STATUS_CODE;
-            }
-        }
-            break;
-        case HTTP_STATUS_CODE:
-        {
-            if(buffer[i] != ' '){
-                status_code += buffer[i];
-            }else{
-                m_status = std::stoi(status_code);
-                status = HttpHeadStatus::HTTP_STATUS_MSG;
-            }
-        }
-            break;
-        case HTTP_STATUS_MSG:
-        {
-            if(buffer[i] == '\r'){
-                status = HttpHeadStatus::HTTP_KEY;
-                ++i;
-            }
-        }
-            break;
-        case HTTP_KEY:
-        {
-            if(buffer[i] == '\r')  {
-                ++i;
-                status = HttpHeadStatus::HTTP_BODY;
-            }
-            else{
-                if(buffer[i] != ':'){
-                    key += std::tolower(buffer[i]);
+            if (status == HttpHeadStatus::HTTP_BODY)
+                break;
+            switch (status)
+            {
+            case HTTP_VERSION:
+            {
+                if (buffer[i] != ' ')
+                {
+                    m_version += buffer[i];
                 }
                 else
                 {
-                    if (i + 1 < n && buffer[i + 1] == ' ') ++i;
-                    status = HttpHeadStatus::HTTP_VALUE;
+                    if (m_version.substr(0, 5) != "HTTP/"){
+                        spdlog::error("[{}:{}] [error: 'http version is illegal']",__FILE__,__LINE__);
+                        return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+                    }
+                    m_version = m_version.substr(m_version.find('/') + 1);
+                    status = HttpHeadStatus::HTTP_STATUS_CODE;
                 }
             }
-        }
             break;
-        case HTTP_VALUE:
-        {
-            if(buffer[i] != '\r'){
-                value += buffer[i];
-            }else{
-                m_headers[key] = value;
-                key.clear();
-                value.clear();
-                ++i;
-                status = HttpHeadStatus::HTTP_KEY;
+            case HTTP_STATUS_CODE:
+            {
+                if (buffer[i] != ' ')
+                {
+                    status_code += buffer[i];
+                }
+                else
+                {
+                    try
+                    {
+                        m_status = std::stoi(status_code);
+                    }
+                    catch (std::invalid_argument &e)
+                    {
+                        spdlog::error("[{}:{}] [error: 'http status code is illegal']",__FILE__,__LINE__);
+                        return Proto_Judge_Type::PROTOCOL_ILLEGAL;
+                    }
+                    status = HttpHeadStatus::HTTP_STATUS_MSG;
+                }
+            }
+            break;
+            case HTTP_STATUS_MSG:
+            {
+                if (buffer[i] == '\r')
+                {
+                    status = HttpHeadStatus::HTTP_KEY;
+                    ++i;
+                }
+            }
+            break;
+            case HTTP_KEY:
+            {
+                if (buffer[i] == '\r')
+                {
+                    ++i;
+                    status = HttpHeadStatus::HTTP_BODY;
+                }
+                else
+                {
+                    if (buffer[i] != ':')
+                    {
+                        key += std::tolower(buffer[i]);
+                    }
+                    else
+                    {
+                        if (i + 1 < n && buffer[i + 1] == ' ')
+                            ++i;
+                        status = HttpHeadStatus::HTTP_VALUE;
+                    }
+                }
+            }
+            break;
+            case HTTP_VALUE:
+            {
+                if (buffer[i] != '\r')
+                {
+                    value += buffer[i];
+                }
+                else
+                {
+                    m_headers[key] = value;
+                    key.clear();
+                    value.clear();
+                    ++i;
+                    status = HttpHeadStatus::HTTP_KEY;
+                }
+            }
+            break;
+            default:
+                break;
             }
         }
-            break;
-        default:
-            break;
-        }
+        m_header_len = i;
     }
 
     if(m_headers.contains("content-length")){
         size_t length = std::stoul(m_headers["content-length"]);
-        if(length + i > n) {
-            state = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
-            return -1;
+        if(length + m_header_len > n) {
+            return Proto_Judge_Type::PROTOCOL_INCOMPLETE;
         }
-        m_body = buffer.substr(i,length);
+    }
+    return Proto_Judge_Type::PROTOCOL_LEGAL;
+}
+
+
+
+int galay::Protocol::Http1_1_Response::DecodePdu(const std::string& buffer)
+{
+    size_t n = buffer.length();
+    if(m_headers.contains("content-length")){
+        size_t length = std::stoul(m_headers["content-length"]);
+        if(length + m_header_len > n) {
+            spdlog::warn("[{}:{}] [warn: 'body is incomplete']",__FILE__,__LINE__);
+            return Proto_Judge_Type::PROTOCOL_INCOMPLETE;
+        }
+        m_body = buffer.substr(m_header_len,length);
         int invaild_len = 0;
-        for( int k = i + length ; k < n - 1 ; ++k ){
+        for( int k = m_header_len + length ; k < n - 1 ; ++k ){
             if(isalpha(buffer[k+1])) break;
             else ++invaild_len;
         }
-        return i + length + invaild_len;
-    }
-
-    for(; i < n ; ++i ){
-        if(isalpha(buffer[i])) break;
-        else m_body += buffer[i];
-    }
-    return i;
+        size_t res = m_header_len + length + invaild_len;
+        spdlog::info("[{}:{}] [info: 'Pdu is {} Bytes']",__FILE__,__LINE__,res);
+        m_header_len = 0;
+        return res;
+    }else m_body = buffer.substr(m_header_len);
+    spdlog::info("[{}:{}] [info: 'Pdu is {} Bytes']",__FILE__,__LINE__,n);
+    m_header_len = 0;
+    return n;
 }
 
-int galay::Protocol::Http1_1_Response::proto_type()
-{
-    return GY_ALL_RECIEVE_PROTOCOL_TYPE;
-}
-
-int galay::Protocol::Http1_1_Response::proto_fixed_len()
-{
-    return 0;
-}
-
-int galay::Protocol::Http1_1_Response::proto_extra_len()
-{
-    return 0;
-}
-
-void galay::Protocol::Http1_1_Response::set_extra_msg(std::string&& msg)
-{
-
-}
-
-const char* galay::Protocol::Http1_1_Response::status_message(int status)
+const char* galay::Protocol::Http1_1_Response::StatusMessage(int status)
 {
     switch (status)
     {

@@ -36,35 +36,35 @@ namespace galay
         using ptr = std::shared_ptr<Task_Base>;
 
         // return -1 error 0 success
-        virtual int exec() = 0;
+        virtual int Exec() = 0;
 
-        virtual std::shared_ptr<Scheduler_Base> get_scheduler()
+        virtual std::shared_ptr<Scheduler_Base> GetScheduler()
         {
             return nullptr;
         }
 
-        virtual Tcp_Request_Base::ptr get_req()
+        virtual Tcp_Request_Base::ptr GetReq()
         {
             return nullptr;
         }
-        virtual Tcp_Response_Base::ptr get_resp()
+        virtual Tcp_Response_Base::ptr GetResp()
         {
             return nullptr;
         }
 
-        virtual void control_task_behavior(Task_Status status) {}
+        virtual void CntlTaskBehavior(Task_Status status) {}
 
-        virtual int get_state() { return this->m_status; }
+        virtual int GetStatus() { return this->m_status; }
 
-        virtual void finish() { this->m_is_finish = true; }
+        virtual void Finish() { this->m_is_finish = true; }
 
-        virtual std::any& get_ctx() { return this->m_ctx; }
+        virtual std::any& GetContext() { return this->m_ctx; }
 
-        virtual void destory() { this->m_destroy = true; }
+        virtual void Destory() { this->m_destroy = true; }
 
-        virtual bool is_destroy() { return this->m_destroy; }
+        virtual bool IsDestory() { return this->m_destroy; }
 
-        virtual int get_error() {   return this->m_error;   }
+        virtual int GetError() {   return this->m_error;   }
 
         virtual ~Task_Base() {
             
@@ -84,17 +84,17 @@ namespace galay
     public:
         using ptr = std::shared_ptr<Scheduler_Base>;
         using wptr = std::weak_ptr<Scheduler_Base>;
-        virtual std::shared_ptr<Timer_Manager> get_timer_manager() = 0;
-        virtual void add_task(std::pair<int,std::shared_ptr<Task_Base>>&& pair) = 0;
-        virtual void del_task(int fd) = 0;
-        virtual int add_event(int fd, int event_type) = 0;
-        virtual int del_event(int fd, int event_type) = 0;
-        virtual int mod_event(int fd, int from , int to) = 0;
-        virtual void close_connection(int fd) = 0;
+        virtual std::shared_ptr<Timer_Manager> GetTimerManager() = 0;
+        virtual void AddTask(std::pair<int,std::shared_ptr<Task_Base>>&& pair) = 0;
+        virtual void DelTask(int fd) = 0;
+        virtual int AddEvent(int fd, int event_type) = 0;
+        virtual int DelEvent(int fd, int event_type) = 0;
+        virtual int ModEvent(int fd, int from , int to) = 0;
+        virtual void CloseConn(int fd) = 0;
         //is stoped?
-        virtual bool is_stop() = 0;
-        virtual int start() = 0;
-        virtual void stop() = 0;
+        virtual bool IsStop() = 0;
+        virtual int Start() = 0;
+        virtual void Stop() = 0;
         virtual ~Scheduler_Base(){}
     };
 

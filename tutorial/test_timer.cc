@@ -12,7 +12,7 @@ Scheduler_Base::ptr scheduler;
 
 void sig_handle(int sig)
 {
-    scheduler->stop();
+    scheduler->Stop();
 }
 
 
@@ -20,7 +20,7 @@ int main()
 {
     signal(SIGINT,sig_handle);
     scheduler = Scheduler_Factory::create_select_scheduler(0);
-    auto timer = scheduler->get_timer_manager()->add_timer(100, 1, []() ->void {
+    auto timer = scheduler->GetTimerManager()->add_timer(100, 1, []() ->void {
         std::string salt = Security::Salt::create(10,20);
         std::string password = "123456";
         // std::cout << "origin: " <<  str << '\n';
@@ -31,10 +31,10 @@ int main()
         std::cout << Security::Sha256Util::encode(Security::Md5Util::encode(password) + salt);
 
     });
-    scheduler->get_timer_manager()->add_timer(100,1,[timer](){
+    scheduler->GetTimerManager()->add_timer(100,1,[timer](){
         timer->cancle();
         std::cout<<"cancle\n";
     });
-    scheduler->start();
+    scheduler->Start();
     return 0;
 }

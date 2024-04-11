@@ -29,7 +29,7 @@ namespace galay
         void reset(int num);
 
         template <typename F, typename... Args>
-        auto exec(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
+        auto Exec(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
         {
             using RetType = decltype(f(args...));
             std::shared_ptr<std::packaged_task<RetType()>> func = std::make_shared<std::packaged_task<RetType()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));

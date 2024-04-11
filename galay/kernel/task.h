@@ -76,7 +76,7 @@ namespace galay
             }
         }
 
-        void control_task_behavior(Task_Status status) override
+        void CntlTaskBehavior(Task_Status status) override
         {
             if (!this->m_scheduler.expired())
             {
@@ -85,18 +85,18 @@ namespace galay
                 {
                 case Task_Status::GY_TASK_WRITE:
                 {
-                    if(scheduler->mod_event(this->m_fd, GY_EVENT_READ , GY_EVENT_WRITE) == -1)
+                    if(scheduler->ModEvent(this->m_fd, GY_EVENT_READ , GY_EVENT_WRITE) == -1)
                     {
-                        spdlog::error("[{}:{}] [mod_event(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
+                        spdlog::error("[{}:{}] [ModEvent(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
                     }
                     this->m_status = Task_Status::GY_TASK_WRITE;
                     break;
                 }
                 case Task_Status::GY_TASK_READ:
                 {
-                    if(scheduler->mod_event(this->m_fd, GY_EVENT_WRITE , GY_EVENT_READ)==-1)
+                    if(scheduler->ModEvent(this->m_fd, GY_EVENT_WRITE , GY_EVENT_READ)==-1)
                     {
-                        spdlog::error("[{}:{}] [mod_event(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
+                        spdlog::error("[{}:{}] [ModEvent(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
                     }
                     this->m_status = Task_Status::GY_TASK_READ;
                     break;
@@ -106,11 +106,11 @@ namespace galay
                 }
             }
         }
-        Tcp_Request_Base::ptr get_req() override { return this->m_req; }
-        Tcp_Response_Base::ptr get_resp() override { return this->m_resp; }
+        Tcp_Request_Base::ptr GetReq() override { return this->m_req; }
+        Tcp_Response_Base::ptr GetResp() override { return this->m_resp; }
 
         // return -1 to delete this task from server
-        int exec() override
+        int Exec() override
         {
             if (this->m_conn_timeout.m_timeout > 0)
             {
@@ -129,13 +129,13 @@ namespace galay
             case Task_Status::GY_TASK_WRITE:
             {
 
-                encode();
+                this->m_wbuffer.append(this->m_resp->EncodePdu());
                 if (send_package() == -1)
                     return -1;
                 if (!this->m_is_finish)
-                    control_task_behavior(Task_Status::GY_TASK_READ);
+                    CntlTaskBehavior(Task_Status::GY_TASK_READ);
                 else
-                    Task_Base::destory();
+                    Task_Base::Destory();
                 break;
             }
             default:
@@ -144,7 +144,7 @@ namespace galay
             return 0;
         }
 
-        std::shared_ptr<Scheduler_Base> get_scheduler() override
+        std::shared_ptr<Scheduler_Base> GetScheduler() override
         {
             if (!this->m_scheduler.expired())
                 return this->m_scheduler.lock();
@@ -165,7 +165,7 @@ namespace galay
             this->m_read_len = len;
         }
 
-        virtual int get_error() { return this->m_error; }
+        virtual int GetError() { return this->m_error; }
 
         virtual ~Tcp_RW_Task()
         {
@@ -186,31 +186,38 @@ namespace galay
     protected:
         void add_timeout_timer()
         {
-            this->m_timer = this->m_scheduler.lock()->get_timer_manager()->add_timer(this->m_conn_timeout.m_timeout, 1, [this]() {
-                    m_scheduler.lock()->close_connection(this->m_fd);
+            this->m_timer = this->m_scheduler.lock()->GetTimerManager()->add_timer(this->m_conn_timeout.m_timeout, 1, [this]() {
+                    m_scheduler.lock()->CloseConn(this->m_fd);
                 });
-        }
-
-        void encode()
-        {
-            m_wbuffer.append(m_resp->encode());
         }
 
         virtual int read_package()
         {
             if(read_all_buffer() == -1) return -1;
-            this->m_error = Error::NoError::GY_SUCCESS;
-            switch (m_req->proto_type())
+            spdlog::info("[{}:{}] [socket(fd: {}) is ready to DecodePdu]",__FILE__,__LINE__,this->m_fd);
+            switch(m_req->IsPduAndLegal(this->m_rbuffer))
             {
-                //buffer read empty
-            case GY_ALL_RECIEVE_PROTOCOL_TYPE:
-                return get_all_buffer();
-                //fixed proto package
-            case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
-                return get_fixed_package();
-                //fixed head and head includes body's length
-            case GY_HEAD_FIXED_PROTOCOL_TYPE:
-                return get_fixed_head_package();
+                case Proto_Judge_Type::PROTOCOL_INCOMPLETE :
+                {
+                    this->m_error = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
+                    return -1;
+                }
+                    break;
+                case Proto_Judge_Type::PROTOCOL_ILLEGAL :
+                {
+                    this->m_error = Error::ProtocolError::GY_PROTOCOL_ILLEGAL;
+                    Task_Base::Destory();
+                    return -1;
+                }
+                    break;
+                case Proto_Judge_Type::PROTOCOL_LEGAL :
+                {
+                    this->m_error = Error::NoError::GY_SUCCESS;
+                    int len = m_req->DecodePdu(this->m_rbuffer);
+                    m_rbuffer.erase(0,len);
+                    return 0;
+                }
+                    break;
             }
             return -1;
         }
@@ -235,20 +242,20 @@ namespace galay
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
                     spdlog::error("[{}:{}] [Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    Task_Base::destory();
+                    Task_Base::Destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
                 spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                Task_Base::destory();
+                Task_Base::Destory();
                 return -1;
             } 
             return 0;
         }
 
-        int read_all_buffer()
+        virtual int read_all_buffer()
         {
             int len;
             do
@@ -265,77 +272,19 @@ namespace galay
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
                     spdlog::error("[{}:{}] [Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    Task_Base::destory();
+                    Task_Base::Destory();
                     return -1;
                 }
             }
             else if (len == 0)
             {
                 spdlog::error("[{}:{}] [Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                Task_Base::destory();
+                Task_Base::Destory();
                 return -1;
             }
+            spdlog::info("[{}:{}] [Recv(fd: {}) Totol : {} Bytes]",__FILE__,__LINE__,this->m_fd,this->m_rbuffer.length());
             return 0;
         }
-
-        int get_all_buffer()
-        {
-            int len = this->m_req->decode(this->m_rbuffer, this->m_error);
-            spdlog::info("[{}:{}] [decode protocol (fd: {}) len: {}]",__FILE__,__LINE__,this->m_fd,len);
-            if (this->m_error == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE){
-                spdlog::warn("[{}:{}] [decode protocol error(fd: {}): {}]",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
-                return -1;
-            }
-            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + len);
-            spdlog::info("[{}:{}] [buffer(fd: {}) clear, len: {}]",__FILE__,__LINE__,this->m_fd,len);
-            return 0;
-        }
-
-        int get_fixed_package()
-        {
-            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) {
-                spdlog::warn("[{}:{}] [protocol data incomplete (fd: {}) require len: {} , real len: {}]",__FILE__,__LINE__,this->m_fd,this->m_req->proto_fixed_len(),this->m_rbuffer.length());
-                return -1;
-            }
-            std::string res = this->m_rbuffer.substr(0 , this->m_req->proto_fixed_len());
-            int len = this->m_req->decode(res, this->m_error);
-            spdlog::info("[{}:{}] [decode protocol(fd: {}) len: {}]",__FILE__,__LINE__,this->m_fd,len);
-            if (this->m_error == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE){
-                spdlog::warn("[{}:{}] [decode protocol(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
-                return -1;
-            }
-            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin() + m_req->proto_fixed_len());
-            spdlog::info("[{}:{}] [buffer(fd: {}) clear, len: {}]",__FILE__,__LINE__,this->m_fd, m_req->proto_fixed_len());
-            return 0;
-        }
-
-        int get_fixed_head_package()
-        {
-            if(this->m_rbuffer.length() < this->m_req->proto_fixed_len()) {
-                spdlog::warn("[{}:{}] [protocol data incomplete (fd: {}) require len: {} , real len: {}]",__FILE__,__LINE__,this->m_fd,this->m_req->proto_fixed_len(),this->m_rbuffer.length());
-                return -1;
-            }
-            std::string head = this->m_rbuffer.substr(0, this->m_req->proto_fixed_len());
-            int len = m_req->decode(head,this->m_error);
-            spdlog::info("[{}:{}] [decode protocol(fd: {}) len: {}]",__FILE__,__LINE__,this->m_fd,len);
-            if (this->m_error == Error::ProtocolError::GY_PROTOCOL_INCOMPLETE)
-            {
-                spdlog::warn("[{}:{}] [decode protocol(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
-                return -1;
-            }
-            int total_len = this->m_req->proto_fixed_len() + this->m_req->proto_extra_len();
-            if(this->m_rbuffer.length() < total_len) {
-                this->m_error = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
-                spdlog::warn("[{}:{}] [decode protocol(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
-                return -1;
-            }
-            std::string body = this->m_rbuffer.substr(this->m_req->proto_fixed_len(),this->m_req->proto_extra_len());
-            this->m_req->set_extra_msg(std::move(body));
-            this->m_rbuffer.erase(this->m_rbuffer.begin(), this->m_rbuffer.begin()+total_len);
-            spdlog::info("[{}:{}] [buffer(fd: {}) clear,len: {}]",__FILE__,__LINE__,this->m_fd, total_len);
-            return 0;
-        }
-
 
     protected:
         char *m_temp = nullptr;
@@ -370,7 +319,7 @@ namespace galay
             this->m_conn_timeout = conn_timeout;
         }
 
-        int exec() override
+        int Exec() override
         {
             int connfd = IOFuntion::TcpFunction::Accept(this->m_fd);
             if (connfd <= 0)
@@ -386,17 +335,17 @@ namespace galay
                 int ret = IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
                 if (ret == -1)
                 {
+                    spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
+                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     this->m_error = Error::NetError::GY_SETSOCKOPT_ERROR;
-                    spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [socket(fd: {}) setkeepalive Success]",__FILE__,__LINE__,connfd);
             }
             if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
                 this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
                 spdlog::error("[{}:{}] [socket(fd: {}) SetNoBlock error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                 close(connfd);
                 return -1;
             }else {
@@ -412,12 +361,12 @@ namespace galay
             if (!this->m_schedulers[indx].expired())
             {
                 auto task = create_rw_task(connfd, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->add_task({connfd, task});
+                this->m_schedulers[indx].lock()->AddTask({connfd, task});
                 spdlog::info("[{}:{}] [scheduler(indx: {}) add task(fd: {}) Success]",__FILE__,__LINE__ , indx, connfd);
-                if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+                if (this->m_schedulers[indx].lock()->AddEvent(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     spdlog::error("[{}:{}] [scheduler add event(fd: {}) error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [scheduler(indx: {}) add event(fd: {}) Success]",__FILE__,__LINE__,indx,connfd);
@@ -425,7 +374,7 @@ namespace galay
             return 0;
         }
 
-        void set_keepalive(uint16_t idle, uint16_t interval, uint16_t retry)
+        void SetKeepalive(uint16_t idle, uint16_t interval, uint16_t retry)
         {
             TcpKeepaliveConf keepalive{
                 .m_keepalive = true,
@@ -479,26 +428,7 @@ namespace galay
         }
 
     protected:
-        int read_package() override
-        {
-            if(read_all_buffer() == -1) return -1;
-            this->m_error = Error::NoError::GY_SUCCESS;
-            switch (this->m_req->proto_type())
-            {
-                //buffer read empty
-            case GY_ALL_RECIEVE_PROTOCOL_TYPE:
-                return this->get_all_buffer();
-                //fixed proto package
-            case GY_PACKAGE_FIXED_PROTOCOL_TYPE:
-                return this->get_fixed_package();
-                //fixed head and head includes body's length
-            case GY_HEAD_FIXED_PROTOCOL_TYPE:
-                return this->get_fixed_head_package();
-            }
-            return -1;
-        }
-
-        int send_package() override
+        virtual int send_package() override
         {
             int len;
             if(this->m_wbuffer.empty()) return 0;
@@ -517,7 +447,7 @@ namespace galay
                     spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
                     IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
                     this->m_ssl = nullptr;
-                    Task_Base::destory();
+                    Task_Base::Destory();
                     return -1;
                 }
             }
@@ -526,13 +456,13 @@ namespace galay
                 spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
                 IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
                 this->m_ssl = nullptr;
-                Task_Base::destory();
+                Task_Base::Destory();
                 return -1;
             } 
             return 0;
         }
 
-        int read_all_buffer()
+        virtual int read_all_buffer() override
         {
             int len;
             do
@@ -549,7 +479,7 @@ namespace galay
                 if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
                 {
                     spdlog::error("[{}:{}] [SSL_Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    Task_Base::destory();
+                    Task_Base::Destory();
                     IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
                     this->m_ssl = nullptr;
                     return -1;
@@ -558,11 +488,12 @@ namespace galay
             else if (len == 0)
             {
                 spdlog::error("[{}:{}] [SSL_Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                Task_Base::destory();
+                Task_Base::Destory();
                 IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
                 this->m_ssl = nullptr;
                 return -1;
             }
+            spdlog::info("[{}:{}] [SSL_Recv(fd: {}) Total: {}]",__FILE__,__LINE__,this->m_fd,this->m_rbuffer.length());
             return 0;
         }
 
@@ -583,7 +514,7 @@ namespace galay
         {
         }
 
-        int exec() override
+        int Exec() override
         {
             int connfd = IOFuntion::TcpFunction::Accept(this->m_fd);
             if (connfd <= 0){
@@ -594,7 +525,7 @@ namespace galay
             {
                 if( IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry) == -1){
                     spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [socket(fd: {}) SetKeepalive Success]",__FILE__,__LINE__,connfd);
@@ -604,7 +535,7 @@ namespace galay
             {
                 this->m_error = Error::NetError::GY_SSL_OBJ_INIT_ERROR;
                 spdlog::error("[{}:{}] [socket(fd: {}) SSLCreateObj error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                 close(connfd);
                 return -1;
             }else{
@@ -613,7 +544,7 @@ namespace galay
             if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
                 this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
                 spdlog::error("[{}:{}] [socket(fd: {}) SetNoBlock error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                 close(connfd);
                 return -1;
             }else {
@@ -640,7 +571,7 @@ namespace galay
                         spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}' , retry: {}]",__FILE__,__LINE__,connfd,msg,retry);
                         IOFuntion::TcpFunction::SSLDestory(ssl);
                         ssl = nullptr;
-                        spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                         close(connfd);
                         return -1;
                     }
@@ -658,13 +589,13 @@ namespace galay
             if (!this->m_schedulers[indx].expired())
             {
                 auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->add_task({connfd, task});
-                if (this->m_schedulers[indx].lock()->add_event(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
+                this->m_schedulers[indx].lock()->AddTask({connfd, task});
+                if (this->m_schedulers[indx].lock()->AddEvent(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
                 {
                     spdlog::error("[{}:{}] scheduler [add event(fd: {}) error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
                     IOFuntion::TcpFunction::SSLDestory(ssl);
                     ssl = nullptr;
-                    spdlog::error("[{}:{}] [socket(fd: {}) close connection]",__FILE__,__LINE__,connfd);
+                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
                     close(connfd);
                     return -1;
                 }else spdlog::info("[{}:{}] [scheduler add event(fd: {}) Success]",__FILE__,__LINE__,connfd);
@@ -700,7 +631,7 @@ namespace galay
         using ptr = std::shared_ptr<Time_Task>;
         Time_Task(std::weak_ptr<Timer_Manager> manager);
 
-        int exec() override;
+        int Exec() override;
 
         ~Time_Task();
 
@@ -715,7 +646,7 @@ namespace galay
         using ptr = std::shared_ptr<Thread_Task>;
         Thread_Task(std::function<void()> &&func);
 
-        int exec() override;
+        int Exec() override;
 
         ~Thread_Task();
 

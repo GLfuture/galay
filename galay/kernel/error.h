@@ -48,6 +48,7 @@ namespace galay
         enum ProtocolError{
             GY_PROTOCOL_INCOMPLETE = GY_SCHEDULERERROR_END,                                    //incomplete package
             GY_PROTOCOL_BAD_REQUEST,                                  //bad request
+            GY_PROTOCOL_ILLEGAL,                              //illegal request
             GY_PROTOCOL_ERROR_END
         };
 
