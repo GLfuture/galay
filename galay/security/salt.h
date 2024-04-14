@@ -1,5 +1,5 @@
-#ifndef GY_SALT_H
-#define GY_SALT_H
+#ifndef GALAY_SALT_H
+#define GALAY_SALT_H
 
 #include <string>
 

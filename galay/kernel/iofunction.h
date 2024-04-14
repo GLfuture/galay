@@ -22,7 +22,6 @@ namespace galay{
         {
         public:
             static int IO_Set_No_Block(int fd);
-
             static int IO_Set_Block(int fd);
         };
 
@@ -32,21 +31,22 @@ namespace galay{
             int port;
         };
 
-        class NetFunction: public BlockFuction
-        {
-        public:
-            static int Reuse_Fd(int fd);
-        };
 
-        class TcpFunction:public NetFunction
+        class TcpFunction: public BlockFuction
         {
         public:
             using SSL_Tup = std::tuple<SSL *, SSL_CTX *>;
             using ptr = std::shared_ptr<TcpFunction>;
 
             static int Sock();
+
+            static int Sock6();
             
             static int SockKeepalive(int fd , int t_idle , int t_interval , int retry);
+            //重用地址(避免timewait导致的无法连接)
+            static int ReuseAddr(int fd);
+            //重用端口(允许不同fd监听同一端口)
+            static int ReusePort(int fd);
 
             static int Conncet(int fd , std::string sip, uint32_t sport);
 
@@ -99,7 +99,7 @@ namespace galay{
         };
 
 
-        class UdpFunction:public NetFunction
+        class UdpFunction:public BlockFuction
         {
         public:
             static int Sock();

@@ -1,5 +1,5 @@
-#ifndef GY_CALLBACK_H
-#define GY_CALLBACK_H
+#ifndef GALAY_CALLBACK_H
+#define GALAY_CALLBACK_H
 
 #include <openssl/ssl.h>
 #include <functional>

@@ -1,5 +1,5 @@
-#ifndef GY_FILE_H
-#define GY_FILE_H
+#ifndef GALAY_FILE_H
+#define GALAY_FILE_H
 
 #include <string>
 

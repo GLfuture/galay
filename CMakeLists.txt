@@ -69,5 +69,6 @@ install(DIRECTORY ${HEADER_SRC_DIR}
         DESTINATION ${HEADER_DST_DIR}
         FILES_MATCHING
         PATTERN "*.h*"
+        PATTERN "*.inl"
 )
 

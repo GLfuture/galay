@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GY_MYSQL_H
-#define GY_MYSQL_H
+#ifndef GALAY_MYSQL_H
+#define GALAY_MYSQL_H
 #include <iostream>
 #include <mysql/mysql.h>
 #include <string>

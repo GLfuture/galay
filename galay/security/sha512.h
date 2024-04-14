@@ -1,5 +1,5 @@
-#ifndef GY_SHA512_H
-#define GY_SHA512_H
+#ifndef GALAY_SHA512_H
+#define GALAY_SHA512_H
 
 #include <string>
 #include <openssl/sha.h>

@@ -1,5 +1,5 @@
-#ifndef GY_ETCD_H
-#define GY_ETCD_H
+#ifndef GALAY_ETCD_H
+#define GALAY_ETCD_H
 
 #include <memory>
 #include <string>

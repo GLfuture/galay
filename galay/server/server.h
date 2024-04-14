@@ -75,10 +75,10 @@ namespace galay
                 spdlog::error("[{}:{}] [socket create error: '{}']",__FILE__,__LINE__,strerror(errno));
                 return Error::NetError::GY_SOCKET_ERROR;
             }
-            int ret = IOFuntion::TcpFunction::Reuse_Fd(fd);
+            int ret = IOFuntion::TcpFunction::ReuseAddr(fd);
             if (ret == -1)
             {
-                spdlog::error("[{}:{}] [Reuse_Fd(fd: {}) error: '{}']",__FILE__,__LINE__,fd,strerror(errno));
+                spdlog::error("[{}:{}] [ReuseAddr(fd: {}) error: '{}']",__FILE__,__LINE__,fd,strerror(errno));
                 spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,fd);
                 close(fd);
                 return Error::NetError::GY_SETSOCKOPT_ERROR;

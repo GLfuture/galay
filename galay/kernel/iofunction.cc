@@ -15,11 +15,6 @@ int galay::IOFuntion::BlockFuction::IO_Set_Block(int fd)
     return fcntl(fd, F_SETFL, flag);
 }
 
-int galay::IOFuntion::NetFunction::Reuse_Fd(int fd)
-{
-    int option = 1;
-    return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&option, sizeof(option));
-}
 
 //tcp
 int galay::IOFuntion::TcpFunction::Sock()
@@ -27,6 +22,10 @@ int galay::IOFuntion::TcpFunction::Sock()
     return socket(AF_INET, SOCK_STREAM, 0);
 }
 
+int galay::IOFuntion::TcpFunction::Sock6()
+{
+    return socket(AF_INET6, SOCK_STREAM, 0);
+}
 
 int galay::IOFuntion::TcpFunction::SockKeepalive(int fd , int t_idle , int t_interval , int retry)
 {
@@ -42,6 +41,17 @@ int galay::IOFuntion::TcpFunction::SockKeepalive(int fd , int t_idle , int t_int
     return ret;
 }
 
+int galay::IOFuntion::TcpFunction::ReuseAddr(int fd)
+{
+    int option = 1;
+    return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&option, sizeof(option));
+}
+
+int galay::IOFuntion::TcpFunction::ReusePort(int fd)
+{
+    int option = 1;
+    return setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *)&option, sizeof(option));
+}
 
 int galay::IOFuntion::TcpFunction::Conncet(int fd , std::string sip, uint32_t sport)
 {
