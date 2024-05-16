@@ -1,26 +1,26 @@
 #include "stringutil.h"
 
-std::vector<std::string> 
-galay::Helper::StringUtil::Spilt_With_Char(const std::string &str, const char symbol)
+::std::vector<::std::string> 
+galay::util::StringUtil::Spilt_With_Char(const ::std::string &str, const char symbol)
 {
-    std::vector<std::string> result;
+    ::std::vector<::std::string> result;
     for (int i = 0; i < str.size(); i++)
     {
         int beg = i;
         i = str.find(symbol, beg);
-        std::string temp = str.substr(beg, i - beg);
-        if(!temp.empty()) result.emplace_back(std::move(temp));
-        if (i == std::string::npos)
+        ::std::string temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(::std::move(temp));
+        if (i == ::std::string::npos)
             break;
     }
     return result;
 }
 
 
-std::vector<std::string>
-galay::Helper::StringUtil::Spilt_With_Str(const std::string &str, const std::string& symbol)
+::std::vector<::std::string>
+galay::util::StringUtil::Spilt_With_Str(const ::std::string &str, const ::std::string& symbol)
 {
-    std::vector<std::string> result;
+    ::std::vector<::std::string> result;
     if (symbol.empty())
         return result;
     size_t len = symbol.length();
@@ -28,9 +28,9 @@ galay::Helper::StringUtil::Spilt_With_Str(const std::string &str, const std::str
     {
         int beg = i;
         i = str.find(symbol, beg);
-        std::string temp = str.substr(beg, i - beg);
-        if(!temp.empty()) result.emplace_back(std::move(temp));
-        if (i == std::string::npos)
+        ::std::string temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(::std::move(temp));
+        if (i == ::std::string::npos)
             break;
         i += len - 1;
     }
@@ -38,12 +38,12 @@ galay::Helper::StringUtil::Spilt_With_Str(const std::string &str, const std::str
 }
 
 
-std::vector<std::string> 
-galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &str, const char partition, const char connction)
+::std::vector<::std::string> 
+galay::util::StringUtil::Spilt_With_Char_Connect_With_char(const ::std::string &str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;
-    std::vector<std::string> result;
+    ::std::vector<::std::string> result;
     for (int i = 0; i < str.size(); i++)
     {
         if (str[i] == '\\')
@@ -70,7 +70,7 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &
             {
                 if (beg != end)
                 {
-                    std::string temp = str.substr(beg, end - beg);
+                    ::std::string temp = str.substr(beg, end - beg);
                     if(!temp.empty()) result.emplace_back();
                 }
                 end++;
@@ -83,7 +83,7 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &
         {
             if (beg != end)
             {
-                std::string temp = str.substr(beg, end - beg);
+                ::std::string temp = str.substr(beg, end - beg);
                 if(!temp.empty()) result.emplace_back();
             }
             beg = end + 1;
@@ -93,7 +93,7 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &
         {
             if (beg != end)
             {
-                std::string temp = str.substr(beg, end - beg);
+                ::std::string temp = str.substr(beg, end - beg);
                 if(!temp.empty()) result.emplace_back();
             }
         }
@@ -108,26 +108,26 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &
 
 
 #if __cplusplus >= 201703L
-std::vector<std::string_view> 
-galay::Helper::StringUtil::Spilt_With_Char(std::string_view str, const char symbol)
+::std::vector<::std::string_view> 
+galay::util::StringUtil::Spilt_With_Char(::std::string_view str, const char symbol)
 {
-    std::vector<std::string_view> result;
+    ::std::vector<::std::string_view> result;
     for (int i = 0; i < str.size(); i++)
     {
         int beg = i;
         i = str.find(symbol, beg);
-        std::string_view temp = str.substr(beg, i - beg);
-        if(!temp.empty()) result.emplace_back(std::move(temp));
-        if (i == std::string::npos)
+        ::std::string_view temp = str.substr(beg, i - beg);
+        if(!temp.empty()) result.emplace_back(::std::move(temp));
+        if (i == ::std::string::npos)
             break;
     }
     return result;
 }
 
-std::vector<std::string_view> 
-galay::Helper::StringUtil::Spilt_With_Str(std::string_view str, std::string_view symbol)
+::std::vector<::std::string_view> 
+galay::util::StringUtil::Spilt_With_Str(::std::string_view str, ::std::string_view symbol)
 {
-    std::vector<std::string_view> result;
+    ::std::vector<::std::string_view> result;
     if (symbol.empty())
         return result;
     size_t len = symbol.length();
@@ -135,21 +135,21 @@ galay::Helper::StringUtil::Spilt_With_Str(std::string_view str, std::string_view
     {
         int beg = i;
         i = str.find(symbol, beg);
-        std::string_view temp = str.substr(beg, i - beg);
+        ::std::string_view temp = str.substr(beg, i - beg);
         if(!temp.empty()) result.emplace_back(temp);
-        if (i == std::string::npos)
+        if (i == ::std::string::npos)
             break;
         i += len - 1;
     }
     return result;
 }
 
-std::vector<std::string_view> 
-galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view str, const char partition, const char connction)
+::std::vector<::std::string_view> 
+galay::util::StringUtil::Spilt_With_Char_Connect_With_char(::std::string_view str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;
-    std::vector<std::string_view> result;
+    ::std::vector<::std::string_view> result;
     for (int i = 0; i < str.size(); i++)
     {
         if (str[i] == '\\')
@@ -176,7 +176,7 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view st
             {
                 if (beg != end)
                 {
-                    std::string_view temp = str.substr(beg, end - beg);
+                    ::std::string_view temp = str.substr(beg, end - beg);
                     if(!temp.empty()) result.emplace_back();;
                 }
                 end++;
@@ -189,7 +189,7 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view st
         {
             if (beg != end)
             {
-                std::string_view temp = str.substr(beg, end - beg);
+                ::std::string_view temp = str.substr(beg, end - beg);
                 if(!temp.empty()) result.emplace_back();;
             }
             beg = end + 1;
@@ -199,7 +199,7 @@ galay::Helper::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view st
         {
             if (beg != end)
             {
-                std::string_view temp = str.substr(beg, end - beg);
+                ::std::string_view temp = str.substr(beg, end - beg);
                 if(!temp.empty()) result.emplace_back();;
             }
         }

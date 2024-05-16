@@ -1,657 +1,72 @@
 #ifndef GALAY_TASK_H
 #define GALAY_TASK_H
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <thread>
-#include <chrono>
-#include <algorithm>
-#include <spdlog/spdlog.h>
-#include "base.h"
-#include "coroutine.h"
-#include "iofunction.h"
 #include "scheduler.h"
-#include "callback.h"
+#include "../util/netiofunction.h"
+#include "objector.h"
+#include <any>
 
+namespace galay {
 
-namespace galay
-{
-
-    class Timer_Manager;
-
-
-    template <typename RESULT = void>
-    class Task : public Coroutine<RESULT>
-    {
+    class GY_Task {
     public:
-        using promise_type = Promise<RESULT>;
-        Task()
-        {
-        }
-
-        Task(std::coroutine_handle<promise_type> co_handle) noexcept
-            : Coroutine<RESULT>(co_handle)
-        {
-        }
-
-        Task(Task<RESULT> &&other) noexcept
-            : Coroutine<RESULT>(other)
-        {
-        }
-
-        Task<RESULT> &operator=(const Task<RESULT> &other) = delete;
-
-        Task<RESULT> &operator=(Task<RESULT> &&other)
-        {
-            this->m_handle = other.m_handle;
-            other.m_handle = nullptr;
-            return *this;
-        }
+        virtual void Execute() = 0;
     };
 
-    // tcp
-    // server read and write task
-    template <Tcp_Request REQ, Tcp_Response RESP>
-    class Tcp_RW_Task : public Task_Base, public std::enable_shared_from_this<Tcp_RW_Task<REQ,RESP>>
-    {
-    protected:
-        using Callback = std::function<Task<>(Task_Base::wptr)>;
-
+    class GY_CreateConnTask: public GY_Task {
     public:
-        using ptr = std::shared_ptr<Tcp_RW_Task>;
-        Tcp_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len, TcpConnTimeOut conn_timeout)
-        {
-            this->m_status = Task_Status::GY_TASK_READ;
-            this->m_error = Error::NoError::GY_SUCCESS;
-            this->m_scheduler = scheduler;
-            this->m_fd = fd;
-            this->m_read_len = read_len;
-            this->m_temp = new char[read_len];
-            this->m_req = std::make_shared<REQ>();
-            this->m_resp = std::make_shared<RESP>();
-            this->m_conn_timeout = conn_timeout;
-            if(conn_timeout.m_timeout > 0){
-                add_timeout_timer();
-            }
-        }
-
-        void CntlTaskBehavior(Task_Status status) override
-        {
-            if (!this->m_scheduler.expired())
-            {
-                auto scheduler = this->m_scheduler.lock();
-                switch (status)
-                {
-                case Task_Status::GY_TASK_WRITE:
-                {
-                    if(scheduler->ModEvent(this->m_fd, GY_EVENT_READ , GY_EVENT_WRITE) == -1)
-                    {
-                        spdlog::error("[{}:{}] [ModEvent(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
-                    }
-                    this->m_status = Task_Status::GY_TASK_WRITE;
-                    break;
-                }
-                case Task_Status::GY_TASK_READ:
-                {
-                    if(scheduler->ModEvent(this->m_fd, GY_EVENT_WRITE , GY_EVENT_READ)==-1)
-                    {
-                        spdlog::error("[{}:{}] [ModEvent(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,Error::get_err_str(this->m_error));
-                    }
-                    this->m_status = Task_Status::GY_TASK_READ;
-                    break;
-                }
-                default:
-                    break;
-                }
-            }
-        }
-        Tcp_Request_Base::ptr GetReq() override { return this->m_req; }
-        Tcp_Response_Base::ptr GetResp() override { return this->m_resp; }
-
-        // return -1 to delete this task from server
-        int Exec() override
-        {
-            if (this->m_conn_timeout.m_timeout > 0)
-            {
-                this->m_timer->cancle();
-                add_timeout_timer();
-            }
-            switch (this->m_status)
-            {
-            case Task_Status::GY_TASK_READ:
-            {
-                if (read_package() == -1)
-                    return -1;
-                m_co_task = this->m_func(this->shared_from_this());
-                break;
-            }
-            case Task_Status::GY_TASK_WRITE:
-            {
-
-                this->m_wbuffer.append(this->m_resp->EncodePdu());
-                if (send_package() == -1)
-                    return -1;
-                if (!this->m_is_finish)
-                    CntlTaskBehavior(Task_Status::GY_TASK_READ);
-                else
-                    Task_Base::Destory();
-                break;
-            }
-            default:
-                break;
-            }
-            return 0;
-        }
-
-        std::shared_ptr<Scheduler_Base> GetScheduler() override
-        {
-            if (!this->m_scheduler.expired())
-                return this->m_scheduler.lock();
-            return nullptr;
-        }
-
-        std::string &Get_Rbuffer() { return m_rbuffer; }
-
-        std::string &Get_Wbuffer() { return m_wbuffer; }
-
-        void set_callback(Callback &&func) { this->m_func = func; }
-
-        void reset_buffer(int len)
-        {
-            if (this->m_temp)
-                delete[] this->m_temp;
-            this->m_temp = new char[len];
-            this->m_read_len = len;
-        }
-
-        virtual int GetError() { return this->m_error; }
-
-        virtual ~Tcp_RW_Task()
-        {
-            if (m_temp)
-            {
-                delete[] m_temp;
-                m_temp = nullptr;
-            }
-            if (m_timer)
-            {
-                if (!m_timer->is_cancled())
-                {
-                    m_timer->cancle();
-                }
-            }
-        }
-
+        using ptr = ::std::shared_ptr<GY_CreateConnTask>;
+        using wptr = ::std::weak_ptr<GY_CreateConnTask>;
+        using uptr = ::std::unique_ptr<GY_CreateConnTask>;
+        GY_CreateConnTask(::std::weak_ptr<GY_IOScheduler> scheduler);
+        virtual void Execute() override;
+        int GetFd();
+        virtual ~GY_CreateConnTask();
     protected:
-        void add_timeout_timer()
-        {
-            this->m_timer = this->m_scheduler.lock()->GetTimerManager()->add_timer(this->m_conn_timeout.m_timeout, 1, [this]() {
-                    m_scheduler.lock()->CloseConn(this->m_fd);
-                });
-        }
-
-        virtual int read_package()
-        {
-            if(read_all_buffer() == -1) return -1;
-            spdlog::info("[{}:{}] [socket(fd: {}) is ready to DecodePdu]",__FILE__,__LINE__,this->m_fd);
-            switch(m_req->IsPduAndLegal(this->m_rbuffer))
-            {
-                case Proto_Judge_Type::PROTOCOL_INCOMPLETE :
-                {
-                    this->m_error = Error::ProtocolError::GY_PROTOCOL_INCOMPLETE;
-                    return -1;
-                }
-                    break;
-                case Proto_Judge_Type::PROTOCOL_ILLEGAL :
-                {
-                    this->m_error = Error::ProtocolError::GY_PROTOCOL_ILLEGAL;
-                    Task_Base::Destory();
-                    return -1;
-                }
-                    break;
-                case Proto_Judge_Type::PROTOCOL_LEGAL :
-                {
-                    this->m_error = Error::NoError::GY_SUCCESS;
-                    int len = m_req->DecodePdu(this->m_rbuffer);
-                    m_rbuffer.erase(0,len);
-                    return 0;
-                }
-                    break;
-            }
-            return -1;
-        }
-
-        virtual int send_package()
-        {
-            int len;
-            if(this->m_wbuffer.empty()) {
-                spdlog::warn("[{}:{}] [Send(fd: {}): {} Bytes]",__FILE__,__LINE__,this->m_fd,0);
-                return 0;
-            }
-            do{
-                len = IOFuntion::TcpFunction::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
-                if (len != -1 && len != 0) {
-                    spdlog::info("[{}:{}] [Send(fd: {}): {} Bytes]",__FILE__,__LINE__,this->m_fd,len);
-                    this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
-                }
-                if(this->m_wbuffer.empty()) break;
-            }while(len != 0 && len != -1);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    spdlog::error("[{}:{}] [Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    Task_Base::Destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                Task_Base::Destory();
-                return -1;
-            } 
-            return 0;
-        }
-
-        virtual int read_all_buffer()
-        {
-            int len;
-            do
-            {
-                memset(this->m_temp, 0, this->m_read_len);
-                len = IOFuntion::TcpFunction::Recv(this->m_fd, this->m_temp, this->m_read_len);
-                if (len != -1 && len != 0){
-                    spdlog::info("[{}:{}] [Recv(fd: {}): {} Bytes]",__FILE__,__LINE__,this->m_fd,len);
-                    this->m_rbuffer.append(this->m_temp, len);
-                }
-            } while (len != -1 && len != 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    spdlog::error("[{}:{}] [Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    Task_Base::Destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                spdlog::error("[{}:{}] [Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                Task_Base::Destory();
-                return -1;
-            }
-            spdlog::info("[{}:{}] [Recv(fd: {}) Totol : {} Bytes]",__FILE__,__LINE__,this->m_fd,this->m_rbuffer.length());
-            return 0;
-        }
-
-    protected:
-        char *m_temp = nullptr;
-        std::weak_ptr<Scheduler_Base> m_scheduler;
-        int m_fd;
-        uint32_t m_read_len;
-        std::string m_rbuffer;
-        std::string m_wbuffer;
-        std::shared_ptr<REQ> m_req;
-        std::shared_ptr<RESP> m_resp;
-        Task<> m_co_task;
-        Callback m_func;
-        int m_error;
-        //timer
-        TcpConnTimeOut m_conn_timeout;
-        Timer::ptr m_timer;
-    };
-
-    template <Tcp_Request REQ, Tcp_Response RESP>
-    class Tcp_Main_Task : public Task_Base
-    {
-    public:
-        using ptr = std::shared_ptr<Tcp_Main_Task>;
-        Tcp_Main_Task(int fd, std::vector<std::weak_ptr<Scheduler_Base>> schedulers,
-                        std::function<Task<>(Task_Base::wptr)> &&func, int read_len,TcpConnTimeOut conn_timeout)
-        {
-            this->m_fd = fd;
-            this->m_status = Task_Status::GY_TASK_READ;
-            this->m_schedulers = schedulers;
-            this->m_func = func;
-            this->m_read_len = read_len;
-            this->m_conn_timeout = conn_timeout;
-        }
-
-        int Exec() override
-        {
-            int connfd = IOFuntion::TcpFunction::Accept(this->m_fd);
-            if (connfd <= 0)
-            {
-                spdlog::error("[{}:{}] [accept(mainfd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                return -1;
-            }else{
-                spdlog::info("[{}:{}] [accept(fd: {}) Success]",__FILE__,__LINE__,connfd);
-            }
-
-            if (this->m_keepalive_conf.m_keepalive)
-            {
-                int ret = IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry);
-                if (ret == -1)
-                {
-                    spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                    close(connfd);
-                    this->m_error = Error::NetError::GY_SETSOCKOPT_ERROR;
-                    return -1;
-                }else spdlog::info("[{}:{}] [socket(fd: {}) setkeepalive Success]",__FILE__,__LINE__,connfd);
-            }
-            if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
-                this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
-                spdlog::error("[{}:{}] [socket(fd: {}) SetNoBlock error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                close(connfd);
-                return -1;
-            }else {
-                spdlog::info("[{}:{}] SetNoBlock success (fd: {})",__FILE__,__LINE__,connfd);
-            }
-            int indx;
-            if (m_schedulers.size() == 1)
-            {
-                indx = 0;
-            }else{
-                indx = connfd % (m_schedulers.size() - 1) + 1;
-            }
-            if (!this->m_schedulers[indx].expired())
-            {
-                auto task = create_rw_task(connfd, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->AddTask({connfd, task});
-                spdlog::info("[{}:{}] [scheduler(indx: {}) add task(fd: {}) Success]",__FILE__,__LINE__ , indx, connfd);
-                if (this->m_schedulers[indx].lock()->AddEvent(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-                {
-                    spdlog::error("[{}:{}] [scheduler add event(fd: {}) error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                    close(connfd);
-                    return -1;
-                }else spdlog::info("[{}:{}] [scheduler(indx: {}) add event(fd: {}) Success]",__FILE__,__LINE__,indx,connfd);
-            }
-            return 0;
-        }
-
-        void SetKeepalive(uint16_t idle, uint16_t interval, uint16_t retry)
-        {
-            TcpKeepaliveConf keepalive{
-                .m_keepalive = true,
-                .m_idle = idle,
-                .m_interval = interval,
-                .m_retry = retry
-            };
-            this->m_keepalive_conf = keepalive;
-        }
-
-        virtual ~Tcp_Main_Task()
-        {
-
-        }
-
-    protected:
-        virtual Task_Base::ptr create_rw_task(int connfd,Scheduler_Base::wptr scheduler)
-        {
-            auto task = std::make_shared<Tcp_RW_Task<REQ,RESP>>(connfd, scheduler, this->m_read_len,this->m_conn_timeout);
-            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
-            return task;
-        }
-
+        int CreateListenFd(std::weak_ptr<GY_TcpServerBuilderBase> builder);
+        int CreateConn();
     protected:
         int m_fd;
-        std::vector<std::weak_ptr<Scheduler_Base>> m_schedulers;
-        uint32_t m_read_len;
-        std::function<Task<>(Task_Base::wptr)> m_func;
-        TcpConnTimeOut m_conn_timeout;
-        // keepalive
-        TcpKeepaliveConf m_keepalive_conf;
+        SSL_CTX* m_ssl_ctx;
+        ::std::weak_ptr<GY_IOScheduler> m_scheduler;
     };
 
-    template <Tcp_Request REQ, Tcp_Response RESP>
-    class Tcp_SSL_RW_Task : public Tcp_RW_Task<REQ,RESP>
-    {
+    class GY_RecvTask: public GY_Task {
     public:
-        using ptr = std::shared_ptr<Tcp_SSL_RW_Task>;
-        Tcp_SSL_RW_Task(int fd, std::weak_ptr<Scheduler_Base> scheduler, uint32_t read_len,TcpConnTimeOut conn_timeout, SSL *ssl)
-            : Tcp_RW_Task<REQ,RESP>(fd, scheduler, read_len,conn_timeout), m_ssl(ssl)
-        {
-        }
-
-        virtual ~Tcp_SSL_RW_Task()
-        {
-            if (this->m_ssl)
-            {
-                IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
-                this->m_ssl = nullptr;
-            }
-        }
-
+        using ptr = ::std::shared_ptr<GY_RecvTask>;
+        using wptr = ::std::weak_ptr<GY_RecvTask>;
+        using uptr = ::std::unique_ptr<GY_RecvTask>;
+        GY_RecvTask(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler);
+        void RecvAll();
+        std::string& GetRBuffer();
+        void SetSSL(SSL* ssl);
     protected:
-        virtual int send_package() override
-        {
-            int len;
-            if(this->m_wbuffer.empty()) return 0;
-            do{
-                len = IOFuntion::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
-                if (len != -1 && len != 0) {
-                    spdlog::info("[{}:{}] [SSL_Send(fd: {}): {} Bytes]",__FILE__,__LINE__,this->m_fd,len);
-                    this->m_wbuffer.erase(this->m_wbuffer.begin(), this->m_wbuffer.begin() + len);
-                }
-                if(this->m_wbuffer.empty()) break;
-            }while(len != 0 && len != -1);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
-                    this->m_ssl = nullptr;
-                    Task_Base::Destory();
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                spdlog::error("[{}:{}] [SSL_Send(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
-                this->m_ssl = nullptr;
-                Task_Base::Destory();
-                return -1;
-            } 
-            return 0;
-        }
-
-        virtual int read_all_buffer() override
-        {
-            int len;
-            do
-            {
-                memset(this->m_temp, 0, this->m_read_len);
-                len = IOFuntion::TcpFunction::SSLRecv(this->m_ssl, this->m_temp, this->m_read_len);
-                if (len != -1 && len != 0){
-                    spdlog::info("[{}:{}] [SSL_Recv (fd: {}) {} Bytes]",__FILE__,__LINE__,this->m_fd,len);
-                    this->m_rbuffer.append(this->m_temp, len);
-                }
-            } while (len != -1 && len != 0);
-            if (len == -1)
-            {
-                if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
-                {
-                    spdlog::error("[{}:{}] [SSL_Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                    Task_Base::Destory();
-                    IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
-                    this->m_ssl = nullptr;
-                    return -1;
-                }
-            }
-            else if (len == 0)
-            {
-                spdlog::error("[{}:{}] [SSL_Recv(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                Task_Base::Destory();
-                IOFuntion::TcpFunction::SSLDestory(this->m_ssl);
-                this->m_ssl = nullptr;
-                return -1;
-            }
-            spdlog::info("[{}:{}] [SSL_Recv(fd: {}) Total: {}]",__FILE__,__LINE__,this->m_fd,this->m_rbuffer.length());
-            return 0;
-        }
-
+        virtual void Execute() override;
     protected:
-        SSL *m_ssl = nullptr;
+        int m_fd;
+        SSL* m_ssl;
+        ::std::weak_ptr<GY_IOScheduler> m_scheduler;
+        ::std::string m_rbuffer;
     };
 
-    // tcp's ssl task
-    template <Tcp_Request REQ, Tcp_Response RESP>
-    class Tcp_SSL_Main_Task : public Tcp_Main_Task<REQ,RESP>
-    {
+    class GY_SendTask : public GY_Task {
     public:
-        using ptr = std::shared_ptr<Tcp_SSL_Main_Task>;
-        Tcp_SSL_Main_Task(int fd, std::vector<std::weak_ptr<Scheduler_Base>> schedulers, std::function<Task<>(Task_Base::wptr)> &&func,
-                            uint32_t read_len, TcpConnTimeOut conn_timeout, uint32_t ssl_accept_max_retry, SSL_CTX *ctx)
-            : Tcp_Main_Task<REQ,RESP>(fd, schedulers, std::forward<std::function<Task<>(Task_Base::wptr)>>(func), read_len,conn_timeout),
-              m_ctx(ctx), m_ssl_accept_retry(ssl_accept_max_retry)
-        {
-        }
-
-        int Exec() override
-        {
-            int connfd = IOFuntion::TcpFunction::Accept(this->m_fd);
-            if (connfd <= 0){
-                spdlog::error("[{}:{}] [accept(fd: {}) error: '{}']",__FILE__,__LINE__,this->m_fd,strerror(errno));
-                return -1;
-            }
-            if (this->m_keepalive_conf.m_keepalive)
-            {
-                if( IOFuntion::TcpFunction::SockKeepalive(connfd, this->m_keepalive_conf.m_idle, this->m_keepalive_conf.m_interval, this->m_keepalive_conf.m_retry) == -1){
-                    spdlog::error("[{}:{}] [socket(fd: {}) SetKeepalive error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                    close(connfd);
-                    return -1;
-                }else spdlog::info("[{}:{}] [socket(fd: {}) SetKeepalive Success]",__FILE__,__LINE__,connfd);
-            }
-            SSL *ssl = IOFuntion::TcpFunction::SSLCreateObj(this->m_ctx, connfd);
-            if (ssl == nullptr)
-            {
-                this->m_error = Error::NetError::GY_SSL_OBJ_INIT_ERROR;
-                spdlog::error("[{}:{}] [socket(fd: {}) SSLCreateObj error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                close(connfd);
-                return -1;
-            }else{
-                spdlog::info("[{}:{}] [SSLCreateObj(fd: {})]",__FILE__,__LINE__,connfd);
-            }
-            if( IOFuntion::TcpFunction::IO_Set_No_Block(connfd) == -1 ){
-                this->m_error = Error::NetError::GY_SET_NOBLOCK_ERROR;
-                spdlog::error("[{}:{}] [socket(fd: {}) SetNoBlock error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                close(connfd);
-                return -1;
-            }else {
-                spdlog::info("[{}:{}] [socket(fd: {}) SetNoBlock Success]",__FILE__,__LINE__,connfd);
-            }
-            int ret = IOFuntion::TcpFunction::SSLAccept(ssl);
-            uint32_t retry = 0;
-            while (ret <= 0 && retry++ <= this->m_ssl_accept_retry)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SSL_SLEEP_MISC_PER_RETRY));
-                ret = IOFuntion::TcpFunction::SSLAccept(ssl);
-                if (ret <= 0)
-                {
-                    int ssl_err = SSL_get_error(ssl, ret);
-                    if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE || ssl_err == SSL_ERROR_WANT_ACCEPT)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        this->m_error = Error::NetError::GY_SSL_ACCEPT_ERROR;
-                        char msg[256];
-                        ERR_error_string(ssl_err,msg);
-                        spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}' , retry: {}]",__FILE__,__LINE__,connfd,msg,retry);
-                        IOFuntion::TcpFunction::SSLDestory(ssl);
-                        ssl = nullptr;
-                        spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                        close(connfd);
-                        return -1;
-                    }
-                }
-            }
-            spdlog::info("[{}:{}] [socket(fd: {}) SSL_Accept Success, retry: {}]",__FILE__,__LINE__,connfd,retry);
-            int indx;
-            if (this->m_schedulers.size() == 1)
-            {
-                indx = 0;
-            }else{
-                indx = connfd % (this->m_schedulers.size() - 1) + 1;
-            }
-
-            if (!this->m_schedulers[indx].expired())
-            {
-                auto task = create_rw_task(connfd, ssl, this->m_schedulers[indx]);
-                this->m_schedulers[indx].lock()->AddTask({connfd, task});
-                if (this->m_schedulers[indx].lock()->AddEvent(connfd, GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-                {
-                    spdlog::error("[{}:{}] scheduler [add event(fd: {}) error: '{}']",__FILE__,__LINE__,connfd,strerror(errno));
-                    IOFuntion::TcpFunction::SSLDestory(ssl);
-                    ssl = nullptr;
-                    spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__,__LINE__,connfd);
-                    close(connfd);
-                    return -1;
-                }else spdlog::info("[{}:{}] [scheduler add event(fd: {}) Success]",__FILE__,__LINE__,connfd);
-            }
-            return 0;
-        }
-
-        virtual ~Tcp_SSL_Main_Task()
-        {
-            if (this->m_ctx)
-                this->m_ctx = nullptr;
-        }
-
+        using ptr = ::std::shared_ptr<GY_SendTask>;
+        using wptr = ::std::weak_ptr<GY_SendTask>;
+        using uptr = ::std::unique_ptr<GY_SendTask>;
+        GY_SendTask(int fd, GY_IOScheduler::wptr scheduler);
+        void AppendWBuffer(::std::string&& wbuffer);
+        void FirstTryToSend();
+        void SendAll();
+        void SetSSL(SSL* ssl);
+        bool Empty() const;
     protected:
-        virtual Task_Base::ptr create_rw_task(int connfd, SSL *ssl,Scheduler_Base::wptr scheduler)
-        {
-            auto task = std::make_shared<Tcp_SSL_RW_Task<REQ,RESP>>(connfd, scheduler, this->m_read_len,this->m_conn_timeout, ssl);
-            task->set_callback(std::forward<std::function<Task<>(Task_Base::wptr)>>(this->m_func));
-            return task;
-        }
-
+        virtual void Execute() override;
     protected:
-        SSL_CTX *m_ctx;
-        uint32_t m_ssl_accept_retry;
-    };
-
-    
-
-    // time task
-    class Time_Task : public Task_Base
-    {
-    public:
-        using ptr = std::shared_ptr<Time_Task>;
-        Time_Task(std::weak_ptr<Timer_Manager> manager);
-
-        int Exec() override;
-
-        ~Time_Task();
-
-    protected:
-        std::weak_ptr<Timer_Manager> m_manager;
-    };
-
-    // thread_task
-    class Thread_Task : public Task_Base
-    {
-    public:
-        using ptr = std::shared_ptr<Thread_Task>;
-        Thread_Task(std::function<void()> &&func);
-
-        int Exec() override;
-
-        ~Thread_Task();
-
-    private:
-        std::function<void()> m_func;
+        int m_fd;
+        SSL* m_ssl;
+        GY_IOScheduler::wptr m_scheduler;
+        ::std::string m_wbuffer;
     };
 }
 

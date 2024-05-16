@@ -10,15 +10,15 @@
 
 namespace galay
 {
-    namespace Helper
+    namespace util
     {
         class ParserBase
         {
         public:
-            virtual int parse(const std::string &filename) = 0;
+            virtual int parse(const ::std::string &filename) = 0;
 
         protected:
-            virtual int ParseContent(const std::string &content) = 0;
+            virtual int ParseContent(const ::std::string &content) = 0;
         };
 
         class ConfigParser : public ParserBase
@@ -30,17 +30,17 @@ namespace galay
             };
 
         public:
-            int parse(const std::string &filename) override;
+            int parse(const ::std::string &filename) override;
 #if __cplusplus >= 201703L
-            std::string_view get_value(std::string_view key);
+            ::std::string_view get_value(::std::string_view key);
 #endif
-            std::string get_value(const std::string &key);
+            ::std::string get_value(const ::std::string &key);
 
         private:
-            int ParseContent(const std::string &content) override;
+            int ParseContent(const ::std::string &content) override;
 
         private:
-            std::unordered_map<std::string, std::string> m_fields;
+            ::std::unordered_map<::std::string, ::std::string> m_fields;
         };
 
     }

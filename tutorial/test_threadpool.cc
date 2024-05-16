@@ -3,16 +3,16 @@
 using namespace galay;
 
 
-std::mutex mtx;
+::std::mutex mtx;
 
 int print(int limit)
 {
-    std::unique_lock lock(mtx);
+    ::std::unique_lock lock(mtx);
     for(int i = 0 ; i < limit ; i ++)
     {
-        std::cout<< i <<" ";
+        ::std::cout<< i <<" ";
     }
-    std::cout<<"finish\n";
+    ::std::cout<<"finish\n";
     return limit;
 }
 
@@ -23,9 +23,9 @@ int main()
     auto fu1 = pool->Exec(print,10);
     auto fu2 = pool->Exec(print,20);
     auto fu3 = pool->Exec(print,10);
-    if(fu1.valid())std::cout << "fu1:" << fu1.get() << '\n';
-    if(fu2.valid()) std::cout << "fu2:" << fu2.get() << '\n';
-    if(fu3.valid()) std::cout << "fu3:" << fu3.get() << '\n';
+    if(fu1.valid())::std::cout << "fu1:" << fu1.get() << '\n';
+    if(fu2.valid()) ::std::cout << "fu2:" << fu2.get() << '\n';
+    if(fu3.valid()) ::std::cout << "fu3:" << fu3.get() << '\n';
 
     pool->destroy();
     return 0;

@@ -1,115 +1,126 @@
 #ifndef GALAY_SCHEDULER_H
 #define GALAY_SCHEDULER_H
 
-#include <unordered_map>
+#include <memory>
+#include <atomic>
+#include <queue>
+#include <chrono>
+#include <memory>
 #include <mutex>
+#include <functional>
 #include <shared_mutex>
-#ifdef __linux__
+#include <unordered_map>
+#include <sys/timerfd.h>
 #include <sys/epoll.h>
-#endif
-#include <sys/select.h>
-#include <limits>
-#include "base.h"
 
-namespace galay{
-#ifdef __linux__
-    class Epoll_Scheduler: public Scheduler_Base , public std::enable_shared_from_this<Epoll_Scheduler>
-    {
-    public:
-        using ptr = std::shared_ptr<Epoll_Scheduler>;
-        using wptr = std::weak_ptr<Epoll_Scheduler>;
-        Epoll_Scheduler(int max_event,int timeout);
+#include "builder.h"
 
-        int Start() override;
-        
-        std::shared_ptr<Timer_Manager> GetTimerManager() override;
+namespace galay {
+    #define MAX_TIMERID         40,000,000,000
 
-        void AddTask(std::pair<int,std::shared_ptr<Task_Base>>&& pair) override;
-
-        void DelTask(int fd) override;
-        
-        int AddEvent(int fd ,int event_type) override; 
-        
-        int DelEvent(int fd, int event_type) override;
-
-        //from is unuse
-        int ModEvent(int fd, int from , int to) override;
-
-        void Stop() override;
-
-        bool IsStop() override;
-
-        // return epollfd
-        int get_epoll_fd() const;
-
-        // return events' size
-        int get_event_size() const;
-
-        virtual ~Epoll_Scheduler() ;
-
-    private:
-        void CloseConn(int fd) override;
-    private: 
-        std::mutex m_mtx;
-        std::unordered_map<int, std::shared_ptr<Task_Base>> m_tasks;
-        bool m_stop = false;
-        std::shared_ptr<Timer_Manager> m_timer_manager = nullptr;
-
-        //epoll
-        int m_epfd = 0;
-        epoll_event *m_events = nullptr;
-        int m_event_num;
-        int m_check_timeout;
+    enum EventType{
+        GY_EVENT_READ = 0x1,
+        GY_EVENT_WRITE = 0x2,
+        GY_EVENT_ERROR = 0x4,
+        GY_EVENT_EPOLLET = 0x8,         //epoll et模式
+        GY_EVENT_EPOLLONESHOT = 0x16,   //epoll oneshot模式
     };
-#endif
-    class Select_Scheduler: public Scheduler_Base , public std::enable_shared_from_this<Select_Scheduler>
-    {
+
+    
+
+    class GY_Objector;
+    class Timer;
+    class GY_TimerManager;
+
+    class GY_IOScheduler {
     public:
-        using ptr = std::shared_ptr<Select_Scheduler>;
-        using wptr = std::weak_ptr<Select_Scheduler>;
-        Select_Scheduler(int timeout);//ms
+        using ptr = ::std::shared_ptr<GY_IOScheduler>;
+        using wptr = ::std::weak_ptr<GY_IOScheduler>;
+        using uptr = ::std::unique_ptr<GY_IOScheduler>;
+        GY_IOScheduler() = default;
+        virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() = 0;
+        virtual void RegisterObjector(int fd,  ::std::shared_ptr<GY_Objector> objector) = 0;
+        virtual void RegiserTimerManager(int fd,  ::std::shared_ptr<GY_TimerManager> timerManager) = 0;
+        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func) = 0;
+        virtual void DelObjector(int fd) = 0;
+        virtual void Start() = 0;
+        virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> UserFunction(galay::GY_Controller::ptr controller) = 0;
+        virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> IllegalFunction(std::string& rbuffer,std::string& wbuffer) = 0;
+        virtual int DelEvent(int fd, int event_type) = 0;
+        virtual int ModEvent(int fd, int from ,int to) = 0;
+        virtual int AddEvent(int fd, int event_type) = 0;
+        virtual void Stop() = 0;
+        virtual bool IsStop() = 0;
+        virtual ~GY_IOScheduler() = default;
+    protected:
+        ::std::unordered_map<int,::std::shared_ptr<GY_Objector>> m_objectors;
+    };
 
-        void AddTask(std::pair<int, std::shared_ptr<Task_Base>> &&pair) override;
-
-        void DelTask(int fd) override;
-
-        int AddEvent(int fd, int event_type) override;
-
-
-        int DelEvent(int fd, int event_type) override;
-
-
-        int ModEvent(int fd, int from ,int to) override;
-        //is stoped?
-        bool IsStop() override;
-
-        int Start() override;
-
-        std::shared_ptr<Timer_Manager> GetTimerManager() override;
-
-        void Stop() override;
-
-        virtual ~Select_Scheduler();
+    class GY_SelectScheduler: public GY_IOScheduler {
+    public:
+        using ptr = ::std::shared_ptr<GY_SelectScheduler>;
+        using wptr = ::std::weak_ptr<GY_SelectScheduler>;
+        using uptr = ::std::unique_ptr<GY_SelectScheduler>;
+        GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder);
+        virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
+        virtual void RegisterObjector(int fd,  ::std::shared_ptr<GY_Objector> objector) override;
+        virtual void RegiserTimerManager(int fd,  ::std::shared_ptr<GY_TimerManager> timerManager) override;
+        virtual void DelObjector(int fd) override;
+        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func) override;
+        virtual void Start() override;
+        virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> UserFunction(galay::GY_Controller::ptr controller) override;
+        virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> IllegalFunction(std::string& rbuffer,std::string& wbuffer) override;
+        virtual int DelEvent(int fd, int event_type) override;
+        virtual int ModEvent(int fd, int from ,int to) override;
+        virtual int AddEvent(int fd, int event_type) override;
+        virtual bool IsStop() override;
+        virtual void Stop() override;
+        virtual ~GY_SelectScheduler();
     private:
-        void CloseConn(int fd) override;
-    private:
-        int m_maxfd = INT32_MIN;
-        int m_minfd = INT32_MAX;
-        std::mutex m_mtx;
+        int m_timerfd;
         fd_set m_rfds;
         fd_set m_wfds;
         fd_set m_efds;
+        int m_maxfd = INT32_MIN;
+        int m_minfd = INT32_MAX;
         bool m_stop;
-        int m_check_timeout;
-        std::unordered_map<int,std::shared_ptr<Task_Base>> m_tasks;
-        std::shared_ptr<Timer_Manager> m_timer_manager = nullptr;
+        GY_TcpServerBuilderBase::ptr m_builder;
+        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalFunc;
     };
 
+    class GY_EpollScheduler : public GY_IOScheduler
+    {
+    public:
+        using ptr = std::shared_ptr<GY_EpollScheduler>;
+        using uptr = std::unique_ptr<GY_EpollScheduler>;
+        using wptr = std::weak_ptr<GY_EpollScheduler>;
 
+        GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder);
+        virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
+        virtual void RegisterObjector(int fd, ::std::shared_ptr<GY_Objector> objector) override;
+        virtual void RegiserTimerManager(int fd, ::std::shared_ptr<GY_TimerManager> timerManager) override;
+        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func) override;
+        virtual void DelObjector(int fd) override;
+        virtual void Start() override;
+        virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> UserFunction(galay::GY_Controller::ptr controller) override;
+        virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> IllegalFunction(std::string& rbuffer,std::string& wbuffer) override;
+        virtual int DelEvent(int fd, int event_type) override;
+        virtual int ModEvent(int fd, int from ,int to) override;
+        virtual int AddEvent(int fd, int event_type) override;
+        virtual void Stop() override;
+        virtual bool IsStop() override;
+        virtual ~GY_EpollScheduler();
+    private:
+        int m_epollfd;
+        int m_timerfd;
+        GY_TcpServerBuilderBase::ptr m_builder;
+        epoll_event* m_events;
+        bool m_stop;
+        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalFunc;
+    };
 
 }
-
-
-
 
 #endif

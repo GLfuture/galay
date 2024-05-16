@@ -1,8 +1,8 @@
 #include "sha256.h"
 
 
-std::string 
-galay::Security::Sha256Util::encode(const std::string & str)
+::std::string 
+galay::security::Sha256Util::encode(const ::std::string & str)
 {
     EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
     EVP_DigestInit(md_ctx, EVP_sha256());
@@ -14,17 +14,17 @@ galay::Security::Sha256Util::encode(const std::string & str)
 
     EVP_MD_CTX_free(md_ctx);
 
-    std::stringstream ss;
-    ss << std::hex << std::setfill('0');
+    ::std::stringstream ss;
+    ss << ::std::hex << ::std::setfill('0');
     for (unsigned int i = 0; i < hash_len; i++) {
-        ss << std::setw(2) << static_cast<unsigned int>(hash[i]);
+        ss << ::std::setw(2) << static_cast<unsigned int>(hash[i]);
     }
     return ss.str();
 }
 
 
-std::string 
-galay::Security::Sha256Util::encode(std::string_view str)
+::std::string 
+galay::security::Sha256Util::encode(::std::string_view str)
 {
     EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
     EVP_DigestInit(md_ctx, EVP_sha256());
@@ -36,10 +36,10 @@ galay::Security::Sha256Util::encode(std::string_view str)
 
     EVP_MD_CTX_free(md_ctx);
 
-    std::stringstream ss;
-    ss << std::hex << std::setfill('0');
+    ::std::stringstream ss;
+    ss << ::std::hex << ::std::setfill('0');
     for (unsigned int i = 0; i < hash_len; i++) {
-        ss << std::setw(2) << static_cast<unsigned int>(hash[i]);
+        ss << ::std::setw(2) << static_cast<unsigned int>(hash[i]);
     }
     return ss.str();
 }

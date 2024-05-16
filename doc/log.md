@@ -1,0 +1,1 @@
+[Function] [Success/Fail/Waiting] [Message]

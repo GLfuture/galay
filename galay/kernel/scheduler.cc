@@ -1,272 +1,66 @@
 #include "scheduler.h"
-#include "task.h"
-#include "callback.h"
+#include "objector.h"
+#include <sys/select.h>
 #include <spdlog/spdlog.h>
 
-galay::Epoll_Scheduler::Epoll_Scheduler(int max_event, int timeout)
-{
-    this->m_epfd = epoll_create(1);
-    this->m_check_timeout = timeout;
-    this->m_event_num = max_event;
-    this->m_events = new epoll_event[max_event];
-}
-
-int galay::Epoll_Scheduler::Start()
-{
-    //不在构造函数构造，因为构造函数中Scheduler还未创建实例无法使用weak_ptr
-    if(!m_timer_manager){
-        this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
-        auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        if (this->AddEvent(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR) == -1)
-        {
-            spdlog::error("[{}:{}] [add scheduler(fd: {}) error: {}]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
-            spdlog::error("[{}:{}] [socket(fd: {}) close]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-            close(this->m_timer_manager->get_timerfd());
-            return -1;
-        }
-        else spdlog::info("[{}:{}] [add scheduler(fd: {}) success]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-        AddTask({this->m_timer_manager->get_timerfd(), time_task});
-    }
-    while (1)
-    {
-        this->m_timer_manager->update_time();
-        int nready = epoll_wait(m_epfd, m_events, m_event_num, m_check_timeout);
-        if (this->m_stop)
-            break;
-        if (nready == -1)
-        {
-            spdlog::error("[{}:{}] [scheduler check(epfd: {}) error: {}]", __FILE__, __LINE__, this->m_epfd ,strerror(errno));
-            continue;
-        }
-        for (int i = 0; i < nready; i++)
-        {
-            int fd = m_events[i].data.fd;
-            if (this->m_tasks.contains(fd))
-            {
-                Task_Base::ptr task = this->m_tasks.at(fd);
-                task->Exec();
-                if (task->IsDestory()) {
-                    CloseConn(fd);
-                }
-            }
-        }
-    }
-    return Error::NoError::GY_SUCCESS;
-}
-
-int galay::Epoll_Scheduler::get_epoll_fd() const
-{
-    return m_epfd;
-}
-
-
-int galay::Epoll_Scheduler::get_event_size() const 
-{
-    return m_event_num;
-}
-
-int galay::Epoll_Scheduler::AddEvent(int fd , int event_type)
-{
-    epoll_event ev = {0};
-    ev.data.fd = fd;
-    if((event_type & GY_EVENT_READ) != 0)
-    {
-        ev.events |= EPOLLIN;
-    }
-    if((event_type & GY_EVENT_WRITE) != 0)
-    {
-        ev.events |= EPOLLOUT;
-    }
-    if((event_type & GY_EVENT_ERROR) != 0)
-    {
-        ev.events |= EPOLLRDHUP;
-    }
-    if((event_type & GY_EVENT_EPOLLET) != 0)
-    {
-        ev.events |= EPOLLET;
-    }
-    return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &ev);
-}
-
-int galay::Epoll_Scheduler::DelEvent(int fd , int event_type)
-{
-    epoll_event ev = {0};
-    ev.data.fd = fd;
-    if((event_type & GY_EVENT_READ) != 0)
-    {
-        ev.events |= EPOLLIN;
-    }
-    if((event_type & GY_EVENT_WRITE) != 0)
-    {
-        ev.events |= EPOLLOUT;
-    }
-    if((event_type & GY_EVENT_ERROR) != 0)
-    {
-        ev.events |= EPOLLRDHUP;
-    }
-    return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &ev);
-}
-
-int galay::Epoll_Scheduler::ModEvent(int fd, int from , int to)
-{
-    epoll_event ev = {0};
-    ev.data.fd = fd;
-    if((to & GY_EVENT_READ) != 0)
-    {
-        ev.events |= EPOLLIN;
-    }
-    if((to & GY_EVENT_WRITE) != 0)
-    {
-        ev.events |= EPOLLOUT;
-    }
-    if((to & GY_EVENT_ERROR) != 0)
-    {
-        ev.events |= EPOLLRDHUP;
-    }
-    return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &ev);
-}
-
-void galay::Epoll_Scheduler::Stop()
-{
-    if (!this->m_stop)
-    {
-        this->m_stop = true;
-        for (auto it = this->m_tasks.begin(); it != this->m_tasks.end(); it++)
-        {
-            if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
-            spdlog::info("[{}:{}] [task(fd :{}) destory]",__FILE__, __LINE__, it->first);
-            spdlog::info("[{}:{}] [socket(fd :{}) close]",__FILE__, __LINE__, it->first);
-            close(it->first);
-            this->DelEvent(it->first, GY_EVENT_READ | GY_EVENT_WRITE| GY_EVENT_ERROR);
-            it->second.reset();
-        }
-        this->m_tasks.clear();
-        spdlog::info("[{}:{}] [socket(epfd :{}) close]",__FILE__, __LINE__, this->m_epfd);
-        close(this->m_epfd);
-    }
-}
-
-galay::Timer_Manager::ptr galay::Epoll_Scheduler::GetTimerManager()
-{
-    if(!this->m_timer_manager)
-    {
-        this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
-        auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        if(this->AddEvent(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET| GY_EVENT_ERROR)==-1)
-        {
-            spdlog::error("[{}:{}] [add scheduler(fd: {}) error: {}]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
-            spdlog::error("[{}:{}] [socket(timerfd :{}) close]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-            close(this->m_timer_manager->get_timerfd());
-            return nullptr;
-        }
-        else spdlog::info("[{}:{}] [add scheduler(fd: {}) Success]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-        AddTask({this->m_timer_manager->get_timerfd(), time_task});
-    }
-    return this->m_timer_manager;
-}
-
-bool galay::Epoll_Scheduler::IsStop()
-{
-    return this->m_stop;
-}
-
-void galay::Epoll_Scheduler::AddTask(std::pair<int,std::shared_ptr<Task_Base>>&& pair)
-{
-    std::unique_lock<std::mutex> lock(this->m_mtx);
-    auto it = this->m_tasks.find(pair.first);
-    if (it == this->m_tasks.end())
-    {
-        this->m_tasks.emplace(pair);
-    }
-    else
-    {
-        it->second = pair.second;
-    }
-}
-
-void galay::Epoll_Scheduler::DelTask(int fd)
-{
-    std::unique_lock<std::mutex> lock(this->m_mtx);
-    auto it = this->m_tasks.find(fd);
-    if (it != this->m_tasks.end()){
-        this->m_tasks.erase(fd);
-    }
-}
-
-void galay::Epoll_Scheduler::CloseConn(int fd)
-{
-    if (!Callback_ConnClose::empty())
-        Callback_ConnClose::call(fd);
-    spdlog::info("[{}:{}] [socket(fd :{}) close connection]",__FILE__, __LINE__, fd);
-    close(fd);
-    DelTask(fd);
-    DelEvent(fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
-}
-
-galay::Epoll_Scheduler::~Epoll_Scheduler() 
-{
-    if(this->m_events){
-        delete[] m_events;
-        m_events = nullptr;
-    }
-}
-
-
-//select scheduler
-galay::Select_Scheduler::Select_Scheduler(int timeout) // ms
+galay::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder)
 {
     FD_ZERO(&m_rfds);
     FD_ZERO(&m_wfds);
     FD_ZERO(&m_efds);
     this->m_stop = false;
-    this->m_check_timeout = (timeout == -1 ? 0:timeout);
+    this->m_builder = builder;
+    this->m_userFunc = builder->GetUserFunction();
+    this->m_illegalFunc = builder->GetIllegalFunction();
+    this->m_timerfd = 0;
 }
 
-void galay::Select_Scheduler::AddTask(std::pair<int, std::shared_ptr<Task_Base>> &&pair)
+galay::GY_TcpServerBuilderBase::wptr 
+galay::GY_SelectScheduler::GetTcpServerBuilder()
 {
-    std::unique_lock<std::mutex> lock(this->m_mtx);
-    auto it = this->m_tasks.find(pair.first);
-    if (it == this->m_tasks.end())
-    {
-        this->m_tasks.emplace(pair);
-    }
-    else
-    {
-        it->second = pair.second;
-    }
+    return this->m_builder;
 }
 
-void galay::Select_Scheduler::DelTask(int fd)
+/// @brief 
+/// @param controller 
+/// @return coroutine
+galay::GY_TcpCoroutine<galay::CoroutineStatus> 
+galay::GY_SelectScheduler::UserFunction(GY_Controller::ptr controller)
 {
-    std::unique_lock<std::mutex> lock(this->m_mtx);
-    auto it = this->m_tasks.find(fd);
-    if (it != this->m_tasks.end())
-    {
-        this->m_tasks.erase(fd);
-    }
+    if(!this->m_userFunc) return {};
+    return this->m_userFunc(controller);
 }
 
-int galay::Select_Scheduler::AddEvent(int fd, int event_type)
+
+galay::GY_TcpCoroutine<galay::CoroutineStatus> 
+galay::GY_SelectScheduler::IllegalFunction(std::string& rbuffer,std::string& wbuffer)
 {
-    if(fd >= __FD_SETSIZE) return -1;
-    if ((event_type & GY_EVENT_READ) != 0)
-    {
-        FD_SET(fd, &m_rfds);
-    }
-    if ((event_type & GY_EVENT_WRITE) != 0)
-    {
-        FD_SET(fd, &m_wfds);
-    }
-    if ((event_type & GY_EVENT_ERROR) != 0)
-    {
-        FD_SET(fd, &m_efds);
-    }
-    this->m_maxfd = std::max(this->m_maxfd, fd);
-    this->m_minfd = std::min(this->m_minfd, fd);
-    return 0;
+    if(!this->m_illegalFunc) return {};
+    return this->m_illegalFunc(rbuffer,wbuffer);
 }
 
-int galay::Select_Scheduler::DelEvent(int fd, int event_type)
+void 
+galay::GY_SelectScheduler::RegisterObjector(int fd, ::std::shared_ptr<GY_Objector> objector)
+{
+    m_objectors[fd] = objector;
+}
+
+void 
+galay::GY_SelectScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_TimerManager> timerManager)
+{
+    this->m_timerfd = fd;
+    RegisterObjector(fd,timerManager);
+    AddEvent(m_timerfd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ);
+}
+
+void 
+galay::GY_SelectScheduler::DelObjector(int fd)
+{
+    m_objectors.erase(fd);
+}
+
+int 
+galay::GY_SelectScheduler::DelEvent(int fd, int event_type)
 {
     if(fd >= __FD_SETSIZE) return -1;
     if ((event_type & GY_EVENT_READ) != 0)
@@ -288,7 +82,8 @@ int galay::Select_Scheduler::DelEvent(int fd, int event_type)
     return 0;
 }
 
-int galay::Select_Scheduler::ModEvent(int fd, int from, int to)
+int
+galay::GY_SelectScheduler::ModEvent(int fd, int from ,int to)
 {
     if(fd >= __FD_SETSIZE) return -1;
     int ret = DelEvent(fd, from);
@@ -297,118 +92,281 @@ int galay::Select_Scheduler::ModEvent(int fd, int from, int to)
     return ret;
 }
 
-bool galay::Select_Scheduler::IsStop()
+
+int 
+galay::GY_SelectScheduler::AddEvent(int fd, int event_type)
 {
-    return this->m_stop;
+    if(fd >= __FD_SETSIZE) return -1;
+    if ((event_type & GY_EVENT_READ) != 0)
+    {
+        FD_SET(fd, &m_rfds);
+    }
+    if ((event_type & GY_EVENT_WRITE) != 0)
+    {
+        FD_SET(fd, &m_wfds);
+    }
+    if ((event_type & GY_EVENT_ERROR) != 0)
+    {
+        FD_SET(fd, &m_efds);
+    }
+    this->m_maxfd = ::std::max(this->m_maxfd, fd);
+    this->m_minfd = ::std::min(this->m_minfd, fd);
+    return 0;
 }
 
-int galay::Select_Scheduler::Start()
+
+std::shared_ptr<galay::Timer>
+galay::GY_SelectScheduler::AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func)
+{
+    auto timerManager = std::dynamic_pointer_cast<GY_TimerManager>(m_objectors[m_timerfd]);
+    return timerManager->AddTimer(during, exec_times, ::std::forward<::std::function<::std::any()>&&>(func));
+}
+
+void 
+galay::GY_SelectScheduler::Start()
 {
     fd_set read_set, write_set, excep_set;
     timeval tv;
-    tv.tv_sec = this->m_check_timeout / 1000;
-    tv.tv_usec = this->m_check_timeout % 1000 * 1000;
-    std::unique_lock<std::mutex> lock(this->m_mtx, std::defer_lock);
-    if (!m_timer_manager)
-    {
-        this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
-        auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        if(this->AddEvent(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR)==-1)
-        {
-            spdlog::error("[{}:{}] [add scheduler(fd: {}) error: {}]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
-            spdlog::error("[{}:{}] [socket(timerfd :{}) close]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-            close(this->m_timer_manager->get_timerfd());
-            return -1;
-        }
-        else spdlog::info("[{}:{}] [add scheduler(fd: {}) Success]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-        AddTask({this->m_timer_manager->get_timerfd(), time_task});
-    }
+    tv.tv_sec = this->m_builder->GetScheWaitTime() / 1000;
+    tv.tv_usec = this->m_builder->GetScheWaitTime() % 1000 * 1000;
     while (1)
     {
-        m_timer_manager->update_time();
-        lock.lock();
         memcpy(&read_set, &m_rfds, sizeof(fd_set));
         memcpy(&write_set, &m_wfds, sizeof(fd_set));
         memcpy(&excep_set, &m_efds, sizeof(fd_set));
-        lock.unlock();
         int nready = select(this->m_maxfd + 1, &read_set, &write_set, &excep_set, &tv);
         if (this->IsStop())
             break;
         if (nready == -1)
         {
-            spdlog::error("[{}:{}] [scheduler check(tid: {}) error: {}]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()),strerror(errno));
-            continue;
+            spdlog::error("[{}:{}] [[select(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,::std::hash<::std::thread::id>{}(::std::this_thread::get_id()),strerror(errno));
+            return;
         }
         if (nready == 0)
             continue;
         for (int fd = m_minfd; fd > 0 && fd <= m_maxfd; fd++)
         {
-            if (FD_ISSET(fd, &read_set) || FD_ISSET(fd, &write_set) || FD_ISSET(fd, &excep_set))
+            int eventType = 0;
+            if (FD_ISSET(fd, &read_set))
             {
-                if (this->m_tasks.contains(fd))
-                {
-                    Task_Base::ptr task = this->m_tasks.at(fd);
-                    task->Exec();
-                    if (task->IsDestory())
-                    {
-                        CloseConn(fd);
-                    }
-                }
+                eventType |= EventType::GY_EVENT_READ;
+            }
+            if(FD_ISSET(fd, &write_set))
+            {
+                eventType |= EventType::GY_EVENT_WRITE;
+            }
+            if(FD_ISSET(fd, &excep_set))
+            {
+                eventType |= EventType::GY_EVENT_ERROR;
+            }
+            if(eventType != 0){
+                auto objector = m_objectors[fd];
+                objector->SetEventType(eventType);
+                objector->ExecuteTask();
+            }
+        }
+    } 
+}
+
+bool 
+galay::GY_SelectScheduler::IsStop() 
+{
+    return this->m_stop;
+}
+
+void
+galay::GY_SelectScheduler::Stop()
+{
+    if (!m_stop)
+    {
+        FD_ZERO(&m_rfds);
+        FD_ZERO(&m_wfds);
+        FD_ZERO(&m_efds);
+        for (auto it = m_objectors.begin(); it != m_objectors.end(); ++it)
+        {
+            this->DelEvent(it->first, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+            spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, it->first);
+            close(it->first);
+        }
+        this->m_objectors.clear();
+        this->m_stop = true;
+    }
+}
+
+galay::GY_SelectScheduler::~GY_SelectScheduler()
+{
+
+}
+
+galay::GY_EpollScheduler::GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder)
+{
+    this->m_epollfd = epoll_create(1);
+    this->m_builder = builder;
+    this->m_events = new epoll_event[builder->GetMaxEventSize()];
+    this->m_stop = false;
+    this->m_userFunc = builder->GetUserFunction();
+    this->m_illegalFunc = builder->GetIllegalFunction();
+}
+
+galay::GY_TcpServerBuilderBase::wptr 
+galay::GY_EpollScheduler::GetTcpServerBuilder() 
+{
+    return this->m_builder;
+}
+
+void 
+galay::GY_EpollScheduler::RegisterObjector(int fd, ::std::shared_ptr<GY_Objector> objector)
+{
+    this->m_objectors[fd] = objector;
+}
+
+void 
+galay::GY_EpollScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_TimerManager> timerManager)
+{
+    this->m_timerfd = fd;
+    RegisterObjector(fd,timerManager);
+    AddEvent(m_timerfd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ);
+}
+
+std::shared_ptr<galay::Timer> 
+galay::GY_EpollScheduler::AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func)
+{
+    auto timerManager = std::dynamic_pointer_cast<GY_TimerManager>(m_objectors[m_timerfd]);
+    return timerManager->AddTimer(during, exec_times, ::std::forward<::std::function<::std::any()>&&>(func));
+}
+
+void 
+galay::GY_EpollScheduler::DelObjector(int fd) 
+{
+    m_objectors.erase(fd);
+}
+void 
+galay::GY_EpollScheduler::Start() 
+{
+    uint16_t eventSize = m_builder->GetMaxEventSize() , waitTime = m_builder->GetScheWaitTime();
+    while (1)
+    {
+        int nready = epoll_wait(this->m_epollfd, m_events, eventSize, waitTime);
+        if(IsStop()) break;
+        if(nready < 0){
+            spdlog::error("[{}:{}] [[epoll_wait error(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,::std::hash<::std::thread::id>{}(::std::this_thread::get_id()),strerror(errno));
+            return;
+        }
+        while(--nready >= 0){
+            int eventType = 0;
+            if(m_events[nready].events & EPOLLIN){
+                eventType |= EventType::GY_EVENT_READ;
+            }
+            if(m_events[nready].events & EPOLLOUT){
+                eventType |= EventType::GY_EVENT_WRITE;
+            }
+            if(m_events[nready].events & EPOLLERR){
+                eventType |= EventType::GY_EVENT_ERROR;
+            }
+            if(eventType != 0){
+                int fd = m_events[nready].data.fd;
+                auto objector = m_objectors[fd];
+                objector->SetEventType(eventType);
+                objector->ExecuteTask();
             }
         }
     }
-    return 0;
+    
 }
 
-std::shared_ptr<galay::Timer_Manager> galay::Select_Scheduler::GetTimerManager()
+galay::GY_TcpCoroutine<galay::CoroutineStatus> 
+galay::GY_EpollScheduler::UserFunction(galay::GY_Controller::ptr controller) 
 {
-    if (!m_timer_manager)
-    {
-        this->m_timer_manager = std::make_shared<Timer_Manager>(shared_from_this());
-        auto time_task = std::make_shared<Time_Task>(this->m_timer_manager);
-        if(this->AddEvent(this->m_timer_manager->get_timerfd(), GY_EVENT_READ | GY_EVENT_EPOLLET | GY_EVENT_ERROR)==-1)
-        {
-            spdlog::error("[{}:{}] [add scheduler(fd: {}) error: {}]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd(), strerror(errno));
-            spdlog::error("[{}:{}] [socket(epfd :{}) close]",__FILE__, __LINE__,this->m_timer_manager->get_timerfd());
-            close(this->m_timer_manager->get_timerfd());
-            return nullptr;
-        }
-        else spdlog::info("[{}:{}] [add scheduler(fd: {}) Success]",__FILE__, __LINE__, this->m_timer_manager->get_timerfd());
-        AddTask({this->m_timer_manager->get_timerfd(), time_task});
-    }
-    return this->m_timer_manager;
+    return this->m_userFunc(controller);
 }
 
-void galay::Select_Scheduler::Stop()
+galay::GY_TcpCoroutine<galay::CoroutineStatus> 
+galay::GY_EpollScheduler::IllegalFunction(std::string& rbuffer,std::string& wbuffer) 
 {
-    FD_ZERO(&m_rfds);
-    FD_ZERO(&m_wfds);
-    FD_ZERO(&m_efds);
-    for(auto it = m_tasks.begin() ; it != m_tasks.end() ; it++)
+    return this->m_illegalFunc(rbuffer,wbuffer);
+}
+
+
+int 
+galay::GY_EpollScheduler::DelEvent(int fd, int event_type) 
+{
+    epoll_event ev = {0};
+    ev.data.fd = fd;
+    if((event_type & GY_EVENT_READ) != 0)
     {
-        if(!Callback_ConnClose::empty()) Callback_ConnClose::call(it->first);
-        this->DelEvent(it->first, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
-        spdlog::info("[{}:{}] [task destory]",__FILE__, __LINE__);
-        spdlog::info("[{}:{}] [socket(fd :{}) close]",__FILE__, __LINE__, it->first);
-        close(it->first);
-        it->second.reset();
+        ev.events |= EPOLLIN;
     }
-    this->m_tasks.clear();
+    if((event_type & GY_EVENT_WRITE) != 0)
+    {
+        ev.events |= EPOLLOUT;
+    }
+    if((event_type & GY_EVENT_ERROR) != 0)
+    {
+        ev.events |= EPOLLRDHUP;
+    }
+    return epoll_ctl(m_epollfd, EPOLL_CTL_DEL, fd, &ev);
+}
+
+int 
+galay::GY_EpollScheduler::ModEvent(int fd, int from ,int to) 
+{
+    epoll_event ev = {0};
+    ev.data.fd = fd;
+    if((to & GY_EVENT_READ) != 0)
+    {
+        ev.events |= EPOLLIN;
+    }
+    if((to & GY_EVENT_WRITE) != 0)
+    {
+        ev.events |= EPOLLOUT;
+    }
+    if((to & GY_EVENT_ERROR) != 0)
+    {
+        ev.events |= EPOLLRDHUP;
+    }
+    return epoll_ctl(m_epollfd, EPOLL_CTL_MOD, fd, &ev);
+}
+
+int 
+galay::GY_EpollScheduler::AddEvent(int fd, int event_type) 
+{
+    epoll_event ev = {0};
+    ev.data.fd = fd;
+    if((event_type & GY_EVENT_READ) != 0)
+    {
+        ev.events |= EPOLLIN;
+    }
+    if((event_type & GY_EVENT_WRITE) != 0)
+    {
+        ev.events |= EPOLLOUT;
+    }
+    if((event_type & GY_EVENT_ERROR) != 0)
+    {
+        ev.events |= EPOLLRDHUP;
+    }
+    if((event_type & GY_EVENT_EPOLLET) != 0)
+    {
+        ev.events |= EPOLLET;
+    }
+    if((event_type & GY_EVENT_EPOLLONESHOT ) != 0)
+    {
+        ev.events |= EPOLLONESHOT;
+    }
+    return epoll_ctl(m_epollfd, EPOLL_CTL_ADD, fd, &ev);
+}
+void 
+galay::GY_EpollScheduler::Stop() 
+{
     this->m_stop = true;
 }
-
-
-void galay::Select_Scheduler::CloseConn(int fd)
+bool 
+galay::GY_EpollScheduler::IsStop() 
 {
-    if (!Callback_ConnClose::empty())
-        Callback_ConnClose::call(fd);
-    spdlog::info("[{}:{}] [socket(fd :{}) close]",__FILE__, __LINE__, fd);
-    close(fd);
-    DelTask(fd);
-    this->DelEvent(fd, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+    return this->m_stop;
 }
 
-galay::Select_Scheduler::~Select_Scheduler()
+galay::GY_EpollScheduler::~GY_EpollScheduler()
 {
-    if(!this->m_stop) Stop();
+    close(this->m_epollfd);
+    delete [] this->m_events;
 }

@@ -1,23 +1,23 @@
 #include "parser.h"
-#include "file.h"
+#include "fileiofunction.h"
 
 int 
-galay::Helper::ConfigParser::parse(const std::string &filename)
+galay::util::ConfigParser::parse(const ::std::string &filename)
 {
-    std::string buffer = FileOP::ReadFile(filename);
+    ::std::string buffer = galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(filename);
     int ret = ParseContent(buffer);
     return ret;
 }
 
 int 
-galay::Helper::ConfigParser::ParseContent(const std::string& content)
+galay::util::ConfigParser::ParseContent(const ::std::string& content)
 {
-    std::stringstream stream(content);
-    std::string line;
-    while (std::getline(stream, line))
+    ::std::stringstream stream(content);
+    ::std::string line;
+    while (::std::getline(stream, line))
     {
         ConfType state = ConfType::CONF_KEY;
-        std::string key, value;
+        ::std::string key, value;
         for (int i = 0; i < line.length(); i++)
         {
             if (line[i] == ' ')
@@ -46,17 +46,17 @@ galay::Helper::ConfigParser::ParseContent(const std::string& content)
     return 0;
 }
 
-std::string_view 
-galay::Helper::ConfigParser::get_value(std::string_view key)
+::std::string_view 
+galay::util::ConfigParser::get_value(::std::string_view key)
 {
-    auto it = m_fields.find(std::string(key));
+    auto it = m_fields.find(::std::string(key));
     if (it == m_fields.end())
         return "";
     return it->second;
 }
 
-std::string 
-galay::Helper::ConfigParser::get_value(const std::string &key)
+::std::string 
+galay::util::ConfigParser::get_value(const ::std::string &key)
 {
     auto it = m_fields.find(key);
     if (it == m_fields.end())

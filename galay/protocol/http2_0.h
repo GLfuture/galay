@@ -7,12 +7,13 @@
 
 namespace galay
 {
-    namespace Protocol{
-        class Http2_0_Protocol:public Http1_1_Protocol
-        {
-        public:
-            
-        };
+    namespace protocol{
+        namespace http{
+            class Http2_0_Protocol : public Http1_1_Protocol
+            {
+            public:
+            };
+        }
     }
     
 }

@@ -3,7 +3,7 @@
 
 namespace galay
 {
-    namespace Helper
+    namespace util
     {
         class Random
         {

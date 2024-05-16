@@ -20,20 +20,20 @@ int main()
 {
     signal(SIGINT,sig_handle);
     scheduler = Scheduler_Factory::create_select_scheduler(0);
-    auto timer = scheduler->GetTimerManager()->add_timer(100, 1, []() ->void {
-        std::string salt = Security::Salt::create(10,20);
-        std::string password = "123456";
-        // std::cout << "origin: " <<  str << '\n';
-        // std::cout << "md5 :" << Security::Md5Util::encode(str)<<'\n';
-        // std::cout << "sha256 :" << Security::Sha256Util::encode(str) << '\n';
-        // std::cout << "sha512 :" << Security::Sha512Util::encode(str)<<'\n';
-        std::cout << salt << '\n';
-        std::cout << Security::Sha256Util::encode(Security::Md5Util::encode(password) + salt);
+    auto timer = scheduler->GetTimerManager()->AddTimer(100, 1, []() ->void {
+        ::std::string salt = security::Salt::create(10,20);
+        ::std::string password = "123456";
+        // ::std::cout << "origin: " <<  str << '\n';
+        // ::std::cout << "md5 :" << Security::Md5Util::encode(str)<<'\n';
+        // ::std::cout << "sha256 :" << Security::Sha256Util::encode(str) << '\n';
+        // ::std::cout << "sha512 :" << Security::Sha512Util::encode(str)<<'\n';
+        ::std::cout << salt << '\n';
+        ::std::cout << security::Sha256Util::encode(security::Md5Util::encode(password) + salt);
 
     });
-    scheduler->GetTimerManager()->add_timer(100,1,[timer](){
-        timer->cancle();
-        std::cout<<"cancle\n";
+    scheduler->GetTimerManager()->AddTimer(100,1,[timer](){
+        timer->Cancle();
+        ::std::cout<<"Cancle\n";
     });
     scheduler->Start();
     return 0;

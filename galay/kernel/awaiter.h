@@ -3,69 +3,88 @@
 
 #include <memory>
 #include <coroutine>
+#include <any>
 #include <optional>
-#include "co_task.h"
+#include <functional>
+#include <mutex>
+#include "../protocol/http1_1.h"
+#include "../protocol/smtp.h"
+#include "../protocol/dns.h"
 
 namespace galay
 {
 
     //return int
-    class Awaiter_Base
+    class AwaiterBase
     {
     public:
-        using ptr = std::shared_ptr<Awaiter_Base>;
-
-        Awaiter_Base(Co_Task_Base::ptr task)
-        {
-            this->m_task = task;
-        }
-
-        Awaiter_Base &operator=(const Awaiter_Base &) = delete;
-        Awaiter_Base &operator=(Awaiter_Base &&other)
-        {
-            if(this != &other)
-            {
-                this->m_task = std::move(other.m_task);
-                other.m_task = nullptr;
-            }
-            return *this;
-        }
-
-        virtual bool await_ready()
-        {
-            return m_task == nullptr;
-        }
-
-        virtual void await_suspend(std::coroutine_handle<> handle)
-        {
-            m_task->set_co_handle(handle);
-        }
-
-        std::any await_resume(){
-            if(m_task) this->m_result = m_task->result();
-            return m_result;
-        }
-
-    protected:
-        Co_Task_Base::ptr m_task = nullptr;
-        std::any m_result;
+        virtual bool await_ready() = 0;
+        virtual void await_suspend(::std::coroutine_handle<> handle) = 0;
+        virtual ::std::any await_resume() = 0;
     };
     
-    class Net_Awaiter: public Awaiter_Base
+    class CommonAwaiter : public AwaiterBase
     {
     public:
-        using ptr = std::shared_ptr<Net_Awaiter>;
-        Net_Awaiter(Co_Task_Base::ptr task)
-            : Awaiter_Base(task)
-        {
+        CommonAwaiter(bool IsSuspend,const std::any& result);
+        CommonAwaiter(CommonAwaiter&& other); 
+        CommonAwaiter &operator=(const CommonAwaiter &) = delete;
+        CommonAwaiter &operator=(CommonAwaiter && other);
+        virtual bool await_ready() override;
+        virtual void await_suspend(::std::coroutine_handle<> handle) override;
+        virtual ::std::any await_resume() override;
+    private:
+        std::any m_Result;
+        bool m_IsSuspend;
+    };
+    
+    class HttpAwaiter
+    {
+    public:
+        HttpAwaiter(bool IsSuspend,std::function<protocol::http::Http1_1_Response::ptr()>& Func);
+        HttpAwaiter(HttpAwaiter&& other); 
+        HttpAwaiter &operator=(const HttpAwaiter &) = delete;
+        HttpAwaiter &operator=(HttpAwaiter && other);
+        virtual bool await_ready();
+        virtual void await_suspend(::std::coroutine_handle<> handle);
+        virtual protocol::http::Http1_1_Response::ptr await_resume();
+    private:
+        protocol::http::Http1_1_Response::ptr m_Result;
+        bool m_IsSuspend;
+        std::function<protocol::http::Http1_1_Response::ptr()>& m_Func;
+        std::mutex m_mtx;
+    };
 
-        }
+    class SmtpAwaiter{
+    public:
+        SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func);
+        SmtpAwaiter(SmtpAwaiter&& other); 
+        SmtpAwaiter &operator=(const SmtpAwaiter &) = delete;
+        SmtpAwaiter &operator=(SmtpAwaiter && other);
+        virtual bool await_ready();
+        virtual void await_suspend(::std::coroutine_handle<> handle);
+        virtual std::vector<protocol::smtp::Smtp_Response::ptr> await_resume();
+        ~SmtpAwaiter() = default;
+    private:
+        bool m_IsSuspend;
+        std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& m_Func;
+        std::vector<protocol::smtp::Smtp_Response::ptr> m_Result;
+    };
 
-        Net_Awaiter(Co_Task_Base::ptr task, const std::any& result)
-            :Awaiter_Base(task)
-        {
-            this->m_result = result;
-        }
+    class DnsAwaiter {
+    public:
+        DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func);
+        DnsAwaiter(DnsAwaiter&& other);
+        DnsAwaiter &operator=(const DnsAwaiter& other) = delete;
+        DnsAwaiter &operator=(DnsAwaiter&& other);
+        virtual bool await_ready();
+        virtual void await_suspend(::std::coroutine_handle<> handle);
+        virtual protocol::dns::Dns_Response::ptr await_resume();
+        ~DnsAwaiter() = default;
+    private:
+        bool m_IsSuspend;
+        protocol::dns::Dns_Response::ptr m_Result;
+        std::function<galay::protocol::dns::Dns_Response::ptr()>& m_Func;
     };
 }
 

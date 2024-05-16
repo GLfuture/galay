@@ -1,16 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 project(kernel)
 
-set(SRC_LIST 
-    callback.cc
-    iofunction.cc
-    error.cc
-    co_task.cc
-    task.cc
-    timer.cc
-    threadpool.cc
-    scheduler.cc
-    )
+file(GLOB SRC_LIST "*.cc")
+
 
 set(DEPEND_LIBS ssl crypto)
 
