@@ -43,6 +43,62 @@ galay::CommonAwaiter::await_resume()
     return m_Result;
 }
 
+galay::GroupAwaiter::GroupAwaiter(bool IsSuspend)
+{
+    this->m_IsSuspend = IsSuspend;
+}
+
+galay::GroupAwaiter&
+galay::GroupAwaiter::operator=(const GroupAwaiter& other)
+{
+    if(this != &other){
+        this->m_handle=other.m_handle;
+        this->m_IsSuspend=other.m_IsSuspend;
+    }
+    return *this;
+}
+
+galay::GroupAwaiter::GroupAwaiter(GroupAwaiter&& other)
+{
+    this->m_handle=other.m_handle;
+    this->m_IsSuspend = other.m_IsSuspend;
+}
+
+galay::GroupAwaiter&
+galay::GroupAwaiter::operator=(GroupAwaiter&& other)
+{
+    if(this != &other){
+        this->m_handle=other.m_handle;
+        this->m_IsSuspend = other.m_IsSuspend;
+    }
+    return *this;
+}
+
+bool 
+galay::GroupAwaiter::await_ready()
+{
+    return !m_IsSuspend;
+}
+
+void 
+galay::GroupAwaiter::Resume()
+{
+    this->m_handle.resume();
+}
+
+void 
+galay::GroupAwaiter::await_suspend(::std::coroutine_handle<> handle)
+{
+    this->m_handle = handle;
+}
+
+::std::any 
+galay::GroupAwaiter::await_resume()
+{
+    return {};
+}
+
+
 //To Do
 galay::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::Http1_1_Response::ptr()>& Func)
     : m_Func(Func)
@@ -173,7 +229,7 @@ galay::DnsAwaiter::await_ready()
 void 
 galay::DnsAwaiter::await_suspend(::std::coroutine_handle<> handle)
 {
-    std::async([this,handle](){
+    auto future = std::async([this,handle](){
         m_Result = m_Func();
         handle.resume();
     });

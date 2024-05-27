@@ -38,6 +38,24 @@ namespace galay
         bool m_IsSuspend;
     };
     
+    class GroupAwaiter
+    {
+    public:
+        GroupAwaiter() = default;
+        GroupAwaiter(bool IsSuspend);
+        GroupAwaiter(GroupAwaiter&& other);
+        GroupAwaiter &operator=(const GroupAwaiter& other);
+        GroupAwaiter &operator=(GroupAwaiter && other);
+        void Resume();
+        bool await_ready();
+        void await_suspend(::std::coroutine_handle<> handle);
+        ::std::any await_resume();
+    private:
+        bool m_IsSuspend;
+        ::std::coroutine_handle<> m_handle;
+    };
+    
+
     class HttpAwaiter
     {
     public:

@@ -54,13 +54,6 @@ galay::GY_SSLConfig::GetKeyPath() const
     return m_ssl_key_path;
 }
 
-// SSL_CTX* 
-// galay::GY_SSLConfig::GetSSLContext() const
-// {
-//     return m_ssl_ctx.load();
-// }
-
-
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
 galay::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()

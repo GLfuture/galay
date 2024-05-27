@@ -5,7 +5,7 @@ set(CXX_STANDARD_REQUIRED on)
 set(CMAKE_CXX_STANDARD 20)
 
 
-set(CMAKE_INSTALL_PREFIX ..)
+set(CMAKE_INSTALL_PREFIX /user/local)
 
 set(HEADER_SRC_DIR galay)
 set(HEADER_DST_DIR include)
@@ -30,7 +30,7 @@ else()
 endif()
 
 #find mysql
-find_path(MYSQL_INCLUDE_DIR NAMES mysql/mysql.h)
+find_path(MYSQL_INCLUDE_DIR NAMES mysql)
 find_library(MYSQL_LIBRARY NAMES mysqlclient)
 
 if(MYSQL_INCLUDE_DIR AND MYSQL_LIBRARY)
@@ -44,7 +44,7 @@ else()
 endif()
 
 #find etcd
-find_path(ETCD_INCLUDE_DIR NAMES etcd/Client.hpp)
+find_path(ETCD_INCLUDE_DIR NAMES etcd)
 find_library(ETCD_LIBRARY NAMES etcd-cpp-api)
 find_library(CPPREST_LIBRARY NAMES cpprest)
 
@@ -64,9 +64,11 @@ endif()
 #添加子目录
 add_subdirectory(galay)
 add_subdirectory(tutorial)
+add_subdirectory(test)
 
 install(DIRECTORY ${HEADER_SRC_DIR}
         DESTINATION ${HEADER_DST_DIR}
+        COMPONENT devel
         FILES_MATCHING
         PATTERN "*.h*"
         PATTERN "*.inl"

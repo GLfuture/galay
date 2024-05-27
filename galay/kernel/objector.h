@@ -210,7 +210,7 @@ namespace galay
         std::queue<protocol::GY_TcpResponse::ptr> m_responses;
         std::any m_context;
     };
-    
+
 } // namespace galay
 
 #endif

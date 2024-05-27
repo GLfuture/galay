@@ -113,6 +113,12 @@ namespace galay {
         ::std::atomic<GY_SSLConfig::ptr> m_ssl_config;
     };
 
+    class GY_HttpServerBuilder: public GY_TcpServerBuilder<protocol::http::Http1_1_Request,protocol::http::Http1_1_Response>
+    {
+    public:
+        
+    };
+    
     #include "builder.inl"
 }
 

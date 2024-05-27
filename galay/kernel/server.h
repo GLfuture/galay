@@ -37,7 +37,8 @@ namespace galay {
         ::std::vector<::std::shared_ptr<::std::thread>> m_threads; 
         ::std::vector<GY_IOScheduler::ptr> m_schedulers;
     };
-    
+
+    using GY_HttpServer = GY_TcpServer;
 }
 
 #endif

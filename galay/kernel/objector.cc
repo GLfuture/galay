@@ -487,7 +487,7 @@ galay::GY_Connector::DealUserFunc()
 {
     this->m_UserCoroutine = this->m_scheduler.lock()->UserFunction(this->m_controller);
     if(this->m_UserCoroutine.IsCoroutine() && this->m_UserCoroutine.GetStatus() == CoroutineStatus::GY_COROUTINE_SUSPEND){
-        this->m_UserCoroutine.SetFatherCoroutine(this->m_UserCoroutine);
+        this->m_UserCoroutine.SetFatherCoroutine(this->m_Maincoroutine);
         return CommonAwaiter(true,-1);
     }
     return CommonAwaiter(false,0);

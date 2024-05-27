@@ -1,4 +1,4 @@
-project(test_server)
+project(tutorial)
 set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     tutorial_http_client.cc
@@ -6,9 +6,7 @@ set(SRC_LIST
     tutorial_proxy_server.cc
     tutorial_ratelimiter.cc
     tutorial_smtp_proxy_server.cc
-    tutorial_conf_parser.cc
     tutorial_dns_client.cc
-    tutorial_mysql_client.cc
     tutorial_https_server.cc
     )
 foreach(SRC ${SRC_LIST})
@@ -31,4 +29,10 @@ if(ETCD_FOUND)
     add_executable(tutorial_etcd_register_client tutorial_etcd_register_client.cc)
     target_link_directories(tutorial_etcd_register_client PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
     target_link_libraries(tutorial_etcd_register_client  galay-static)
+endif()
+
+if(MYSQL_FOUND)
+    add_executable(tutorial_mysql_client tutorial_mysql_client.cc)
+    target_link_directories(tutorial_mysql_client PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
+    target_link_libraries(tutorial_mysql_client  galay-static)
 endif()
