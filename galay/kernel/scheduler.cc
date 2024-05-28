@@ -57,6 +57,7 @@ void
 galay::GY_SelectScheduler::DelObjector(int fd)
 {
     m_objectors.erase(fd);
+    close(fd);
 }
 
 int 
@@ -239,6 +240,7 @@ void
 galay::GY_EpollScheduler::DelObjector(int fd) 
 {
     m_objectors.erase(fd);
+    close(fd);
 }
 void 
 galay::GY_EpollScheduler::Start() 
