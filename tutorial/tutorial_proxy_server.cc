@@ -16,6 +16,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test_http_proxy(galay::GY_Control
     response->SetStatus(response1->GetStatus());
     response->SetVersion(response1->GetVersion());
     response->SetHeaders(response1->GetHeaders());
+    ctrl.lock()->Done();
     co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
 }
 

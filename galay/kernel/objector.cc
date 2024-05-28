@@ -395,7 +395,6 @@ galay::GY_Connector::ExecuteTask()
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
     }
-    spdlog::error("fd: {} , event: {}",this->m_fd,this->m_eventType); 
     if(m_eventType & GY_EVENT_READ){
         this->m_RecvCoroutine.Resume();
     }
@@ -481,7 +480,7 @@ galay::GY_Connector::CoSendExec()
                 this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);
                 this->m_scheduler.lock()->DelObjector(this->m_fd);
             }else {
-                this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_WRITE);
+                this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::GY_EVENT_WRITE , EventType::GY_EVENT_READ);
             }         
         }else{
             this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::GY_EVENT_READ, EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);

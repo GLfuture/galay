@@ -21,6 +21,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_Controller::wptr c
     if(request->GetHeadValue("connection").compare("close") == 0){
         ctrl.lock()->Close();
     }
+    ctrl.lock()->Done();
     co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
 }
 
