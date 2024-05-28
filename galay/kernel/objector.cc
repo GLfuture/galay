@@ -1,5 +1,6 @@
 #include "objector.h"
 #include "task.h"
+#include "waitgroup.h"
 #include <spdlog/spdlog.h>
 
 
@@ -394,6 +395,7 @@ galay::GY_Connector::ExecuteTask()
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
     }
+    spdlog::error("fd: {} , event: {}",this->m_fd,this->m_eventType); 
     if(m_eventType & GY_EVENT_READ){
         this->m_RecvCoroutine.Resume();
     }
@@ -422,7 +424,11 @@ galay::GY_Connector::CoBusinessExec()
             co_await std::suspend_always{};
         }
         this->m_WaitingForRequest = false;
-        co_await DealUserFunc();
+        WaitGroup group;
+        group.Add(1);
+        this->m_controller->SetWaitGroup(&group);
+        this->m_UserCoroutine = this->m_scheduler.lock()->UserFunction(this->m_controller);
+        co_await group.Wait();
         if(this->m_controller->IsClosed() && this->m_sender->WBufferEmpty()){
             this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
@@ -440,7 +446,9 @@ galay::GY_Connector::CoReceiveExec()
         m_receiver->ExecuteTask();
         while(1){
             if(!m_tempRequest) m_tempRequest = g_tcp_protocol_factory->CreateRequest();
-            ProtoJudgeType type = m_tempRequest->DecodePdu(m_receiver->GetRBuffer());
+            std::string& buffer = m_receiver->GetRBuffer();
+            if(buffer.length() == 0) break;
+            ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
             if(type == ProtoJudgeType::PROTOCOL_FINISHED){
                 PushRequest(std::move(m_tempRequest));
                 m_tempRequest = nullptr;
@@ -476,21 +484,10 @@ galay::GY_Connector::CoSendExec()
                 this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_WRITE);
             }         
         }else{
-            this->m_scheduler.lock()->AddEvent(this->m_fd,EventType::GY_EVENT_WRITE);
+            this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::GY_EVENT_READ, EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);
         }
     }
     co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
-}
-
-galay::CommonAwaiter 
-galay::GY_Connector::DealUserFunc()
-{
-    this->m_UserCoroutine = this->m_scheduler.lock()->UserFunction(this->m_controller);
-    if(this->m_UserCoroutine.IsCoroutine() && this->m_UserCoroutine.GetStatus() == CoroutineStatus::GY_COROUTINE_SUSPEND){
-        this->m_UserCoroutine.SetFatherCoroutine(this->m_Maincoroutine);
-        return CommonAwaiter(true,-1);
-    }
-    return CommonAwaiter(false,0);
 }
 
 galay::GY_Connector::~GY_Connector()
