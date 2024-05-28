@@ -1,5 +1,6 @@
 #include "awaiter.h"
 #include <future>
+#include <iostream>
 
 galay::CommonAwaiter::CommonAwaiter(bool IsSuspend,const std::any& result)
 {
@@ -83,7 +84,8 @@ galay::GroupAwaiter::await_ready()
 void 
 galay::GroupAwaiter::Resume()
 {
-    this->m_handle.resume();
+    if(this->m_handle) 
+        this->m_handle.resume();
 }
 
 void 
