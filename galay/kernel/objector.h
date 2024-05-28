@@ -190,7 +190,6 @@ namespace galay
 
         void PushRequest(galay::protocol::GY_TcpRequest::ptr request);
         galay::protocol::GY_TcpResponse::ptr GetResponse();
-        galay::CommonAwaiter DealUserFunc();
     private:
         int m_fd;
         bool m_is_ssl_accept;
