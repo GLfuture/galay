@@ -64,7 +64,7 @@ namespace galay {
         virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
         virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() = 0;
         virtual bool GetIsSSL() = 0;
-        virtual GY_SSLConfig::ptr GetSSLConfig() = 0;
+        virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
         ~GY_TcpServerBuilderBase() = default;
     };
 
@@ -97,9 +97,9 @@ namespace galay {
         virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
         virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() override;
         virtual bool GetIsSSL() override;
-        virtual GY_SSLConfig::ptr GetSSLConfig() override;
+        virtual const GY_SSLConfig::ptr GetSSLConfig() override;
         ~GY_TcpServerBuilder();
-    private:
+    protected:
         ::std::atomic_char16_t m_backlog;
         ::std::atomic_uint16_t m_port;    
         ::std::atomic_uint16_t m_threadnum;
@@ -110,13 +110,16 @@ namespace galay {
         ::std::atomic_bool m_is_ssl;
         ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
         ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalfunc;
-        ::std::atomic<GY_SSLConfig::ptr> m_ssl_config;
+        GY_SSLConfig::ptr m_ssl_config;
     };
 
     class GY_HttpServerBuilder: public GY_TcpServerBuilder<protocol::http::Http1_1_Request,protocol::http::Http1_1_Response>
     {
     public:
-        
+        GY_HttpServerBuilder() = default;
+        virtual void  SetUserFunction(::std::pair<uint16_t,::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
+    private:
+        GY_TcpCoroutine<galay::CoroutineStatus> RouterHandlers(::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> func,GY_Controller::wptr ctrl);
     };
     
     #include "builder.inl"
