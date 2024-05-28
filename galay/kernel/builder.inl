@@ -67,7 +67,7 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()
     m_port = 0;
     m_userfunc = nullptr;
     m_is_ssl = false;
-    m_ssl_config.store(nullptr);
+    m_ssl_config = nullptr;
     g_tcp_protocol_factory = std::make_unique<GY_TcpProtocolFactory<REQ,RESP>>();
 }
 
@@ -137,8 +137,7 @@ void
 galay::GY_TcpServerBuilder<REQ,RESP>::InitSSLServer(bool is_ssl)
 {
     this->m_is_ssl.store(is_ssl);
-    GY_SSLConfig::ptr config = std::make_shared<GY_SSLConfig>();
-    m_ssl_config.store(config);
+    m_ssl_config = std::make_shared<GY_SSLConfig>();
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
@@ -212,16 +211,16 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GetIsSSL()
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
-galay::GY_SSLConfig::ptr 
+const galay::GY_SSLConfig::ptr 
 galay::GY_TcpServerBuilder<REQ,RESP>::GetSSLConfig()
 {
-    return m_ssl_config.load();
+    return m_ssl_config;
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
 galay::GY_TcpServerBuilder<REQ,RESP>::~GY_TcpServerBuilder()
 {
-    m_ssl_config.store(nullptr);
+    m_ssl_config = nullptr;
 }
 
 #endif
