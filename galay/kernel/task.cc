@@ -180,7 +180,7 @@ galay::GY_RecvTask::Execute()
             }
             else
             {
-                spdlog::debug("[{}:{}] [[Accept warn(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+                spdlog::debug("[{}:{}] [[Recv warn(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             }
             return;
         }
@@ -281,14 +281,14 @@ galay::GY_SendTask::Execute()
         }
         else if (len == 0)
         {
-            spdlog::info("[{}:{}] [Send warn(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
+            spdlog::info("[{}:{}] [Send info(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
             this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE);
             return;
         }
         else
         {
-            spdlog::debug("[{}:{}] [Send info(fd:{})] [Send len:{} Bytes]", __FILE__, __LINE__, this->m_fd, len);
+            spdlog::debug("[{}:{}] [Send(fd:{})] [Send len:{} Bytes]", __FILE__, __LINE__, this->m_fd, len);
             offset += len;
         }
     }
