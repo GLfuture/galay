@@ -62,3 +62,15 @@ galay::GY_Controller::IsClosed()
 {
     return this->m_close;
 }
+
+void 
+galay::GY_Controller::Done()
+{
+    m_group->Done();
+}
+
+void 
+galay::GY_Controller::SetWaitGroup(WaitGroup* waitgroup)
+{
+    this->m_group = waitgroup;
+}
