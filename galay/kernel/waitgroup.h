@@ -8,6 +8,9 @@ namespace galay
 {
     class WaitGroup{
     public:
+        using ptr = std::shared_ptr<WaitGroup>;
+        using wptr = std::weak_ptr<WaitGroup>;
+        using uptr = std::unique_ptr<WaitGroup>;
         WaitGroup();
         void Add(int num);
         GroupAwaiter& Wait();
