@@ -59,9 +59,6 @@ void galay::GY_TcpPromise<RESULT>::return_value(RESULT val) noexcept
 {
     SetStatus(CoroutineStatus::GY_COROUTINE_FINISHED);
     SetResult(val);
-    if(this->m_fatherhandle){
-        this->m_fatherhandle.resume();
-    }
 }
 
 template <typename RESULT>
@@ -78,12 +75,6 @@ void galay::GY_TcpPromise<RESULT>::SetResult(RESULT result)
     this->m_result = result;
 }
 
-template <typename RESULT>
-void 
-galay::GY_TcpPromise<RESULT>::SetFatherCoroutine(::std::coroutine_handle<promise_type> father_coroutine)
-{
-    this->m_fatherhandle = father_coroutine;
-}
 
 template <typename RESULT>
 galay::CoroutineStatus 
@@ -158,12 +149,6 @@ galay::GY_TcpPromise<void>::SetStatus(CoroutineStatus status)
     this->m_status = status;
 }
 
-void 
-galay::GY_TcpPromise<void>::SetFatherCoroutine(::std::coroutine_handle<> father_coroutine)
-{
-    this->m_fathercoroutine = father_coroutine;
-}
-
 void galay::GY_TcpPromise<void>::rethrow_if_exception()
 {
     if (m_exception)
@@ -232,9 +217,6 @@ void galay::GY_TcpPromiseSuspend<RESULT>::return_value(RESULT val) noexcept
 {
     SetStatus(CoroutineStatus::GY_COROUTINE_FINISHED);
     SetResult(val);
-    if(this->m_fatherhandle){
-        this->m_fatherhandle.resume();
-    }
 }
 
 template <typename RESULT>
@@ -249,13 +231,6 @@ template <typename RESULT>
 void galay::GY_TcpPromiseSuspend<RESULT>::SetResult(RESULT result)
 {
     this->m_result = result;
-}
-
-template <typename RESULT>
-void 
-galay::GY_TcpPromiseSuspend<RESULT>::SetFatherCoroutine(::std::coroutine_handle<promise_type> father_coroutine)
-{
-    this->m_fatherhandle = father_coroutine;
 }
 
 template <typename RESULT>
@@ -329,12 +304,6 @@ void
 galay::GY_TcpPromiseSuspend<void>::SetStatus(CoroutineStatus status)
 {
     this->m_status = status;
-}
-
-void 
-galay::GY_TcpPromiseSuspend<void>::SetFatherCoroutine(::std::coroutine_handle<> father_coroutine)
-{
-    this->m_fathercoroutine = father_coroutine;
 }
 
 void 
@@ -471,13 +440,6 @@ galay::GY_TcpCoroutine<RESULT>::SetStatus(CoroutineStatus status)
         this->m_handle.promise().SetStatus(status);
 }
 
-template <typename RESULT>
-void 
-galay::GY_TcpCoroutine<RESULT>::SetFatherCoroutine(const GY_TcpCoroutine<RESULT>& father_coroutine)
-{
-    this->m_handle.promise().SetFatherCoroutine(father_coroutine.GetCoroutine());
-}
-
 
 template <typename RESULT>
 galay::GY_TcpCoroutine<RESULT>::~GY_TcpCoroutine()
@@ -606,13 +568,6 @@ galay::GY_TcpCoroutineSuspend<RESULT>::SetStatus(CoroutineStatus status)
 {
     if (this->m_handle)
         this->m_handle.promise().SetStatus(status);
-}
-
-template <typename RESULT>
-void 
-galay::GY_TcpCoroutineSuspend<RESULT>::SetFatherCoroutine(const GY_TcpCoroutineSuspend<RESULT>& father_coroutine)
-{
-    this->m_handle.promise().SetFatherCoroutine(father_coroutine.GetCoroutine());
 }
 
 
