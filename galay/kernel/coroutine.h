@@ -37,14 +37,12 @@ namespace galay
         //获取状态
         inline CoroutineStatus GetStatus();
         inline void SetStatus(CoroutineStatus status);
-        inline void SetFatherCoroutine(::std::coroutine_handle<promise_type> father_coroutine);
     private:
         inline void rethrow_if_exception();
     private:
         ::std::exception_ptr m_exception = nullptr;
         RESULT m_result;
         CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_RUNNING;
-        ::std::coroutine_handle<> m_fatherhandle;
     };
 
     template <>
@@ -62,13 +60,11 @@ namespace galay
         //获取状态
         inline CoroutineStatus GetStatus();
         inline void SetStatus(CoroutineStatus status);
-        inline void SetFatherCoroutine(::std::coroutine_handle<> father_coroutine);
     private:
         inline void rethrow_if_exception();
     private:
         ::std::exception_ptr m_exception = {};
         CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_RUNNING;
-        ::std::coroutine_handle<> m_fathercoroutine;
     };
 
     template <typename RESULT>
@@ -91,14 +87,12 @@ namespace galay
         //获取状态
         inline CoroutineStatus GetStatus();
         inline void SetStatus(CoroutineStatus status);
-        inline void SetFatherCoroutine(::std::coroutine_handle<promise_type> father_coroutine);
     private:
         inline void rethrow_if_exception();
     private:
         ::std::exception_ptr m_exception = nullptr;
         RESULT m_result;
         CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_SUSPEND;
-        ::std::coroutine_handle<> m_fatherhandle;
     };
 
     template <>
@@ -116,13 +110,11 @@ namespace galay
         //获取状态
         inline CoroutineStatus GetStatus();
         inline void SetStatus(CoroutineStatus status);
-        inline void SetFatherCoroutine(::std::coroutine_handle<> father_coroutine);
     private:
         inline void rethrow_if_exception();
     private:
         ::std::exception_ptr m_exception = {};
         CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_RUNNING;
-        ::std::coroutine_handle<> m_fathercoroutine;
     };
 
 
@@ -163,7 +155,6 @@ namespace galay
         GY_TcpCoroutine<RESULT> &operator=(const GY_TcpCoroutine<RESULT> &other) = delete;
         GY_TcpCoroutine<RESULT> &operator=(GY_TcpCoroutine<RESULT> &&other);  
         std::coroutine_handle<promise_type> GetCoroutine() const;
-        void SetFatherCoroutine(const GY_TcpCoroutine<RESULT>& father_coroutine);
         //是否是协程
         bool IsCoroutine();
         //获取结果
@@ -212,7 +203,6 @@ namespace galay
         GY_TcpCoroutineSuspend(GY_TcpCoroutineSuspend<RESULT> &&other) noexcept;
         GY_TcpCoroutineSuspend<RESULT> &operator=(GY_TcpCoroutineSuspend<RESULT> &&other);  
         std::coroutine_handle<promise_type> GetCoroutine() const;
-        void SetFatherCoroutine(const GY_TcpCoroutineSuspend<RESULT>& father_coroutine);
         //是否是协程
         bool IsCoroutine();
         //获取结果
