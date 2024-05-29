@@ -11,10 +11,14 @@
 
 ## 安装
 
-1. 下载必要依赖openssl，g++(version > 9)，cmake
+1. 下载必要依赖openssl，g++(version > 9)，cmake spdlog
     > linux
     >```shell
     > sudo apt-get install libssl-dev g++ cmake
+    > git clone https://github.com/gabime/spdlog.git
+    > cd spdlog
+    > mkdir build
+    > cd build && sudo make -j4 && make install
     >```
 
 2. 编译安装
