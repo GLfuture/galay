@@ -80,7 +80,7 @@ galay::GY_HttpAsyncClient::Get(protocol::http::Http1_1_Request::ptr request)
     {
         return ExecMethod(request->EncodePdu());
     };
-    return HttpAwaiter(true, this->m_ExecMethod);
+    return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
 galay::HttpAwaiter
@@ -108,7 +108,7 @@ galay::GY_HttpAsyncClient::Post(std::string &&body, protocol::http::Http1_1_Requ
     {
         return ExecMethod(request->EncodePdu());
     };
-    return HttpAwaiter(true, this->m_ExecMethod);
+    return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
 galay::HttpAwaiter
@@ -132,7 +132,7 @@ galay::GY_HttpAsyncClient::Options(protocol::http::Http1_1_Request::ptr request)
     {
         return ExecMethod(request->EncodePdu());
     };
-    return HttpAwaiter(true, this->m_ExecMethod);
+    return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
 void galay::GY_HttpAsyncClient::Close()
@@ -253,7 +253,7 @@ galay::GY_SmtpAsyncClient::Auth(std::string account, std::string password)
     {
         return ExecSendMsg(requests);
     };
-    return SmtpAwaiter(true,m_ExecSendMsg);
+    return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
 galay::SmtpAwaiter
@@ -271,7 +271,7 @@ galay::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::vector<std
     {
         return ExecSendMsg(requests);
     };
-    return SmtpAwaiter(true,m_ExecSendMsg);
+    return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
 galay::SmtpAwaiter
@@ -284,7 +284,7 @@ galay::GY_SmtpAsyncClient::Quit()
     {
         return ExecSendMsg(requests);
     };
-    return SmtpAwaiter(true,m_ExecSendMsg);
+    return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
 void galay::GY_SmtpAsyncClient::Close()
@@ -429,7 +429,7 @@ galay::DnsAsyncClient::QueryA(std::queue<std::string> domains)
     this->m_ExecSendMsg = [this,reqStrs](){
         return ExecSendMsg(reqStrs);
     };
-    return DnsAwaiter(true,this->m_ExecSendMsg);
+    return DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
 }
 
 galay::DnsAwaiter 
@@ -464,7 +464,7 @@ galay::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
     this->m_ExecSendMsg = [this,reqStrs](){
         return ExecSendMsg(reqStrs);
     };
-    return DnsAwaiter(true,this->m_ExecSendMsg);
+    return DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
 }
 
 galay::protocol::dns::Dns_Response::ptr 

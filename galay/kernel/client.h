@@ -42,6 +42,7 @@ namespace galay
         uint16_t m_port;
         std::string m_uri;
         std::string m_version;
+        std::queue<std::future<void>> m_futures;
         std::function<protocol::http::Http1_1_Response::ptr()> m_ExecMethod;
         bool m_keepalive;
         bool m_isconnected;
@@ -63,6 +64,7 @@ namespace galay
         std::string m_host;
         uint16_t m_port;
         bool m_isconnected;
+        std::queue<std::future<void>> m_futures;
         std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()> m_ExecSendMsg;
     };
 
@@ -80,6 +82,7 @@ namespace galay
         bool m_IsInit;
         uint16_t m_port;
         std::string m_host;
+        std::queue<std::future<void>> m_futures;
         std::function<galay::protocol::dns::Dns_Response::ptr()> m_ExecSendMsg; 
     };
 }

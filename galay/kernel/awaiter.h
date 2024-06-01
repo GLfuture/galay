@@ -6,7 +6,7 @@
 #include <any>
 #include <optional>
 #include <functional>
-#include <mutex>
+#include <future>
 #include "../protocol/http1_1.h"
 #include "../protocol/smtp.h"
 #include "../protocol/dns.h"
@@ -59,7 +59,7 @@ namespace galay
     class HttpAwaiter
     {
     public:
-        HttpAwaiter(bool IsSuspend,std::function<protocol::http::Http1_1_Response::ptr()>& Func);
+        HttpAwaiter(bool IsSuspend,std::function<protocol::http::Http1_1_Response::ptr()>& Func,std::queue<std::future<void>>& futures);
         HttpAwaiter(HttpAwaiter&& other); 
         HttpAwaiter &operator=(const HttpAwaiter &) = delete;
         HttpAwaiter &operator=(HttpAwaiter && other);
@@ -69,13 +69,14 @@ namespace galay
     private:
         protocol::http::Http1_1_Response::ptr m_Result;
         bool m_IsSuspend;
+        std::queue<std::future<void>>& m_futures;
         std::function<protocol::http::Http1_1_Response::ptr()>& m_Func;
         std::mutex m_mtx;
     };
 
     class SmtpAwaiter{
     public:
-        SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func);
+        SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func,std::queue<std::future<void>>& futures);
         SmtpAwaiter(SmtpAwaiter&& other); 
         SmtpAwaiter &operator=(const SmtpAwaiter &) = delete;
         SmtpAwaiter &operator=(SmtpAwaiter && other);
@@ -85,13 +86,14 @@ namespace galay
         ~SmtpAwaiter() = default;
     private:
         bool m_IsSuspend;
+        std::queue<std::future<void>>& m_futures;
         std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& m_Func;
         std::vector<protocol::smtp::Smtp_Response::ptr> m_Result;
     };
 
     class DnsAwaiter {
     public:
-        DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func);
+        DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func,std::queue<std::future<void>>& futures);
         DnsAwaiter(DnsAwaiter&& other);
         DnsAwaiter &operator=(const DnsAwaiter& other) = delete;
         DnsAwaiter &operator=(DnsAwaiter&& other);
@@ -101,6 +103,7 @@ namespace galay
         ~DnsAwaiter() = default;
     private:
         bool m_IsSuspend;
+        std::queue<std::future<void>>& m_futures;
         protocol::dns::Dns_Response::ptr m_Result;
         std::function<galay::protocol::dns::Dns_Response::ptr()>& m_Func;
     };

@@ -1,7 +1,5 @@
 #include "awaiter.h"
-#include <future>
 #include <iostream>
-
 galay::CommonAwaiter::CommonAwaiter(bool IsSuspend,const std::any& result)
 {
     m_IsSuspend = IsSuspend;
@@ -102,14 +100,16 @@ galay::GroupAwaiter::await_resume()
 
 
 //To Do
-galay::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::Http1_1_Response::ptr()>& Func)
-    : m_Func(Func)
+galay::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::Http1_1_Response::ptr()>& Func,std::queue<std::future<void>>& futures)
+    :m_Func(Func),
+     m_futures(futures)
 {
     this->m_IsSuspend = IsSuspend;
 }
 
 galay::HttpAwaiter::HttpAwaiter(HttpAwaiter&& other)
-    :m_Func(other.m_Func)
+    :m_Func(other.m_Func),
+     m_futures(other.m_futures)
 {
     if(this != &other){
         this->m_IsSuspend = other.m_IsSuspend;
@@ -137,10 +137,10 @@ galay::HttpAwaiter::await_ready()
 //To Do
 void galay::HttpAwaiter::await_suspend(::std::coroutine_handle<> handle)
 {
-    std::future<void> future = std::async([this,handle](){
+    m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
         handle.resume();
-    });
+    }));
 }
 
 galay::protocol::http::Http1_1_Response::ptr 
@@ -149,14 +149,16 @@ galay::HttpAwaiter::await_resume()
     return m_Result;
 }
 
-galay::SmtpAwaiter::SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func)
-    :m_Func(func)
+galay::SmtpAwaiter::SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func,std::queue<std::future<void>>& futures)
+    :m_Func(func),
+     m_futures(futures)
 {
     this->m_IsSuspend = IsSuspend;
 }
 
 galay::SmtpAwaiter::SmtpAwaiter(SmtpAwaiter&& other)
-    :m_Func(other.m_Func)
+    :m_Func(other.m_Func),
+     m_futures(other.m_futures)
 {
     m_IsSuspend = other.m_IsSuspend;
     m_Result = std::move(other.m_Result);
@@ -183,10 +185,10 @@ galay::SmtpAwaiter::await_ready()
 void 
 galay::SmtpAwaiter::await_suspend(::std::coroutine_handle<> handle)
 {
-    auto future = std::async([this,handle](){
+    this->m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
         handle.resume();
-    });
+    }));
 }
 
 
@@ -196,14 +198,16 @@ galay::SmtpAwaiter::await_resume()
     return std::move(m_Result);
 }
 
-galay::DnsAwaiter::DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func)
-    :m_Func(func)
+galay::DnsAwaiter::DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func,std::queue<std::future<void>>& futures)
+    :m_Func(func),
+     m_futures(futures)
 {
     this->m_IsSuspend = IsSuspend;
 }
 
 galay::DnsAwaiter::DnsAwaiter(DnsAwaiter&& other)
-    :m_Func(other.m_Func)
+    :m_Func(other.m_Func),
+     m_futures(other.m_futures)
 {
     m_IsSuspend = other.m_IsSuspend;
     m_Result = std::move(other.m_Result);
@@ -231,10 +235,12 @@ galay::DnsAwaiter::await_ready()
 void 
 galay::DnsAwaiter::await_suspend(::std::coroutine_handle<> handle)
 {
-    auto future = std::async([this,handle](){
+    this->m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
         handle.resume();
-    });
+        std::cout << this <<"    resume over.....\n";
+    }));
+    std::cout << this <<"  suspend over.....\n";
 }
 
 
