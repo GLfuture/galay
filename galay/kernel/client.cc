@@ -4,39 +4,22 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 
-galay::GY_HttpAsyncClient::GY_HttpAsyncClient(std::string url)
+galay::GY_HttpAsyncClient::GY_HttpAsyncClient()
 {
-    std::regex uriRegex(R"((http|https):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?(/.*)?)");
-    std::smatch match;
-    if (std::regex_search(url, match, uriRegex))
-    {
-        this->m_host = match.str(2);
-        if (match[3].matched)
-        {
-            std::string port = match.str(3);
-            port.erase(0, 1);
-            this->m_port = std::stoi(port);
-        }
-        else
-            this->m_port = 80;
-        this->m_uri = match.str(4).empty() ? "/" : match.str(4);
-    }
-    else
-    {
-        spdlog::error("[{}:{}] [[Invalid url] [Url:{}]] ", __FILE__, __LINE__, url);
-        exit(-1);
-    }
+    
     this->m_keepalive = false;
     this->m_isconnected = false;
     this->m_version = "1.1";
 }
 
-void galay::GY_HttpAsyncClient::KeepAlive()
+void 
+galay::GY_HttpAsyncClient::KeepAlive()
 {
     this->m_keepalive = true;
 }
 
-void galay::GY_HttpAsyncClient::CancleKeepalive()
+void 
+galay::GY_HttpAsyncClient::CancleKeepalive()
 {
     this->m_keepalive = false;
 }
@@ -59,77 +42,77 @@ void galay::GY_HttpAsyncClient::CancleKeepalive()
 //     spdlog::debug("[{}:{}] [now version] [{}]",__FILE__,__LINE__,this->m_version);
 // }
 
-galay::HttpAwaiter
-galay::GY_HttpAsyncClient::Get(protocol::http::Http1_1_Request::ptr request)
+void 
+galay::GY_HttpAsyncClient::SetVersion(const std::string& version)
 {
-    if (!request)
+    this->m_version = version;
+}
+
+void 
+galay::GY_HttpAsyncClient::AddHeaderPair(const std::string& key, const std::string& value)
+{
+    this->m_headers[key] = value;
+}
+
+void 
+galay::GY_HttpAsyncClient::RemoveHeaderPair(const std::string& key)
+{
+    this->m_headers.erase(key);
+}
+
+galay::HttpAwaiter
+galay::GY_HttpAsyncClient::Get(const std::string& url)
+{
+    protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
+    request->SetMethod("GET");
+    request->SetVersion(this->m_version);
+    std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
+    request->SetUri(std::get<2>(res));
+    SetHttpHeaders(request);
+    std::string host = std::get<0>(res);
+    uint16_t port = std::get<1>(res);
+    this->m_ExecMethod = [this, request, host , port]() -> galay::protocol::http::Http1_1_Response::ptr
     {
-        request = std::make_shared<protocol::http::Http1_1_Request>();
-        request->SetMethod("GET");
-        std::string version = this->m_version;
-        request->SetVersion(std::move(version));
-        std::string uri = this->m_uri;
-        request->SetUri(std::move(uri));
-        if (!this->m_keepalive)
-            request->SetHeadPair({"Connection", "Close"});
-        else
-            request->SetHeadPair({"Connection", "Keep-Alive"});
-        request->SetHeadPair({"X-Server", "GY_Server"});
-    }
-    this->m_ExecMethod = [this, request]() -> galay::protocol::http::Http1_1_Response::ptr
-    {
+        if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
     };
     return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
 galay::HttpAwaiter
-galay::GY_HttpAsyncClient::Post(std::string &&body, protocol::http::Http1_1_Request::ptr request)
+galay::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&body)
 {
-    if (!request)
+    auto request = std::make_shared<protocol::http::Http1_1_Request>();
+    request->SetMethod("POST");
+    request->SetVersion(this->m_version);
+    std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
+    request->SetUri(std::get<2>(res));
+    SetHttpHeaders(request);
+    std::string host = std::get<0>(res);
+    uint16_t port = std::get<1>(res);
+    request->SetBody(std::forward<std::string&&>(body));
+    this->m_ExecMethod = [this, request,host,port]() -> galay::protocol::http::Http1_1_Response::ptr
     {
-        request = std::make_shared<protocol::http::Http1_1_Request>();
-        request->SetMethod("POST");
-        std::string version = this->m_version;
-        request->SetVersion(std::move(version));
-        std::string uri = this->m_uri;
-        request->SetUri(std::move(uri));
-        if (!this->m_keepalive)
-            request->SetHeadPair({"Connection", "Close"});
-        else
-            request->SetHeadPair({"Connection", "Keep-Alive"});
-        request->SetHeadPair({"Server", "GyServer"});
-    }
-    if (request->GetBody().empty())
-    {
-        request->SetBody(std::forward<std::string &&>(body));
-    }
-    this->m_ExecMethod = [this, request]() -> galay::protocol::http::Http1_1_Response::ptr
-    {
+        if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
     };
     return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
 galay::HttpAwaiter
-galay::GY_HttpAsyncClient::Options(protocol::http::Http1_1_Request::ptr request)
+galay::GY_HttpAsyncClient::Options(const std::string& url)
 {
-    if (!request)
+    protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
+    request->SetMethod("OPTIONS");
+    request->SetVersion(this->m_version);
+    std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
+    request->SetUri(std::get<2>(res));
+    SetHttpHeaders(request);
+    std::string host = std::get<0>(res);
+    uint16_t port = std::get<1>(res);
+    this->m_ExecMethod = [this, request, host , port]() -> galay::protocol::http::Http1_1_Response::ptr
     {
-        request = std::make_shared<protocol::http::Http1_1_Request>();
-        request->SetMethod("OPTIONS");
-        std::string version = this->m_version;
-        request->SetVersion(std::move(version));
-        std::string uri = this->m_uri;
-        request->SetUri(std::move(uri));
-        if (!this->m_keepalive)
-            request->SetHeadPair({"Connection", "Close"});
-        else
-            request->SetHeadPair({"Connection", "Keep-Alive"});
-        request->SetHeadPair({"Server", "GyServer"});
-    }
-    this->m_ExecMethod = [this, request]() -> galay::protocol::http::Http1_1_Response::ptr
-    {
+        if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
     };
     return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
@@ -144,21 +127,60 @@ void galay::GY_HttpAsyncClient::Close()
     }
 }
 
+std::tuple<std::string,uint16_t,std::string> 
+galay::GY_HttpAsyncClient::ParseUrl(const std::string& url)
+{
+    std::regex uriRegex(R"((http|https):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?(/.*)?)");
+    std::smatch match;
+    std::tuple<std::string,uint16_t,std::string> res;
+    std::string uri,host;
+    uint16_t port = 80;
+    if (std::regex_search(url, match, uriRegex))
+    {
+        host = match.str(2);
+        if (match[3].matched)
+        {
+            std::string port_str = match.str(3);
+            port_str.erase(0, 1);
+            port = std::stoi(port_str);
+        }
+        uri = match.str(4).empty() ? "/" : match.str(4);
+    }
+    else
+    {
+        spdlog::error("[{}:{}] [[Invalid url] [Url:{}]] ", __FILE__, __LINE__, url);
+        return {};
+    }
+    res = std::make_tuple(host,port,uri);
+    return res;
+}
+
+void 
+galay::GY_HttpAsyncClient::SetHttpHeaders(protocol::http::Http1_1_Request::ptr request)
+{
+    if (!this->m_keepalive)
+        request->SetHeadPair({"Connection", "close"});
+    else
+        request->SetHeadPair({"Connection", "keepalive"});
+    request->SetHeadPair({"Server", "galay-server"});
+    request->SetHeaders(this->m_headers);
+}
+
 int 
-galay::GY_HttpAsyncClient::Connect()
+galay::GY_HttpAsyncClient::Connect(const std::string& ip, uint16_t port)
 {
     if (!this->m_isconnected)
     {
         this->m_fd = IOFunction::NetIOFunction::TcpFunction::Sock();
         spdlog::info("[{}:{}] [Socket(fd :{}) init]", __FILE__, __LINE__, this->m_fd);
-        int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, this->m_host, this->m_port);
+        int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, ip , port);
         if (ret < 0)
         {
-            spdlog::error("[{}:{}] [Connect(fd:{}) to {}:{} failed]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
+            spdlog::error("[{}:{}] [Connect(fd:{}) to {}:{} failed]", __FILE__, __LINE__, this->m_fd, ip , port);
             Close();
             return -1;
         }
-        spdlog::info("[{}:{}] [Connect(fd:{}) to {}:{} success]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
+        spdlog::info("[{}:{}] [Connect(fd:{}) to {}:{} success]", __FILE__, __LINE__, this->m_fd,  ip , port);
         this->m_isconnected = true;
     }
     return 0;
@@ -167,19 +189,18 @@ galay::GY_HttpAsyncClient::Connect()
 galay::protocol::http::Http1_1_Response::ptr
 galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
 {
-    if(Connect() == -1) return nullptr;
     int len = 0 , offset = 0;
     do
     {
         len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, reqStr, reqStr.size());
         if (len > 0)
         {
-            spdlog::debug("[{}:{}] [Send(fd:{}) to {}:{} [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port, len, reqStr.substr(0, len));
+            spdlog::debug("[{}:{}] [Send(fd:{}) [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, len, reqStr.substr(0, len));
             offset += len;
         }
         else
         {
-            spdlog::error("[{}:{}] [Send(fd:{}) to {}:{} Errmsg:[{}]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port, strerror(errno));
+            spdlog::error("[{}:{}] [Send(fd:{}) Errmsg:[{}]]", __FILE__, __LINE__, this->m_fd , strerror(errno));
             Close();
             return nullptr;
         }
@@ -194,7 +215,7 @@ galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
         if (len >= 0)
         {
             respStr.append(buffer, len);
-            spdlog::debug("[{}:{}] [Recv(fd:{}) from {}:{} [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port, len, respStr);
+            spdlog::debug("[{}:{}] [Recv(fd:{}) [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, len, respStr);
             if (!respStr.empty())
             {
                 ProtoJudgeType type = response->DecodePdu(respStr);
@@ -204,28 +225,28 @@ galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
                 }
                 else if (type == ProtoJudgeType::kProtoFinished)
                 {
-                    spdlog::info("[{}:{}] [Recv(fd:{}) from {}:{} [Success]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
+                    spdlog::info("[{}:{}] [Recv(fd:{}) [Success]]", __FILE__, __LINE__, this->m_fd);
                     if (!this->m_keepalive)
                         Close();
                     return response;
                 }
                 else
                 {
-                    spdlog::error("[{}:{}] [Recv(fd:{}) from {}:{} [Protocol is Illegal]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
+                    spdlog::error("[{}:{}] [Recv(fd:{}) [Protocol is Illegal]", __FILE__, __LINE__, this->m_fd);
                     Close();
                     return nullptr;
                 }
             }
             else
             {
-                spdlog::error("[{}:{}] [Recv(fd:{}) from {}:{} [Errmsg:[{}]]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port, strerror(errno));
+                spdlog::error("[{}:{}] [Recv(fd:{}) [Errmsg:[{}]]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 Close();
                 return nullptr;
             }
         }
         else
         {
-            spdlog::error("[{}:{}] [Recv(fd:{}) from {}:{} Errmsg:[{}]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port, strerror(errno));
+            spdlog::error("[{}:{}] [Recv(fd:{}) Errmsg:[{}]]", __FILE__, __LINE__, this->m_fd,strerror(errno));
             Close();
             return nullptr;
         }

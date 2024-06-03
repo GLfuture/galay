@@ -5,8 +5,6 @@
 namespace galay
 {
     class GY_TcpClientBase{
-    protected:
-        virtual int Connect() = 0;
     };
 
     class GY_UdpClientBase{
@@ -18,7 +16,7 @@ namespace galay
         using ptr = std::shared_ptr<GY_HttpAsyncClient>;
         using wptr = std::weak_ptr<GY_HttpAsyncClient>;
         using uptr = std::unique_ptr<GY_HttpAsyncClient>;
-        GY_HttpAsyncClient(std::string url);
+        GY_HttpAsyncClient();
         void KeepAlive();
         void CancleKeepalive();
         
@@ -26,24 +24,27 @@ namespace galay
         //void Downgrade(const std::string& version);
         //To Do
         void Chunked(const std::string& chunked_data);
-
+        void SetVersion(const std::string& version);
+        void AddHeaderPair(const std::string& key, const std::string& value);
+        void RemoveHeaderPair(const std::string& key);
         //return http_response ptr
-        HttpAwaiter Get(protocol::http::Http1_1_Request::ptr request = nullptr);
-        HttpAwaiter Post(std::string&& body,protocol::http::Http1_1_Request::ptr request = nullptr);
-        HttpAwaiter Options(protocol::http::Http1_1_Request::ptr request = nullptr);
+        HttpAwaiter Get(const std::string& url);
+        HttpAwaiter Post(const std::string& url,std::string&& body);
+        HttpAwaiter Options(const std::string& url);
         void Close();
         virtual ~GY_HttpAsyncClient() = default;
     private:
-        virtual int Connect() override;
+        virtual int Connect(const std::string& ip, uint16_t port);
         protocol::http::Http1_1_Response::ptr ExecMethod(std::string reqStr);
+        // addr  port  uri
+        std::tuple<std::string,uint16_t,std::string> ParseUrl(const std::string& url);
+        void SetHttpHeaders(protocol::http::Http1_1_Request::ptr request);
     private:
         int m_fd;
-        std::string m_host;
-        uint16_t m_port;
-        std::string m_uri;
         std::string m_version;
         std::queue<std::future<void>> m_futures;
         std::function<protocol::http::Http1_1_Response::ptr()> m_ExecMethod;
+        std::unordered_map<std::string,std::string> m_headers;
         bool m_keepalive;
         bool m_isconnected;
     };
@@ -57,7 +58,7 @@ namespace galay
         void Close();
         virtual ~GY_SmtpAsyncClient() = default;
     private:
-        virtual int Connect() override;
+        virtual int Connect();
         std::vector<galay::protocol::smtp::Smtp_Response::ptr> ExecSendMsg(std::queue<std::string> requests);
     private:
         int m_fd;

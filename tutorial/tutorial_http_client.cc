@@ -6,15 +6,8 @@
 #include <spdlog/async.h>
 galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
 {
-    galay::GY_HttpAsyncClient client("http://183.2.172.185:80");
-    galay::protocol::http::Http1_1_Request::ptr request = std::make_shared<galay::protocol::http::Http1_1_Request>();
-    request->SetMethod("GET");
-    request->SetUri("/");
-    request->SetVersion("1.1");
-    request->SetHeadPair({"Connection","Upgrade, HTTP2-Settings"});
-    request->SetHeadPair({"Upgrade","h2c"});
-    //std::string http2Settings = galay::security::Base64Util::base64_encode("")
-    auto resp = co_await client.Get(request);
+    galay::GY_HttpAsyncClient client;
+    auto resp = co_await client.Get("http://183.2.172.185:80");
     std::cout << resp->EncodePdu();
     co_return galay::CoroutineStatus::kCoroutineFinished;
 }

@@ -9,7 +9,7 @@ galay::protocol::http::Http1_1_Protocol::GetVersion()
 }
 
 void 
-galay::protocol::http::Http1_1_Protocol::SetVersion(std::string&& version)
+galay::protocol::http::Http1_1_Protocol::SetVersion(const std::string& version)
 {
     this->m_version = version;
 }
@@ -94,7 +94,7 @@ galay::protocol::http::Http1_1_Request::GetUri()
 }
 
 void
-galay::protocol::http::Http1_1_Request::SetUri(std::string&& uri)
+galay::protocol::http::Http1_1_Request::SetUri(const std::string& uri)
 {
     this->m_uri = uri;
 }

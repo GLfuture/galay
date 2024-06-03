@@ -34,7 +34,7 @@ namespace galay
             public:
                 using Ptr = ::std::shared_ptr<Http1_1_Protocol>;
                 ::std::string GetVersion();
-                void SetVersion(std::string &&version);
+                void SetVersion(const std::string&version);
                 ::std::string GetBody();
                 void SetBody(std::string &&body);
                 ::std::string GetHeadValue(const ::std::string &key);
@@ -60,7 +60,7 @@ namespace galay
                 void SetMethod(std::string &&method);
                 // for server
                 ::std::string GetUri();
-                void SetUri(std::string &&uri);
+                void SetUri(const std::string& uri);
                 ProtoJudgeType DecodePdu(::std::string &buffer) override;
                 // for  client
                 ::std::string EncodePdu() override;
