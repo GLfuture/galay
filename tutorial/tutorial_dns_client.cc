@@ -15,9 +15,9 @@ galay::GY_Coroutine<galay::CoroutineStatus> func()
     {
         auto item = ans.front();
         ans.pop();
-        if(item.m_type == galay::protocol::dns::DNS_QUERY_CNAME){
+        if(item.m_type == galay::protocol::dns::kDnsQueryCname){
             ::std::cout << item.m_aname << " has cname : " << item.m_data << '\n';
-        }else if(item.m_type == galay::protocol::dns::DNS_QUERY_A){
+        }else if(item.m_type == galay::protocol::dns::kDnsQueryA){
             ::std::cout << item.m_aname << " has ipv4 : "<< item.m_data <<'\n';
         }
     }
@@ -27,14 +27,14 @@ galay::GY_Coroutine<galay::CoroutineStatus> func()
     {
         auto item = ans.front();
         ans.pop();
-        if(item.m_type == galay::protocol::dns::DNS_QUERY_CNAME){
+        if(item.m_type == galay::protocol::dns::kDnsQueryCname){
             ::std::cout << item.m_aname << " has cname : " << item.m_data << '\n';
-        }else if(item.m_type == galay::protocol::dns::DNS_QUERY_AAAA){
+        }else if(item.m_type == galay::protocol::dns::kDnsQueryAAAA){
             ::std::cout << item.m_aname << " has ipv6 : "<< item.m_data <<'\n';
         }
     }
     client.Close();
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 int main()

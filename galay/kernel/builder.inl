@@ -63,8 +63,8 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()
     m_sche_wait_time.store(DEFAULT_SCHE_WAIT_TIME);
     m_rbuffer_len.store(DEFAULT_RBUFFER_LENGTH);
     m_backlog.store(DEFAULT_BACKLOG);
-    m_scheduler_type.store(SchedulerType::EPOLL_SCHEDULER);
-    m_port = 0;
+    m_scheduler_type.store(SchedulerType::kEpollScheduler);
+    m_port = DEFAULT_LISTEN_PORT;
     m_userfunc = nullptr;
     m_is_ssl = false;
     m_ssl_config = nullptr;

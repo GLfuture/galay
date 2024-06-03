@@ -16,7 +16,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
     //std::string http2Settings = galay::security::Base64Util::base64_encode("")
     auto resp = co_await client.Get(request);
     std::cout << resp->EncodePdu();
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 int main()

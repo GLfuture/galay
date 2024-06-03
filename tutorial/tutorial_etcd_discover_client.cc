@@ -9,7 +9,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
     for(auto [k,v]:m){
         ::std::cout << k << ": " << v <<'\n';
     }
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 

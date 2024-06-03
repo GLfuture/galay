@@ -37,7 +37,7 @@ galay::util::ConfigParser::ParseContent(const ::std::string& content)
     ::std::string line;
     while (::std::getline(stream, line))
     {
-        ConfType state = ConfType::CONF_KEY;
+        ConfType state = ConfType::kConfKey;
         ::std::string key, value;
         for (int i = 0; i < line.length(); i++)
         {
@@ -45,17 +45,17 @@ galay::util::ConfigParser::ParseContent(const ::std::string& content)
                 continue;
             if (line[i] == '#')
                 break;
-            if ((line[i] == '=' || line[i] == ':') && state == ConfType::CONF_KEY)
+            if ((line[i] == '=' || line[i] == ':') && state == ConfType::kConfKey)
             {
-                state = ConfType::CONF_VALUE;
+                state = ConfType::kConfValue;
                 continue;
             }
             switch (state)
             {
-            case CONF_KEY:
+            case kConfKey:
                 key += line[i];
                 break;
-            case CONF_VALUE:
+            case kConfValue:
                 value += line[i];
                 break;
             default:

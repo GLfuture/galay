@@ -10,7 +10,7 @@ void galay::GY_TcpServer::Start(GY_TcpServerBuilderBase::ptr builder)
         scheduler->RegiserTimerManager(timerfd, timerManager);
         typename GY_Acceptor::ptr acceptor = CreateAcceptor(scheduler);
         scheduler->RegisterObjector(acceptor->GetListenFd(), acceptor);
-        scheduler->AddEvent(acceptor->GetListenFd(), EventType::GY_EVENT_READ | EventType::GY_EVENT_EPOLLET);
+        scheduler->AddEvent(acceptor->GetListenFd(), EventType::kEventRead | EventType::kEvnetEpollET);
         m_schedulers.push_back(scheduler);
         m_threads.push_back(::std::make_shared<::std::thread>(&GY_IOScheduler::Start, scheduler));
     }
@@ -36,9 +36,9 @@ galay::GY_TcpServer::CreateScheduler(GY_TcpServerBuilderBase::ptr builder)
 {
     switch (builder->GetSchedulerType())
     {
-    case GY_TcpServerBuilderBase::SchedulerType::EPOLL_SCHEDULER:
+    case GY_TcpServerBuilderBase::SchedulerType::kEpollScheduler:
         return ::std::make_shared<GY_EpollScheduler>(builder);
-    case GY_TcpServerBuilderBase::SchedulerType::SELECT_SCHEDULER:
+    case GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler:
         return ::std::make_shared<GY_SelectScheduler>(builder);
     }
     return nullptr;

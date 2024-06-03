@@ -19,11 +19,11 @@ namespace galay {
     #define MAX_TIMERID         40,000,000,000
 
     enum EventType{
-        GY_EVENT_READ = 0x1,
-        GY_EVENT_WRITE = 0x2,
-        GY_EVENT_ERROR = 0x4,
-        GY_EVENT_EPOLLET = 0x8,         //epoll et模式
-        GY_EVENT_EPOLLONESHOT = 0x16,   //epoll oneshot模式
+        kEventRead = 0x1,
+        kEventWrite = 0x2,
+        kEventError = 0x4,
+        kEvnetEpollET = 0x8,         //epoll et模式
+        kEventEpollOneShot = 0x16,   //epoll oneshot模式
     };
 
     

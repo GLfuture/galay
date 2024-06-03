@@ -9,6 +9,7 @@ namespace galay {
     #define DEFAULT_CLINET_EVENT_SIZE               1
     #define MAX_UDP_WAIT_FOR_RECV_TIME              5000
     #define DEFAULT_CONNCTION_TIMEOUT               -1
+    #define DEFAULT_LISTEN_PORT                     8080
     
     
     #define DEFAULT_THREAD_NUM                      4

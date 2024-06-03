@@ -4,10 +4,10 @@ galay::ProtoJudgeType
 galay::protocol::smtp::Smtp_Protocol:: DecodePdu(::std::string& buffer)
 {
     int pos = buffer.find("\r\n");
-    if(pos == std::string::npos) return ProtoJudgeType::PROTOCOL_INCOMPLETE;
+    if(pos == std::string::npos) return ProtoJudgeType::kProtoIncomplete;
     this->m_content = buffer.substr(0,pos);
     buffer.erase(0,pos + 2);
-    return ProtoJudgeType::PROTOCOL_FINISHED;
+    return ProtoJudgeType::kProtoFinished;
 }
 
 ::std::string 

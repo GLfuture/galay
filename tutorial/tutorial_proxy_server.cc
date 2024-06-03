@@ -16,7 +16,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test_http_proxy(galay::GY_Control
     response->SetVersion(response1->GetVersion());
     response->SetHeaders(response1->GetHeaders());
     ctrl.lock()->Done();
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 galay::GY_TcpServer server;
@@ -35,7 +35,7 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     galay::GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request,galay::protocol::http::Http1_1_Response>::ptr 
     builder = std::make_shared<galay::GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request,galay::protocol::http::Http1_1_Response>>();
-    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::EPOLL_SCHEDULER);
+    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kEpollScheduler);
     builder->SetUserFunction({8082,test_http_proxy});
     builder->SetThreadNum(1);
     server.Start(builder);

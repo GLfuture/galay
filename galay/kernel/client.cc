@@ -198,11 +198,11 @@ galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
             if (!respStr.empty())
             {
                 ProtoJudgeType type = response->DecodePdu(respStr);
-                if (type == ProtoJudgeType::PROTOCOL_INCOMPLETE)
+                if (type == ProtoJudgeType::kProtoIncomplete)
                 {
                     continue;
                 }
-                else if (type == ProtoJudgeType::PROTOCOL_FINISHED)
+                else if (type == ProtoJudgeType::kProtoFinished)
                 {
                     spdlog::info("[{}:{}] [Recv(fd:{}) from {}:{} [Success]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
                     if (!this->m_keepalive)
@@ -355,11 +355,11 @@ galay::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
                 {
                     galay::protocol::smtp::Smtp_Response::ptr response = std::make_shared<galay::protocol::smtp::Smtp_Response>();
                     ProtoJudgeType type = response->Resp()->DecodePdu(respStr);
-                    if (type == ProtoJudgeType::PROTOCOL_INCOMPLETE)
+                    if (type == ProtoJudgeType::kProtoIncomplete)
                     {
                         continue;
                     }
-                    else if (type == ProtoJudgeType::PROTOCOL_FINISHED)
+                    else if (type == ProtoJudgeType::kProtoFinished)
                     {
                         spdlog::info("[{}:{}] [Recv(fd:{}) from {}:{} [Success]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
                         res.push_back(response);
@@ -412,7 +412,7 @@ galay::DnsAsyncClient::QueryA(std::queue<std::string> domains)
     header.m_questions = 1;
     galay::protocol::dns::Dns_Question question;
     question.m_class = 1;
-    question.m_type = galay::protocol::dns::DNS_QUERY_A;
+    question.m_type = galay::protocol::dns::kDnsQueryA;
     std::queue<galay::protocol::dns::Dns_Question> questions;
     while(!domains.empty())
     {
@@ -447,7 +447,7 @@ galay::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
     header.m_questions = 1;
     galay::protocol::dns::Dns_Question question;
     question.m_class = 1;
-    question.m_type = galay::protocol::dns::DNS_QUERY_AAAA;
+    question.m_type = galay::protocol::dns::kDnsQueryAAAA;
     std::queue<galay::protocol::dns::Dns_Question> questions;
     while(!domains.empty())
     {

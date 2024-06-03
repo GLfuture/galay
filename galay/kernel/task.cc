@@ -56,7 +56,7 @@ galay::GY_CreateConnTask::CreateConn()
     m_scheduler.lock()->RegisterObjector(connfd, connector);
     if(!m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL())
     {
-        if (m_scheduler.lock()->AddEvent(connfd, EventType::GY_EVENT_READ | EventType::GY_EVENT_EPOLLET | EventType::GY_EVENT_ERROR) == -1)
+        if (m_scheduler.lock()->AddEvent(connfd, EventType::kEventRead | EventType::kEvnetEpollET | EventType::kEventError) == -1)
         {
             close(connfd);
             spdlog::error("[{}:{}] [AddEvent error(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, connfd, strerror(errno));
@@ -64,7 +64,7 @@ galay::GY_CreateConnTask::CreateConn()
         }
     }else{
         connector->SetSSLCtx(this->m_ssl_ctx);
-        if (m_scheduler.lock()->AddEvent(connfd, EventType::GY_EVENT_EPOLLET | EventType::GY_EVENT_ERROR | EventType::GY_EVENT_WRITE) == -1)
+        if (m_scheduler.lock()->AddEvent(connfd, EventType::kEvnetEpollET | EventType::kEventError | EventType::kEventWrite) == -1)
         {
             close(connfd);
             spdlog::error("[{}:{}] [AddEvent error(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, connfd, strerror(errno));
@@ -176,7 +176,7 @@ galay::GY_RecvTask::Execute()
                 spdlog::error("[{}:{}] [Fail(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 close(this->m_fd);
                 this->m_scheduler.lock()->DelObjector(this->m_fd);
-                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE);
+                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
             }
             else
             {
@@ -187,7 +187,7 @@ galay::GY_RecvTask::Execute()
         else if (len == 0)
         {
             spdlog::info("[{}:{}] [Recv warn(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
-            this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE);
+            this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
             return;
         }
@@ -219,7 +219,7 @@ galay::GY_SendTask::FirstTryToSend()
     Execute();
     if (!this->m_wbuffer.empty())
     {
-        this->m_scheduler.lock()->AddEvent(this->m_fd, EventType::GY_EVENT_WRITE);
+        this->m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventWrite);
     }
 }
 
@@ -230,7 +230,7 @@ galay::GY_SendTask::SendAll()
         return;
     Execute();
     if (this->m_wbuffer.empty())
-        this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::GY_EVENT_WRITE);
+        this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventWrite);
 }
 
 bool 
@@ -270,7 +270,7 @@ galay::GY_SendTask::Execute()
                 spdlog::error("[{}:{}] [Send error(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 close(this->m_fd);
                 this->m_scheduler.lock()->DelObjector(this->m_fd);
-                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE);
+                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
             }
             else
             {
@@ -283,7 +283,7 @@ galay::GY_SendTask::Execute()
         {
             spdlog::info("[{}:{}] [Send info(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
-            this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE);
+            this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
             return;
         }
         else

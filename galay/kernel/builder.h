@@ -39,8 +39,8 @@ namespace galay {
         using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
         enum SchedulerType
         {
-            SELECT_SCHEDULER,       //select
-            EPOLL_SCHEDULER,        //epoll
+            kSelectScheduler,       //select
+            kEpollScheduler,        //epoll
         };
         //nessaray
         virtual void SetIllegalFunction(::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func) = 0;

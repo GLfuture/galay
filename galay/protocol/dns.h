@@ -16,17 +16,17 @@ namespace galay
             #define MAX_UDP_LENGTH 1500
             enum DNS_Query_Type
             {
-                DNS_QUERY_A = 1,      // 由域名获取ipv4地址
-                DNS_QUERY_NS = 2,     // 查询域名服务器
-                DNS_QUERY_CNAME = 5,  // 查询规范名称
-                DNS_QUERY_SOA = 6,    // 开始授权
-                DNS_QUERY_WKS = 11,   // 熟知服务
-                DNS_QUERY_PTR = 12,   // ip地址转域名
-                DNS_QUERY_HINFO = 13, // 主机信息
-                DNS_QUERY_MX = 15,    // 邮件交换
-                DNS_QUERY_AAAA = 28,  // 由域名获取ipv6地址
-                DNS_QUERY_AXFR = 252, // 传送整个区的请求
-                DNS_QUERY_ANY = 255,  // 对所有记录的请求
+                kDnsQueryA = 1,      // 由域名获取ipv4地址
+                kDnsQueryNS = 2,     // 查询域名服务器
+                kDnsQueryCname = 5,  // 查询规范名称
+                kDnsQuerySOA = 6,    // 开始授权
+                kDnsQueryWKS = 11,   // 熟知服务
+                kDnsQueryPtr = 12,   // ip地址转域名
+                kDnsQueryHInfo = 13, // 主机信息
+                kDnsQueryMX = 15,    // 邮件交换
+                kDnsQueryAAAA = 28,  // 由域名获取ipv6地址
+                kDnsQueryAXFR = 252, // 传送整个区的请求
+                kDnsQueryAny = 255,  // 对所有记录的请求
             };
 
             struct Dns_Flags

@@ -380,14 +380,14 @@ galay::GY_Connector::ExecuteTask()
                 IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
                 this->m_ssl = nullptr;
                 spdlog::error("[{}:{}] [socket(fd: {}) close]", __FILE__, __LINE__, this->m_fd);
-                m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_READ|EventType::GY_EVENT_WRITE|EventType::GY_EVENT_ERROR);
+                m_scheduler.lock()->DelEvent(this->m_fd,EventType::kEventRead|EventType::kEventWrite|EventType::kEventError);
                 m_scheduler.lock()->DelObjector(this->m_fd);
                 close(this->m_fd);
                 return;
             }
         }else{
             spdlog::debug("[{}:{}] [SSLAccept(fd: {}) Success]", __FILE__, __LINE__, this->m_fd);
-            m_scheduler.lock()->ModEvent(this->m_fd,EventType::GY_EVENT_WRITE,EventType::GY_EVENT_READ);
+            m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventWrite,EventType::kEventRead);
             m_is_ssl_accept = true;
             return;
         }
@@ -395,10 +395,10 @@ galay::GY_Connector::ExecuteTask()
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
     }
-    if(m_eventType & GY_EVENT_READ){
+    if(m_eventType & kEventRead){
         this->m_RecvCoroutine.Resume();
     }
-    if(m_eventType & GY_EVENT_WRITE)
+    if(m_eventType & kEventWrite)
     {
         this->m_SendCoroutine.Resume();
     }
@@ -429,11 +429,11 @@ galay::GY_Connector::CoBusinessExec()
         this->m_UserCoroutine = this->m_scheduler.lock()->UserFunction(this->m_controller);
         co_await group.Wait();
         if(this->m_controller->IsClosed() && this->m_sender->WBufferEmpty()){
-            this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);
+            this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
         }
     }
-    co_return galay::GY_COROUTINE_FINISHED;
+    co_return galay::kCoroutineFinished;
 }
 
 galay::GY_TcpCoroutine<galay::CoroutineStatus> 
@@ -448,10 +448,10 @@ galay::GY_Connector::CoReceiveExec()
             std::string& buffer = m_receiver->GetRBuffer();
             if(buffer.length() == 0) break;
             ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
-            if(type == ProtoJudgeType::PROTOCOL_FINISHED){
+            if(type == ProtoJudgeType::kProtoFinished){
                 PushRequest(std::move(m_tempRequest));
                 m_tempRequest = nullptr;
-            }else if(type == ProtoJudgeType::PROTOCOL_INCOMPLETE)
+            }else if(type == ProtoJudgeType::kProtoIncomplete)
             {
                 break;
             }else{
@@ -460,7 +460,7 @@ galay::GY_Connector::CoReceiveExec()
             }
         }
     }
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 galay::GY_TcpCoroutine<galay::CoroutineStatus> 
@@ -477,16 +477,16 @@ galay::GY_Connector::CoSendExec()
         m_sender->ExecuteTask();
         if(m_sender->WBufferEmpty()){
             if(this->m_controller->IsClosed()){
-                this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);
+                this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
                 this->m_scheduler.lock()->DelObjector(this->m_fd);
             }else {
-                this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::GY_EVENT_WRITE , EventType::GY_EVENT_READ);
+                this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventWrite , EventType::kEventRead);
             }         
         }else{
-            this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::GY_EVENT_READ, EventType::GY_EVENT_READ | EventType::GY_EVENT_WRITE | EventType::GY_EVENT_ERROR);
+            this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
         }
     }
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 galay::GY_Connector::~GY_Connector()

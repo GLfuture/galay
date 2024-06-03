@@ -6,9 +6,9 @@
 namespace galay
 {
     enum ProtoJudgeType {
-        PROTOCOL_FINISHED,
-        PROTOCOL_INCOMPLETE,
-        PROTOCOL_ILLEGAL
+        kProtoFinished,
+        kProtoIncomplete,
+        kProtoIllegal
     };
 
     template <typename T>

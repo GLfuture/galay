@@ -56,8 +56,8 @@ namespace galay
         {
             enum ConfType
             {
-                CONF_KEY,
-                CONF_VALUE,
+                kConfKey,
+                kConfValue,
             };
 
         public:

@@ -18,7 +18,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
         ctrl.lock()->Close();
     }
     ctrl.lock()->Done();
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 galay::GY_TcpServer server;
@@ -39,7 +39,7 @@ int main()
     builder->InitSSLServer(true);
     builder->GetSSLConfig()->SetCertPath("./server.crt");
     builder->GetSSLConfig()->SetKeyPath("./server.key");
-    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::SELECT_SCHEDULER);
+    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler);
     builder->Get("/",test);
     builder->SetThreadNum(1);
     server.Start(builder);

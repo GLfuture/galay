@@ -65,7 +65,7 @@ galay::GY_HttpServerBuilder::RouteHttp(galay::GY_Controller::wptr ctrl)
     }
     co_await group.Wait();
     ctrl.lock()->Done();
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 void galay::GY_HttpServerBuilder::SetUserFunction(::std::pair<uint16_t, ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func)

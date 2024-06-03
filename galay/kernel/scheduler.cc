@@ -50,7 +50,7 @@ galay::GY_SelectScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_Time
 {
     this->m_timerfd = fd;
     RegisterObjector(fd,timerManager);
-    AddEvent(m_timerfd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ);
+    AddEvent(m_timerfd, EventType::kEventError | EventType::kEventRead);
 }
 
 void 
@@ -64,15 +64,15 @@ int
 galay::GY_SelectScheduler::DelEvent(int fd, int event_type)
 {
     if(fd >= __FD_SETSIZE) return -1;
-    if ((event_type & GY_EVENT_READ) != 0)
+    if ((event_type & kEventRead) != 0)
     {
         FD_CLR(fd, &m_rfds);
     }
-    if ((event_type & GY_EVENT_WRITE) != 0)
+    if ((event_type & kEventWrite) != 0)
     {
         FD_CLR(fd, &m_wfds);
     }
-    if ((event_type & GY_EVENT_ERROR) != 0)
+    if ((event_type & kEventError) != 0)
     {
         FD_CLR(fd, &m_efds);
     }
@@ -98,15 +98,15 @@ int
 galay::GY_SelectScheduler::AddEvent(int fd, int event_type)
 {
     if(fd >= __FD_SETSIZE) return -1;
-    if ((event_type & GY_EVENT_READ) != 0)
+    if ((event_type & kEventRead) != 0)
     {
         FD_SET(fd, &m_rfds);
     }
-    if ((event_type & GY_EVENT_WRITE) != 0)
+    if ((event_type & kEventWrite) != 0)
     {
         FD_SET(fd, &m_wfds);
     }
-    if ((event_type & GY_EVENT_ERROR) != 0)
+    if ((event_type & kEventError) != 0)
     {
         FD_SET(fd, &m_efds);
     }
@@ -150,15 +150,15 @@ galay::GY_SelectScheduler::Start()
             int eventType = 0;
             if (FD_ISSET(fd, &read_set))
             {
-                eventType |= EventType::GY_EVENT_READ;
+                eventType |= EventType::kEventRead;
             }
             if(FD_ISSET(fd, &write_set))
             {
-                eventType |= EventType::GY_EVENT_WRITE;
+                eventType |= EventType::kEventWrite;
             }
             if(FD_ISSET(fd, &excep_set))
             {
-                eventType |= EventType::GY_EVENT_ERROR;
+                eventType |= EventType::kEventError;
             }
             if(eventType != 0){
                 auto objector = m_objectors[fd];
@@ -185,7 +185,7 @@ galay::GY_SelectScheduler::Stop()
         FD_ZERO(&m_efds);
         for (auto it = m_objectors.begin(); it != m_objectors.end(); ++it)
         {
-            this->DelEvent(it->first, GY_EVENT_READ | GY_EVENT_WRITE | GY_EVENT_ERROR);
+            this->DelEvent(it->first, kEventRead | kEventWrite | kEventError);
             spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, it->first);
             close(it->first);
         }
@@ -226,7 +226,7 @@ galay::GY_EpollScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_Timer
 {
     this->m_timerfd = fd;
     RegisterObjector(fd,timerManager);
-    AddEvent(m_timerfd, EventType::GY_EVENT_ERROR | EventType::GY_EVENT_READ);
+    AddEvent(m_timerfd, EventType::kEventError | EventType::kEventRead);
 }
 
 std::shared_ptr<galay::Timer> 
@@ -257,13 +257,13 @@ galay::GY_EpollScheduler::Start()
         while(--nready >= 0){
             int eventType = 0;
             if(m_events[nready].events & EPOLLIN){
-                eventType |= EventType::GY_EVENT_READ;
+                eventType |= EventType::kEventRead;
             }
             if(m_events[nready].events & EPOLLOUT){
-                eventType |= EventType::GY_EVENT_WRITE;
+                eventType |= EventType::kEventWrite;
             }
             if(m_events[nready].events & EPOLLERR){
-                eventType |= EventType::GY_EVENT_ERROR;
+                eventType |= EventType::kEventError;
             }
             if(eventType != 0){
                 int fd = m_events[nready].data.fd;
@@ -295,15 +295,15 @@ galay::GY_EpollScheduler::DelEvent(int fd, int event_type)
 {
     epoll_event ev = {0};
     ev.data.fd = fd;
-    if((event_type & GY_EVENT_READ) != 0)
+    if((event_type & kEventRead) != 0)
     {
         ev.events |= EPOLLIN;
     }
-    if((event_type & GY_EVENT_WRITE) != 0)
+    if((event_type & kEventWrite) != 0)
     {
         ev.events |= EPOLLOUT;
     }
-    if((event_type & GY_EVENT_ERROR) != 0)
+    if((event_type & kEventError) != 0)
     {
         ev.events |= EPOLLRDHUP;
     }
@@ -315,15 +315,15 @@ galay::GY_EpollScheduler::ModEvent(int fd, int from ,int to)
 {
     epoll_event ev = {0};
     ev.data.fd = fd;
-    if((to & GY_EVENT_READ) != 0)
+    if((to & kEventRead) != 0)
     {
         ev.events |= EPOLLIN;
     }
-    if((to & GY_EVENT_WRITE) != 0)
+    if((to & kEventWrite) != 0)
     {
         ev.events |= EPOLLOUT;
     }
-    if((to & GY_EVENT_ERROR) != 0)
+    if((to & kEventError) != 0)
     {
         ev.events |= EPOLLRDHUP;
     }
@@ -335,23 +335,23 @@ galay::GY_EpollScheduler::AddEvent(int fd, int event_type)
 {
     epoll_event ev = {0};
     ev.data.fd = fd;
-    if((event_type & GY_EVENT_READ) != 0)
+    if((event_type & kEventRead) != 0)
     {
         ev.events |= EPOLLIN;
     }
-    if((event_type & GY_EVENT_WRITE) != 0)
+    if((event_type & kEventWrite) != 0)
     {
         ev.events |= EPOLLOUT;
     }
-    if((event_type & GY_EVENT_ERROR) != 0)
+    if((event_type & kEventError) != 0)
     {
         ev.events |= EPOLLRDHUP;
     }
-    if((event_type & GY_EVENT_EPOLLET) != 0)
+    if((event_type & kEvnetEpollET) != 0)
     {
         ev.events |= EPOLLET;
     }
-    if((event_type & GY_EVENT_EPOLLONESHOT ) != 0)
+    if((event_type & kEventEpollOneShot ) != 0)
     {
         ev.events |= EPOLLONESHOT;
     }

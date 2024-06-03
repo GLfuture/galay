@@ -21,14 +21,14 @@ namespace galay
             protected:
                 enum HttpHeadStatus
                 {
-                    HTTP_METHOD,
-                    HTTP_URI,
-                    HTTP_VERSION,
-                    HTTP_KEY,
-                    HTTP_VALUE,
-                    HTTP_BODY,
-                    HTTP_STATUS_CODE,
-                    HTTP_STATUS_MSG,
+                    kHttpMethod,
+                    kHttpUri,
+                    kHttpVersion,
+                    kHttpKey,
+                    kHttpValue,
+                    kHttpBody,
+                    kHttpStatusCode,
+                    kHttpStatusMsg,
                 };
 
             public:

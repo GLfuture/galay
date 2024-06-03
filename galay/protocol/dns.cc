@@ -198,14 +198,14 @@ galay::protocol::dns::Dns_Response::DealAnswer(unsigned short type, char *buffer
     ::std::string res;
     switch (type)
     {
-    case DNS_QUERY_A:
+    case kDnsQueryA:
     {
         char ip[20] = {0};
         inet_ntop(AF_INET, data.c_str(), ip, 20);
         res.append(ip);
     }
     break;
-    case DNS_QUERY_CNAME:
+    case kDnsQueryCname:
     {
         char *temp = new char[data.length()];
         memcpy(temp, data.c_str(), data.length());
@@ -213,7 +213,7 @@ galay::protocol::dns::Dns_Response::DealAnswer(unsigned short type, char *buffer
         delete[] temp;
     }
     break;
-    case DNS_QUERY_AAAA:
+    case kDnsQueryAAAA:
     {
         char ip6[40] = {0};
         inet_ntop(AF_INET6, data.c_str(), ip6, 40);

@@ -21,7 +21,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
         ctrl.lock()->Close();
     }
     ctrl.lock()->Done();
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
 #if ILLEGAL_NOT_CLOSE
@@ -34,7 +34,7 @@ galay::GY_TcpCoroutine<galay::TaskStatus> illegal(std::string& rbuffer,std::stri
 galay::GY_TcpCoroutine<galay::CoroutineStatus> illegal(std::string& rbuffer,std::string& wbuffer)
 {
     wbuffer = "your protocol is illegal , please try again";
-    co_return galay::CoroutineStatus::GY_COROUTINE_FINISHED;
+    co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 #elif ILLEGAL_IMMEDIATELY_CLOSE
 galay::GY_TcpCoroutine<galay::TaskStatus> illegal(std::string& rbuffer,std::string& wbuffer)
@@ -59,7 +59,7 @@ int main()
     signal(SIGINT,signal_handler);
     spdlog::set_level(spdlog::level::debug);
     galay::GY_HttpServerBuilder::ptr builder = std::make_shared<galay::GY_HttpServerBuilder>();
-    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::SELECT_SCHEDULER);
+    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler);
     builder->Get("/echo",test);
     builder->SetPort(8080);
     builder->SetIllegalFunction(illegal);

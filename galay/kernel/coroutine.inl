@@ -27,7 +27,7 @@ template <typename RESULT>
 galay::GY_TcpPromise<RESULT>::yield_value(const RESULT &value)
 {
     SetResult(value);
-    SetStatus(CoroutineStatus::GY_COROUTINE_SUSPEND);
+    SetStatus(CoroutineStatus::kCoroutineSuspend);
     return {};
 }
 
@@ -36,7 +36,7 @@ template <typename RESULT>
 galay::GY_TcpPromise<RESULT>::yield_value(RESULT value)
 {
     SetResult(value);
-    SetStatus(CoroutineStatus::GY_COROUTINE_SUSPEND);
+    SetStatus(CoroutineStatus::kCoroutineSuspend);
     return {};
 }
 
@@ -44,7 +44,7 @@ template <typename RESULT>
 ::std::suspend_always
 galay::GY_TcpPromise<RESULT>::final_suspend() noexcept
 {
-    SetStatus(CoroutineStatus::GY_COROUTINE_FINISHED);
+    SetStatus(CoroutineStatus::kCoroutineFinished);
     return {};
 }
 
@@ -57,7 +57,7 @@ void galay::GY_TcpPromise<RESULT>::unhandled_exception() noexcept
 template <typename RESULT>
 void galay::GY_TcpPromise<RESULT>::return_value(RESULT val) noexcept
 {
-    SetStatus(CoroutineStatus::GY_COROUTINE_FINISHED);
+    SetStatus(CoroutineStatus::kCoroutineFinished);
     SetResult(val);
 }
 
@@ -185,7 +185,7 @@ template <typename RESULT>
 galay::GY_TcpPromiseSuspend<RESULT>::yield_value(const RESULT &value)
 {
     SetResult(value);
-    SetStatus(CoroutineStatus::GY_COROUTINE_SUSPEND);
+    SetStatus(CoroutineStatus::kCoroutineSuspend);
     return {};
 }
 
@@ -194,7 +194,7 @@ template <typename RESULT>
 galay::GY_TcpPromiseSuspend<RESULT>::yield_value(RESULT value)
 {
     SetResult(value);
-    SetStatus(CoroutineStatus::GY_COROUTINE_SUSPEND);
+    SetStatus(CoroutineStatus::kCoroutineSuspend);
     return {};
 }
 
@@ -202,7 +202,7 @@ template <typename RESULT>
 ::std::suspend_always
 galay::GY_TcpPromiseSuspend<RESULT>::final_suspend() noexcept
 {
-    SetStatus(CoroutineStatus::GY_COROUTINE_FINISHED);
+    SetStatus(CoroutineStatus::kCoroutineFinished);
     return {};
 }
 
@@ -215,7 +215,7 @@ void galay::GY_TcpPromiseSuspend<RESULT>::unhandled_exception() noexcept
 template <typename RESULT>
 void galay::GY_TcpPromiseSuspend<RESULT>::return_value(RESULT val) noexcept
 {
-    SetStatus(CoroutineStatus::GY_COROUTINE_FINISHED);
+    SetStatus(CoroutineStatus::kCoroutineFinished);
     SetResult(val);
 }
 
@@ -428,7 +428,7 @@ template <typename RESULT>
 galay::CoroutineStatus 
 galay::GY_TcpCoroutine<RESULT>::GetStatus()
 {
-    if (!this->m_handle) return CoroutineStatus::GY_COROUTINE_NOT_EXIST;
+    if (!this->m_handle) return CoroutineStatus::kCoroutineNotExist;
     return this->m_handle.promise().GetStatus();
 }
 
@@ -558,7 +558,7 @@ template <typename RESULT>
 galay::CoroutineStatus 
 galay::GY_TcpCoroutineSuspend<RESULT>::GetStatus()
 {
-    if (!this->m_handle) return CoroutineStatus::GY_COROUTINE_NOT_EXIST;
+    if (!this->m_handle) return CoroutineStatus::kCoroutineNotExist;
     return this->m_handle.promise().GetStatus();
 }
 

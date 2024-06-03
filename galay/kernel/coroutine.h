@@ -9,12 +9,11 @@ namespace galay
 {
     enum CoroutineStatus
     {
-        GY_COROUTINE_NOT_EXIST,             // 协程不存在
-        GY_COROUTINE_RUNNING,               // 协程运行
-        GY_COROUTINE_SUSPEND,               // 协程挂起
-        GY_COROUTINE_FINISHED,              // 协程结束
-
-        GY_COROUTINE_WATTING_FOR_DATA,      //正在等待数据
+        kCoroutineNotExist,             // 协程不存在
+        kCoroutineRunning,               // 协程运行
+        kCoroutineSuspend,               // 协程挂起
+        kCoroutineFinished,              // 协程结束
+        kCoroutineWaitingForData,      //正在等待数据
     };
 
     template <typename RESULT>
@@ -42,7 +41,7 @@ namespace galay
     private:
         ::std::exception_ptr m_exception = nullptr;
         RESULT m_result;
-        CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_RUNNING;
+        CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
     };
 
     template <>
@@ -64,7 +63,7 @@ namespace galay
         inline void rethrow_if_exception();
     private:
         ::std::exception_ptr m_exception = {};
-        CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_RUNNING;
+        CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
     };
 
     template <typename RESULT>
@@ -92,7 +91,7 @@ namespace galay
     private:
         ::std::exception_ptr m_exception = nullptr;
         RESULT m_result;
-        CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_SUSPEND;
+        CoroutineStatus m_status = CoroutineStatus::kCoroutineSuspend;
     };
 
     template <>
@@ -114,7 +113,7 @@ namespace galay
         inline void rethrow_if_exception();
     private:
         ::std::exception_ptr m_exception = {};
-        CoroutineStatus m_status = CoroutineStatus::GY_COROUTINE_RUNNING;
+        CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
     };
 
 
