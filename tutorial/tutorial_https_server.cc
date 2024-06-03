@@ -40,6 +40,7 @@ int main()
     builder->GetSSLConfig()->SetCertPath("./server.crt");
     builder->GetSSLConfig()->SetKeyPath("./server.key");
     builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler);
+    builder->SetPort(8082);
     builder->Get("/",test);
     builder->SetThreadNum(1);
     server.Start(builder);
