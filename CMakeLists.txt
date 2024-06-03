@@ -29,6 +29,17 @@ else()
   message(FATAL_ERROR "spdlog not found")
 endif()
 
+find_path(NLOHMANN_JSON_INCLUDE_DIR NAMES nlohmann/json.hpp)
+if(NLOHMANN_JSON_INCLUDE_DIR)
+  set(NLOHMANN_JSON_FOUND TRUE)
+endif()
+
+if(NLOHMANN_JSON_FOUND)
+  message(STATUS "nlohmann/json found")
+else()
+  message(FATAL_ERROR "nlohmann/json not found")
+endif()
+
 #find mysql
 find_path(MYSQL_INCLUDE_DIR NAMES mysql)
 find_library(MYSQL_LIBRARY NAMES mysqlclient)

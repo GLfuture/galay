@@ -113,6 +113,13 @@ galay::GY_TcpServerBuilder<REQ,RESP>::SetBacklog(uint16_t backlog)
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
 void 
+galay::GY_TcpServerBuilder<REQ,RESP>::SetPort(uint16_t port)
+{
+    this->m_port = port;
+}
+
+template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
+void 
 galay::GY_TcpServerBuilder<REQ,RESP>::SetMaxEventSize(uint16_t max_event_size)
 {
     m_max_event_size.store(max_event_size);

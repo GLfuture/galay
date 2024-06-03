@@ -74,3 +74,64 @@ galay::GY_Controller::SetWaitGroup(WaitGroup* waitgroup)
 {
     this->m_group = waitgroup;
 }
+
+
+galay::GY_HttpController::GY_HttpController(GY_Controller::wptr ctrl)
+{
+    this->m_ctrl = ctrl;
+}
+
+void 
+galay::GY_HttpController::Done()
+{
+    this->m_waitgroup->Done();
+}
+
+void 
+galay::GY_HttpController::Close()
+{
+    this->m_ctrl.lock()->Close();
+}
+
+void 
+galay::GY_HttpController::SetContext(::std::any&& context)
+{
+    this->m_ctrl.lock()->SetContext(std::forward<std::any&&>(context));
+}
+
+::std::any&& 
+galay::GY_HttpController::GetContext()
+{
+    return this->m_ctrl.lock()->GetContext();
+}
+
+::std::shared_ptr<galay::Timer> 
+galay::GY_HttpController::AddTimer(uint64_t during, uint32_t exec_times,::std::function<::std::any()> &&func)
+{
+    return this->m_ctrl.lock()->AddTimer(during,exec_times,std::forward<::std::function<::std::any()>&&>(func));
+}
+
+void 
+galay::GY_HttpController::SetWaitGroup(WaitGroup* waitgroup)
+{
+    this->m_waitgroup = waitgroup;
+}
+
+galay::protocol::http::Http1_1_Request::ptr 
+galay::GY_HttpController::GetRequest()
+{
+    return this->m_request;
+}
+
+
+void 
+galay::GY_HttpController::PushResponse(protocol::http::Http1_1_Response::ptr response)
+{
+    this->m_ctrl.lock()->PushResponse(response);
+}
+
+void 
+galay::GY_HttpController::SetRequest(protocol::http::Http1_1_Request::ptr request)
+{
+    this->m_request = request;
+}

@@ -279,6 +279,7 @@ galay::GY_EpollScheduler::Start()
 galay::GY_TcpCoroutine<galay::CoroutineStatus> 
 galay::GY_EpollScheduler::UserFunction(galay::GY_Controller::ptr controller) 
 {
+    if(!this->m_userFunc) return {};
     return this->m_userFunc(controller);
 }
 

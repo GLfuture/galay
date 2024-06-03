@@ -4,9 +4,9 @@
 #include <mutex>
 #include <signal.h>
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_Controller::wptr ctrl)
+galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wptr ctrl)
 {
-    auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
+    auto request = ctrl.lock()->GetRequest();
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
     response->SetStatus(200) ;
     response->SetVersion("1.1");
@@ -35,13 +35,12 @@ int main()
 {
     signal(SIGINT,signal_handler);
     spdlog::set_level(spdlog::level::debug);
-    galay::GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request,galay::protocol::http::Http1_1_Response>::ptr 
-    builder = std::make_shared<galay::GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request,galay::protocol::http::Http1_1_Response>>();
+    galay::GY_HttpServerBuilder::ptr builder = std::make_shared<galay::GY_HttpServerBuilder>();
     builder->InitSSLServer(true);
     builder->GetSSLConfig()->SetCertPath("./server.crt");
     builder->GetSSLConfig()->SetKeyPath("./server.key");
     builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::SELECT_SCHEDULER);
-    builder->SetUserFunction({8082,test});
+    builder->Get("/",test);
     builder->SetThreadNum(1);
     server.Start(builder);
     return 0;
