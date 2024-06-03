@@ -1,5 +1,5 @@
 #include "../galay/middleware/AsyncEtcd.h"
-#include "../galay/kernel/client.h"
+#include "../galay/galay.h"
 
 galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
 {

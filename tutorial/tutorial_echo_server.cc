@@ -1,5 +1,4 @@
-#include "../galay/kernel/server.h"
-#include "../galay/protocol/http1_1.h"
+#include "../galay/galay.h"
 #include <condition_variable>
 #include <spdlog/spdlog.h>
 #include <mutex>

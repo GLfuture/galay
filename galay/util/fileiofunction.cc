@@ -41,7 +41,8 @@ galay::IOFunction::FileIOFunction::SyncFileStream::WriteFile(const ::std::string
         out.open(FileName);
     }
     if(out.fail()){
-        spdlog::error("[{}:{}] [open '{}' fail]",__FILE__,__LINE__,FileName);
+        std::string path = std::filesystem::current_path();
+        spdlog::error("[{}:{}] [open file: {} failed , now path is {}]",__FILE__,__LINE__,FileName,path);
         return ;
     }
     spdlog::debug("[{}:{}] [write to file: {} Bytes]",__FILE__,__LINE__,Content.length());
@@ -55,7 +56,8 @@ galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(const ::std::string &F
 {
     int fd = open(FileName.c_str(),O_RDONLY);
     if(fd == -1){
-        spdlog::error("[{}:{}] [open file: {} failed]",__FILE__,__LINE__,FileName);
+        std::string path = std::filesystem::current_path();
+        spdlog::error("[{}:{}] [open file: {} failed , now path is {}]",__FILE__,__LINE__,FileName,path);
         return "";
     }
     struct stat st;
@@ -83,7 +85,8 @@ galay::IOFunction::FileIOFunction::ZeroCopyFile::WriteFile(const ::std::string &
 {
     int fd = open(FileName.c_str(),O_WRONLY | O_CREAT);
     if(fd == -1) {
-        spdlog::error("[{}:{}] [open '{}' fail]",__FILE__,__LINE__ ,FileName);
+        std::string path = std::filesystem::current_path();
+        spdlog::error("[{}:{}] [open file: {} failed, now path is {}]",__FILE__,__LINE__ ,FileName,path);
         return;
     }
     if(ftruncate(fd,Content.size()) == -1){

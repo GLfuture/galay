@@ -5,7 +5,7 @@ set(CXX_STANDARD_REQUIRED on)
 set(CMAKE_CXX_STANDARD 20)
 
 
-set(CMAKE_INSTALL_PREFIX /user/local)
+set(CMAKE_INSTALL_PREFIX /usr/local)
 
 set(HEADER_SRC_DIR galay)
 set(HEADER_DST_DIR include)

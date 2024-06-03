@@ -1,5 +1,4 @@
-#include "../galay/kernel/client.h"
-#include "../galay/kernel/server.h"
+#include "../galay/galay.h"
 #include <spdlog/spdlog.h>
 #include <iostream>
 #include <signal.h>
