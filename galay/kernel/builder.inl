@@ -73,7 +73,7 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
 void 
-galay::GY_TcpServerBuilder<REQ,RESP>::SetIllegalFunction(::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func)
+galay::GY_TcpServerBuilder<REQ,RESP>::SetIllegalFunction(std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func)
 {
     m_illegalfunc = func;
 }
@@ -84,7 +84,7 @@ galay::GY_TcpServerBuilder<REQ,RESP>::SetIllegalFunction(::std::function<GY_TcpC
 /// @param port_func 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
 void 
-galay::GY_TcpServerBuilder<REQ,RESP>::SetUserFunction(::std::pair<uint16_t,::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) 
+galay::GY_TcpServerBuilder<REQ,RESP>::SetUserFunction(std::pair<uint16_t,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) 
 {
     this->m_port.store(port_func.first);
     this->m_userfunc = port_func.second;
@@ -183,7 +183,7 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GetBacklog()
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
-galay::GY_TcpServerBuilderBase::SchedulerType 
+galay::SchedulerType 
 galay::GY_TcpServerBuilder<REQ,RESP>::GetSchedulerType()
 {
     return m_scheduler_type.load();
@@ -197,14 +197,14 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GetPort()
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
-::std::function<galay::GY_TcpCoroutine<galay::CoroutineStatus>(galay::GY_Controller::wptr)>
+std::function<galay::GY_TcpCoroutine<galay::CoroutineStatus>(galay::GY_Controller::wptr)>
 galay::GY_TcpServerBuilder<REQ,RESP>::GetUserFunction()
 {
     return m_userfunc;
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
-::std::function<galay::GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> 
+std::function<galay::GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> 
 galay::GY_TcpServerBuilder<REQ,RESP>::GetIllegalFunction()
 {
     return m_illegalfunc;

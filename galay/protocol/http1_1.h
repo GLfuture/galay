@@ -32,62 +32,62 @@ namespace galay
                 };
 
             public:
-                using Ptr = ::std::shared_ptr<Http1_1_Protocol>;
-                ::std::string GetVersion();
+                using Ptr = std::shared_ptr<Http1_1_Protocol>;
+                std::string GetVersion();
                 void SetVersion(const std::string&version);
-                ::std::string GetBody();
+                std::string GetBody();
                 void SetBody(std::string &&body);
-                ::std::string GetHeadValue(const ::std::string &key);
-                void SetHeadPair(::std::pair<::std::string, ::std::string> &&p_head);
+                std::string GetHeadValue(const std::string &key);
+                void SetHeadPair(std::pair<std::string, std::string> &&p_head);
                 void SetHeaders(const std::unordered_map<std::string,std::string>& headers);
                 const std::unordered_map<std::string,std::string>& GetHeaders();
             protected:
-                ::std::string m_version;                                      // 版本号
-                ::std::unordered_map<::std::string, ::std::string> m_headers; // 字段
-                ::std::string m_body = "";                                    // body
+                std::string m_version;                                      // 版本号
+                std::unordered_map<std::string, std::string> m_headers; // 字段
+                std::string m_body = "";                                    // body
             };
 
             class Http1_1_Request : public Http1_1_Protocol, public GY_TcpRequest, public GY_TcpResponse
             {
             private:
-                static ::std::unordered_set<::std::string> m_std_methods;
+                static std::unordered_set<std::string> m_std_methods;
 
             public:
-                using ptr = ::std::shared_ptr<Http1_1_Request>;
-                ::std::string GetArgValue(const ::std::string &key);
-                void SetArgPair(::std::pair<::std::string, ::std::string> &&p_arg);
-                ::std::string GetMethod();
+                using ptr = std::shared_ptr<Http1_1_Request>;
+                std::string GetArgValue(const std::string &key);
+                void SetArgPair(std::pair<std::string, std::string> &&p_arg);
+                std::string GetMethod();
                 void SetMethod(std::string &&method);
                 // for server
-                ::std::string GetUri();
+                std::string GetUri();
                 void SetUri(const std::string& uri);
-                ProtoJudgeType DecodePdu(::std::string &buffer) override;
+                ProtoJudgeType DecodePdu(std::string &buffer) override;
                 // for  client
-                ::std::string EncodePdu() override;
+                std::string EncodePdu() override;
 
                 virtual void Clear() override;
             private:
-                ProtoJudgeType ParseHead(const ::std::string &buffer);
+                ProtoJudgeType ParseHead(const std::string &buffer);
             private:
-                int ConvertUri(::std::string aurl);
-                ::std::string EncodeUri(const ::std::string &s);
-                ::std::string ConvertUri(const ::std::string &s, bool convert_plus_to_space);
+                int ConvertUri(std::string aurl);
+                std::string EncodeUri(const std::string &s);
+                std::string ConvertUri(const std::string &s, bool convert_plus_to_space);
                 bool IsHex(char c, int &v);
                 size_t ToUtf8(int code, char *buff);
-                bool FromHexToI(const ::std::string &s, size_t i, size_t cnt, int &val);
+                bool FromHexToI(const std::string &s, size_t i, size_t cnt, int &val);
 
             private:
                 uint32_t m_header_len = 0;                                     // 头长度
-                ::std::string m_method;                                        // http协议类型
-                ::std::string m_target;                                        //?后的内容
-                ::std::string m_uri;                                           // uri
-                ::std::unordered_map<::std::string, ::std::string> m_arg_list; // 参数
+                std::string m_method;                                        // http协议类型
+                std::string m_target;                                        //?后的内容
+                std::string m_uri;                                           // uri
+                std::unordered_map<std::string, std::string> m_arg_list; // 参数
             };
 
             class Http1_1_Response : public Http1_1_Protocol, public GY_TcpResponse, public GY_TcpRequest
             {
             public:
-                using ptr = ::std::shared_ptr<Http1_1_Response>;
+                using ptr = std::shared_ptr<Http1_1_Response>;
                 // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
                 enum http_protocol_status
                 {
@@ -168,15 +168,15 @@ namespace galay
                 int GetStatus();
                 void SetStatus(int status);
 
-                ::std::string EncodePdu() override;
+                std::string EncodePdu() override;
 
-                ProtoJudgeType DecodePdu(::std::string &buffer) override;
+                ProtoJudgeType DecodePdu(std::string &buffer) override;
 
                 virtual void Clear() override;
                 // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
                 const char *StatusMessage(int status);
             private:
-                ProtoJudgeType ParseHead(const ::std::string &buffer);
+                ProtoJudgeType ParseHead(const std::string &buffer);
             private:
                 int m_header_len = 0;
                 int m_status = 0;

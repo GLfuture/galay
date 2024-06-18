@@ -37,14 +37,9 @@ namespace galay {
         using ptr = std::shared_ptr<GY_TcpServerBuilderBase>;
         using uptr = std::unique_ptr<GY_TcpServerBuilderBase>;
         using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
-        enum SchedulerType
-        {
-            kSelectScheduler,       //select
-            kEpollScheduler,        //epoll
-        };
         //nessaray
-        virtual void SetIllegalFunction(::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func) = 0;
-        virtual void SetUserFunction(::std::pair<uint16_t,::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) = 0;
+        virtual void SetIllegalFunction(std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func) = 0;
+        virtual void SetUserFunction(std::pair<uint16_t,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) = 0;
         virtual void InitSSLServer(bool is_ssl) = 0;
         virtual void SetSchedulerType(SchedulerType scheduler_type) = 0;
         virtual void SetThreadNum(uint16_t threadnum) = 0;
@@ -62,8 +57,8 @@ namespace galay {
         virtual uint16_t GetScheWaitTime() = 0;
         virtual uint32_t GetReadBufferLen() = 0;
         virtual uint16_t GetPort() = 0;
-        virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
-        virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() = 0;
+        virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
+        virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() = 0;
         virtual bool GetIsSSL() = 0;
         virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
         ~GY_TcpServerBuilderBase() = default;
@@ -73,13 +68,13 @@ namespace galay {
     class GY_TcpServerBuilder : public GY_TcpServerBuilderBase
     {
     public:
-        using ptr = ::std::shared_ptr<GY_TcpServerBuilder>;
-        using wptr = ::std::weak_ptr<GY_TcpServerBuilder>;
-        using uptr = ::std::unique_ptr<GY_TcpServerBuilder>;
+        using ptr = std::shared_ptr<GY_TcpServerBuilder>;
+        using wptr = std::weak_ptr<GY_TcpServerBuilder>;
+        using uptr = std::unique_ptr<GY_TcpServerBuilder>;
         GY_TcpServerBuilder();
         //nessaray
-        virtual void  SetUserFunction(::std::pair<uint16_t,::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
-        virtual void  SetIllegalFunction(::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func) override;
+        virtual void  SetUserFunction(std::pair<uint16_t,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
+        virtual void  SetIllegalFunction(std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> func) override;
         virtual void  SetSchedulerType(SchedulerType scheduler_type) override;
         virtual void  SetThreadNum(uint16_t threadnum) override;
         virtual void  SetBacklog(uint16_t backlog) override;
@@ -96,24 +91,26 @@ namespace galay {
         virtual uint16_t GetScheWaitTime() override;
         virtual uint32_t GetReadBufferLen() override;
         virtual uint16_t GetPort() override;
-        virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
-        virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() override;
+        virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
+        virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() override;
         virtual bool GetIsSSL() override;
         virtual const GY_SSLConfig::ptr GetSSLConfig() override;
         ~GY_TcpServerBuilder();
     protected:
-        ::std::atomic_char16_t m_backlog;
-        ::std::atomic_uint16_t m_port;    
-        ::std::atomic_uint16_t m_threadnum;
-        ::std::atomic_uint32_t m_rbuffer_len;
-        ::std::atomic_uint16_t m_max_event_size;
-        ::std::atomic_int16_t m_sche_wait_time;
-        ::std::atomic<SchedulerType> m_scheduler_type;
-        ::std::atomic_bool m_is_ssl;
-        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
-        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalfunc;
+        std::atomic_char16_t m_backlog;
+        std::atomic_uint16_t m_port;    
+        std::atomic_uint16_t m_threadnum;
+        std::atomic_uint32_t m_rbuffer_len;
+        std::atomic_uint16_t m_max_event_size;
+        std::atomic_int16_t m_sche_wait_time;
+        std::atomic<SchedulerType> m_scheduler_type;
+        std::atomic_bool m_is_ssl;
+        std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
+        std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalfunc;
         GY_SSLConfig::ptr m_ssl_config;
     };
+
+    class GY_HttpRouter;
 
     class GY_HttpServerBuilder: public GY_TcpServerBuilder<protocol::http::Http1_1_Request,protocol::http::Http1_1_Response>
     {
@@ -122,16 +119,12 @@ namespace galay {
         using wptr = std::weak_ptr<GY_HttpServerBuilder>;
         using uptr = std::unique_ptr<GY_HttpServerBuilder>;
         GY_HttpServerBuilder() = default;
-        virtual ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
-
-        void Get(const std::string& path,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_HttpController::wptr)> func);
-        void Post(const std::string& path,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_HttpController::wptr)> func);
+        virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
+        void SetRouter(std::shared_ptr<GY_HttpRouter> router);
     private:
-        void RegisterRouter(const std::string& method,const std::string& path,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_HttpController::wptr)> func);
-        virtual void  SetUserFunction(::std::pair<uint16_t,::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
-        galay::GY_TcpCoroutine<galay::CoroutineStatus> RouteHttp(galay::GY_Controller::wptr ctrl);
+        virtual void  SetUserFunction(std::pair<uint16_t,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
     private:
-        std::unordered_map<std::string,std::unordered_map<std::string,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_HttpController::wptr)>>> m_routers;
+        std::shared_ptr<GY_HttpRouter> m_router;
     };
     
     #include "builder.inl"

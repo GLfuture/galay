@@ -53,19 +53,19 @@ namespace galay
 
             struct Dns_Question
             {
-                ::std::string m_qname;
+                std::string m_qname;
                 unsigned short m_type = 0;
                 unsigned short m_class = htons(1); // 一般为1
             };
 
             struct Dns_Answer
             {
-                ::std::string m_aname;
+                std::string m_aname;
                 unsigned short m_type = 0;
                 unsigned short m_class = htons(1);
                 unsigned int m_ttl = 0;
                 unsigned short m_data_len = 0;
-                ::std::string m_data;
+                std::string m_data;
             };
 
             #pragma pack()
@@ -75,41 +75,41 @@ namespace galay
             public:
                 Dns_Header GetHeader();
                 void SetHeader(Dns_Header &&header);
-                void SetQuestionQueue(::std::queue<Dns_Question> &&questions);
-                ::std::queue<Dns_Answer> GetAnswerQueue();
+                void SetQuestionQueue(std::queue<Dns_Question> &&questions);
+                std::queue<Dns_Answer> GetAnswerQueue();
 
             protected:
                 Dns_Header m_header{0};
-                ::std::queue<Dns_Question> m_questions;
-                ::std::queue<Dns_Answer> m_answers;
+                std::queue<Dns_Question> m_questions;
+                std::queue<Dns_Answer> m_answers;
             };
 
             class Dns_Request : public Dns_Protocol, public GY_UdpRequest, public GY_UdpResponse
             {
             public:
-                using ptr = ::std::shared_ptr<Dns_Request>;
+                using ptr = std::shared_ptr<Dns_Request>;
                 // ignore
-                int DecodePdu(::std::string &buffer) override { return 0; }
-                ::std::string EncodePdu() override;
+                int DecodePdu(std::string &buffer) override { return 0; }
+                std::string EncodePdu() override;
                 virtual void Clear() override;
 
             protected:
-                ::std::string ModifyHostname(::std::string hostname);
+                std::string ModifyHostname(std::string hostname);
             };
 
             class Dns_Response : public Dns_Protocol, public GY_UdpRequest, public GY_UdpResponse
             {
             public:
-                using ptr = ::std::shared_ptr<Dns_Response>;
+                using ptr = std::shared_ptr<Dns_Response>;
                 // ignore
-                ::std::string EncodePdu() override { return ""; }
-                int DecodePdu(::std::string &buffer) override;
+                std::string EncodePdu() override { return ""; }
+                int DecodePdu(std::string &buffer) override;
                 virtual void Clear() override;
 
             protected:
                 static bool IsPointer(int in);
-                ::std::string DealAnswer(unsigned short type, char *buffer, ::std::string data);
-                int DnsParseName(unsigned char *buffer, unsigned char *ptr, ::std::string &out);
+                std::string DealAnswer(unsigned short type, char *buffer, std::string data);
+                int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);
             };
         }
     }

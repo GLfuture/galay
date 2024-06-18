@@ -1,7 +1,7 @@
 #include "md5.h"
 
-::std::string 
-galay::security::Md5Util::encode(::std::string const& str)
+std::string 
+galay::security::Md5Util::encode(std::string const& str)
 {
     unsigned char digest[MD5_DIGEST_LENGTH];
     memset(digest,0,MD5_DIGEST_LENGTH);
@@ -9,17 +9,17 @@ galay::security::Md5Util::encode(::std::string const& str)
     MD5_Init(&ctx);
     MD5_Update(&ctx,str.c_str(),str.length());
     MD5_Final(digest,&ctx);
-    ::std::stringstream ss;
+    std::stringstream ss;
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
     {
-        ss << ::std::hex << ::std::setw(2) << ::std::setfill('0') << static_cast<int>(digest[i]);
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(digest[i]);
     }
     return ss.str();
 }
 
 #if __cplusplus >= 201703L
-::std::string 
-galay::security::Md5Util::encode(::std::string_view str)
+std::string 
+galay::security::Md5Util::encode(std::string_view str)
 {
     unsigned char digest[MD5_DIGEST_LENGTH];
     memset(digest,0,MD5_DIGEST_LENGTH);
@@ -27,10 +27,10 @@ galay::security::Md5Util::encode(::std::string_view str)
     MD5_Init(&ctx);
     MD5_Update(&ctx,str.cbegin(),str.length());
     MD5_Final(digest,&ctx);
-    ::std::stringstream ss;
+    std::stringstream ss;
     for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
     {
-        ss << ::std::hex << ::std::setw(2) << ::std::setfill('0') << static_cast<int>(digest[i]);
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(digest[i]);
     }
     return ss.str();
 }

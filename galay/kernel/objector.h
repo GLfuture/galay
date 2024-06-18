@@ -24,9 +24,9 @@ namespace galay
     class GY_Objector
     {
     public:
-        using wptr = ::std::weak_ptr<GY_Objector>;
-        using ptr = ::std::shared_ptr<GY_Objector>;
-        using uptr = ::std::unique_ptr<GY_Objector>;
+        using wptr = std::weak_ptr<GY_Objector>;
+        using ptr = std::shared_ptr<GY_Objector>;
+        using uptr = std::unique_ptr<GY_Objector>;
         GY_Objector();
         virtual void SetEventType(int event_type) = 0;
         virtual void ExecuteTask() = 0;
@@ -36,8 +36,8 @@ namespace galay
     class Timer
     {
     public:
-        using ptr = ::std::shared_ptr<Timer>;
-        Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times , ::std::function<::std::any()> &&func);
+        using ptr = std::shared_ptr<Timer>;
+        Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times , std::function<std::any()> &&func);
         //获取当前时间戳
         static uint64_t GetCurrentTime();
         //获取需要等待的时间
@@ -55,7 +55,7 @@ namespace galay
         //执行任务
         void Execute();
         //获取结果
-        ::std::any Result();
+        std::any Result();
         //取消任务
         void Cancle();
         //判断任务是否取消
@@ -68,22 +68,22 @@ namespace galay
         uint32_t m_exec_times;  
         uint64_t m_expired_time;
         uint64_t m_during_time;
-        ::std::atomic_bool m_cancle;
-        ::std::atomic_bool m_is_finish;
-        ::std::function<::std::any()> m_userfunc;
-        ::std::any m_result;
+        std::atomic_bool m_cancle;
+        std::atomic_bool m_is_finish;
+        std::function<std::any()> m_userfunc;
+        std::any m_result;
     };
 
     class GY_TimerManager : public GY_Objector
     {
     public:
-        using ptr = ::std::shared_ptr<GY_TimerManager>;
-        using wptr = ::std::weak_ptr<GY_TimerManager>;
-        using uptr = ::std::unique_ptr<GY_TimerManager>;
+        using ptr = std::shared_ptr<GY_TimerManager>;
+        using wptr = std::weak_ptr<GY_TimerManager>;
+        using uptr = std::unique_ptr<GY_TimerManager>;
         GY_TimerManager();
         virtual void SetEventType(int event_type) override;
         virtual void ExecuteTask() override;
-        Timer::ptr AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func);
+        Timer::ptr AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
         // return timerfd
         int GetTimerfd();
         ~GY_TimerManager();
@@ -112,19 +112,19 @@ namespace galay
 
     private:
         int m_timerfd;
-        ::std::shared_mutex m_mtx;
-        static ::std::atomic_uint64_t m_global_timerid; // 小于4,000,000,000
-        ::std::priority_queue<Timer::ptr, ::std::vector<Timer::ptr>, MyCompare> m_timers;
+        std::shared_mutex m_mtx;
+        static std::atomic_uint64_t m_global_timerid; // 小于4,000,000,000
+        std::priority_queue<Timer::ptr, std::vector<Timer::ptr>, MyCompare> m_timers;
 
     };
 
     class GY_Acceptor : public GY_Objector
     {
     public:
-        using wptr = ::std::weak_ptr<GY_Acceptor>;
-        using ptr = ::std::shared_ptr<GY_Acceptor>;
-        using uptr = ::std::unique_ptr<GY_Acceptor>;
-        GY_Acceptor(::std::weak_ptr<GY_IOScheduler> scheduler);
+        using wptr = std::weak_ptr<GY_Acceptor>;
+        using ptr = std::shared_ptr<GY_Acceptor>;
+        using uptr = std::unique_ptr<GY_Acceptor>;
+        GY_Acceptor(std::weak_ptr<GY_IOScheduler> scheduler);
         int GetListenFd();
         virtual void SetEventType(int event_type) override;
         inline virtual void ExecuteTask() override;
@@ -137,18 +137,18 @@ namespace galay
     class GY_Receiver : public GY_Objector
     {
     public:
-        using wptr = ::std::weak_ptr<GY_Receiver>;
-        using ptr = ::std::shared_ptr<GY_Receiver>;
-        using uptr = ::std::unique_ptr<GY_Receiver>;
+        using wptr = std::weak_ptr<GY_Receiver>;
+        using ptr = std::shared_ptr<GY_Receiver>;
+        using uptr = std::unique_ptr<GY_Receiver>;
         // 创建时既需要加入scheduler的事件中
-        GY_Receiver(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler);
+        GY_Receiver(int fd, std::weak_ptr<GY_IOScheduler> scheduler);
         std::string& GetRBuffer();
         virtual void SetEventType(int event_type) override;
         virtual void ExecuteTask() override;
         void SetSSL(SSL* ssl);
         virtual ~GY_Receiver() = default;
     private:
-        ::std::unique_ptr<GY_RecvTask> m_recvTask;
+        std::unique_ptr<GY_RecvTask> m_recvTask;
     };
 
     class GY_Sender : public GY_Objector {
@@ -156,15 +156,15 @@ namespace galay
         using ptr = std::shared_ptr<GY_Sender>;
         using wptr = std::weak_ptr<GY_Sender>;
         using uptr = std::unique_ptr<GY_Sender>;
-        GY_Sender(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler);
-        void AppendWBuffer(::std::string&& wbuffer);
+        GY_Sender(int fd, std::weak_ptr<GY_IOScheduler> scheduler);
+        void AppendWBuffer(std::string&& wbuffer);
         bool WBufferEmpty();
         virtual void SetEventType(int event_type) override;
         virtual void ExecuteTask() override;
         void SetSSL(SSL* ssl);
         virtual ~GY_Sender() = default;
     private:
-        ::std::unique_ptr<GY_SendTask> m_sendTask;
+        std::unique_ptr<GY_SendTask> m_sendTask;
     };
 
     class GY_Connector : public GY_Objector, public std::enable_shared_from_this<GY_Connector>
@@ -173,12 +173,12 @@ namespace galay
         using ptr = std::shared_ptr<GY_Connector>;
         using wptr = std::weak_ptr<GY_Connector>;
         using uptr = std::unique_ptr<GY_Connector>;
-        GY_Connector(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler);
-        void SetContext(::std::any&& context);
+        GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> scheduler);
+        void SetContext(std::any&& context);
         std::any&& GetContext();
         galay::protocol::GY_TcpRequest::ptr GetRequest();
         void PushResponse(galay::protocol::GY_TcpResponse::ptr response);
-        ::std::shared_ptr<galay::Timer> AddTimer(uint64_t during, uint32_t exec_times,::std::function<::std::any()> &&func);
+        std::shared_ptr<galay::Timer> AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func);
         virtual void SetEventType(int event_type) override;
         virtual void ExecuteTask() override;
         virtual void SetSSLCtx(SSL_CTX* ctx);

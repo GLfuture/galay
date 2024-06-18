@@ -53,7 +53,7 @@ int galay::IOFunction::NetIOFunction::TcpFunction::ReusePort(int fd)
     return setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void *)&option, sizeof(option));
 }
 
-int galay::IOFunction::NetIOFunction::TcpFunction::Conncet(int fd , ::std::string sip, uint32_t sport)
+int galay::IOFunction::NetIOFunction::TcpFunction::Conncet(int fd , std::string sip, uint32_t sport)
 {
     sockaddr_in sin = {0};
     memset(&sin, 0, sizeof(sin));
@@ -93,7 +93,7 @@ ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Recv(int fd , char *buffe
     return recv(fd, buffer, len, 0);
 }
 
-ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Send(int fd,const ::std::string& buffer , uint32_t len)
+ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Send(int fd,const std::string& buffer , uint32_t len)
 {
     return send(fd, buffer.c_str() ,len,0);
 }
@@ -147,7 +147,7 @@ int galay::IOFunction::NetIOFunction::TcpFunction::SSLRecv(SSL* ssl,char* buffer
 }
 
 
-int galay::IOFunction::NetIOFunction::TcpFunction::SSLSend(SSL* ssl,const ::std::string& buffer,int len)
+int galay::IOFunction::NetIOFunction::TcpFunction::SSLSend(SSL* ssl,const std::string& buffer,int len)
 {
     return SSL_write(ssl,buffer.c_str(),len);
 }
@@ -163,7 +163,7 @@ void galay::IOFunction::NetIOFunction::TcpFunction::SSLDestory(SSL* ssl)
     SSL_free(ssl);
 }
 
-void galay::IOFunction::NetIOFunction::TcpFunction::SSLDestory(::std::vector<SSL*> ssls, SSL_CTX *ctx) 
+void galay::IOFunction::NetIOFunction::TcpFunction::SSLDestory(std::vector<SSL*> ssls, SSL_CTX *ctx) 
 {
     for(auto ssl:ssls)
     {
@@ -242,7 +242,7 @@ ssize_t galay::IOFunction::NetIOFunction::UdpFunction::RecvFrom(int fd , Addr& a
     return ret;
 }
 
-ssize_t galay::IOFunction::NetIOFunction::UdpFunction::SendTo(int fd,const Addr& addr,const ::std::string& buffer)
+ssize_t galay::IOFunction::NetIOFunction::UdpFunction::SendTo(int fd,const Addr& addr,const std::string& buffer)
 {
     sockaddr_in sin = {0};
     sin.sin_family = AF_INET;

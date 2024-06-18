@@ -1,7 +1,7 @@
 #include "task.h"
 #include <spdlog/spdlog.h>
 
-galay::GY_CreateConnTask::GY_CreateConnTask(::std::weak_ptr<GY_IOScheduler> scheduler)
+galay::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_fd = CreateListenFd(this->m_scheduler.lock()->GetTcpServerBuilder());
@@ -52,7 +52,7 @@ galay::GY_CreateConnTask::CreateConn()
         return -1;
     }
     spdlog::debug("[{}:{}] [IO_Set_No_Block Success(fd:{})]", __FILE__, __LINE__, connfd);
-    ::std::shared_ptr<GY_Connector> connector = ::std::make_shared<GY_Connector>(connfd, this->m_scheduler);
+    std::shared_ptr<GY_Connector> connector = std::make_shared<GY_Connector>(connfd, this->m_scheduler);
     m_scheduler.lock()->RegisterObjector(connfd, connector);
     if(!m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL())
     {
@@ -137,7 +137,7 @@ void galay::GY_RecvTask::RecvAll()
     Execute();
 }
 
-galay::GY_RecvTask::GY_RecvTask(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler)
+galay::GY_RecvTask::GY_RecvTask(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_fd = fd;
@@ -206,7 +206,7 @@ galay::GY_SendTask::GY_SendTask(int fd, GY_IOScheduler::wptr scheduler)
 }
 
 void 
-galay::GY_SendTask::AppendWBuffer(::std::string &&wbuffer)
+galay::GY_SendTask::AppendWBuffer(std::string &&wbuffer)
 {
     this->m_wbuffer.append(std::forward<std::string &&>(wbuffer));
 }

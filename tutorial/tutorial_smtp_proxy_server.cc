@@ -2,7 +2,7 @@
 #include <signal.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
-galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_Controller::wptr ctrl)
+galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wptr ctrl)
 {
     auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
@@ -43,13 +43,13 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_Controller::wptr c
 }
 
 
-galay::GY_TcpServer server;
+galay::GY_TcpServer::ptr server;
 
 void signal_handler(int signum)
 {
     std::cout << "signal_handler begin" << std::endl;
     if(signum == SIGINT) {
-        server.Stop();
+        server->Stop();
         //signal(signum,SIG_DFL);
         //raise(signum);
     }    
@@ -57,13 +57,12 @@ void signal_handler(int signum)
 
 int main()
 {
-    signal(SIGINT, signal_handler);
+    signal(SIGINT,signal_handler);
     spdlog::set_level(spdlog::level::debug);
-    galay::GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request,galay::protocol::http::Http1_1_Response>::ptr 
-    builder = std::make_shared<galay::GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request,galay::protocol::http::Http1_1_Response>>();
-    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler);
-    builder->SetUserFunction({8082,test});
-    builder->SetThreadNum(1);
-    server.Start(builder);
+    auto router = galay::GY_RouterFactory::CreateHttpRouter();
+    router->Get("/smtp",test);
+    galay::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8080,router);
+    server = galay::GY_ServerFactory::CreateHttpServer(builder);
+    server->Start();
     return 0;
 }

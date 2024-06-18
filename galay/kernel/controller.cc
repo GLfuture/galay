@@ -2,16 +2,16 @@
 #include "scheduler.h"
 #include "objector.h"
 
-galay::GY_Controller::GY_Controller(::std::weak_ptr<GY_Connector> connector)
+galay::GY_Controller::GY_Controller(std::weak_ptr<GY_Connector> connector)
 {
     this->m_connector = connector;
     this->m_close = false;
 }
 
 void 
-galay::GY_Controller::SetContext(::std::any&& context)
+galay::GY_Controller::SetContext(std::any&& context)
 {
-    this->m_connector.lock()->SetContext(::std::forward<::std::any&&>(context));
+    this->m_connector.lock()->SetContext(std::forward<std::any&&>(context));
 }
 
 // void 
@@ -20,10 +20,10 @@ galay::GY_Controller::SetContext(::std::any&& context)
 //     this->m_coroutine = std::forward<GY_TcpCoroutine<CoroutineStatus>&&>(coroutine);
 // }
 
-::std::shared_ptr<galay::Timer> 
-galay::GY_Controller::AddTimer(uint64_t during, uint32_t exec_times,::std::function<::std::any()> &&func)
+std::shared_ptr<galay::Timer> 
+galay::GY_Controller::AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func)
 {
-    return this->m_connector.lock()->AddTimer(during, exec_times, std::forward<::std::function<::std::any()>&&>(func));
+    return this->m_connector.lock()->AddTimer(during, exec_times, std::forward<std::function<std::any()>&&>(func));
 }
 
 galay::protocol::GY_TcpRequest::ptr
@@ -38,7 +38,7 @@ galay::GY_Controller::PushResponse(galay::protocol::GY_TcpResponse::ptr response
     this->m_connector.lock()->PushResponse(response);
 }
 
-::std::any&&
+std::any&&
 galay::GY_Controller::GetContext()
 {
     return this->m_connector.lock()->GetContext();
@@ -94,21 +94,21 @@ galay::GY_HttpController::Close()
 }
 
 void 
-galay::GY_HttpController::SetContext(::std::any&& context)
+galay::GY_HttpController::SetContext(std::any&& context)
 {
     this->m_ctrl.lock()->SetContext(std::forward<std::any&&>(context));
 }
 
-::std::any&& 
+std::any&& 
 galay::GY_HttpController::GetContext()
 {
     return this->m_ctrl.lock()->GetContext();
 }
 
-::std::shared_ptr<galay::Timer> 
-galay::GY_HttpController::AddTimer(uint64_t during, uint32_t exec_times,::std::function<::std::any()> &&func)
+std::shared_ptr<galay::Timer> 
+galay::GY_HttpController::AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func)
 {
-    return this->m_ctrl.lock()->AddTimer(during,exec_times,std::forward<::std::function<::std::any()>&&>(func));
+    return this->m_ctrl.lock()->AddTimer(during,exec_times,std::forward<std::function<std::any()>&&>(func));
 }
 
 void 

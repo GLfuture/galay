@@ -21,13 +21,13 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
     co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::GY_TcpServer server;
+galay::GY_TcpServer::ptr server;
 
 void signal_handler(int signo)
 {
     if (signo == SIGINT)
     {
-        server.Stop();
+        server->Stop();
     }
 }
 
@@ -35,14 +35,10 @@ int main()
 {
     signal(SIGINT,signal_handler);
     spdlog::set_level(spdlog::level::debug);
-    galay::GY_HttpServerBuilder::ptr builder = std::make_shared<galay::GY_HttpServerBuilder>();
-    builder->InitSSLServer(true);
-    builder->GetSSLConfig()->SetCertPath("./server.crt");
-    builder->GetSSLConfig()->SetKeyPath("./server.key");
-    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler);
-    builder->SetPort(8082);
-    builder->Get("/",test);
-    builder->SetThreadNum(1);
-    server.Start(builder);
+    auto router = galay::GY_RouterFactory::CreateHttpRouter();
+    router->Get("/",test);
+    auto builder = galay::GY_ServerBuilderFactory::CreateHttpsServerBuilder("./server.key","./server.crt",8082,router);
+    server = galay::GY_ServerFactory::CreateHttpsServer(builder);
+    server->Start();
     return 0;
 }

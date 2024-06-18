@@ -1,10 +1,18 @@
 #include "server.h"
 #include <spdlog/spdlog.h>
-void galay::GY_TcpServer::Start(GY_TcpServerBuilderBase::ptr builder)
+
+void 
+galay::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
 {
-    for (int i = 0; i < builder->GetThreadNum(); ++i)
+    this->m_builder = builder;
+}
+
+void 
+galay::GY_TcpServer::Start()
+{
+    for (int i = 0; i < m_builder->GetThreadNum(); ++i)
     {
-        GY_IOScheduler::ptr scheduler = CreateScheduler(builder);
+        GY_IOScheduler::ptr scheduler = CreateScheduler(m_builder);
         GY_TimerManager::ptr timerManager = CreateTimerManager();
         int timerfd = timerManager->GetTimerfd();
         scheduler->RegiserTimerManager(timerfd, timerManager);
@@ -12,12 +20,13 @@ void galay::GY_TcpServer::Start(GY_TcpServerBuilderBase::ptr builder)
         scheduler->RegisterObjector(acceptor->GetListenFd(), acceptor);
         scheduler->AddEvent(acceptor->GetListenFd(), EventType::kEventRead | EventType::kEvnetEpollET);
         m_schedulers.push_back(scheduler);
-        m_threads.push_back(::std::make_shared<::std::thread>(&GY_IOScheduler::Start, scheduler));
+        m_threads.push_back(std::make_shared<std::thread>(&GY_IOScheduler::Start, scheduler));
     }
     WaitForThreads();
 }
 
-void galay::GY_TcpServer::Stop()
+void 
+galay::GY_TcpServer::Stop()
 {
     for (auto &scheduler : m_schedulers)
     {
@@ -28,7 +37,7 @@ void galay::GY_TcpServer::Stop()
 galay::GY_TimerManager::ptr
 galay::GY_TcpServer::CreateTimerManager()
 {
-    return ::std::make_shared<GY_TimerManager>();
+    return std::make_shared<GY_TimerManager>();
 }
 
 galay::GY_IOScheduler::ptr
@@ -36,10 +45,10 @@ galay::GY_TcpServer::CreateScheduler(GY_TcpServerBuilderBase::ptr builder)
 {
     switch (builder->GetSchedulerType())
     {
-    case GY_TcpServerBuilderBase::SchedulerType::kEpollScheduler:
-        return ::std::make_shared<GY_EpollScheduler>(builder);
-    case GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler:
-        return ::std::make_shared<GY_SelectScheduler>(builder);
+    case kEpollScheduler:
+        return std::make_shared<GY_EpollScheduler>(builder);
+    case kSelectScheduler:
+        return std::make_shared<GY_SelectScheduler>(builder);
     }
     return nullptr;
 }
@@ -54,7 +63,7 @@ galay::GY_TcpServer::GetScheduler(int indx)
 galay::GY_Acceptor::ptr
 galay::GY_TcpServer::CreateAcceptor( GY_IOScheduler::ptr scheduler)
 {
-    return ::std::make_shared<GY_Acceptor>(scheduler);
+    return std::make_shared<GY_Acceptor>(scheduler);
 }
 
 void galay::GY_TcpServer::WaitForThreads()

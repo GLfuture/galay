@@ -38,6 +38,33 @@ namespace galay{
         virtual protocol::GY_TcpResponse::ptr CreateResponse();
     };
 
+    class GY_HttpServerBuilder;
+    class GY_HttpRouter;
+    class GY_TcpServer;
+
+
+    class GY_RouterFactory{
+    public:
+        static std::shared_ptr<GY_HttpRouter> CreateHttpRouter(); 
+    };
+
+    class GY_ServerBuilderFactory{
+    public:
+        static std::shared_ptr<GY_HttpServerBuilder> CreateHttpServerBuilder(\
+            int port,std::shared_ptr<GY_HttpRouter> router,\
+            SchedulerType type = kEpollScheduler,uint16_t thread_num = DEFAULT_THREAD_NUM);
+        static std::shared_ptr<GY_HttpServerBuilder> CreateHttpsServerBuilder(\
+            const std::string& key_file,const std::string& cert_file, int port,\
+            std::shared_ptr<GY_HttpRouter> router,SchedulerType type = kEpollScheduler\
+            ,uint16_t thread_num = DEFAULT_THREAD_NUM);
+    };
+
+    class GY_ServerFactory{
+    public:
+        static std::shared_ptr<GY_TcpServer> CreateHttpServer(std::shared_ptr<GY_HttpServerBuilder> builder);
+        static std::shared_ptr<GY_TcpServer> CreateHttpsServer(std::shared_ptr<GY_HttpServerBuilder> builder);
+    };
+
     #include "factory.inl"
 }
 

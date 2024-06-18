@@ -1,6 +1,6 @@
 #include "SyncMySql.h"
 
-galay::MiddleWare::MySql::MySqlException::MySqlException(::std::string message) 
+galay::MiddleWare::MySql::MySqlException::MySqlException(std::string message) 
     : m_message(message) 
 {}
 
@@ -10,7 +10,7 @@ galay::MiddleWare::MySql::MySqlException::what() const noexcept
     return m_message.c_str();
 }
 
-galay::MiddleWare::MySql::SyncMySql::SyncMySql(::std::string charset)
+galay::MiddleWare::MySql::SyncMySql::SyncMySql(std::string charset)
 {
     this->m_handle=mysql_init(NULL);
     if(this->m_handle==NULL) {
@@ -24,7 +24,7 @@ galay::MiddleWare::MySql::SyncMySql::SyncMySql(::std::string charset)
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::Connect(const ::std::string& Remote,const ::std::string& UserName,const ::std::string& Password,const ::std::string& DBName, uint16_t Port)
+galay::MiddleWare::MySql::SyncMySql::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port)
 {
     if (!mysql_real_connect(this->m_handle, Remote.c_str(), UserName.c_str(), Password.c_str(), DBName.c_str(), Port, NULL, 0))
     {
@@ -45,14 +45,14 @@ galay::MiddleWare::MySql::SyncMySql::DisConnect()
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::CreateTable(::std::string TableName, const ::std::vector<::std::tuple<::std::string,::std::string,::std::string>>& Field_Type_Key)
+galay::MiddleWare::MySql::SyncMySql::CreateTable(std::string TableName, const std::vector<std::tuple<std::string,std::string,std::string>>& Field_Type_Key)
 {
     if(TableName.empty() || Field_Type_Key.empty())
     {
         spdlog::error("[{}:{}] [Arg: [TableName] or [Field_Type_Key] empty]", __FILE__,__LINE__);
         return -1;
     }    
-    ::std::string query="CREATE TABLE IF NOT EXISTS " + TableName + "(";
+    std::string query="CREATE TABLE IF NOT EXISTS " + TableName + "(";
     int n = Field_Type_Key.size();
     for(int i = 0 ; i < n ; ++i){
         auto [field,type,key] = Field_Type_Key[i];
@@ -75,13 +75,13 @@ galay::MiddleWare::MySql::SyncMySql::CreateTable(::std::string TableName, const 
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::DropTable(::std::string TableName)
+galay::MiddleWare::MySql::SyncMySql::DropTable(std::string TableName)
 {
     if(TableName.empty()){
         spdlog::error("[{}:{}] [Arg: [TableName] empty]", __FILE__,__LINE__);
         return -1;
     }
-    ::std::string query = "DROP TABLE IF EXISTS "+TableName+";";
+    std::string query = "DROP TABLE IF EXISTS "+TableName+";";
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__,__LINE__,mysql_error(this->m_handle));
@@ -96,15 +96,15 @@ galay::MiddleWare::MySql::SyncMySql::DropTable(::std::string TableName)
     return ret;
 }
 
-::std::vector<::std::vector<::std::string>> 
-galay::MiddleWare::MySql::SyncMySql::Select(const ::std::string& TableName,const ::std::vector<::std::string> &Fields,const ::std::string& Cond)
+std::vector<std::vector<std::string>> 
+galay::MiddleWare::MySql::SyncMySql::Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond)
 {
     if (Fields.empty() || TableName.empty())
     {
         spdlog::error("[{}:{}] [Arg: [Fields] or [TableName] empty]", __FILE__,__LINE__);
         return {};
     }
-    ::std::string query = "SELECT " ;
+    std::string query = "SELECT " ;
     int n = Fields.size();
     for (int i = 0; i < n; i++)
     {
@@ -137,11 +137,11 @@ galay::MiddleWare::MySql::SyncMySql::Select(const ::std::string& TableName,const
     int field_num = mysql_num_fields(m_res); // 列数
     int row_num = mysql_num_rows(m_res);
     MYSQL_FIELD *fields; // 列名
-    ::std::vector<::std::vector<::std::string>> result(row_num + 1,::std::vector<::std::string>(field_num));
+    std::vector<std::vector<std::string>> result(row_num + 1,std::vector<std::string>(field_num));
     int col_start = 0;
     while ((fields = mysql_fetch_field(m_res)) != NULL)
     {
-        result[0][col_start++] = ::std::string(fields->name);
+        result[0][col_start++] = std::string(fields->name);
     }
     MYSQL_ROW row;
     int row_start = 1;
@@ -165,7 +165,7 @@ galay::MiddleWare::MySql::SyncMySql::Select(const ::std::string& TableName,const
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::Insert(const ::std::string& TableName , const ::std::vector<::std::pair<::std::string,::std::string>>& Field_Value)
+galay::MiddleWare::MySql::SyncMySql::Insert(const std::string& TableName , const std::vector<std::pair<std::string,std::string>>& Field_Value)
 {
     if (TableName.empty() || Field_Value.empty())
     {
@@ -173,7 +173,7 @@ galay::MiddleWare::MySql::SyncMySql::Insert(const ::std::string& TableName , con
         return -1;
     }
     int n = Field_Value.size();
-    ::std::string fields = "(", values = "(";
+    std::string fields = "(", values = "(";
     for(int i = 0 ; i < n ; ++i ) {
         fields += Field_Value[i].first;
         values += Field_Value[i].second;
@@ -185,7 +185,7 @@ galay::MiddleWare::MySql::SyncMySql::Insert(const ::std::string& TableName , con
             values += ')';
         }
     }
-    ::std::string query = "INSERT INTO " + TableName + fields + " values " + values + ";";
+    std::string query = "INSERT INTO " + TableName + fields + " values " + values + ";";
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__,__LINE__,mysql_error(this->m_handle));
@@ -201,13 +201,13 @@ galay::MiddleWare::MySql::SyncMySql::Insert(const ::std::string& TableName , con
 }
 
 int
-galay::MiddleWare::MySql::SyncMySql::Update(const ::std::string& TableName,const ::std::vector<::std::pair<::std::string,::std::string>>& Field_Value,const ::std::string& Cond)
+galay::MiddleWare::MySql::SyncMySql::Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond)
 {
     if(TableName.empty() || Field_Value.empty()){
         spdlog::error("[{}:{}] [Arg: [TableName] or [Field_Value] empty]",__FILE__,__LINE__);
         return -1;
     }
-    ::std::string query = "UPDATE " + TableName + " SET ";
+    std::string query = "UPDATE " + TableName + " SET ";
     int n = Field_Value.size();
     for (int i = 0; i < n; ++i)
     {
@@ -230,14 +230,14 @@ galay::MiddleWare::MySql::SyncMySql::Update(const ::std::string& TableName,const
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::Delete(const ::std::string& TableName, const ::std::string& Cond)
+galay::MiddleWare::MySql::SyncMySql::Delete(const std::string& TableName, const std::string& Cond)
 {
     if(TableName.empty() || Cond.empty())
     {
         spdlog::error("[{}:{}] [Arg: [TableName] or [Field_Value] empty]",__FILE__,__LINE__);
         return -1;
     }
-    ::std::string query = "DELETE FROM " + TableName + " WHERE " + Cond + ";";
+    std::string query = "DELETE FROM " + TableName + " WHERE " + Cond + ";";
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__,__LINE__,mysql_error(this->m_handle));
@@ -254,14 +254,14 @@ galay::MiddleWare::MySql::SyncMySql::Delete(const ::std::string& TableName, cons
 
 
 int 
-galay::MiddleWare::MySql::SyncMySql::AddField(const ::std::string& TableName, const ::std::pair<::std::string,::std::string>& Field_Type)
+galay::MiddleWare::MySql::SyncMySql::AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
 {
     if (TableName.empty())
     {
         spdlog::error("[{}:{}] Arg: [TableName] empty", __TIME__, __FILE__, __LINE__);
         return -1;
     }
-    ::std::string query = "ALTER TABLE " + TableName + " ADD COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
+    std::string query = "ALTER TABLE " + TableName + " ADD COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
@@ -278,14 +278,14 @@ galay::MiddleWare::MySql::SyncMySql::AddField(const ::std::string& TableName, co
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::ModFieldType(const ::std::string& TableName, const ::std::pair<::std::string,::std::string>& Field_Type)
+galay::MiddleWare::MySql::SyncMySql::ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
 {
     if (TableName.empty())
     {
         spdlog::error("[{}:{}] [Arg: [TableName] empty]", __TIME__, __FILE__, __LINE__);
         return -1;
     }
-    ::std::string query = "ALTER TABLE " + TableName + " MODIFY COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
+    std::string query = "ALTER TABLE " + TableName + " MODIFY COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
@@ -302,13 +302,13 @@ galay::MiddleWare::MySql::SyncMySql::ModFieldType(const ::std::string& TableName
 }
 
 int 
-galay::MiddleWare::MySql::SyncMySql::ModFieldName(const ::std::string& TableName,const ::std::string& OldFieldName, const ::std::pair<::std::string,::std::string>& Field_Type)
+galay::MiddleWare::MySql::SyncMySql::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
 {
     if(TableName.empty() || OldFieldName.empty() ){
         spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __TIME__, __FILE__, __LINE__);
         return -1;
     }
-    ::std::string query = "ALTER TABLE " + TableName + " CHANGE COLUMN " + OldFieldName + " " + Field_Type.first + " " + Field_Type.second + ';';
+    std::string query = "ALTER TABLE " + TableName + " CHANGE COLUMN " + OldFieldName + " " + Field_Type.first + " " + Field_Type.second + ';';
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
@@ -326,13 +326,13 @@ galay::MiddleWare::MySql::SyncMySql::ModFieldName(const ::std::string& TableName
 
 
 int 
-galay::MiddleWare::MySql::SyncMySql::DelField(const ::std::string& TableName,const ::std::string& FieldName)
+galay::MiddleWare::MySql::SyncMySql::DelField(const std::string& TableName,const std::string& FieldName)
 {
     if(TableName.empty() || FieldName.empty()){
         spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __TIME__, __FILE__, __LINE__);
         return -1;
     }
-    ::std::string query = "ALTER TABLE " + TableName + "DROP COLUMN " + FieldName + ";";
+    std::string query = "ALTER TABLE " + TableName + "DROP COLUMN " + FieldName + ";";
     if (mysql_ping(this->m_handle))
     {
         spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
@@ -350,7 +350,7 @@ galay::MiddleWare::MySql::SyncMySql::DelField(const ::std::string& TableName,con
 
 // 发送二进制数据
 int 
-galay::MiddleWare::MySql::SyncMySql::ParamSendBinaryData(const ::std::string &ParamQuery, const ::std::string& Data)
+galay::MiddleWare::MySql::SyncMySql::ParamSendBinaryData(const std::string &ParamQuery, const std::string& Data)
 {
     if (Data.empty() || ParamQuery.empty())
     {
@@ -407,7 +407,7 @@ galay::MiddleWare::MySql::SyncMySql::ParamSendBinaryData(const ::std::string &Pa
 }
 // 接收二进制数据
 int
-galay::MiddleWare::MySql::SyncMySql::ParamRecvBinaryData(const ::std::string &ParamQuery, ::std::string& Data)
+galay::MiddleWare::MySql::SyncMySql::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
 {
     if (ParamQuery.empty())
     {
@@ -476,7 +476,7 @@ galay::MiddleWare::MySql::SyncMySql::ParamRecvBinaryData(const ::std::string &Pa
             result.buffer_length = total_length - save >= 1024 ? 1024 : total_length - save;
             mysql_stmt_fetch_column(stmt, &result, 0, save);
             save += result.buffer_length;
-            Data += ::std::string(reinterpret_cast<char*>(result.buffer),result.buffer_length);
+            Data += std::string(reinterpret_cast<char*>(result.buffer),result.buffer_length);
         }
     }
     mysql_stmt_close(stmt);

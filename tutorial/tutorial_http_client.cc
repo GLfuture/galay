@@ -4,9 +4,10 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/async_logger.h>
 #include <spdlog/async.h>
+
+galay::GY_HttpAsyncClient client;
 galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
 {
-    galay::GY_HttpAsyncClient client;
     auto resp = co_await client.Get("http://183.2.172.185:80");
     std::cout << resp->EncodePdu();
     co_return galay::CoroutineStatus::kCoroutineFinished;
@@ -17,9 +18,9 @@ int main()
     //遇到debug级别日志立即刷新
     spdlog::flush_on(spdlog::level::debug);
     spdlog::init_thread_pool(8192, 1);
-    auto rotating_sink = ::std::make_shared<spdlog::sinks::rotating_file_sink_mt>("client.log", 1024*1024*10, 3);
-    ::std::vector<spdlog::sink_ptr> sinks {rotating_sink};
-    auto logger = ::std::make_shared<spdlog::async_logger>("logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
+    auto rotating_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("client.log", 1024*1024*10, 3);
+    std::vector<spdlog::sink_ptr> sinks {rotating_sink};
+    auto logger = std::make_shared<spdlog::async_logger>("logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
     logger->set_level(spdlog::level::debug);
     spdlog::set_default_logger(logger);
     auto co = func();

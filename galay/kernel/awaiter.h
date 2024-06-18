@@ -19,8 +19,8 @@ namespace galay
     {
     public:
         virtual bool await_ready() = 0;
-        virtual void await_suspend(::std::coroutine_handle<> handle) = 0;
-        virtual ::std::any await_resume() = 0;
+        virtual void await_suspend(std::coroutine_handle<> handle) = 0;
+        virtual std::any await_resume() = 0;
     };
     
     class CommonAwaiter : public AwaiterBase
@@ -31,8 +31,8 @@ namespace galay
         CommonAwaiter &operator=(const CommonAwaiter &) = delete;
         CommonAwaiter &operator=(CommonAwaiter && other);
         virtual bool await_ready() override;
-        virtual void await_suspend(::std::coroutine_handle<> handle) override;
-        virtual ::std::any await_resume() override;
+        virtual void await_suspend(std::coroutine_handle<> handle) override;
+        virtual std::any await_resume() override;
     private:
         std::any m_Result;
         bool m_IsSuspend;
@@ -48,11 +48,11 @@ namespace galay
         GroupAwaiter &operator=(GroupAwaiter && other);
         void Resume();
         bool await_ready();
-        void await_suspend(::std::coroutine_handle<> handle);
-        ::std::any await_resume();
+        void await_suspend(std::coroutine_handle<> handle);
+        std::any await_resume();
     private:
         bool m_IsSuspend;
-        ::std::coroutine_handle<> m_handle;
+        std::coroutine_handle<> m_handle;
     };
     
 
@@ -64,7 +64,7 @@ namespace galay
         HttpAwaiter &operator=(const HttpAwaiter &) = delete;
         HttpAwaiter &operator=(HttpAwaiter && other);
         virtual bool await_ready();
-        virtual void await_suspend(::std::coroutine_handle<> handle);
+        virtual void await_suspend(std::coroutine_handle<> handle);
         virtual protocol::http::Http1_1_Response::ptr await_resume();
     private:
         protocol::http::Http1_1_Response::ptr m_Result;
@@ -81,7 +81,7 @@ namespace galay
         SmtpAwaiter &operator=(const SmtpAwaiter &) = delete;
         SmtpAwaiter &operator=(SmtpAwaiter && other);
         virtual bool await_ready();
-        virtual void await_suspend(::std::coroutine_handle<> handle);
+        virtual void await_suspend(std::coroutine_handle<> handle);
         virtual std::vector<protocol::smtp::Smtp_Response::ptr> await_resume();
         ~SmtpAwaiter() = default;
     private:
@@ -98,7 +98,7 @@ namespace galay
         DnsAwaiter &operator=(const DnsAwaiter& other) = delete;
         DnsAwaiter &operator=(DnsAwaiter&& other);
         virtual bool await_ready();
-        virtual void await_suspend(::std::coroutine_handle<> handle);
+        virtual void await_suspend(std::coroutine_handle<> handle);
         virtual protocol::dns::Dns_Response::ptr await_resume();
         ~DnsAwaiter() = default;
     private:

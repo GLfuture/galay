@@ -30,15 +30,15 @@ namespace galay
         {
             struct Addr
             {
-                ::std::string ip;
+                std::string ip;
                 int port;
             };
 
             class TcpFunction : public BlockFuction
             {
             public:
-                using SSL_Tup = ::std::tuple<SSL *, SSL_CTX *>;
-                using ptr = ::std::shared_ptr<TcpFunction>;
+                using SSL_Tup = std::tuple<SSL *, SSL_CTX *>;
+                using ptr = std::shared_ptr<TcpFunction>;
 
                 static int Sock();
                 static int Sock6();
@@ -47,12 +47,12 @@ namespace galay
                 static int ReuseAddr(int fd);
                 // 重用端口(允许不同fd监听同一端口)
                 static int ReusePort(int fd);
-                static int Conncet(int fd, ::std::string sip, uint32_t sport);
+                static int Conncet(int fd, std::string sip, uint32_t sport);
                 static int Bind(int fd, uint16_t port);
                 static int Listen(int fd, uint16_t backlog);
                 static int Accept(int fd);
                 static ssize_t Recv(int fd, char *buffer, uint32_t len);
-                static ssize_t Send(int fd, const ::std::string &buffer, uint32_t len);
+                static ssize_t Send(int fd, const std::string &buffer, uint32_t len);
                 // for server
                 static SSL_CTX *SSL_Init_Server(long min_version, long max_version);
                 // for client
@@ -65,9 +65,9 @@ namespace galay
                 static int SSLAccept(SSL *ssl);
                 static int SSLConnect(SSL *ssl);
                 static int SSLRecv(SSL *ssl, char *buffer, int len);
-                static int SSLSend(SSL *ssl, const ::std::string &buffer, int len);
+                static int SSLSend(SSL *ssl, const std::string &buffer, int len);
                 static void SSLDestory(SSL *ssl);
-                static void SSLDestory(::std::vector<SSL *> ssls, SSL_CTX *ctx);
+                static void SSLDestory(std::vector<SSL *> ssls, SSL_CTX *ctx);
 
             private:
                 static void SSL_Init_Env();
@@ -83,7 +83,7 @@ namespace galay
                 static int Sock();
                 static int Bind(int fd, uint32_t port);
                 static ssize_t RecvFrom(int fd, Addr &addr, char *buffer, int len);
-                static ssize_t SendTo(int fd, const Addr &addr, const ::std::string &buffer);
+                static ssize_t SendTo(int fd, const Addr &addr, const std::string &buffer);
             };
         }
     }

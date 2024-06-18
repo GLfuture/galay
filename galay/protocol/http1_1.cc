@@ -2,7 +2,7 @@
 #include <spdlog/spdlog.h>
 
 
-::std::string 
+std::string 
 galay::protocol::http::Http1_1_Protocol::GetVersion()
 {
     return this->m_version;
@@ -14,7 +14,7 @@ galay::protocol::http::Http1_1_Protocol::SetVersion(const std::string& version)
     this->m_version = version;
 }
 
-::std::string
+std::string
 galay::protocol::http::Http1_1_Protocol::GetBody()
 {
     return this->m_body;
@@ -26,8 +26,8 @@ galay::protocol::http::Http1_1_Protocol::SetBody(std::string&& body)
     this->m_body = body;
 }
 
-::std::string 
-galay::protocol::http::Http1_1_Protocol::GetHeadValue(const ::std::string& key)
+std::string 
+galay::protocol::http::Http1_1_Protocol::GetHeadValue(const std::string& key)
 {
     auto it = this->m_headers.find(key);
     if (it == this->m_headers.end())
@@ -36,7 +36,7 @@ galay::protocol::http::Http1_1_Protocol::GetHeadValue(const ::std::string& key)
 }
 
 void 
-galay::protocol::http::Http1_1_Protocol::SetHeadPair(::std::pair<::std::string, ::std::string>&& p_head)
+galay::protocol::http::Http1_1_Protocol::SetHeadPair(std::pair<std::string, std::string>&& p_head)
 {
     this->m_headers[p_head.first] = p_head.second;
 }
@@ -55,13 +55,13 @@ galay::protocol::http::Http1_1_Protocol::GetHeaders()
     return this->m_headers;
 }
 
-::std::unordered_set<::std::string> 
+std::unordered_set<std::string> 
 galay::protocol::http::Http1_1_Request::m_std_methods = {
     "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" , "PATCH"
 };
 
-::std::string 
-galay::protocol::http::Http1_1_Request::GetArgValue(const ::std::string& key)
+std::string 
+galay::protocol::http::Http1_1_Request::GetArgValue(const std::string& key)
 {
     auto it = this->m_arg_list.find(key);
     if (it == this->m_arg_list.end())
@@ -70,12 +70,12 @@ galay::protocol::http::Http1_1_Request::GetArgValue(const ::std::string& key)
 }
 
 void 
-galay::protocol::http::Http1_1_Request::SetArgPair(::std::pair<::std::string, ::std::string>&& p_arg)
+galay::protocol::http::Http1_1_Request::SetArgPair(std::pair<std::string, std::string>&& p_arg)
 {
     this->m_arg_list[p_arg.first] = p_arg.second;
 }
 
-::std::string 
+std::string 
 galay::protocol::http::Http1_1_Request::GetMethod()
 {
     return this->m_method;
@@ -87,7 +87,7 @@ galay::protocol::http::Http1_1_Request::SetMethod(std::string&& method)
     this->m_method = method;
 }
 
-::std::string 
+std::string 
 galay::protocol::http::Http1_1_Request::GetUri()
 {
     return this->m_uri;
@@ -100,7 +100,7 @@ galay::protocol::http::Http1_1_Request::SetUri(const std::string& uri)
 }
 
 galay::ProtoJudgeType 
-galay::protocol::http::Http1_1_Request::DecodePdu(::std::string& buffer)
+galay::protocol::http::Http1_1_Request::DecodePdu(std::string& buffer)
 {
     size_t n = buffer.length();
     if(this->m_header_len == 0){
@@ -111,7 +111,7 @@ galay::protocol::http::Http1_1_Request::DecodePdu(::std::string& buffer)
         n = buffer.length();
     }
     if(m_headers.contains("content-length")){
-        size_t length = ::std::stoul(m_headers["content-length"]);
+        size_t length = std::stoul(m_headers["content-length"]);
         if(length <= n) {
             m_body = buffer.substr(0,length);
             int invaild_len = 0;
@@ -162,11 +162,11 @@ galay::protocol::http::Http1_1_Request::DecodePdu(::std::string& buffer)
 }
 
 galay::ProtoJudgeType 
-galay::protocol::http::Http1_1_Request::ParseHead(const ::std::string &buffer)
+galay::protocol::http::Http1_1_Request::ParseHead(const std::string &buffer)
 {
     size_t n = buffer.length();
     size_t pos = buffer.find("\r\n\r\n");
-    if (pos == ::std::string::npos)
+    if (pos == std::string::npos)
     {
         if (buffer.length() > HTTP_HEADER_MAX_LEN)
         {
@@ -183,7 +183,7 @@ galay::protocol::http::Http1_1_Request::ParseHead(const ::std::string &buffer)
         return ProtoJudgeType::kProtoIllegal;
     }
     HttpHeadStatus status = HttpHeadStatus::kHttpMethod;
-    ::std::string key, value;
+    std::string key, value;
     size_t i;
     for (i = 0; i < n; ++i)
     {
@@ -253,7 +253,7 @@ galay::protocol::http::Http1_1_Request::ParseHead(const ::std::string &buffer)
             {
                 if (buffer[i] != ':')
                 {
-                    key += ::std::tolower(buffer[i]);
+                    key += std::tolower(buffer[i]);
                 }
                 else
                 {
@@ -290,11 +290,11 @@ galay::protocol::http::Http1_1_Request::ParseHead(const ::std::string &buffer)
 }
 
 
-::std::string 
+std::string 
 galay::protocol::http::Http1_1_Request::EncodePdu()
 {
-    ::std::string res = this->m_method + " ";
-    ::std::string args;
+    std::string res = this->m_method + " ";
+    std::string args;
     for (auto& [k, v] : m_arg_list)
     {
         args = args + k + '=' + v + '&';
@@ -302,11 +302,11 @@ galay::protocol::http::Http1_1_Request::EncodePdu()
     if (!m_arg_list.empty())
     {
         args.erase(--args.end());
-        res += EncodeUri(::std::move(this->m_uri + '?' + args));
+        res += EncodeUri(std::move(this->m_uri + '?' + args));
     }
     else
     {
-        res += EncodeUri(::std::move(this->m_uri));
+        res += EncodeUri(std::move(this->m_uri));
     }
     res = res + " HTTP/" + this->m_version + "\r\n";
     for (auto& [k, v] : m_headers)
@@ -315,12 +315,12 @@ galay::protocol::http::Http1_1_Request::EncodePdu()
     }
     if (!m_headers.contains("content-length")&& !m_headers.contains("Content-Length"))
     {
-        res = res + "Content-Length: " + ::std::to_string(this->m_body.length()) + "\r\n";
+        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
     if (this->m_body.length() != 0)
     {
-        res.append(::std::move(this->m_body));
+        res.append(std::move(this->m_body));
     }
     res.append("\r\n\r\n");
     return std::move(res);
@@ -340,16 +340,16 @@ galay::protocol::http::Http1_1_Request::Clear()
 }
 
 int 
-galay::protocol::http::Http1_1_Request::ConvertUri(::std::string aurl)
+galay::protocol::http::Http1_1_Request::ConvertUri(std::string aurl)
 {
-    ::std::string uri = ConvertUri(::std::move(aurl), false);
+    std::string uri = ConvertUri(std::move(aurl), false);
     int argindx = uri.find('?');
-    if (argindx != ::std::string::npos)
+    if (argindx != std::string::npos)
     {
         int cur = 0;
         this->m_uri = uri.substr(cur, argindx - cur);
-        ::std::string args = uri.substr(argindx + 1);
-        ::std::string key = "", value = "";
+        std::string args = uri.substr(argindx + 1);
+        std::string key = "", value = "";
         int status = 0;
         for (int i = 0; i < args.length(); i++)
         {
@@ -388,9 +388,9 @@ galay::protocol::http::Http1_1_Request::ConvertUri(::std::string aurl)
     return 0;
 }
 
-::std::string galay::protocol::http::Http1_1_Request::EncodeUri(const ::std::string& s)
+std::string galay::protocol::http::Http1_1_Request::EncodeUri(const std::string& s)
 {
-    ::std::string result;
+    std::string result;
     result.reserve(s.size());
     for (size_t i = 0; s[i]; i++)
     {
@@ -439,9 +439,9 @@ galay::protocol::http::Http1_1_Request::ConvertUri(::std::string aurl)
     return std::move(result);
 }
 
-::std::string galay::protocol::http::Http1_1_Request::ConvertUri(const ::std::string& s, bool convert_plus_to_space)
+std::string galay::protocol::http::Http1_1_Request::ConvertUri(const std::string& s, bool convert_plus_to_space)
 {
-    ::std::string result;
+    std::string result;
 
     for (size_t i = 0; i < s.size(); i++)
     {
@@ -554,7 +554,7 @@ size_t galay::protocol::http::Http1_1_Request::ToUtf8(int code, char* buff)
     return 0;
 }
 
-bool galay::protocol::http::Http1_1_Request::FromHexToI(const ::std::string& s, size_t i, size_t cnt, int& val)
+bool galay::protocol::http::Http1_1_Request::FromHexToI(const std::string& s, size_t i, size_t cnt, int& val)
 {
     if (i >= s.size())
     {
@@ -593,16 +593,16 @@ galay::protocol::http::Http1_1_Response::SetStatus(int status)
     this->m_status = status;
 }
 
-::std::string galay::protocol::http::Http1_1_Response::EncodePdu()
+std::string galay::protocol::http::Http1_1_Response::EncodePdu()
 {
-    ::std::string res = "HTTP/";
-    res = res + this->m_version + ' ' + ::std::to_string(this->m_status) + ' ' + StatusMessage(this->m_status) + "\r\n";
+    std::string res = "HTTP/";
+    res = res + this->m_version + ' ' + std::to_string(this->m_status) + ' ' + StatusMessage(this->m_status) + "\r\n";
     for (auto& [k, v] : this->m_headers)
     {
         res = res + k + ": " + v + "\r\n";
     }
     if (!this->m_headers.contains("Content-Length")&&!this->m_headers.contains("content-length")) {
-        res = res + "Content-Length: " + ::std::to_string(this->m_body.length()) + "\r\n";
+        res = res + "Content-Length: " + std::to_string(this->m_body.length()) + "\r\n";
     }
     res += "\r\n";
     res.append(this->m_body);
@@ -611,7 +611,7 @@ galay::protocol::http::Http1_1_Response::SetStatus(int status)
 }
 
 
-galay::ProtoJudgeType galay::protocol::http::Http1_1_Response::DecodePdu(::std::string& buffer)
+galay::ProtoJudgeType galay::protocol::http::Http1_1_Response::DecodePdu(std::string& buffer)
 {
     size_t n = buffer.length();
     if(m_header_len == 0){
@@ -622,7 +622,7 @@ galay::ProtoJudgeType galay::protocol::http::Http1_1_Response::DecodePdu(::std::
         n = buffer.length();
     }
     if(m_headers.contains("content-length")){
-        size_t length = ::std::stoul(m_headers["content-length"]);
+        size_t length = std::stoul(m_headers["content-length"]);
         if(length <= n) {
             m_body = buffer.substr(0,length);
             int invaild_len = 0;
@@ -674,9 +674,9 @@ galay::ProtoJudgeType galay::protocol::http::Http1_1_Response::DecodePdu(::std::
 }
 
 galay::ProtoJudgeType 
-galay::protocol::http::Http1_1_Response::ParseHead(const ::std::string &buffer)
+galay::protocol::http::Http1_1_Response::ParseHead(const std::string &buffer)
 {
-    if(buffer.find("\r\n\r\n") == ::std::string::npos) {
+    if(buffer.find("\r\n\r\n") == std::string::npos) {
         if(buffer.length() > HTTP_HEADER_MAX_LEN) {
             spdlog::error("[{}:{}] [error: 'header is too long']",__FILE__,__LINE__);
             return ProtoJudgeType::kProtoIllegal;
@@ -686,8 +686,8 @@ galay::protocol::http::Http1_1_Response::ParseHead(const ::std::string &buffer)
     }
     size_t n = buffer.length();
     HttpHeadStatus status = HttpHeadStatus::kHttpVersion;
-    ::std::string status_code;
-    ::std::string key,value;
+    std::string status_code;
+    std::string key,value;
     if (m_header_len == 0)
     {
         size_t i;
@@ -725,9 +725,9 @@ galay::protocol::http::Http1_1_Response::ParseHead(const ::std::string &buffer)
                 {
                     try
                     {
-                        m_status = ::std::stoi(status_code);
+                        m_status = std::stoi(status_code);
                     }
-                    catch (::std::invalid_argument &e)
+                    catch (std::invalid_argument &e)
                     {
                         spdlog::error("[{}:{}] [error: 'http status code is illegal',buffer len:{}]",__FILE__,__LINE__,n);
                         Clear();
@@ -757,7 +757,7 @@ galay::protocol::http::Http1_1_Response::ParseHead(const ::std::string &buffer)
                 {
                     if (buffer[i] != ':')
                     {
-                        key += ::std::tolower(buffer[i]);
+                        key += std::tolower(buffer[i]);
                     }
                     else
                     {

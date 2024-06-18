@@ -40,13 +40,13 @@ galay::GY_SelectScheduler::IllegalFunction(std::string& rbuffer,std::string& wbu
 }
 
 void 
-galay::GY_SelectScheduler::RegisterObjector(int fd, ::std::shared_ptr<GY_Objector> objector)
+galay::GY_SelectScheduler::RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector)
 {
     m_objectors[fd] = objector;
 }
 
 void 
-galay::GY_SelectScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_TimerManager> timerManager)
+galay::GY_SelectScheduler::RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager)
 {
     this->m_timerfd = fd;
     RegisterObjector(fd,timerManager);
@@ -110,17 +110,17 @@ galay::GY_SelectScheduler::AddEvent(int fd, int event_type)
     {
         FD_SET(fd, &m_efds);
     }
-    this->m_maxfd = ::std::max(this->m_maxfd, fd);
-    this->m_minfd = ::std::min(this->m_minfd, fd);
+    this->m_maxfd = std::max(this->m_maxfd, fd);
+    this->m_minfd = std::min(this->m_minfd, fd);
     return 0;
 }
 
 
 std::shared_ptr<galay::Timer>
-galay::GY_SelectScheduler::AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func)
+galay::GY_SelectScheduler::AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func)
 {
     auto timerManager = std::dynamic_pointer_cast<GY_TimerManager>(m_objectors[m_timerfd]);
-    return timerManager->AddTimer(during, exec_times, ::std::forward<::std::function<::std::any()>&&>(func));
+    return timerManager->AddTimer(during, exec_times, std::forward<std::function<std::any()>&&>(func));
 }
 
 void 
@@ -140,7 +140,7 @@ galay::GY_SelectScheduler::Start()
             break;
         if (nready == -1)
         {
-            spdlog::error("[{}:{}] [[select(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,::std::hash<::std::thread::id>{}(::std::this_thread::get_id()),strerror(errno));
+            spdlog::error("[{}:{}] [[select(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()),strerror(errno));
             return;
         }
         if (nready == 0)
@@ -216,13 +216,13 @@ galay::GY_EpollScheduler::GetTcpServerBuilder()
 }
 
 void 
-galay::GY_EpollScheduler::RegisterObjector(int fd, ::std::shared_ptr<GY_Objector> objector)
+galay::GY_EpollScheduler::RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector)
 {
     this->m_objectors[fd] = objector;
 }
 
 void 
-galay::GY_EpollScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_TimerManager> timerManager)
+galay::GY_EpollScheduler::RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager)
 {
     this->m_timerfd = fd;
     RegisterObjector(fd,timerManager);
@@ -230,10 +230,10 @@ galay::GY_EpollScheduler::RegiserTimerManager(int fd, ::std::shared_ptr<GY_Timer
 }
 
 std::shared_ptr<galay::Timer> 
-galay::GY_EpollScheduler::AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func)
+galay::GY_EpollScheduler::AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func)
 {
     auto timerManager = std::dynamic_pointer_cast<GY_TimerManager>(m_objectors[m_timerfd]);
-    return timerManager->AddTimer(during, exec_times, ::std::forward<::std::function<::std::any()>&&>(func));
+    return timerManager->AddTimer(during, exec_times, std::forward<std::function<std::any()>&&>(func));
 }
 
 void 
@@ -251,7 +251,7 @@ galay::GY_EpollScheduler::Start()
         int nready = epoll_wait(this->m_epollfd, m_events, eventSize, waitTime);
         if(IsStop()) break;
         if(nready < 0){
-            spdlog::error("[{}:{}] [[epoll_wait error(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,::std::hash<::std::thread::id>{}(::std::this_thread::get_id()),strerror(errno));
+            spdlog::error("[{}:{}] [[epoll_wait error(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()),strerror(errno));
             return;
         }
         while(--nready >= 0){

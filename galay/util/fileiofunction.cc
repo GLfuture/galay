@@ -8,12 +8,12 @@
 #include <sys/mman.h>
 #endif
 
-::std::string 
-galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile(const ::std::string& FileName, bool IsBinary)
+std::string 
+galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile(const std::string& FileName, bool IsBinary)
 {
-    ::std::ifstream in;
+    std::ifstream in;
     if(IsBinary){
-        in.open(FileName, ::std::ios::binary);
+        in.open(FileName, std::ios::binary);
     }else{
         in.open(FileName);
     }
@@ -21,22 +21,22 @@ galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile(const ::std::string&
         spdlog::error("[{}:{}] [open file error]",__FILE__,__LINE__);
         return "";
     }
-    uintmax_t size = ::std::filesystem::file_size(FileName);
+    uintmax_t size = std::filesystem::file_size(FileName);
     char *buffer = new char[size];
     in.read(buffer, size);
     spdlog::debug("[{}:{}] [read from file: {} Bytes]",__FILE__,__LINE__,size);
     in.close();
-    ::std::string res(buffer,size);
+    std::string res(buffer,size);
     delete[] buffer;
     return res;
 }
 
 void 
-galay::IOFunction::FileIOFunction::SyncFileStream::WriteFile(const ::std::string& FileName,const ::std::string& Content, bool IsBinary)
+galay::IOFunction::FileIOFunction::SyncFileStream::WriteFile(const std::string& FileName,const std::string& Content, bool IsBinary)
 {
-    ::std::ofstream out;
+    std::ofstream out;
     if(IsBinary){
-        out.open(FileName, ::std::ios::binary);
+        out.open(FileName, std::ios::binary);
     }else{
         out.open(FileName);
     }
@@ -51,8 +51,8 @@ galay::IOFunction::FileIOFunction::SyncFileStream::WriteFile(const ::std::string
 }
 
 #ifdef __linux__
-::std::string 
-galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(const ::std::string &FileName)
+std::string 
+galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(const std::string &FileName)
 {
     int fd = open(FileName.c_str(),O_RDONLY);
     if(fd == -1){
@@ -81,7 +81,7 @@ galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(const ::std::string &F
 
 
 void 
-galay::IOFunction::FileIOFunction::ZeroCopyFile::WriteFile(const ::std::string &FileName, const ::std::string &Content,bool IsBinary)
+galay::IOFunction::FileIOFunction::ZeroCopyFile::WriteFile(const std::string &FileName, const std::string &Content,bool IsBinary)
 {
     int fd = open(FileName.c_str(),O_WRONLY | O_CREAT);
     if(fd == -1) {

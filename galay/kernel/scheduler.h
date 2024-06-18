@@ -34,14 +34,14 @@ namespace galay {
 
     class GY_IOScheduler {
     public:
-        using ptr = ::std::shared_ptr<GY_IOScheduler>;
-        using wptr = ::std::weak_ptr<GY_IOScheduler>;
-        using uptr = ::std::unique_ptr<GY_IOScheduler>;
+        using ptr = std::shared_ptr<GY_IOScheduler>;
+        using wptr = std::weak_ptr<GY_IOScheduler>;
+        using uptr = std::unique_ptr<GY_IOScheduler>;
         GY_IOScheduler() = default;
         virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() = 0;
-        virtual void RegisterObjector(int fd,  ::std::shared_ptr<GY_Objector> objector) = 0;
-        virtual void RegiserTimerManager(int fd,  ::std::shared_ptr<GY_TimerManager> timerManager) = 0;
-        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func) = 0;
+        virtual void RegisterObjector(int fd,  std::shared_ptr<GY_Objector> objector) = 0;
+        virtual void RegiserTimerManager(int fd,  std::shared_ptr<GY_TimerManager> timerManager) = 0;
+        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) = 0;
         virtual void DelObjector(int fd) = 0;
         virtual void Start() = 0;
         virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> UserFunction(galay::GY_Controller::ptr controller) = 0;
@@ -53,20 +53,20 @@ namespace galay {
         virtual bool IsStop() = 0;
         virtual ~GY_IOScheduler() = default;
     protected:
-        ::std::unordered_map<int,::std::shared_ptr<GY_Objector>> m_objectors;
+        std::unordered_map<int,std::shared_ptr<GY_Objector>> m_objectors;
     };
 
     class GY_SelectScheduler: public GY_IOScheduler {
     public:
-        using ptr = ::std::shared_ptr<GY_SelectScheduler>;
-        using wptr = ::std::weak_ptr<GY_SelectScheduler>;
-        using uptr = ::std::unique_ptr<GY_SelectScheduler>;
+        using ptr = std::shared_ptr<GY_SelectScheduler>;
+        using wptr = std::weak_ptr<GY_SelectScheduler>;
+        using uptr = std::unique_ptr<GY_SelectScheduler>;
         GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder);
         virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
-        virtual void RegisterObjector(int fd,  ::std::shared_ptr<GY_Objector> objector) override;
-        virtual void RegiserTimerManager(int fd,  ::std::shared_ptr<GY_TimerManager> timerManager) override;
+        virtual void RegisterObjector(int fd,  std::shared_ptr<GY_Objector> objector) override;
+        virtual void RegiserTimerManager(int fd,  std::shared_ptr<GY_TimerManager> timerManager) override;
         virtual void DelObjector(int fd) override;
-        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func) override;
+        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
         virtual void Start() override;
         virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> UserFunction(galay::GY_Controller::ptr controller) override;
         virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> IllegalFunction(std::string& rbuffer,std::string& wbuffer) override;
@@ -85,8 +85,8 @@ namespace galay {
         int m_minfd = INT32_MAX;
         bool m_stop;
         GY_TcpServerBuilderBase::ptr m_builder;
-        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
-        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalFunc;
+        std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+        std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalFunc;
     };
 
     class GY_EpollScheduler : public GY_IOScheduler
@@ -98,9 +98,9 @@ namespace galay {
 
         GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder);
         virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
-        virtual void RegisterObjector(int fd, ::std::shared_ptr<GY_Objector> objector) override;
-        virtual void RegiserTimerManager(int fd, ::std::shared_ptr<GY_TimerManager> timerManager) override;
-        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func) override;
+        virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
+        virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
+        virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
         virtual void DelObjector(int fd) override;
         virtual void Start() override;
         virtual galay::GY_TcpCoroutine<galay::CoroutineStatus> UserFunction(galay::GY_Controller::ptr controller) override;
@@ -117,8 +117,8 @@ namespace galay {
         GY_TcpServerBuilderBase::ptr m_builder;
         epoll_event* m_events;
         bool m_stop;
-        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
-        ::std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalFunc;
+        std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+        std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalFunc;
     };
 
 }

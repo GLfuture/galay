@@ -22,11 +22,11 @@ namespace galay
     public:
         using promise_type = GY_TcpPromise<RESULT>;
         inline static int get_return_object_on_alloaction_failure() noexcept;
-        inline ::std::coroutine_handle<GY_TcpPromise> get_return_object();
-        inline ::std::suspend_never initial_suspend() noexcept;
-        inline ::std::suspend_always yield_value(const RESULT &value);
-        inline ::std::suspend_always yield_value(RESULT value);
-        inline ::std::suspend_always final_suspend() noexcept;
+        inline std::coroutine_handle<GY_TcpPromise> get_return_object();
+        inline std::suspend_never initial_suspend() noexcept;
+        inline std::suspend_always yield_value(const RESULT &value);
+        inline std::suspend_always yield_value(RESULT value);
+        inline std::suspend_always final_suspend() noexcept;
         inline void unhandled_exception() noexcept;
         inline void return_value(RESULT val) noexcept;
         // 获取结果
@@ -39,7 +39,7 @@ namespace galay
     private:
         inline void rethrow_if_exception();
     private:
-        ::std::exception_ptr m_exception = nullptr;
+        std::exception_ptr m_exception = nullptr;
         RESULT m_result;
         CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
     };
@@ -49,11 +49,11 @@ namespace galay
     {
     public:
         inline static int get_return_object_on_alloaction_failure();
-        inline ::std::coroutine_handle<GY_TcpPromise> get_return_object();
-        inline ::std::suspend_never initial_suspend() noexcept;
+        inline std::coroutine_handle<GY_TcpPromise> get_return_object();
+        inline std::suspend_never initial_suspend() noexcept;
         template <typename T>
-        inline ::std::suspend_always yield_value(const T &value);
-        inline ::std::suspend_always final_suspend() noexcept;
+        inline std::suspend_always yield_value(const T &value);
+        inline std::suspend_always final_suspend() noexcept;
         inline void unhandled_exception() noexcept;
         inline void return_void() noexcept {}
         //获取状态
@@ -62,7 +62,7 @@ namespace galay
     private:
         inline void rethrow_if_exception();
     private:
-        ::std::exception_ptr m_exception = {};
+        std::exception_ptr m_exception = {};
         CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
     };
 
@@ -72,11 +72,11 @@ namespace galay
     public:
         using promise_type = GY_TcpPromiseSuspend<RESULT>;
         inline static int get_return_object_on_alloaction_failure() noexcept;
-        inline ::std::coroutine_handle<GY_TcpPromiseSuspend> get_return_object();
-        inline ::std::suspend_always initial_suspend() noexcept;
-        inline ::std::suspend_always yield_value(const RESULT &value);
-        inline ::std::suspend_always yield_value(RESULT value);
-        inline ::std::suspend_always final_suspend() noexcept;
+        inline std::coroutine_handle<GY_TcpPromiseSuspend> get_return_object();
+        inline std::suspend_always initial_suspend() noexcept;
+        inline std::suspend_always yield_value(const RESULT &value);
+        inline std::suspend_always yield_value(RESULT value);
+        inline std::suspend_always final_suspend() noexcept;
         inline void unhandled_exception() noexcept;
         inline void return_value(RESULT val) noexcept;
         // 获取结果
@@ -89,7 +89,7 @@ namespace galay
     private:
         inline void rethrow_if_exception();
     private:
-        ::std::exception_ptr m_exception = nullptr;
+        std::exception_ptr m_exception = nullptr;
         RESULT m_result;
         CoroutineStatus m_status = CoroutineStatus::kCoroutineSuspend;
     };
@@ -99,11 +99,11 @@ namespace galay
     {
     public:
         inline static int get_return_object_on_alloaction_failure();
-        inline ::std::coroutine_handle<GY_TcpPromiseSuspend> get_return_object();
-        inline ::std::suspend_always initial_suspend() noexcept;
+        inline std::coroutine_handle<GY_TcpPromiseSuspend> get_return_object();
+        inline std::suspend_always initial_suspend() noexcept;
         template <typename T>
-        inline ::std::suspend_always yield_value(const T &value);
-        inline ::std::suspend_always final_suspend() noexcept;
+        inline std::suspend_always yield_value(const T &value);
+        inline std::suspend_always final_suspend() noexcept;
         inline void unhandled_exception() noexcept;
         inline void return_void() noexcept {}
         //获取状态
@@ -112,7 +112,7 @@ namespace galay
     private:
         inline void rethrow_if_exception();
     private:
-        ::std::exception_ptr m_exception = {};
+        std::exception_ptr m_exception = {};
         CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
     };
 
@@ -128,7 +128,7 @@ namespace galay
 
         GY_Coroutine<RESULT> &operator=(GY_Coroutine<RESULT> &&other);
         GY_Coroutine() = default;
-        GY_Coroutine(::std::coroutine_handle<promise_type> co_handle) noexcept;
+        GY_Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
         GY_Coroutine(GY_Coroutine<RESULT> &&other) noexcept;
 
         void Resume() noexcept;
@@ -136,7 +136,7 @@ namespace galay
         ~GY_Coroutine();
     protected:
         // 协程句柄
-        ::std::coroutine_handle<promise_type> m_handle = nullptr;
+        std::coroutine_handle<promise_type> m_handle = nullptr;
     };
 
     template <typename RESULT = CoroutineStatus>
@@ -149,7 +149,7 @@ namespace galay
         using wptr = std::weak_ptr<GY_TcpCoroutine>;
 
         GY_TcpCoroutine() = default;
-        GY_TcpCoroutine(::std::coroutine_handle<promise_type> co_handle) noexcept;
+        GY_TcpCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
         GY_TcpCoroutine(GY_TcpCoroutine<RESULT> &&other) noexcept;
         GY_TcpCoroutine<RESULT> &operator=(const GY_TcpCoroutine<RESULT> &other) = delete;
         GY_TcpCoroutine<RESULT> &operator=(GY_TcpCoroutine<RESULT> &&other);  
@@ -177,13 +177,13 @@ namespace galay
 
         GY_CoroutineSuspend<RESULT> &operator=(GY_CoroutineSuspend<RESULT> &&other);
         GY_CoroutineSuspend() = default;
-        GY_CoroutineSuspend(::std::coroutine_handle<promise_type> co_handle) noexcept;
+        GY_CoroutineSuspend(std::coroutine_handle<promise_type> co_handle) noexcept;
         GY_CoroutineSuspend(GY_CoroutineSuspend<RESULT> &&other) noexcept;
         void Resume() noexcept;
         bool Done() noexcept;
         ~GY_CoroutineSuspend();
     protected:
-        ::std::coroutine_handle<promise_type> m_handle;
+        std::coroutine_handle<promise_type> m_handle;
     };
 
     template <typename RESULT = CoroutineStatus>
@@ -198,7 +198,7 @@ namespace galay
         GY_TcpCoroutineSuspend<RESULT> &operator=(const GY_TcpCoroutineSuspend<RESULT> &other) = delete;
 
         GY_TcpCoroutineSuspend() = default;
-        GY_TcpCoroutineSuspend(::std::coroutine_handle<promise_type> co_handle) noexcept;
+        GY_TcpCoroutineSuspend(std::coroutine_handle<promise_type> co_handle) noexcept;
         GY_TcpCoroutineSuspend(GY_TcpCoroutineSuspend<RESULT> &&other) noexcept;
         GY_TcpCoroutineSuspend<RESULT> &operator=(GY_TcpCoroutineSuspend<RESULT> &&other);  
         std::coroutine_handle<promise_type> GetCoroutine() const;

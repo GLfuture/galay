@@ -9,7 +9,7 @@
 
 
 
-::std::string 
+std::string 
 galay::security::Base64Util::base64_encode(unsigned char const* bytes_to_encode, size_t in_len, bool url) {
 
     size_t len_encoded = (in_len +2) / 3 * 4;
@@ -27,7 +27,7 @@ galay::security::Base64Util::base64_encode(unsigned char const* bytes_to_encode,
  //
     const char* base64_chars_ = base64_chars[url];
 
-    ::std::string ret;
+    std::string ret;
     ret.reserve(len_encoded);
 
     unsigned int pos = 0;
@@ -62,50 +62,50 @@ galay::security::Base64Util::base64_encode(unsigned char const* bytes_to_encode,
 }
 
 
-::std::string 
-galay::security::Base64Util::base64_decode(::std::string const& s, bool remove_linebreaks) {
+std::string 
+galay::security::Base64Util::base64_decode(std::string const& s, bool remove_linebreaks) {
    return decode(s, remove_linebreaks);
 }
 
-::std::string 
-galay::security::Base64Util::base64_encode(::std::string const& s, bool url) {
+std::string 
+galay::security::Base64Util::base64_encode(std::string const& s, bool url) {
    return encode(s, url);
 }
 
-::std::string 
-galay::security::Base64Util::base64_encode_pem (::std::string const& s) {
+std::string 
+galay::security::Base64Util::base64_encode_pem (std::string const& s) {
    return encode_pem(s);
 }
 
-::std::string 
-galay::security::Base64Util::base64_encode_mime(::std::string const& s) {
+std::string 
+galay::security::Base64Util::base64_encode_mime(std::string const& s) {
    return encode_mime(s);
 }
 
 #if __cplusplus >= 201703L
 //
-// Interface with ::std::string_view rather than const ::std::string&
+// Interface with std::string_view rather than const std::string&
 // Requires C++17
 // Provided by Yannic Bonenberger (https://github.com/Yannic)
 //
 
-::std::string 
-galay::security::Base64Util::base64_encode(::std::string_view s, bool url) {
+std::string 
+galay::security::Base64Util::base64_encode(std::string_view s, bool url) {
    return encode(s, url);
 }
 
-::std::string 
-galay::security::Base64Util::base64_encode_pem(::std::string_view s) {
+std::string 
+galay::security::Base64Util::base64_encode_pem(std::string_view s) {
    return encode_pem(s);
 }
 
-::std::string 
-galay::security::Base64Util::base64_encode_mime(::std::string_view s) {
+std::string 
+galay::security::Base64Util::base64_encode_mime(std::string_view s) {
    return encode_mime(s);
 }
 
-::std::string 
-galay::security::Base64Util::base64_decode(::std::string_view s, bool remove_linebreaks) {
+std::string 
+galay::security::Base64Util::base64_decode(std::string_view s, bool remove_linebreaks) {
    return decode(s, remove_linebreaks);
 }
 

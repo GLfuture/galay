@@ -9,21 +9,21 @@ galay::GY_TcpPromise<RESULT>::get_return_object_on_alloaction_failure() noexcept
 }
 
 template <typename RESULT>
-::std::coroutine_handle<galay::GY_TcpPromise<RESULT>> 
+std::coroutine_handle<galay::GY_TcpPromise<RESULT>> 
 galay::GY_TcpPromise<RESULT>::get_return_object() 
 { 
-    return ::std::coroutine_handle<GY_TcpPromise>::from_promise(*this); 
+    return std::coroutine_handle<GY_TcpPromise>::from_promise(*this); 
 }
 
 template <typename RESULT>
-::std::suspend_never
+std::suspend_never
 galay::GY_TcpPromise<RESULT>::initial_suspend() noexcept
 {
     return {};
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromise<RESULT>::yield_value(const RESULT &value)
 {
     SetResult(value);
@@ -32,7 +32,7 @@ galay::GY_TcpPromise<RESULT>::yield_value(const RESULT &value)
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromise<RESULT>::yield_value(RESULT value)
 {
     SetResult(value);
@@ -41,7 +41,7 @@ galay::GY_TcpPromise<RESULT>::yield_value(RESULT value)
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromise<RESULT>::final_suspend() noexcept
 {
     SetStatus(CoroutineStatus::kCoroutineFinished);
@@ -51,7 +51,7 @@ galay::GY_TcpPromise<RESULT>::final_suspend() noexcept
 template <typename RESULT>
 void galay::GY_TcpPromise<RESULT>::unhandled_exception() noexcept
 {
-    m_exception = ::std::current_exception();
+    m_exception = std::current_exception();
 }
 
 template <typename RESULT>
@@ -96,7 +96,7 @@ void galay::GY_TcpPromise<RESULT>::rethrow_if_exception()
 {
     if (m_exception)
     {
-        ::std::rethrow_exception(m_exception);
+        std::rethrow_exception(m_exception);
     }
 }
 
@@ -106,26 +106,26 @@ galay::GY_TcpPromise<void>::get_return_object_on_alloaction_failure()
     return -1;
 }
 
-::std::coroutine_handle<galay::GY_TcpPromise<void>>
+std::coroutine_handle<galay::GY_TcpPromise<void>>
 galay::GY_TcpPromise<void>::get_return_object()
 {
-    return ::std::coroutine_handle<GY_TcpPromise>::from_promise(*this);
+    return std::coroutine_handle<GY_TcpPromise>::from_promise(*this);
 }
 
-::std::suspend_never
+std::suspend_never
 galay::GY_TcpPromise<void>::initial_suspend() noexcept
 {
     return {};
 }
 
 template <typename T>
-::std::suspend_always 
+std::suspend_always 
 galay::GY_TcpPromise<void>::yield_value(const T &value)
 {
     return {};
 }
 
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromise<void>::final_suspend() noexcept
 {
     return {};
@@ -134,7 +134,7 @@ galay::GY_TcpPromise<void>::final_suspend() noexcept
 void 
 galay::GY_TcpPromise<void>::unhandled_exception() noexcept
 {
-    m_exception = ::std::current_exception();
+    m_exception = std::current_exception();
 }
 
 galay::CoroutineStatus 
@@ -153,7 +153,7 @@ void galay::GY_TcpPromise<void>::rethrow_if_exception()
 {
     if (m_exception)
     {
-        ::std::rethrow_exception(m_exception);
+        std::rethrow_exception(m_exception);
     }
 }
 
@@ -167,21 +167,21 @@ galay::GY_TcpPromiseSuspend<RESULT>::get_return_object_on_alloaction_failure() n
 }
 
 template <typename RESULT>
-::std::coroutine_handle<galay::GY_TcpPromiseSuspend<RESULT>> 
+std::coroutine_handle<galay::GY_TcpPromiseSuspend<RESULT>> 
 galay::GY_TcpPromiseSuspend<RESULT>::get_return_object() 
 { 
-    return ::std::coroutine_handle<GY_TcpPromiseSuspend>::from_promise(*this); 
+    return std::coroutine_handle<GY_TcpPromiseSuspend>::from_promise(*this); 
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromiseSuspend<RESULT>::initial_suspend() noexcept
 {
     return {};
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromiseSuspend<RESULT>::yield_value(const RESULT &value)
 {
     SetResult(value);
@@ -190,7 +190,7 @@ galay::GY_TcpPromiseSuspend<RESULT>::yield_value(const RESULT &value)
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromiseSuspend<RESULT>::yield_value(RESULT value)
 {
     SetResult(value);
@@ -199,7 +199,7 @@ galay::GY_TcpPromiseSuspend<RESULT>::yield_value(RESULT value)
 }
 
 template <typename RESULT>
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromiseSuspend<RESULT>::final_suspend() noexcept
 {
     SetStatus(CoroutineStatus::kCoroutineFinished);
@@ -209,7 +209,7 @@ galay::GY_TcpPromiseSuspend<RESULT>::final_suspend() noexcept
 template <typename RESULT>
 void galay::GY_TcpPromiseSuspend<RESULT>::unhandled_exception() noexcept
 {
-    m_exception = ::std::current_exception();
+    m_exception = std::current_exception();
 }
 
 template <typename RESULT>
@@ -253,7 +253,7 @@ void galay::GY_TcpPromiseSuspend<RESULT>::rethrow_if_exception()
 {
     if (m_exception)
     {
-        ::std::rethrow_exception(m_exception);
+        std::rethrow_exception(m_exception);
     }
 }
 
@@ -263,26 +263,26 @@ galay::GY_TcpPromiseSuspend<void>::get_return_object_on_alloaction_failure()
     return -1;
 }
 
-::std::coroutine_handle<galay::GY_TcpPromiseSuspend<void>>
+std::coroutine_handle<galay::GY_TcpPromiseSuspend<void>>
 galay::GY_TcpPromiseSuspend<void>::get_return_object()
 {
-    return ::std::coroutine_handle<GY_TcpPromiseSuspend>::from_promise(*this);
+    return std::coroutine_handle<GY_TcpPromiseSuspend>::from_promise(*this);
 }
 
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromiseSuspend<void>::initial_suspend() noexcept
 {
     return {};
 }
 
 template <typename T>
-::std::suspend_always 
+std::suspend_always 
 galay::GY_TcpPromiseSuspend<void>::yield_value(const T &value)
 {
     return {};
 }
 
-::std::suspend_always
+std::suspend_always
 galay::GY_TcpPromiseSuspend<void>::final_suspend() noexcept
 {
     return {};
@@ -291,7 +291,7 @@ galay::GY_TcpPromiseSuspend<void>::final_suspend() noexcept
 void 
 galay::GY_TcpPromiseSuspend<void>::unhandled_exception() noexcept
 {
-    m_exception = ::std::current_exception();
+    m_exception = std::current_exception();
 }
 
 galay::CoroutineStatus 
@@ -311,7 +311,7 @@ galay::GY_TcpPromiseSuspend<void>::rethrow_if_exception()
 {
     if (m_exception)
     {
-        ::std::rethrow_exception(m_exception);
+        std::rethrow_exception(m_exception);
     }
 }
 
@@ -333,7 +333,7 @@ galay::GY_Coroutine<RESULT>::operator=(GY_Coroutine<RESULT> &&other)
 }
 
 template <typename RESULT>
-galay::GY_Coroutine<RESULT>::GY_Coroutine(::std::coroutine_handle<promise_type> co_handle) noexcept
+galay::GY_Coroutine<RESULT>::GY_Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept
 {
     this->m_handle = co_handle;
 }
@@ -376,7 +376,7 @@ galay::GY_Coroutine<RESULT>::~GY_Coroutine()
 
 
 template <typename RESULT>
-galay::GY_TcpCoroutine<RESULT>::GY_TcpCoroutine(::std::coroutine_handle<promise_type> co_handle) noexcept
+galay::GY_TcpCoroutine<RESULT>::GY_TcpCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept
     : GY_Coroutine<RESULT>(co_handle)
 {
 }
@@ -464,7 +464,7 @@ galay::GY_CoroutineSuspend<RESULT>::operator=(GY_CoroutineSuspend<RESULT> &&othe
 }
 
 template <typename RESULT>
-galay::GY_CoroutineSuspend<RESULT>::GY_CoroutineSuspend(::std::coroutine_handle<promise_type> co_handle) noexcept
+galay::GY_CoroutineSuspend<RESULT>::GY_CoroutineSuspend(std::coroutine_handle<promise_type> co_handle) noexcept
 {
     this->m_handle = co_handle;
 }
@@ -506,7 +506,7 @@ galay::GY_CoroutineSuspend<RESULT>::~GY_CoroutineSuspend()
 }
 
 template <typename RESULT>
-galay::GY_TcpCoroutineSuspend<RESULT>::GY_TcpCoroutineSuspend(::std::coroutine_handle<promise_type> co_handle) noexcept
+galay::GY_TcpCoroutineSuspend<RESULT>::GY_TcpCoroutineSuspend(std::coroutine_handle<promise_type> co_handle) noexcept
     : GY_CoroutineSuspend<RESULT>(co_handle)
 {
 }

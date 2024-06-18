@@ -8,7 +8,7 @@ namespace galay{
     namespace security{
         class Sha512Util{
         public:
-            static ::std::string encode(const ::std::string& str);
+            static std::string encode(const std::string& str);
         };
     }
 }

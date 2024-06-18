@@ -13,15 +13,15 @@ int main()
     //mysqlclient.Insert("user",{{"name","'gong'"},{"age","10"}});
     auto res = mysqlclient.Select("user",{"name","age"});
     for(auto &v: res){
-        for(auto &c: v) ::std::cout << c <<" ";
-        ::std::cout << '\n';
+        for(auto &c: v) std::cout << c <<" ";
+        std::cout << '\n';
     }
     mysqlclient.CreateTable("images",{{"uid","int","primary key"},{"image","longblob","not null"}});
-    ::std::string indata1 = galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile("1.jpeg") , indata2 = galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile("2.jpeg");
-    ::std::cout << indata1.length() << " " << indata2.length() << '\n';
+    std::string indata1 = galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile("1.jpeg") , indata2 = galay::IOFunction::FileIOFunction::SyncFileStream::ReadFile("2.jpeg");
+    std::cout << indata1.length() << " " << indata2.length() << '\n';
     mysqlclient.ParamSendBinaryData("insert into images(uid,image) values (1,?);",indata1);
     mysqlclient.ParamSendBinaryData("insert into images(uid,image) values (2,?);",indata2);
-    ::std::string outdata;
+    std::string outdata;
     mysqlclient.ParamRecvBinaryData("select image from images where uid = 2;",outdata);
     galay::IOFunction::FileIOFunction::SyncFileStream::WriteFile("out1.jpeg",outdata);
     mysqlclient.DropTable("user");

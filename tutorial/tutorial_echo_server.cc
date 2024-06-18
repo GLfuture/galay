@@ -44,13 +44,13 @@ galay::GY_TcpCoroutine<galay::TaskStatus> illegal(std::string& rbuffer,std::stri
 }
 #endif
 
-galay::GY_TcpServer server;
+galay::GY_TcpServer::ptr server;
 
 void signal_handler(int signo)
 {
     if (signo == SIGINT)
     {
-        server.Stop();
+        server->Stop();
     }
 }
 
@@ -58,12 +58,10 @@ int main()
 {
     signal(SIGINT,signal_handler);
     spdlog::set_level(spdlog::level::debug);
-    galay::GY_HttpServerBuilder::ptr builder = std::make_shared<galay::GY_HttpServerBuilder>();
-    builder->SetSchedulerType(galay::GY_TcpServerBuilderBase::SchedulerType::kSelectScheduler);
-    builder->Get("/echo",test);
-    builder->SetPort(8080);
-    builder->SetIllegalFunction(illegal);
-    builder->SetThreadNum(1);
-    server.Start(builder);
+    auto router = galay::GY_RouterFactory::CreateHttpRouter();
+    router->Get("/echo",test);
+    galay::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8082,router);
+    server = galay::GY_ServerFactory::CreateHttpServer(builder);
+    server->Start();
     return 0;
 }

@@ -15,7 +15,7 @@ galay::GY_Objector::~GY_Objector()
 }
 
 //timer
-galay::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times , ::std::function<::std::any()> &&func)
+galay::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times , std::function<std::any()> &&func)
 {
     this->m_timerid = timerid;
     this->m_exec_times = exec_times;
@@ -26,7 +26,7 @@ galay::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times
 uint64_t 
 galay::Timer::GetCurrentTime()
 {
-    return ::std::chrono::duration_cast<::std::chrono::milliseconds>(::std::chrono::steady_clock::now().time_since_epoch()).count();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 uint64_t 
@@ -76,7 +76,7 @@ galay::Timer::Execute()
     if(this->m_exec_times == 0) this->m_is_finish = true;
 }
 
-::std::any 
+std::any 
 galay::Timer::Result()
 {
     return this->m_result;
@@ -99,7 +99,7 @@ bool galay::Timer::IsFinish()
     return this->m_is_finish.load();
 }
 
-::std::atomic_uint64_t galay::GY_TimerManager::m_global_timerid = 0;
+std::atomic_uint64_t galay::GY_TimerManager::m_global_timerid = 0;
 
 galay::GY_TimerManager::GY_TimerManager()
 {
@@ -107,16 +107,16 @@ galay::GY_TimerManager::GY_TimerManager()
 }
 
 galay::Timer::ptr
-galay::GY_TimerManager::AddTimer(uint64_t during, uint32_t exec_times, ::std::function<::std::any()> &&func)
+galay::GY_TimerManager::AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func)
 {
-    m_global_timerid.fetch_add(1, ::std::memory_order_acquire);
-    ::std::unique_lock<::std::shared_mutex> lock(this->m_mtx);
-    uint64_t timerid = m_global_timerid.load(::std::memory_order_acquire);
+    m_global_timerid.fetch_add(1, std::memory_order_acquire);
+    std::unique_lock<std::shared_mutex> lock(this->m_mtx);
+    uint64_t timerid = m_global_timerid.load(std::memory_order_acquire);
     if (timerid >= MAX_TIMERID)
     {
-        m_global_timerid.store((timerid % MAX_TIMERID), ::std::memory_order_release);
+        m_global_timerid.store((timerid % MAX_TIMERID), std::memory_order_release);
     }
-    auto timer = ::std::make_shared<Timer>(m_global_timerid.load(), during, exec_times, ::std::forward<::std::function<::std::any()> &&>(func));
+    auto timer = std::make_shared<Timer>(m_global_timerid.load(), during, exec_times, std::forward<std::function<std::any()> &&>(func));
     this->m_timers.push(timer);
     UpdateTimerfd();
     return timer;
@@ -162,7 +162,7 @@ galay::GY_TimerManager::GetEaliestTimer()
 {
     if (this->m_timers.empty())
         return nullptr;
-    ::std::unique_lock<::std::shared_mutex> lock(this->m_mtx);
+    std::unique_lock<std::shared_mutex> lock(this->m_mtx);
     auto timer = this->m_timers.top();
     this->m_timers.pop();
     if (--timer->GetRemainExecTimes() > 0)
@@ -196,9 +196,9 @@ galay::GY_TimerManager::~GY_TimerManager()
     }
 }
 
-galay::GY_Acceptor::GY_Acceptor(::std::weak_ptr<GY_IOScheduler> scheduler)
+galay::GY_Acceptor::GY_Acceptor(std::weak_ptr<GY_IOScheduler> scheduler)
 {
-    this->m_listentask = ::std::make_unique<GY_CreateConnTask>(scheduler);
+    this->m_listentask = std::make_unique<GY_CreateConnTask>(scheduler);
 }
 
 int 
@@ -225,7 +225,7 @@ galay::GY_Acceptor::~GY_Acceptor()
 }
 
 
-galay::GY_Receiver::GY_Receiver(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler)
+galay::GY_Receiver::GY_Receiver(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_recvTask = std::make_unique<GY_RecvTask>(fd, scheduler);
 }
@@ -254,7 +254,7 @@ galay::GY_Receiver::ExecuteTask()
     this->m_recvTask->RecvAll();
 }
 
-galay::GY_Sender::GY_Sender(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler)
+galay::GY_Sender::GY_Sender(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_sendTask = std::make_unique<GY_SendTask>(fd, scheduler);
 }
@@ -266,9 +266,9 @@ galay::GY_Sender::SetEventType(int event_type)
 }
 
 void 
-galay::GY_Sender::AppendWBuffer(::std::string&& wbuffer)
+galay::GY_Sender::AppendWBuffer(std::string&& wbuffer)
 {
-    this->m_sendTask->AppendWBuffer(std::forward<::std::string&&>(wbuffer));
+    this->m_sendTask->AppendWBuffer(std::forward<std::string&&>(wbuffer));
 }
 
 bool 
@@ -289,7 +289,7 @@ galay::GY_Sender::SetSSL(SSL* ssl)
     this->m_sendTask->SetSSL(ssl);
 }
 
-galay::GY_Connector::GY_Connector(int fd, ::std::weak_ptr<GY_IOScheduler> scheduler)
+galay::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_fd = fd;
     this->m_is_ssl_accept = false;
@@ -310,16 +310,16 @@ galay::GY_Connector::SetEventType(int event_type)
     this->m_eventType = event_type;
 }
 
-::std::shared_ptr<galay::Timer> 
-galay::GY_Connector::AddTimer(uint64_t during, uint32_t exec_times,::std::function<::std::any()> &&func)
+std::shared_ptr<galay::Timer> 
+galay::GY_Connector::AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func)
 {
-    return this->m_scheduler.lock()->AddTimer(during,exec_times,::std::forward<::std::function<::std::any()>&&>(func));
+    return this->m_scheduler.lock()->AddTimer(during,exec_times,std::forward<std::function<std::any()>&&>(func));
 }
 
 void 
-galay::GY_Connector::SetContext(::std::any&& context)
+galay::GY_Connector::SetContext(std::any&& context)
 {
-    this->m_context = std::forward<::std::any&&>(context);
+    this->m_context = std::forward<std::any&&>(context);
 }
 
 std::any&&
