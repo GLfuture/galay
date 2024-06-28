@@ -47,7 +47,7 @@ namespace galay
                 std::string m_body = "";                                    // body
             };
 
-            class Http1_1_Request : public Http1_1_Protocol, public GY_TcpRequest, public GY_TcpResponse
+            class Http1_1_Request : public Http1_1_Protocol, public GY_Request, public GY_Response, public GY_DynamicCreator<kRequestFactory,Http1_1_Request>
             {
             private:
                 static std::unordered_set<std::string> m_std_methods;
@@ -84,12 +84,12 @@ namespace galay
                 std::unordered_map<std::string, std::string> m_arg_list; // 参数
             };
 
-            class Http1_1_Response : public Http1_1_Protocol, public GY_TcpResponse, public GY_TcpRequest
+            class Http1_1_Response : public Http1_1_Protocol, public GY_Response, public GY_Request, public GY_DynamicCreator<kResponseFactory,Http1_1_Response>
             {
             public:
                 using ptr = std::shared_ptr<Http1_1_Response>;
                 // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
-                enum http_protocol_status
+                enum HttpStatus
                 {
                     // Information responses
                     Continue_100 = 100,

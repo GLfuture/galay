@@ -22,8 +22,8 @@ namespace galay {
         void Close();
         bool IsClosed();
         void SetContext(std::any&& context);
-        protocol::GY_TcpRequest::ptr GetRequest();
-        void PushResponse(protocol::GY_TcpResponse::ptr response);
+        protocol::GY_Request::ptr GetRequest();
+        void PushResponse(protocol::GY_Response::ptr response);
         std::any&& GetContext();
         std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func);
         //协程结束时必须调用

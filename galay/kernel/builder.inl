@@ -68,7 +68,8 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()
     m_userfunc = nullptr;
     m_is_ssl = false;
     m_ssl_config = nullptr;
-    g_tcp_protocol_factory = std::make_unique<GY_TcpProtocolFactory<REQ,RESP>>();
+    m_typeNames[kDataRequest] = REQ::GetTypeName();
+    m_typeNames[kDataResponse] = RESP::GetTypeName();
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
@@ -222,6 +223,20 @@ const galay::GY_SSLConfig::ptr
 galay::GY_TcpServerBuilder<REQ,RESP>::GetSSLConfig()
 {
     return m_ssl_config;
+}
+
+template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>
+std::string 
+galay::GY_TcpServerBuilder<REQ,RESP>::GetTypeName(DataType type)
+{
+    switch(type)
+    {
+        case galay::DataType::kDataRequest :
+            return m_typeNames[kDataRequest];
+        case galay::DataType::kDataResponse :
+            return m_typeNames[kDataRequest];
+    }
+    return "";
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>

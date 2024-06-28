@@ -238,9 +238,7 @@ galay::DnsAwaiter::await_suspend(std::coroutine_handle<> handle)
     this->m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
         handle.resume();
-        std::cout << this <<"    resume over.....\n";
     }));
-    std::cout << this <<"  suspend over.....\n";
 }
 
 

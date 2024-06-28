@@ -8,7 +8,7 @@
 #include <shared_mutex>
 #include <any>
 #include <openssl/ssl.h>
-#include "base.h"
+#include "../common/base.h"
 #include "awaiter.h"
 #include "coroutine.h"
 #include "../protocol/basic_protocol.h"
@@ -176,8 +176,8 @@ namespace galay
         GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> scheduler);
         void SetContext(std::any&& context);
         std::any&& GetContext();
-        galay::protocol::GY_TcpRequest::ptr GetRequest();
-        void PushResponse(galay::protocol::GY_TcpResponse::ptr response);
+        galay::protocol::GY_Request::ptr GetRequest();
+        void PushResponse(galay::protocol::GY_Response::ptr response);
         std::shared_ptr<galay::Timer> AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func);
         virtual void SetEventType(int event_type) override;
         virtual void ExecuteTask() override;
@@ -188,8 +188,8 @@ namespace galay
         galay::GY_TcpCoroutine<galay::CoroutineStatus> CoReceiveExec();
         galay::GY_TcpCoroutine<galay::CoroutineStatus> CoSendExec();
 
-        void PushRequest(galay::protocol::GY_TcpRequest::ptr request);
-        galay::protocol::GY_TcpResponse::ptr GetResponse();
+        void PushRequest(galay::protocol::GY_Request::ptr request);
+        galay::protocol::GY_Response::ptr GetResponse();
     private:
         int m_fd;
         bool m_is_ssl_accept;
@@ -204,9 +204,9 @@ namespace galay
         GY_TcpCoroutine<CoroutineStatus> m_UserCoroutine;
         GY_TcpCoroutine<CoroutineStatus> m_RecvCoroutine;
         GY_TcpCoroutine<CoroutineStatus> m_SendCoroutine;
-        protocol::GY_TcpRequest::ptr m_tempRequest;
-        std::queue<protocol::GY_TcpRequest::ptr> m_requests;
-        std::queue<protocol::GY_TcpResponse::ptr> m_responses;
+        protocol::GY_Request::ptr m_tempRequest;
+        std::queue<protocol::GY_Request::ptr> m_requests;
+        std::queue<protocol::GY_Response::ptr> m_responses;
         std::any m_context;
     };
 

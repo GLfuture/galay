@@ -3,6 +3,7 @@ set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     test_conf_parser.cc
     test_wait_group.cc
+    test_reflection.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

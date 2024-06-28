@@ -11,7 +11,7 @@ namespace galay
     {
         namespace smtp
         {
-            class Smtp_Protocol : public GY_TcpRequest, public GY_TcpResponse
+            class Smtp_Protocol : public GY_Request, public GY_Response,public GY_DynamicCreator<kRequestFactory,Smtp_Protocol>,public GY_DynamicCreator<kResponseFactory,Smtp_Protocol>
             {
             public:
                 using ptr = std::shared_ptr<Smtp_Protocol>;

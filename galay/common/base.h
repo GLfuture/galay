@@ -2,6 +2,7 @@
 #define GALAY_CONCEPTS_H
 #include <string>
 #include <concepts>
+#include <memory>
 
 namespace galay
 {
@@ -59,7 +60,7 @@ namespace galay
     concept Udp_Request = requires(T a){
         { 
             a.DecodePdu(std::declval<std::string&>()) 
-        } -> std::same_as<int>;
+        } -> std::same_as<ProtoJudgeType>;
 
         { 
             a.Clear() 
@@ -81,6 +82,21 @@ namespace galay
     {
         kSelectScheduler,       //select
         kEpollScheduler,        //epoll
+    };
+
+
+    //factory type
+    enum FactoryType
+    {
+        kRequestFactory,        //request
+        kResponseFactory,       //response
+    };
+
+
+    enum DataType
+    {
+        kDataRequest,               //request data
+        kDataResponse,              //response data
     };
 }
 #endif

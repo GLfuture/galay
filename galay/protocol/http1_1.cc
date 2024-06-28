@@ -814,133 +814,133 @@ galay::protocol::http::Http1_1_Response::StatusMessage(int status)
 {
     switch (status)
     {
-    case http_protocol_status::Continue_100:
+    case HttpStatus::Continue_100:
         return "Continue";
-    case http_protocol_status::SwitchingProtocol_101:
+    case HttpStatus::SwitchingProtocol_101:
         return "Switching Protocol";
-    case http_protocol_status::Processing_102:
+    case HttpStatus::Processing_102:
         return "Processing";
-    case http_protocol_status::EarlyHints_103:
+    case HttpStatus::EarlyHints_103:
         return "Early Hints";
-    case http_protocol_status::OK_200:
+    case HttpStatus::OK_200:
         return "OK";
-    case http_protocol_status::Created_201:
+    case HttpStatus::Created_201:
         return "Created";
-    case http_protocol_status::Accepted_202:
+    case HttpStatus::Accepted_202:
         return "Accepted";
-    case http_protocol_status::NonAuthoritativeInformation_203:
+    case HttpStatus::NonAuthoritativeInformation_203:
         return "Non-Authoritative Information";
-    case http_protocol_status::NoContent_204:
+    case HttpStatus::NoContent_204:
         return "No Content";
-    case http_protocol_status::ResetContent_205:
+    case HttpStatus::ResetContent_205:
         return "Reset Content";
-    case http_protocol_status::PartialContent_206:
+    case HttpStatus::PartialContent_206:
         return "Partial Content";
-    case http_protocol_status::MultiStatus_207:
+    case HttpStatus::MultiStatus_207:
         return "Multi-Status";
-    case http_protocol_status::AlreadyReported_208:
+    case HttpStatus::AlreadyReported_208:
         return "Already Reported";
-    case http_protocol_status::IMUsed_226:
+    case HttpStatus::IMUsed_226:
         return "IM Used";
-    case http_protocol_status::MultipleChoices_300:
+    case HttpStatus::MultipleChoices_300:
         return "Multiple Choices";
-    case http_protocol_status::MovedPermanently_301:
+    case HttpStatus::MovedPermanently_301:
         return "Moved Permanently";
-    case http_protocol_status::Found_302:
+    case HttpStatus::Found_302:
         return "Found";
-    case http_protocol_status::SeeOther_303:
+    case HttpStatus::SeeOther_303:
         return "See Other";
-    case http_protocol_status::NotModified_304:
+    case HttpStatus::NotModified_304:
         return "Not Modified";
-    case http_protocol_status::UseProxy_305:
+    case HttpStatus::UseProxy_305:
         return "Use Proxy";
-    case http_protocol_status::unused_306:
+    case HttpStatus::unused_306:
         return "unused";
-    case http_protocol_status::TemporaryRedirect_307:
+    case HttpStatus::TemporaryRedirect_307:
         return "Temporary Redirect";
-    case http_protocol_status::PermanentRedirect_308:
+    case HttpStatus::PermanentRedirect_308:
         return "Permanent Redirect";
-    case http_protocol_status::BadRequest_400:
+    case HttpStatus::BadRequest_400:
         return "Bad Request";
-    case http_protocol_status::Unauthorized_401:
+    case HttpStatus::Unauthorized_401:
         return "Unauthorized";
-    case http_protocol_status::PaymentRequired_402:
+    case HttpStatus::PaymentRequired_402:
         return "Payment Required";
-    case http_protocol_status::Forbidden_403:
+    case HttpStatus::Forbidden_403:
         return "Forbidden";
-    case http_protocol_status::NotFound_404:
+    case HttpStatus::NotFound_404:
         return "Not Found";
-    case http_protocol_status::MethodNotAllowed_405:
+    case HttpStatus::MethodNotAllowed_405:
         return "Method Not Allowed";
-    case http_protocol_status::NotAcceptable_406:
+    case HttpStatus::NotAcceptable_406:
         return "Not Acceptable";
-    case http_protocol_status::ProxyAuthenticationRequired_407:
+    case HttpStatus::ProxyAuthenticationRequired_407:
         return "Proxy Authentication Required";
-    case http_protocol_status::RequestTimeout_408:
+    case HttpStatus::RequestTimeout_408:
         return "Request Timeout";
-    case http_protocol_status::Conflict_409:
+    case HttpStatus::Conflict_409:
         return "Conflict";
-    case http_protocol_status::Gone_410:
+    case HttpStatus::Gone_410:
         return "Gone";
-    case http_protocol_status::LengthRequired_411:
+    case HttpStatus::LengthRequired_411:
         return "Length Required";
-    case http_protocol_status::PreconditionFailed_412:
+    case HttpStatus::PreconditionFailed_412:
         return "Precondition Failed";
-    case http_protocol_status::PayloadTooLarge_413:
+    case HttpStatus::PayloadTooLarge_413:
         return "Payload Too Large";
-    case http_protocol_status::UriTooLong_414:
+    case HttpStatus::UriTooLong_414:
         return "URI Too Long";
-    case http_protocol_status::UnsupportedMediaType_415:
+    case HttpStatus::UnsupportedMediaType_415:
         return "Unsupported Media Type";
-    case http_protocol_status::RangeNotSatisfiable_416:
+    case HttpStatus::RangeNotSatisfiable_416:
         return "Range Not Satisfiable";
-    case http_protocol_status::ExpectationFailed_417:
+    case HttpStatus::ExpectationFailed_417:
         return "Expectation Failed";
-    case http_protocol_status::ImATeapot_418:
+    case HttpStatus::ImATeapot_418:
         return "I'm a teapot";
-    case http_protocol_status::MisdirectedRequest_421:
+    case HttpStatus::MisdirectedRequest_421:
         return "Misdirected Request";
-    case http_protocol_status::UnprocessableContent_422:
+    case HttpStatus::UnprocessableContent_422:
         return "Unprocessable Content";
-    case http_protocol_status::Locked_423:
+    case HttpStatus::Locked_423:
         return "Locked";
-    case http_protocol_status::FailedDependency_424:
+    case HttpStatus::FailedDependency_424:
         return "Failed Dependency";
-    case http_protocol_status::TooEarly_425:
+    case HttpStatus::TooEarly_425:
         return "Too Early";
-    case http_protocol_status::UpgradeRequired_426:
+    case HttpStatus::UpgradeRequired_426:
         return "Upgrade Required";
-    case http_protocol_status::PreconditionRequired_428:
+    case HttpStatus::PreconditionRequired_428:
         return "Precondition Required";
-    case http_protocol_status::TooManyRequests_429:
+    case HttpStatus::TooManyRequests_429:
         return "Too Many Requests";
-    case http_protocol_status::RequestHeaderFieldsTooLarge_431:
+    case HttpStatus::RequestHeaderFieldsTooLarge_431:
         return "Request Header Fields Too Large";
-    case http_protocol_status::UnavailableForLegalReasons_451:
+    case HttpStatus::UnavailableForLegalReasons_451:
         return "Unavailable For Legal Reasons";
-    case http_protocol_status::NotImplemented_501:
+    case HttpStatus::NotImplemented_501:
         return "Not Implemented";
-    case http_protocol_status::BadGateway_502:
+    case HttpStatus::BadGateway_502:
         return "Bad Gateway";
-    case http_protocol_status::ServiceUnavailable_503:
+    case HttpStatus::ServiceUnavailable_503:
         return "Service Unavailable";
-    case http_protocol_status::GatewayTimeout_504:
+    case HttpStatus::GatewayTimeout_504:
         return "Gateway Timeout";
-    case http_protocol_status::HttpVersionNotSupported_505:
+    case HttpStatus::HttpVersionNotSupported_505:
         return "HTTP Version Not Supported";
-    case http_protocol_status::VariantAlsoNegotiates_506:
+    case HttpStatus::VariantAlsoNegotiates_506:
         return "Variant Also Negotiates";
-    case http_protocol_status::InsufficientStorage_507:
+    case HttpStatus::InsufficientStorage_507:
         return "Insufficient Storage";
-    case http_protocol_status::LoopDetected_508:
+    case HttpStatus::LoopDetected_508:
         return "Loop Detected";
-    case http_protocol_status::NotExtended_510:
+    case HttpStatus::NotExtended_510:
         return "Not Extended";
-    case http_protocol_status::NetworkAuthenticationRequired_511:
+    case HttpStatus::NetworkAuthenticationRequired_511:
         return "Network Authentication Required";
 
     default:
-    case http_protocol_status::InternalServerError_500:
+    case HttpStatus::InternalServerError_500:
         return "Internal Server Error";
     }
     return "";

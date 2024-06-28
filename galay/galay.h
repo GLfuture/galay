@@ -1,6 +1,8 @@
 #ifndef GALAY_H
 #define GALAY_H
 
+//common
+
 //kernel
 #include "kernel/client.h"
 #include "kernel/server.h"

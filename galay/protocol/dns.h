@@ -14,7 +14,7 @@ namespace galay
         {
             #pragma pack(push, 1)
             #define MAX_UDP_LENGTH 1500
-            enum DNS_Query_Type
+            enum DnsQueryType
             {
                 kDnsQueryA = 1,      // 由域名获取ipv4地址
                 kDnsQueryNS = 2,     // 查询域名服务器
@@ -29,7 +29,7 @@ namespace galay
                 kDnsQueryAny = 255,  // 对所有记录的请求
             };
 
-            struct Dns_Flags
+            struct DnsFlags
             {
                 unsigned char m_qr : 1; // 0为查询，1为响应
                 unsigned char m_opcode : 4;
@@ -41,24 +41,24 @@ namespace galay
                 unsigned char m_rcode : 4; // 返回码,0无错,3名字错,2服务器错
             };
 
-            struct Dns_Header
+            struct DnsHeader
             {
                 unsigned short m_id;                 // 会话ID
-                Dns_Flags m_flags{0};                // flags
+                DnsFlags m_flags{0};                // flags
                 unsigned short m_questions = 0;      // 问题数
                 unsigned short m_answers_RRs = 0;    // 回答资源记录数
                 unsigned short m_authority_RRs = 0;  // 授权资源记录数
                 unsigned short m_additional_RRs = 0; // 附加资源记录数
             };
 
-            struct Dns_Question
+            struct DnsQuestion
             {
                 std::string m_qname;
                 unsigned short m_type = 0;
                 unsigned short m_class = htons(1); // 一般为1
             };
 
-            struct Dns_Answer
+            struct DnsAnswer
             {
                 std::string m_aname;
                 unsigned short m_type = 0;
@@ -73,23 +73,23 @@ namespace galay
             class Dns_Protocol
             {
             public:
-                Dns_Header GetHeader();
-                void SetHeader(Dns_Header &&header);
-                void SetQuestionQueue(std::queue<Dns_Question> &&questions);
-                std::queue<Dns_Answer> GetAnswerQueue();
+                DnsHeader GetHeader();
+                void SetHeader(DnsHeader &&header);
+                void SetQuestionQueue(std::queue<DnsQuestion> &&questions);
+                std::queue<DnsAnswer> GetAnswerQueue();
 
             protected:
-                Dns_Header m_header{0};
-                std::queue<Dns_Question> m_questions;
-                std::queue<Dns_Answer> m_answers;
+                DnsHeader m_header{0};
+                std::queue<DnsQuestion> m_questions;
+                std::queue<DnsAnswer> m_answers;
             };
 
-            class Dns_Request : public Dns_Protocol, public GY_UdpRequest, public GY_UdpResponse
+            class Dns_Request : public Dns_Protocol, public GY_Request, public GY_Response, public GY_DynamicCreator<kRequestFactory,Dns_Request>
             {
             public:
                 using ptr = std::shared_ptr<Dns_Request>;
                 // ignore
-                int DecodePdu(std::string &buffer) override { return 0; }
+                ProtoJudgeType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
                 virtual void Clear() override;
 
@@ -97,13 +97,13 @@ namespace galay
                 std::string ModifyHostname(std::string hostname);
             };
 
-            class Dns_Response : public Dns_Protocol, public GY_UdpRequest, public GY_UdpResponse
+            class Dns_Response : public Dns_Protocol, public GY_Request, public GY_Response, public GY_DynamicCreator<kResponseFactory,Dns_Response>
             {
             public:
                 using ptr = std::shared_ptr<Dns_Response>;
                 // ignore
-                std::string EncodePdu() override { return ""; }
-                int DecodePdu(std::string &buffer) override;
+                std::string EncodePdu() override;
+                ProtoJudgeType DecodePdu(std::string &buffer) override;
                 virtual void Clear() override;
 
             protected:

@@ -1,26 +1,26 @@
 #include "dns.h"
 
-galay::protocol::dns::Dns_Header
+galay::protocol::dns::DnsHeader
 galay::protocol::dns::Dns_Protocol::GetHeader()
 {
     return this->m_header;
 }
 
 void 
-galay::protocol::dns::Dns_Protocol::SetHeader(Dns_Header&& header)
+galay::protocol::dns::Dns_Protocol::SetHeader(DnsHeader&& header)
 {
     this->m_header = header;
 }
 
 void
-galay::protocol::dns::Dns_Protocol::SetQuestionQueue(std::queue<Dns_Question> &&questions)
+galay::protocol::dns::Dns_Protocol::SetQuestionQueue(std::queue<DnsQuestion> &&questions)
 {
-    this->m_questions = std::forward<std::queue<Dns_Question> &&>(questions);
+    this->m_questions = std::forward<std::queue<DnsQuestion> &&>(questions);
 }
 
 
 
-std::queue<galay::protocol::dns::Dns_Answer>
+std::queue<galay::protocol::dns::DnsAnswer>
 galay::protocol::dns::Dns_Protocol::GetAnswerQueue()
 {
     return std::move(this->m_answers);
@@ -60,9 +60,9 @@ galay::protocol::dns::Dns_Request::EncodePdu()
     unsigned short addtional_RRs = htons(m_header.m_additional_RRs);
     memcpy(ptr, &addtional_RRs, sizeof(unsigned short));
     ptr += sizeof(unsigned short);
-    int len = sizeof(Dns_Header); // 12
+    int len = sizeof(DnsHeader); // 12
 
-    Dns_Question question = m_questions.front();
+    DnsQuestion question = m_questions.front();
     m_questions.pop();
     std::string qname = ModifyHostname(question.m_qname);
     memcpy(ptr, qname.c_str(), qname.length());
@@ -75,6 +75,12 @@ galay::protocol::dns::Dns_Request::EncodePdu()
 
     char *begin = (char *)&buffer[0];
     return std::string(begin, len);
+}
+
+galay::ProtoJudgeType 
+galay::protocol::dns::Dns_Request::DecodePdu(std::string &buffer)
+{
+    return galay::ProtoJudgeType::kProtoFinished;
 }
 
 void 
@@ -98,7 +104,7 @@ galay::protocol::dns::Dns_Request::ModifyHostname(std::string hostname)
     return res + static_cast<char>(0);
 }
 
-int 
+galay::ProtoJudgeType 
 galay::protocol::dns::Dns_Response::DecodePdu(std::string &buffer)
 {
     char *begin = new char[buffer.length()];
@@ -140,7 +146,7 @@ galay::protocol::dns::Dns_Response::DecodePdu(std::string &buffer)
 
     for (int i = 0; i < m_header.m_questions; i++)
     {
-        Dns_Question q;
+        DnsQuestion q;
         int len = DnsParseName((unsigned char *)begin, (unsigned char *)temp, q.m_qname);
         temp += (len);
         unsigned short qtype;
@@ -156,7 +162,7 @@ galay::protocol::dns::Dns_Response::DecodePdu(std::string &buffer)
 
     for (int i = 0; i < m_header.m_answers_RRs; i++)
     {
-        Dns_Answer a;
+        DnsAnswer a;
         int flag = static_cast<int>(temp[0]);
         int len = DnsParseName((unsigned char *)begin, (unsigned char *)temp, a.m_aname);
         temp += len;
@@ -183,7 +189,7 @@ galay::protocol::dns::Dns_Response::DecodePdu(std::string &buffer)
 
     delete[] begin;
     buffer.clear();
-    return 0;
+    return ProtoJudgeType::kProtoFinished;
 }
 
 bool 
@@ -262,6 +268,13 @@ galay::protocol::dns::Dns_Response::DnsParseName(unsigned char *buffer, unsigned
         }
     }
     return alen + 1;
+}
+
+
+std::string 
+galay::protocol::dns::Dns_Response::EncodePdu()
+{
+    return "";
 }
 
 void 

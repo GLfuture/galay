@@ -26,14 +26,14 @@ galay::GY_Controller::AddTimer(uint64_t during, uint32_t exec_times,std::functio
     return this->m_connector.lock()->AddTimer(during, exec_times, std::forward<std::function<std::any()>&&>(func));
 }
 
-galay::protocol::GY_TcpRequest::ptr
+galay::protocol::GY_Request::ptr
 galay::GY_Controller::GetRequest()
 {
     return this->m_connector.lock()->GetRequest();
 }
 
 void 
-galay::GY_Controller::PushResponse(galay::protocol::GY_TcpResponse::ptr response)
+galay::GY_Controller::PushResponse(galay::protocol::GY_Response::ptr response)
 {
     this->m_connector.lock()->PushResponse(response);
 }

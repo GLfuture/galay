@@ -3,47 +3,33 @@
 
 #include <string>
 #include <memory>
-#include "../kernel/base.h"
+#include "../common/base.h"
+#include "../common/reflection.h"
 
 namespace galay
 {
     namespace protocol
     {
-        class GY_TcpRequest
-        {
+
+        class GY_Request{
         public:
-            using ptr = std::shared_ptr<GY_TcpRequest>;
-            using wptr = std::weak_ptr<GY_TcpRequest>;
-            using uptr = std::unique_ptr<GY_TcpRequest>;
+            using ptr = std::shared_ptr<GY_Request>;
+            using wptr = std::weak_ptr<GY_Request>;
+            using uptr = std::unique_ptr<GY_Request>;
             virtual ProtoJudgeType DecodePdu(std::string &buffer) = 0;
             virtual void Clear() = 0;
         };
 
-        class GY_TcpResponse
-        {
+        class GY_Response{
         public:
-            using ptr = std::shared_ptr<GY_TcpResponse>;
-            using wptr = std::weak_ptr<GY_TcpResponse>;
-            using uptr = std::unique_ptr<GY_TcpResponse>;
+            using ptr = std::shared_ptr<GY_Response>;
+            using wptr = std::weak_ptr<GY_Response>;
+            using uptr = std::unique_ptr<GY_Response>;
             virtual std::string EncodePdu() = 0;
             virtual void Clear() = 0;
+            
         };
-
-        class GY_UdpRequest
-        {
-        public:
-            using ptr = std::shared_ptr<GY_UdpRequest>;
-            virtual int DecodePdu(std::string &buffer) = 0;
-            virtual void Clear() = 0;
-        };
-
-        class GY_UdpResponse
-        {
-        public:
-            using ptr = std::shared_ptr<GY_UdpResponse>;
-            virtual std::string EncodePdu() = 0;
-            virtual void Clear() = 0;
-        };
+        
     }
 }
 

@@ -1,6 +1,7 @@
 #include "objector.h"
 #include "task.h"
 #include "waitgroup.h"
+#include "../common/reflection.h"
 #include <spdlog/spdlog.h>
 
 
@@ -328,23 +329,23 @@ galay::GY_Connector::GetContext()
     return std::move(this->m_context);
 }
 
-galay::protocol::GY_TcpRequest::ptr 
+galay::protocol::GY_Request::ptr 
 galay::GY_Connector::GetRequest()
 {
-    protocol::GY_TcpRequest::ptr request = m_requests.front();
+    protocol::GY_Request::ptr request = m_requests.front();
     m_requests.pop();
     return request;
 }
 
 void 
-galay::GY_Connector::PushResponse(galay::protocol::GY_TcpResponse::ptr response)
+galay::GY_Connector::PushResponse(galay::protocol::GY_Response::ptr response)
 {
     m_responses.push(response);
     m_SendCoroutine.Resume();
 }
 
 void 
-galay::GY_Connector::PushRequest(galay::protocol::GY_TcpRequest::ptr request)
+galay::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
 {
     m_requests.push(request);
     if(this->m_WaitingForRequest){
@@ -352,10 +353,10 @@ galay::GY_Connector::PushRequest(galay::protocol::GY_TcpRequest::ptr request)
     }
 }
 
-galay::protocol::GY_TcpResponse::ptr 
+galay::protocol::GY_Response::ptr 
 galay::GY_Connector::GetResponse()
 {
-    protocol::GY_TcpResponse::ptr response = m_responses.front();
+    protocol::GY_Response::ptr response = m_responses.front();
     m_responses.pop();
     return response;
 }
@@ -444,7 +445,11 @@ galay::GY_Connector::CoReceiveExec()
         co_await std::suspend_always{};
         m_receiver->ExecuteTask();
         while(1){
-            if(!m_tempRequest) m_tempRequest = g_tcp_protocol_factory->CreateRequest();
+            if(!m_tempRequest) m_tempRequest = GY_RequestFactory<>::Instance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
+            if(!m_tempRequest) {
+                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail]",__FILE__,__LINE__);
+                break;
+            }
             std::string& buffer = m_receiver->GetRBuffer();
             if(buffer.length() == 0) break;
             ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);

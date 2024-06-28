@@ -4,8 +4,8 @@
 #include <map>
 #include <functional>
 #include <openssl/ssl.h>
+#include "../common/base.h"
 #include "controller.h"
-#include "global.h"
 
 namespace galay {
 
@@ -61,6 +61,7 @@ namespace galay {
         virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() = 0;
         virtual bool GetIsSSL() = 0;
         virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
+        virtual std::string GetTypeName(DataType type) = 0;
         ~GY_TcpServerBuilderBase() = default;
     };
 
@@ -95,6 +96,7 @@ namespace galay {
         virtual std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> GetIllegalFunction() override;
         virtual bool GetIsSSL() override;
         virtual const GY_SSLConfig::ptr GetSSLConfig() override;
+        virtual std::string GetTypeName(DataType type) override;
         ~GY_TcpServerBuilder();
     protected:
         std::atomic_char16_t m_backlog;
@@ -108,6 +110,8 @@ namespace galay {
         std::function<GY_TcpCoroutine<galay::CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
         std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::string&,std::string&)> m_illegalfunc;
         GY_SSLConfig::ptr m_ssl_config;
+
+        std::unordered_map<int,std::string> m_typeNames;
     };
 
     class GY_HttpRouter;

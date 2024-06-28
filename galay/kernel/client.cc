@@ -427,14 +427,14 @@ galay::DnsAsyncClient::QueryA(std::queue<std::string> domains)
     }
     int num = domains.size();
     protocol::dns::Dns_Request request;
-    protocol::dns::Dns_Header header;
+    protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
     header.m_id = galay::util::Random::random(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
-    galay::protocol::dns::Dns_Question question;
+    galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;
     question.m_type = galay::protocol::dns::kDnsQueryA;
-    std::queue<galay::protocol::dns::Dns_Question> questions;
+    std::queue<galay::protocol::dns::DnsQuestion> questions;
     while(!domains.empty())
     {
         std::string domain = domains.front();
@@ -462,14 +462,14 @@ galay::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
     }
     int num = domains.size();
     protocol::dns::Dns_Request request;
-    protocol::dns::Dns_Header header;
+    protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
     header.m_id = galay::util::Random::random(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
-    galay::protocol::dns::Dns_Question question;
+    galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;
     question.m_type = galay::protocol::dns::kDnsQueryAAAA;
-    std::queue<galay::protocol::dns::Dns_Question> questions;
+    std::queue<galay::protocol::dns::DnsQuestion> questions;
     while(!domains.empty())
     {
         std::string domain = domains.front();
