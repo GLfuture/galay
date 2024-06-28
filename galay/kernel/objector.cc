@@ -445,7 +445,7 @@ galay::GY_Connector::CoReceiveExec()
         co_await std::suspend_always{};
         m_receiver->ExecuteTask();
         while(1){
-            if(!m_tempRequest) m_tempRequest = GY_RequestFactory<>::Instance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
+            if(!m_tempRequest) m_tempRequest = GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
             if(!m_tempRequest) {
                 spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail]",__FILE__,__LINE__);
                 break;
