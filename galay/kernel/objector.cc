@@ -338,7 +338,7 @@ galay::GY_Connector::GetRequest()
 }
 
 void 
-galay::GY_Connector::PushResponse(galay::protocol::GY_Response::ptr response)
+galay::GY_Connector::PushResponse(std::string&& response)
 {
     m_responses.push(response);
     m_SendCoroutine.Resume();
@@ -351,14 +351,6 @@ galay::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
     if(this->m_WaitingForRequest){
         m_Maincoroutine.Resume();
     }
-}
-
-galay::protocol::GY_Response::ptr 
-galay::GY_Connector::GetResponse()
-{
-    protocol::GY_Response::ptr response = m_responses.front();
-    m_responses.pop();
-    return response;
 }
 
 void 
@@ -447,7 +439,7 @@ galay::GY_Connector::CoReceiveExec()
         while(1){
             if(!m_tempRequest) m_tempRequest = GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
             if(!m_tempRequest) {
-                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail]",__FILE__,__LINE__);
+                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
                 break;
             }
             std::string& buffer = m_receiver->GetRBuffer();
@@ -476,8 +468,8 @@ galay::GY_Connector::CoSendExec()
         co_await std::suspend_always{};
         while (!m_responses.empty())
         {
-            auto response = GetResponse();
-            m_sender->AppendWBuffer(response->EncodePdu());
+            m_sender->AppendWBuffer(std::move(m_responses.front()));
+            m_responses.pop();
         }
         m_sender->ExecuteTask();
         if(m_sender->WBufferEmpty()){

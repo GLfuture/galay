@@ -68,8 +68,33 @@ galay::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()
     m_userfunc = nullptr;
     m_is_ssl = false;
     m_ssl_config = nullptr;
-    m_typeNames[kDataRequest] = REQ::GetTypeName();
-    m_typeNames[kDataResponse] = RESP::GetTypeName();
+    char *szDemangleName = nullptr;
+#ifdef __GNUC__
+    szDemangleName = abi::__cxa_demangle(typeid(REQ).name(), nullptr, nullptr, nullptr);
+#else
+    szDemangleName = abi::__cxa_demangle(typeid(REQ).name(), nullptr, nullptr, nullptr);
+#endif
+    if (nullptr != szDemangleName)
+    {
+        m_typeNames[kDataRequest] = szDemangleName;
+        free(szDemangleName);
+    }
+
+    szDemangleName = nullptr;
+#ifdef __GNUC__
+    szDemangleName = abi::__cxa_demangle(typeid(RESP).name(), nullptr, nullptr, nullptr);
+#else
+    szDemangleName = abi::__cxa_demangle(typeid(RESP).name(), nullptr, nullptr, nullptr);
+#endif
+    if (nullptr != szDemangleName)
+    {
+        m_typeNames[kDataResponse] = szDemangleName;
+        free(szDemangleName);
+    }
+    if(m_typeNames[kDataRequest].empty() || m_typeNames[kDataResponse].empty()) {
+        spdlog::error("[{}:{}] [protocol type name is empty]", __FILE__, __LINE__);
+        exit(0);
+    }
 }
 
 template<galay::Tcp_Request REQ,galay::Tcp_Response RESP>

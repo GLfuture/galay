@@ -38,7 +38,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>Not Found</body></html>";
         response->SetBody(std::move(body));
     }
-    ctrl.lock()->PushResponse(response);
+    ctrl.lock()->PushResponse(response->EncodePdu());
     co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 

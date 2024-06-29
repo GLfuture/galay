@@ -69,7 +69,7 @@ namespace galay
         
         GY_DynamicCreator();
         static std::shared_ptr<T> CreateObject(Targs &&...args);
-        static std::string GetTypeName();
+        static const std::string GetTypeName();
         virtual ~GY_DynamicCreator();
     private:
         static Register m_register;

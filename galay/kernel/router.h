@@ -21,6 +21,7 @@ namespace galay
         
     private:
         std::unordered_map<std::string,std::unordered_map<std::string,std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::weak_ptr<GY_HttpController>)>>> m_routes;
+        galay::GY_TcpCoroutine<galay::CoroutineStatus> m_coroBusiness;
     };
 }
 

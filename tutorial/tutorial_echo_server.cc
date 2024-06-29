@@ -3,10 +3,6 @@
 #include <spdlog/spdlog.h>
 #include <mutex>
 #include <signal.h>
-
-#define ILLEGAL_NOT_CLOSE 0
-#define ILLEGAL_DELAY_CLOSE 1
-#define ILLEGAL_IMMEDIATELY_CLOSE 0
 galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wptr ctrl)
 {
     auto request = ctrl.lock()->GetRequest();
@@ -16,33 +12,26 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
     response->SetHeadPair({"Content-Type", "text/html"});
     std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
     response->SetBody(std::move(body));
-    ctrl.lock()->PushResponse(response);
+    ctrl.lock()->PushResponse(response->EncodePdu());
+    galay::WaitGroup group;
+    group.Add(1);
+    //模拟耗时任务
+    std::thread th([ctrl,&group](){
+        std::cout << "start ....\n";
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        if(!ctrl.expired()) ctrl.lock()->PushResponse("end....\n");
+        group.Done();
+    });
+    //一定要detach,不能是join，否则线程内唤醒协程会死锁
+    th.detach();
+    std::cout << "wait....\n";
+    co_await group.Wait();
     if(request->GetHeadValue("connection").compare("close") == 0){
         ctrl.lock()->Close();
     }
     ctrl.lock()->Done();
     co_return galay::CoroutineStatus::kCoroutineFinished;
 }
-
-#if ILLEGAL_NOT_CLOSE
-galay::GY_TcpCoroutine<galay::TaskStatus> illegal(std::string& rbuffer,std::string& wbuffer)
-{
-    wbuffer = "your protocol is illegal , please try again";
-    co_return galay::TaskStatus::GY_TASK_SEND;
-}
-#elif ILLEGAL_DELAY_CLOSE
-galay::GY_TcpCoroutine<galay::CoroutineStatus> illegal(std::string& rbuffer,std::string& wbuffer)
-{
-    wbuffer = "your protocol is illegal , please try again";
-    co_return galay::CoroutineStatus::kCoroutineFinished;
-}
-#elif ILLEGAL_IMMEDIATELY_CLOSE
-galay::GY_TcpCoroutine<galay::TaskStatus> illegal(std::string& rbuffer,std::string& wbuffer)
-{
-    wbuffer = "your protocol is illegal , please try again";
-    co_return galay::TaskStatus::GY_TASK_IMMEDIATELY_CLOSE;
-}
-#endif
 
 galay::GY_TcpServer::ptr server;
 

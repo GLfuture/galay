@@ -13,11 +13,10 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
     response->SetHeadPair({"Content-Type", "text/html"});
     std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
     response->SetBody(std::move(body));
-    ctrl.lock()->PushResponse(response);
+    ctrl.lock()->PushResponse(response->EncodePdu());
     if(request->GetHeadValue("connection").compare("close") == 0){
         ctrl.lock()->Close();
     }
-    ctrl.lock()->Done();
     co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 

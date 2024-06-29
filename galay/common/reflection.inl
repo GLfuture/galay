@@ -121,7 +121,7 @@ GY_DynamicCreator<type, T, Targs...>::CreateObject(Targs &&...args)
 }
 
 template <FactoryType type, typename T, typename... Targs>
-std::string 
+const std::string 
 GY_DynamicCreator<type, T, Targs...>::GetTypeName()
 {
     return m_typeName;

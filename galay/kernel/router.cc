@@ -36,7 +36,7 @@ galay::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
         {
             group.Add(1);
             http_ctrl->SetRequest(request);
-            router->second(http_ctrl);
+            m_coroBusiness = router->second(http_ctrl);
         }
         else
         {
@@ -47,7 +47,7 @@ galay::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
             response->SetHeadPair({"Content-Type", "text/html"});
             response->SetHeadPair({"Server", "galay server"});
             response->SetBody("<html><head><meta charset=\"utf-8\"><title>404</title></head><body>Not Found</body></html>");
-            ctrl.lock()->PushResponse(response);
+            ctrl.lock()->PushResponse(response->EncodePdu());
         }
     }
     else
@@ -59,7 +59,7 @@ galay::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
         response->SetHeadPair({"Content-Type", "text/html"});
         response->SetHeadPair({"Server", "galay server"});
         response->SetBody("<html><head><meta charset=\"utf-8\"><title>405</title></head><body>Method Not Allowed</body></html>");
-        ctrl.lock()->PushResponse(response);
+        ctrl.lock()->PushResponse(response->EncodePdu());
     }
     co_await group.Wait();
     ctrl.lock()->Done();

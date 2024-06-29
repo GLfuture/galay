@@ -6,6 +6,8 @@
 #include <openssl/ssl.h>
 #include "../common/base.h"
 #include "controller.h"
+#include <spdlog/spdlog.h>
+
 
 namespace galay {
 

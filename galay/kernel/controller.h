@@ -23,7 +23,7 @@ namespace galay {
         bool IsClosed();
         void SetContext(std::any&& context);
         protocol::GY_Request::ptr GetRequest();
-        void PushResponse(protocol::GY_Response::ptr response);
+        void PushResponse(std::string&& response);
         std::any&& GetContext();
         std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func);
         //协程结束时必须调用
@@ -49,7 +49,7 @@ namespace galay {
         void Done();
         void Close();
         protocol::http::Http1_1_Request::ptr GetRequest();
-        void PushResponse(protocol::http::Http1_1_Response::ptr response);
+        void PushResponse(std::string&& response);
     protected:
         void SetWaitGroup(WaitGroup* waitgroup);
         void SetRequest(protocol::http::Http1_1_Request::ptr request);

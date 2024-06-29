@@ -10,14 +10,14 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test_http_proxy(galay::GY_HttpCon
 {
     auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
+    client.KeepAlive();
     auto response1 = co_await client.Get("http://183.2.172.42:80");
     client.Close();
     response->SetBody(response1->GetBody());
     response->SetStatus(response1->GetStatus());
     response->SetVersion(response1->GetVersion());
     response->SetHeaders(response1->GetHeaders());
-    ctrl.lock()->PushResponse(response);
-    ctrl.lock()->Done();
+    ctrl.lock()->PushResponse(response->EncodePdu());
     co_return galay::CoroutineStatus::kCoroutineFinished;
 }
 
@@ -34,10 +34,11 @@ void signal_handler(int signo)
 int main()
 {
     signal(SIGINT,signal_handler);
-    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::info);
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
-    router->Get("/echo",test_http_proxy);
-    galay::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8080,router);
+    router->Get("/",test_http_proxy);
+    //std::cout << "DataRequest type name: " << galay::protocol::http::Http1_1_Request::GetTypeName() << std::endl;
+    galay::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8083,router);
     server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;

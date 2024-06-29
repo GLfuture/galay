@@ -177,7 +177,7 @@ namespace galay
         void SetContext(std::any&& context);
         std::any&& GetContext();
         galay::protocol::GY_Request::ptr GetRequest();
-        void PushResponse(galay::protocol::GY_Response::ptr response);
+        void PushResponse(std::string&& response);
         std::shared_ptr<galay::Timer> AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func);
         virtual void SetEventType(int event_type) override;
         virtual void ExecuteTask() override;
@@ -189,7 +189,6 @@ namespace galay
         galay::GY_TcpCoroutine<galay::CoroutineStatus> CoSendExec();
 
         void PushRequest(galay::protocol::GY_Request::ptr request);
-        galay::protocol::GY_Response::ptr GetResponse();
     private:
         int m_fd;
         bool m_is_ssl_accept;
@@ -206,7 +205,7 @@ namespace galay
         GY_TcpCoroutine<CoroutineStatus> m_SendCoroutine;
         protocol::GY_Request::ptr m_tempRequest;
         std::queue<protocol::GY_Request::ptr> m_requests;
-        std::queue<protocol::GY_Response::ptr> m_responses;
+        std::queue<std::string> m_responses;
         std::any m_context;
     };
 

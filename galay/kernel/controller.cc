@@ -33,9 +33,9 @@ galay::GY_Controller::GetRequest()
 }
 
 void 
-galay::GY_Controller::PushResponse(galay::protocol::GY_Response::ptr response)
+galay::GY_Controller::PushResponse(std::string&& response)
 {
-    this->m_connector.lock()->PushResponse(response);
+    this->m_connector.lock()->PushResponse(std::forward<std::string>(response));
 }
 
 std::any&&
@@ -125,9 +125,9 @@ galay::GY_HttpController::GetRequest()
 
 
 void 
-galay::GY_HttpController::PushResponse(protocol::http::Http1_1_Response::ptr response)
+galay::GY_HttpController::PushResponse(std::string&& response)
 {
-    this->m_ctrl.lock()->PushResponse(response);
+    this->m_ctrl.lock()->PushResponse(std::forward<std::string>(response));
 }
 
 void 
