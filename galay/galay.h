@@ -2,6 +2,7 @@
 #define GALAY_H
 
 //common
+#include "common/base.h"
 
 //kernel
 #include "kernel/client.h"
@@ -24,12 +25,28 @@
 
 namespace galay
 {
-    class GY_CoreBase
+    class GY_TcpCoreBase
     {
     public:
-        using ptr = std::shared_ptr<GY_CoreBase>;
-        using wptr = std::weak_ptr<GY_CoreBase>;
-        using uptr = std::unique_ptr<GY_CoreBase>;
+        using ptr = std::shared_ptr<GY_TcpCoreBase>;
+        using wptr = std::weak_ptr<GY_TcpCoreBase>;
+        using uptr = std::unique_ptr<GY_TcpCoreBase>;
+        using GY_TcpCoroutine = galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>;
+        using GY_Controller = galay::kernel::GY_Controller;
+        
+        virtual GY_TcpCoroutine CoreBusiness(GY_Controller::wptr ctrl) = 0;
+    };
+
+    class GY_HttpCoreBase
+    {
+    public:
+        using ptr = std::shared_ptr<GY_HttpCoreBase>;
+        using wptr = std::weak_ptr<GY_HttpCoreBase>;
+        using uptr = std::unique_ptr<GY_HttpCoreBase>;
+        using GY_TcpCoroutine = galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>;
+        using GY_HttpController = galay::kernel::GY_HttpController;
+
+        virtual GY_TcpCoroutine CoreBusiness(GY_HttpController::wptr ctrl) = 0;
     };
 }
 

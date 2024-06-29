@@ -2,7 +2,7 @@
 #include <thread>
 #include <iostream>
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> func(std::thread& th)
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> func(std::thread& th)
 {
     std::cout << "func start\n";
     galay::kernel::WaitGroup group;

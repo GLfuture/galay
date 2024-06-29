@@ -4,9 +4,8 @@
 #include <map>
 #include <functional>
 #include <openssl/ssl.h>
-#include "../common/base.h"
-#include "controller.h"
 #include <spdlog/spdlog.h>
+#include "controller.h"
 
 namespace galay
 {
@@ -43,8 +42,7 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpServerBuilderBase>;
             using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
             // nessaray
-            virtual void SetIllegalFunction(std::function<GY_TcpCoroutine<CoroutineStatus>(std::string &, std::string &)> func) = 0;
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)>> port_func) = 0;
+            virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) = 0;
             virtual void InitSSLServer(bool is_ssl) = 0;
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) = 0;
             virtual void SetThreadNum(uint16_t threadnum) = 0;
@@ -62,15 +60,14 @@ namespace galay
             virtual uint16_t GetScheWaitTime() = 0;
             virtual uint32_t GetReadBufferLen() = 0;
             virtual uint16_t GetPort() = 0;
-            virtual std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
-            virtual std::function<GY_TcpCoroutine<CoroutineStatus>(std::string &, std::string &)> GetIllegalFunction() = 0;
+            virtual std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
             virtual bool GetIsSSL() = 0;
             virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
-            virtual std::string GetTypeName(galay::common::DataType type) = 0;
+            virtual std::string GetTypeName(galay::common::ClassNameType type) = 0;
             ~GY_TcpServerBuilderBase() = default;
         };
 
-        template <galay::common::Tcp_Request REQ, galay::common::Tcp_Response RESP>
+        template <galay::common::TcpRequest REQ, galay::common::TcpResponse RESP>
         class GY_TcpServerBuilder : public GY_TcpServerBuilderBase
         {
         public:
@@ -79,8 +76,9 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpServerBuilder>;
             GY_TcpServerBuilder();
             // nessaray
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
-            virtual void SetIllegalFunction(std::function<GY_TcpCoroutine<CoroutineStatus>(std::string &, std::string &)> func) override;
+            
+            virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
+            //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;
             virtual void SetThreadNum(uint16_t threadnum) override;
             virtual void SetBacklog(uint16_t backlog) override;
@@ -88,7 +86,9 @@ namespace galay
             virtual void SetScheWaitTime(uint16_t sche_wait_time) override;
             virtual void SetReadBufferLen(uint32_t rbuffer_len) override;
             virtual void SetPort(uint16_t port) override;
+            //开启SSL env
             virtual void InitSSLServer(bool is_ssl) override;
+            virtual const GY_SSLConfig::ptr GetSSLConfig() override;
             // 每一个端口对应的线程数
             virtual uint16_t GetThreadNum() override;
             virtual uint16_t GetBacklog() override;
@@ -97,11 +97,9 @@ namespace galay
             virtual uint16_t GetScheWaitTime() override;
             virtual uint32_t GetReadBufferLen() override;
             virtual uint16_t GetPort() override;
-            virtual std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
-            virtual std::function<GY_TcpCoroutine<CoroutineStatus>(std::string &, std::string &)> GetIllegalFunction() override;
+            virtual std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
             virtual bool GetIsSSL() override;
-            virtual const GY_SSLConfig::ptr GetSSLConfig() override;
-            virtual std::string GetTypeName(galay::common::DataType type) override;
+            virtual std::string GetTypeName(galay::common::ClassNameType type) override;
             ~GY_TcpServerBuilder();
 
         protected:
@@ -113,8 +111,7 @@ namespace galay
             std::atomic_int16_t m_sche_wait_time;
             std::atomic<galay::common::SchedulerType> m_scheduler_type;
             std::atomic_bool m_is_ssl;
-            std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
-            std::function<GY_TcpCoroutine<CoroutineStatus>(std::string &, std::string &)> m_illegalfunc;
+            std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
             GY_SSLConfig::ptr m_ssl_config;
 
             std::unordered_map<int, std::string> m_typeNames;
@@ -129,11 +126,11 @@ namespace galay
             using wptr = std::weak_ptr<GY_HttpServerBuilder>;
             using uptr = std::unique_ptr<GY_HttpServerBuilder>;
             GY_HttpServerBuilder() = default;
-            virtual std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
+            virtual std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
             void SetRouter(std::shared_ptr<GY_HttpRouter> router);
 
         private:
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<GY_TcpCoroutine<CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
+            virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
 
         private:
             std::shared_ptr<GY_HttpRouter> m_router;

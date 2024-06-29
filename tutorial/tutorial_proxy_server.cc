@@ -6,7 +6,7 @@
 //必须放在外面，不然在多线程中唤醒协程，协程中析构client时会析构future导致死锁
 galay::kernel::GY_HttpAsyncClient client;
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> test_http_proxy(galay::kernel::GY_HttpController::wptr ctrl)
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> test_http_proxy(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
@@ -18,7 +18,7 @@ galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> test_http_proxy(g
     response->SetVersion(response1->GetVersion());
     response->SetHeaders(response1->GetHeaders());
     ctrl.lock()->PushResponse(response->EncodePdu());
-    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
+    co_return galay::common::CoroutineStatus::kCoroutineFinished;
 }
 
 galay::kernel::GY_TcpServer::ptr server;

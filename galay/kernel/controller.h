@@ -1,10 +1,9 @@
 #ifndef GALAY_CONTROLLER_H
 #define GALAY_CONTROLLER_H
-#include "coroutine.h"
-#include "awaiter.h"
-#include "waitgroup.h"
 #include <functional>
 #include <any>
+#include "../common/base.h"
+#include "waitgroup.h"
 
 namespace galay
 {

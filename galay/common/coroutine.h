@@ -7,7 +7,7 @@
 
 namespace galay
 {
-    namespace kernel
+    namespace common
     {
         enum CoroutineStatus
         {

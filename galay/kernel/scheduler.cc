@@ -11,7 +11,6 @@ galay::kernel::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::p
     this->m_stop = false;
     this->m_builder = builder;
     this->m_userFunc = builder->GetUserFunction();
-    this->m_illegalFunc = builder->GetIllegalFunction();
     this->m_timerfd = 0;
 }
 
@@ -24,7 +23,7 @@ galay::kernel::GY_SelectScheduler::GetTcpServerBuilder()
 /// @brief 
 /// @param controller 
 /// @return coroutine
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_SelectScheduler::UserFunction(GY_Controller::ptr controller)
 {
     if(!this->m_userFunc) return {};
@@ -32,7 +31,7 @@ galay::kernel::GY_SelectScheduler::UserFunction(GY_Controller::ptr controller)
 }
 
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_SelectScheduler::IllegalFunction(std::string& rbuffer,std::string& wbuffer)
 {
     if(!this->m_illegalFunc) return {};
@@ -206,7 +205,6 @@ galay::kernel::GY_EpollScheduler::GY_EpollScheduler(GY_TcpServerBuilderBase::ptr
     this->m_events = new epoll_event[builder->GetMaxEventSize()];
     this->m_stop = false;
     this->m_userFunc = builder->GetUserFunction();
-    this->m_illegalFunc = builder->GetIllegalFunction();
 }
 
 galay::kernel::GY_TcpServerBuilderBase::wptr 
@@ -276,14 +274,14 @@ galay::kernel::GY_EpollScheduler::Start()
     
 }
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_EpollScheduler::UserFunction(GY_Controller::ptr controller) 
 {
     if(!this->m_userFunc) return {};
     return this->m_userFunc(controller);
 }
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_EpollScheduler::IllegalFunction(std::string& rbuffer,std::string& wbuffer) 
 {
     return this->m_illegalFunc(rbuffer,wbuffer);

@@ -3,6 +3,7 @@
 #include <string>
 #include <concepts>
 #include <memory>
+#include "../common/coroutine.h"
 
 namespace galay
 {
@@ -37,7 +38,7 @@ namespace galay
         };
 
         template <typename T>
-        concept Tcp_Request = requires(T a) {
+        concept TcpRequest = requires(T a) {
             {
                 // 会附带解析头部的职责
                 a.DecodePdu(std::declval<std::string &>())
@@ -48,7 +49,7 @@ namespace galay
             } -> std::same_as<void>;
         };
         template <typename T>
-        concept Tcp_Response = requires(T a) {
+        concept TcpResponse = requires(T a) {
             {
                 a.EncodePdu()
             } -> std::same_as<std::string>;
@@ -59,7 +60,7 @@ namespace galay
         };
 
         template <typename T>
-        concept Udp_Request = requires(T a) {
+        concept UdpRequest = requires(T a) {
             {
                 a.DecodePdu(std::declval<std::string &>())
             } -> std::same_as<ProtoJudgeType>;
@@ -70,13 +71,21 @@ namespace galay
         };
 
         template <typename T>
-        concept Udp_Response = requires(T a) {
+        concept UdpResponse = requires(T a) {
             {
                 a.EncodePdu()
             } -> std::same_as<std::string>;
 
             {
                 a.Clear()
+            } -> std::same_as<void>;
+        };
+
+        template <typename T>
+        concept TcpCoreType = requires(T a) {
+            {
+                //To do
+                a.Hello()
             } -> std::same_as<void>;
         };
 
@@ -93,10 +102,11 @@ namespace galay
             kResponseFactory, // response
         };
 
-        enum DataType
+        enum ClassNameType
         {
-            kDataRequest,  // request data
-            kDataResponse, // response data
+            kClassNameRequest,  // protocol request 
+            kClassNameResponse, // protocol response 
+            kClassNameCoreBusinuess,    //核心业务类
         };
     }
 }

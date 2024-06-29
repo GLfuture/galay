@@ -8,10 +8,9 @@
 #include <shared_mutex>
 #include <any>
 #include <openssl/ssl.h>
-#include "../common/base.h"
 #include "awaiter.h"
-#include "coroutine.h"
-#include "../protocol/basic_protocol.h"
+#include "../common/base.h"
+
 
 namespace galay
 {
@@ -191,9 +190,9 @@ namespace galay
             virtual ~GY_Connector();
 
         private:
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> CoBusinessExec();
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> CoReceiveExec();
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> CoSendExec();
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> CoBusinessExec();
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> CoReceiveExec();
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> CoSendExec();
 
             void PushRequest(galay::protocol::GY_Request::ptr request);
 
@@ -207,10 +206,10 @@ namespace galay
             std::shared_ptr<galay::kernel::GY_Controller> m_controller;
             GY_Receiver::uptr m_receiver;
             GY_Sender::uptr m_sender;
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> m_Maincoroutine;
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> m_UserCoroutine;
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> m_RecvCoroutine;
-            galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> m_SendCoroutine;
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_Maincoroutine;
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_UserCoroutine;
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_RecvCoroutine;
+            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_SendCoroutine;
             protocol::GY_Request::ptr m_tempRequest;
             std::queue<protocol::GY_Request::ptr> m_requests;
             std::queue<std::string> m_responses;

@@ -1,7 +1,7 @@
 #ifndef GALAY_ROUTER_H
 #define GALAY_ROUTER_H
 
-#include "coroutine.h"
+#include "../common/coroutine.h"
 
 namespace galay
 {
@@ -15,16 +15,16 @@ namespace galay
             friend class GY_HttpServerBuilder;
 
         public:
-            void Get(const std::string &path, std::function<GY_TcpCoroutine<CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
-            void Post(const std::string &path, std::function<GY_TcpCoroutine<CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Get(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Post(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
 
         protected:
-            void RegisterRouter(const std::string &method, const std::string &path, std::function<GY_TcpCoroutine<CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
-            GY_TcpCoroutine<CoroutineStatus> RouteHttp(std::weak_ptr<GY_Controller> ctrl);
+            void RegisterRouter(const std::string &method, const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            common::GY_TcpCoroutine<common::CoroutineStatus> RouteHttp(std::weak_ptr<GY_Controller> ctrl);
 
         private:
-            std::unordered_map<std::string, std::unordered_map<std::string, std::function<GY_TcpCoroutine<CoroutineStatus>(std::weak_ptr<GY_HttpController>)>>> m_routes;
-            GY_TcpCoroutine<CoroutineStatus> m_coroBusiness;
+            std::unordered_map<std::string, std::unordered_map<std::string, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)>>> m_routes;
+            common::GY_TcpCoroutine<common::CoroutineStatus> m_coroBusiness;
         };
     }
 }

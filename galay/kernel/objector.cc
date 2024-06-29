@@ -405,7 +405,7 @@ galay::kernel::GY_Connector::SetSSLCtx(SSL_CTX* ctx)
     this->m_sender->SetSSL(this->m_ssl);
 }
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoBusinessExec()
 {
     co_await std::suspend_always{};
@@ -426,10 +426,10 @@ galay::kernel::GY_Connector::CoBusinessExec()
             this->m_scheduler.lock()->DelObjector(this->m_fd);
         }
     }
-    co_return kernel::kCoroutineFinished;
+    co_return common::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoReceiveExec()
 {
     while(1)
@@ -437,9 +437,9 @@ galay::kernel::GY_Connector::CoReceiveExec()
         co_await std::suspend_always{};
         m_receiver->ExecuteTask();
         while(1){
-            if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kDataRequest));
+            if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
             if(!m_tempRequest) {
-                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kDataRequest));
+                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
                 break;
             }
             std::string& buffer = m_receiver->GetRBuffer();
@@ -457,10 +457,10 @@ galay::kernel::GY_Connector::CoReceiveExec()
             }
         }
     }
-    co_return kernel::CoroutineStatus::kCoroutineFinished;
+    co_return common::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoSendExec()
 {
     while(1)
@@ -483,7 +483,7 @@ galay::kernel::GY_Connector::CoSendExec()
             this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
         }
     }
-    co_return kernel::CoroutineStatus::kCoroutineFinished;
+    co_return common::CoroutineStatus::kCoroutineFinished;
 }
 
 galay::kernel::GY_Connector::~GY_Connector()

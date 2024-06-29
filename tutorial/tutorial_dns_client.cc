@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 
 galay::kernel::DnsAsyncClient client("114.114.114.114");
-galay::kernel::GY_Coroutine<galay::kernel::CoroutineStatus> func()
+galay::common::GY_Coroutine<galay::common::CoroutineStatus> func()
 {
     std::queue<std::string> q;
     q.push("www.baidu.com");
@@ -34,7 +34,7 @@ galay::kernel::GY_Coroutine<galay::kernel::CoroutineStatus> func()
         }
     }
     client.Close();
-    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
+    co_return galay::common::CoroutineStatus::kCoroutineFinished;
 }
 
 int main()
