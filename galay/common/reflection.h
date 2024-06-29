@@ -3,6 +3,8 @@
 
 #include <functional>
 #include <unordered_map>
+#include <list>
+#include <iostream>
 #include "../protocol/basic_protocol.h"
 #include "../util/typename.h"
 
@@ -20,9 +22,21 @@ namespace galay
         class GY_Response;
     }
 
-
     namespace common
     {
+        
+        class GY_FactoryManager
+        {
+        public:
+            using uptr = std::unique_ptr<GY_FactoryManager>;
+            static void AddReleaseFunc(std::function<void()> func);
+            virtual ~GY_FactoryManager();
+        private:
+            static GY_FactoryManager::uptr m_FactoryManager;
+            std::list<std::function<void()>> m_ReleaseFunc;
+        };
+
+        //必须满足构造函数参数相同且都继承自同一基类
         template <typename... Targs>
         class GY_RequestFactory
         {
@@ -33,13 +47,13 @@ namespace galay
             static GY_RequestFactory<Targs...> *GetInstance();
             bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...args)> func);
             std::shared_ptr<galay::protocol::GY_Request> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_RequestFactory() = default;
 
+            virtual ~GY_RequestFactory() = default;
         private:
             GY_RequestFactory() = default;
 
         private:
-            static GY_RequestFactory<Targs...> *m_reqFactory;
+            static GY_RequestFactory* m_reqFactory;
             std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...)>> m_mapCreateFunction;
         };
 
@@ -54,12 +68,11 @@ namespace galay
             bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...args)> func);
             std::shared_ptr<galay::protocol::GY_Response> Create(const std::string &typeName, Targs &&...args);
             virtual ~GY_ResponseFactory() = default;
-
         private:
             GY_ResponseFactory() = default;
 
         private:
-            static GY_ResponseFactory<Targs...> *m_respFactory;
+            static GY_ResponseFactory* m_respFactory;
             std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...)>> m_mapCreateFunction;
         };
 
@@ -74,12 +87,12 @@ namespace galay
             bool Regist(const std::string &typeName, std::function<std::shared_ptr<GY_Base>(Targs &&...args)> func);
             std::shared_ptr<GY_Base> Create(const std::string &typeName, Targs &&...args);
             virtual ~GY_UserFactory() = default;
-
         private:
             GY_UserFactory() = default;
+            
 
         private:
-            static GY_UserFactory<Targs...> *m_userFactory;
+            static GY_UserFactory *m_userFactory;
             std::unordered_map<std::string, std::function<std::shared_ptr<GY_Base>(Targs &&...)>> m_mapCreateFunction;
         };
 
@@ -135,6 +148,8 @@ namespace galay
             inline void do_nothing() const {};
         };
 
+
+        
         #include "reflection.inl"
     }
 

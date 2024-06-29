@@ -5,7 +5,7 @@ if(MYSQL_FOUND OR ETCD_FOUND)
     list(APPEND MIDDLEWARE middleware)
 endif()
 
-set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security)
+set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security common)
 set(STATIC_LIB ${PROJECT_NAME}-static)
 set(SHARED_LIB ${PROJECT_NAME}-shared)
 

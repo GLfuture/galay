@@ -1,6 +1,7 @@
 #ifndef GALAY_REFLECION_INL
 #define GALAY_REFLECION_INL
 
+
 template <typename... Targs>
 galay::common::GY_RequestFactory<Targs...>* galay::common::GY_RequestFactory<Targs...>::m_reqFactory = nullptr;
 
@@ -10,7 +11,13 @@ galay::common::GY_RequestFactory<Targs...>::GetInstance()
 {
     if (m_reqFactory == nullptr)
     {
-        m_reqFactory = new GY_RequestFactory;
+        m_reqFactory =  new GY_RequestFactory;
+        GY_FactoryManager::AddReleaseFunc([](){
+            if(m_reqFactory){
+                delete m_reqFactory;
+                m_reqFactory = nullptr;
+            }
+        });
     }
     return m_reqFactory;
 }
@@ -37,7 +44,6 @@ galay::common::GY_RequestFactory<Targs...>::Create(const std::string &typeName, 
 }
 
 
-
 //response factory
 template <typename... Targs>
 galay::common::GY_ResponseFactory<Targs...> *galay::common::GY_ResponseFactory<Targs...>::m_respFactory = nullptr;
@@ -49,7 +55,13 @@ galay::common::GY_ResponseFactory<Targs...>::GetInstance()
 {
     if (m_respFactory == nullptr)
     {
-        m_respFactory = new GY_ResponseFactory();
+        m_respFactory = new GY_ResponseFactory ;
+        GY_FactoryManager::AddReleaseFunc([](){
+            if(m_respFactory){
+                delete m_respFactory;
+                m_respFactory = nullptr;
+            }
+        });
     }
     return m_respFactory;
 }
@@ -75,6 +87,7 @@ galay::common::GY_ResponseFactory<Targs...>::Create(const std::string &typeName,
     return nullptr;
 }
 
+
 //user factory
 template <typename... Targs>
 galay::common::GY_UserFactory<Targs...> *galay::common::GY_UserFactory<Targs...>::m_userFactory = nullptr;
@@ -86,7 +99,13 @@ galay::common::GY_UserFactory<Targs...>::GetInstance()
 {
     if (m_userFactory == nullptr)
     {
-        m_userFactory = new GY_UserFactory();
+        m_userFactory = new GY_UserFactory;
+        GY_FactoryManager::AddReleaseFunc([](){
+            if(m_userFactory){
+                delete m_userFactory;
+                m_userFactory = nullptr;
+            }
+        });
     }
     return m_userFactory;
 }
