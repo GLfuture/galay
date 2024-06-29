@@ -8,10 +8,19 @@
 
 namespace galay
 {
+
+    class GY_Base
+    {
+    public:
+        virtual ~GY_Base() = default;
+    };
+
     namespace protocol{
         class GY_Request;
         class GY_Response;
     }
+
+
     namespace common
     {
         template <typename... Targs>
@@ -55,29 +64,77 @@ namespace galay
         };
 
         template <typename... Targs>
-        GY_ResponseFactory<Targs...> *GY_ResponseFactory<Targs...>::m_respFactory = nullptr;
+        class GY_UserFactory
+        {
+        public:
+            using ptr = std::shared_ptr<GY_UserFactory>;
+            using uptr = std::unique_ptr<GY_UserFactory>;
+            using wptr = std::weak_ptr<GY_UserFactory>;
+            static GY_UserFactory<Targs...> *GetInstance();
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<GY_Base>(Targs &&...args)> func);
+            std::shared_ptr<GY_Base> Create(const std::string &typeName, Targs &&...args);
+            virtual ~GY_UserFactory() = default;
 
-        template <FactoryType type, typename T, typename... Targs>
+        private:
+            GY_UserFactory() = default;
+
+        private:
+            static GY_UserFactory<Targs...> *m_userFactory;
+            std::unordered_map<std::string, std::function<std::shared_ptr<GY_Base>(Targs &&...)>> m_mapCreateFunction;
+        };
+
+        template <typename BaseClass, typename T, typename... Targs>
+        class Register;
+        
+
+        template <typename BaseClass, typename T, typename... Targs>
         class GY_DynamicCreator
         {
         public:
-            struct Register
-            {
-                Register();
-                inline void do_nothing() const {};
-            };
-
             GY_DynamicCreator();
             static std::shared_ptr<T> CreateObject(Targs &&...args);
             static const std::string GetTypeName();
             virtual ~GY_DynamicCreator();
 
         private:
-            static Register m_register;
+            static Register<BaseClass, T, Targs...> m_register;
             static std::string m_typeName;
         };
+
+
+        template <typename BaseClass, typename T, typename... Targs>
+        class Register
+        {
+        public:
+            explicit Register();
+            inline void do_nothing() const {};
+        };
+
+        //偏特化
+        template <typename T, typename... Targs>
+        class Register<protocol::GY_Request,T,Targs...>
+        {
+        public:
+            explicit Register();
+            inline void do_nothing() const {};
+        };
+
+        template <typename T, typename... Targs>
+        class Register<protocol::GY_Response,T,Targs...>
+        {
+        public:
+            explicit Register();
+            inline void do_nothing() const {};
+        };
         
-        
+        template <typename T, typename... Targs>
+        class Register<GY_Base,T,Targs...>
+        {
+        public:
+            explicit Register();
+            inline void do_nothing() const {};
+        };
+
         #include "reflection.inl"
     }
 

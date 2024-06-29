@@ -1,6 +1,28 @@
 #include "../galay/galay.h"
 #include <iostream>
 
+class Base: public galay::GY_Base, public galay::common::GY_DynamicCreator<galay::GY_Base,Base>
+{
+public:
+    virtual void print()
+    {
+        std::cout << "Base" << std::endl;
+    }
+    
+    virtual ~Base() {}
+};
+
+class Child:public Base,galay::common::GY_DynamicCreator<galay::GY_Base,Child>
+{
+public:
+    virtual void print() override
+    {
+        std::cout << "Child" << std::endl;
+    }
+
+    virtual ~Child() {}
+};
+
 
 int main()
 {
@@ -13,5 +35,7 @@ int main()
     }else{
         std::cout << "create failed" << std::endl;
     }
+    std::shared_ptr<galay::GY_Base> ptr = galay::common::GY_UserFactory<>::GetInstance()->Create(galay::util::GetTypeName<Child>());
+    if(ptr) std::dynamic_pointer_cast<Base>(ptr)->print();
     return 0;
 }

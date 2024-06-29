@@ -108,13 +108,6 @@ namespace galay
             kEpollScheduler,  // epoll
         };
 
-        // factory type
-        enum FactoryType
-        {
-            kRequestFactory,  // request
-            kResponseFactory, // response
-        };
-
         enum ClassNameType
         {
             kClassNameRequest,  // protocol request 

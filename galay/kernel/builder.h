@@ -80,8 +80,8 @@ namespace galay
             GY_TcpServerBuilder();
             // nessaray
             // nessaray
-            template <common::TcpCoreType CoreType>
-            virtual void SetCoreBusiness(CoreType coreImpl);
+            // template <common::TcpCoreType CoreType>
+            // virtual void SetCoreBusiness(CoreType coreImpl);
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;

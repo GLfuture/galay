@@ -47,7 +47,7 @@ namespace galay
                 std::string m_body = "";                                    // body
             };
 
-            class Http1_1_Request : public Http1_1_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<galay::common::kRequestFactory,Http1_1_Request>
+            class Http1_1_Request : public Http1_1_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<GY_Request,Http1_1_Request>
             {
             private:
                 static std::unordered_set<std::string> m_std_methods;
@@ -84,7 +84,7 @@ namespace galay
                 std::unordered_map<std::string, std::string> m_arg_list; // 参数
             };
 
-            class Http1_1_Response : public Http1_1_Protocol, public GY_Response, public GY_Request, public galay::common::GY_DynamicCreator<galay::common::kResponseFactory,Http1_1_Response>
+            class Http1_1_Response : public Http1_1_Protocol, public GY_Response, public GY_Request, public galay::common::GY_DynamicCreator<GY_Response,Http1_1_Response>
             {
             public:
                 using ptr = std::shared_ptr<Http1_1_Response>;
