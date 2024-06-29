@@ -68,32 +68,11 @@ galay::kernel::GY_TcpServerBuilder<REQ,RESP>::GY_TcpServerBuilder()
     m_userfunc = nullptr;
     m_is_ssl = false;
     m_ssl_config = nullptr;
-    char *szDemangleName = nullptr;
-#ifdef __GNUC__
-    szDemangleName = abi::__cxa_demangle(typeid(REQ).name(), nullptr, nullptr, nullptr);
-#else
-    szDemangleName = abi::__cxa_demangle(typeid(REQ).name(), nullptr, nullptr, nullptr);
-#endif
-    if (nullptr != szDemangleName)
-    {
-        m_typeNames[common::kClassNameRequest] = szDemangleName;
-        free(szDemangleName);
-    }
-
-    szDemangleName = nullptr;
-#ifdef __GNUC__
-    szDemangleName = abi::__cxa_demangle(typeid(RESP).name(), nullptr, nullptr, nullptr);
-#else
-    szDemangleName = abi::__cxa_demangle(typeid(RESP).name(), nullptr, nullptr, nullptr);
-#endif
-    if (nullptr != szDemangleName)
-    {
-        m_typeNames[common::kClassNameResponse] = szDemangleName;
-        free(szDemangleName);
-    }
+    m_typeNames[common::kClassNameRequest] = util::GetTypeName<REQ>() ;
+    m_typeNames[common::kClassNameResponse] = util::GetTypeName<RESP>() ;
     if(m_typeNames[common::kClassNameRequest].empty() || m_typeNames[common::kClassNameResponse].empty()) {
         spdlog::error("[{}:{}] [protocol type name is empty]", __FILE__, __LINE__);
-        exit(0);
+        exit(-1);
     }
 }
 

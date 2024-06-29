@@ -3,8 +3,8 @@
 
 #include <functional>
 #include <unordered_map>
-#include <cxxabi.h>
 #include "../protocol/basic_protocol.h"
+#include "../util/typename.h"
 
 namespace galay
 {

@@ -41,9 +41,9 @@ namespace galay
             using ptr = std::shared_ptr<GY_TcpServerBuilderBase>;
             using uptr = std::unique_ptr<GY_TcpServerBuilderBase>;
             using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
-            // nessaray
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) = 0;
-            virtual void InitSSLServer(bool is_ssl) = 0;
+
+            //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) = 0;
             virtual void SetThreadNum(uint16_t threadnum) = 0;
             virtual void SetBacklog(uint16_t backlog) = 0;
@@ -51,6 +51,10 @@ namespace galay
             virtual void SetScheWaitTime(uint16_t sche_wait_time) = 0;
             virtual void SetReadBufferLen(uint32_t rbuffer_len) = 0;
             virtual void SetPort(uint16_t port) = 0;
+
+            //SSL env
+            virtual void InitSSLServer(bool is_ssl) = 0;
+            virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
 
             // 每一个端口对应的线程数
             virtual uint16_t GetThreadNum() = 0;
@@ -62,7 +66,6 @@ namespace galay
             virtual uint16_t GetPort() = 0;
             virtual std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
             virtual bool GetIsSSL() = 0;
-            virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
             virtual std::string GetTypeName(galay::common::ClassNameType type) = 0;
             ~GY_TcpServerBuilderBase() = default;
         };
@@ -76,7 +79,9 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpServerBuilder>;
             GY_TcpServerBuilder();
             // nessaray
-            
+            // nessaray
+            template <common::TcpCoreType CoreType>
+            virtual void SetCoreBusiness(CoreType coreImpl);
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;

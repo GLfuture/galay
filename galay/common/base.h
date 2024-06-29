@@ -7,6 +7,11 @@
 
 namespace galay
 {
+    namespace kernel
+    {
+        class GY_Controller;
+        class GY_HttpController;
+    }
     namespace common
     {
 #define DEFAULT_BACKLOG 128
@@ -85,8 +90,16 @@ namespace galay
         concept TcpCoreType = requires(T a) {
             {
                 //To do
-                a.Hello()
-            } -> std::same_as<void>;
+                a.CoreBusiness(std::declval<std::weak_ptr<kernel::GY_Controller>>)
+            } -> std::same_as<GY_TcpCoroutine<CoroutineStatus>>;
+        };
+
+        template <typename T>
+        concept HttpCoreType = requires(T a) {
+            {
+                //To do
+                a.CoreBusiness(std::declval<std::weak_ptr<kernel::GY_HttpController>>)
+            } -> std::same_as<GY_TcpCoroutine<CoroutineStatus>>;
         };
 
         enum SchedulerType

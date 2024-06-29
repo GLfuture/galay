@@ -83,17 +83,7 @@ typename std::string galay::common::GY_DynamicCreator<type, T, Targs...>::m_type
 template <galay::common::FactoryType type, typename T, typename... Targs>
 galay::common::GY_DynamicCreator<type, T, Targs...>::Register::Register()
 {
-    char *szDemangleName = nullptr;
-#ifdef __GNUC__
-    szDemangleName = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
-#else
-    szDemangleName = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
-#endif
-    if (nullptr != szDemangleName)
-    {
-        m_typeName = szDemangleName;
-        free(szDemangleName);
-    }
+    m_typeName = util::GetTypeName<T>();
     switch (type)
     {
     case kRequestFactory:
