@@ -47,7 +47,7 @@ namespace galay
                 std::string m_body = "";                                    // body
             };
 
-            class Http1_1_Request : public Http1_1_Protocol, public GY_Request, public GY_Response, public GY_DynamicCreator<kRequestFactory,Http1_1_Request>
+            class Http1_1_Request : public Http1_1_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<galay::common::kRequestFactory,Http1_1_Request>
             {
             private:
                 static std::unordered_set<std::string> m_std_methods;
@@ -61,13 +61,13 @@ namespace galay
                 // for server
                 std::string GetUri();
                 void SetUri(const std::string& uri);
-                ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::common::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 // for  client
                 std::string EncodePdu() override;
 
                 virtual void Clear() override;
             private:
-                ProtoJudgeType ParseHead(const std::string &buffer);
+                galay::common::ProtoJudgeType ParseHead(const std::string &buffer);
             private:
                 int ConvertUri(std::string aurl);
                 std::string EncodeUri(const std::string &s);
@@ -84,7 +84,7 @@ namespace galay
                 std::unordered_map<std::string, std::string> m_arg_list; // 参数
             };
 
-            class Http1_1_Response : public Http1_1_Protocol, public GY_Response, public GY_Request, public GY_DynamicCreator<kResponseFactory,Http1_1_Response>
+            class Http1_1_Response : public Http1_1_Protocol, public GY_Response, public GY_Request, public galay::common::GY_DynamicCreator<galay::common::kResponseFactory,Http1_1_Response>
             {
             public:
                 using ptr = std::shared_ptr<Http1_1_Response>;
@@ -170,13 +170,13 @@ namespace galay
 
                 std::string EncodePdu() override;
 
-                ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::common::ProtoJudgeType DecodePdu(std::string &buffer) override;
 
                 virtual void Clear() override;
                 // look for httplib's status https://github.com/yhirose/cpp-httplib/blob/master/httplib.h
                 const char *StatusMessage(int status);
             private:
-                ProtoJudgeType ParseHead(const std::string &buffer);
+                galay::common::ProtoJudgeType ParseHead(const std::string &buffer);
             private:
                 int m_header_len = 0;
                 int m_status = 0;

@@ -1,7 +1,7 @@
 #include "task.h"
 #include <spdlog/spdlog.h>
 
-galay::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_fd = CreateListenFd(this->m_scheduler.lock()->GetTcpServerBuilder());
@@ -19,7 +19,7 @@ galay::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler> schedu
     }
 }
 
-void galay::GY_CreateConnTask::Execute()
+void galay::kernel::GY_CreateConnTask::Execute()
 {
     while(1)
     {
@@ -28,7 +28,7 @@ void galay::GY_CreateConnTask::Execute()
 }
 
 int 
-galay::GY_CreateConnTask::CreateConn()
+galay::kernel::GY_CreateConnTask::CreateConn()
 {
     int connfd = IOFunction::NetIOFunction::TcpFunction::Accept(this->m_fd);
     if (connfd == -1)
@@ -76,7 +76,7 @@ galay::GY_CreateConnTask::CreateConn()
 }
 
 int 
-galay::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuilderBase> builder)
+galay::kernel::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuilderBase> builder)
 {
     int fd = IOFunction::NetIOFunction::TcpFunction::Sock();
     if (fd <= 0)
@@ -118,12 +118,12 @@ galay::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuilderBase> 
 
 
 int 
-galay::GY_CreateConnTask::GetFd()
+galay::kernel::GY_CreateConnTask::GetFd()
 {
     return this->m_fd;
 }
 
-galay::GY_CreateConnTask::~GY_CreateConnTask()
+galay::kernel::GY_CreateConnTask::~GY_CreateConnTask()
 {
     if(this->m_ssl_ctx) {
         IOFunction::NetIOFunction::TcpFunction::SSLDestory({},this->m_ssl_ctx);
@@ -132,31 +132,33 @@ galay::GY_CreateConnTask::~GY_CreateConnTask()
 
 }
 
-void galay::GY_RecvTask::RecvAll()
-{
-    Execute();
-}
-
-galay::GY_RecvTask::GY_RecvTask(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_RecvTask::GY_RecvTask(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_fd = fd;
 }
 
+
+void 
+galay::kernel::GY_RecvTask::RecvAll()
+{
+    Execute();
+}
+
 std::string&
-galay::GY_RecvTask::GetRBuffer()
+galay::kernel::GY_RecvTask::GetRBuffer()
 {
     return m_rbuffer;
 }
 
 void 
-galay::GY_RecvTask::SetSSL(SSL* ssl)
+galay::kernel::GY_RecvTask::SetSSL(SSL* ssl)
 {
     this->m_ssl = ssl;
 }
 
 void 
-galay::GY_RecvTask::Execute()
+galay::kernel::GY_RecvTask::Execute()
 {
     uint32_t BufferLen = m_scheduler.lock()->GetTcpServerBuilder().lock()->GetReadBufferLen();
     char buffer[BufferLen] = {0};
@@ -199,20 +201,20 @@ galay::GY_RecvTask::Execute()
     }
 }
 
-galay::GY_SendTask::GY_SendTask(int fd, GY_IOScheduler::wptr scheduler)
+galay::kernel::GY_SendTask::GY_SendTask(int fd, GY_IOScheduler::wptr scheduler)
 {
     this->m_fd = fd;
     this->m_scheduler = scheduler;
 }
 
 void 
-galay::GY_SendTask::AppendWBuffer(std::string &&wbuffer)
+galay::kernel::GY_SendTask::AppendWBuffer(std::string &&wbuffer)
 {
     this->m_wbuffer.append(std::forward<std::string &&>(wbuffer));
 }
 
 void 
-galay::GY_SendTask::FirstTryToSend()
+galay::kernel::GY_SendTask::FirstTryToSend()
 {
     if (this->m_wbuffer.empty())
         return;
@@ -224,7 +226,7 @@ galay::GY_SendTask::FirstTryToSend()
 }
 
 void 
-galay::GY_SendTask::SendAll()
+galay::kernel::GY_SendTask::SendAll()
 {
     if (this->m_wbuffer.empty())
         return;
@@ -234,19 +236,19 @@ galay::GY_SendTask::SendAll()
 }
 
 bool 
-galay::GY_SendTask::Empty() const
+galay::kernel::GY_SendTask::Empty() const
 {
     return this->m_wbuffer.empty();
 }
 
 void 
-galay::GY_SendTask::SetSSL(SSL* ssl)
+galay::kernel::GY_SendTask::SetSSL(SSL* ssl)
 {
     this->m_ssl = ssl;
 }
 
 void 
-galay::GY_SendTask::Execute()
+galay::kernel::GY_SendTask::Execute()
 {
     spdlog::info("[{}:{}] [Send(fd:{})] [Len:{} Package:{}]", __FILE__, __LINE__, this->m_fd, this->m_wbuffer.length(), this->m_wbuffer);
     int offset = 0;

@@ -5,18 +5,18 @@
 #include <spdlog/spdlog.h>
 
 
-galay::GY_Objector::GY_Objector()
+galay::kernel::GY_Objector::GY_Objector()
 {
 
 }
 
-galay::GY_Objector::~GY_Objector()
+galay::kernel::GY_Objector::~GY_Objector()
 {
 
 }
 
 //timer
-galay::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times , std::function<std::any()> &&func)
+galay::kernel::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times , std::function<std::any()> &&func)
 {
     this->m_timerid = timerid;
     this->m_exec_times = exec_times;
@@ -25,52 +25,52 @@ galay::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t exec_times
 }
 
 uint64_t 
-galay::Timer::GetCurrentTime()
+galay::kernel::Timer::GetCurrentTime()
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 uint64_t 
-galay::Timer::GetDuringTime()
+galay::kernel::Timer::GetDuringTime()
 {
     return this->m_during_time;
 }
 
 uint64_t 
-galay::Timer::GetExpiredTime()
+galay::kernel::Timer::GetExpiredTime()
 {
     return this->m_expired_time;
 }
 
 uint64_t 
-galay::Timer::GetRemainTime()
+galay::kernel::Timer::GetRemainTime()
 {
     int64_t time = this->m_expired_time - Timer::GetCurrentTime();
     return time < 0 ? 0 : time;
 }
 
 uint64_t 
-galay::Timer::GetTimerid()
+galay::kernel::Timer::GetTimerid()
 {
     return this->m_timerid;
 }
 
 void 
-galay::Timer::SetDuringTime(uint64_t during_time)
+galay::kernel::Timer::SetDuringTime(uint64_t during_time)
 {
     this->m_during_time = during_time;
     this->m_expired_time = Timer::GetCurrentTime() + during_time;
 }
 
 uint32_t&
-galay::Timer::GetRemainExecTimes()
+galay::kernel::Timer::GetRemainExecTimes()
 {
     return this->m_exec_times;
 }
 
 
 void 
-galay::Timer::Execute()
+galay::kernel::Timer::Execute()
 {
     this->m_is_finish = false;
     m_result = this->m_userfunc();
@@ -78,37 +78,37 @@ galay::Timer::Execute()
 }
 
 std::any 
-galay::Timer::Result()
+galay::kernel::Timer::Result()
 {
     return this->m_result;
 }
 
 // 取消任务
-void galay::Timer::Cancle()
+void galay::kernel::Timer::Cancle()
 {
     this->m_cancle = true;
 }
 
-bool galay::Timer::IsCancled()
+bool galay::kernel::Timer::IsCancled()
 {
     return this->m_cancle;
 }
 
 // 是否已经完成
-bool galay::Timer::IsFinish()
+bool galay::kernel::Timer::IsFinish()
 {
     return this->m_is_finish.load();
 }
 
-std::atomic_uint64_t galay::GY_TimerManager::m_global_timerid = 0;
+std::atomic_uint64_t galay::kernel::GY_TimerManager::m_global_timerid = 0;
 
-galay::GY_TimerManager::GY_TimerManager()
+galay::kernel::GY_TimerManager::GY_TimerManager()
 {
     this->m_timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
 }
 
-galay::Timer::ptr
-galay::GY_TimerManager::AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func)
+galay::kernel::Timer::ptr
+galay::kernel::GY_TimerManager::AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func)
 {
     m_global_timerid.fetch_add(1, std::memory_order_acquire);
     std::unique_lock<std::shared_mutex> lock(this->m_mtx);
@@ -124,13 +124,13 @@ galay::GY_TimerManager::AddTimer(uint64_t during, uint32_t exec_times, std::func
 }
 
 void 
-galay::GY_TimerManager::SetEventType(int event_type)
+galay::kernel::GY_TimerManager::SetEventType(int event_type)
 {
     
 }
 
 void 
-galay::GY_TimerManager::UpdateTimerfd()
+galay::kernel::GY_TimerManager::UpdateTimerfd()
 {
     struct timespec abstime;
     if (m_timers.empty())
@@ -158,8 +158,8 @@ galay::GY_TimerManager::UpdateTimerfd()
     timerfd_settime(this->m_timerfd, 0, &its, nullptr);
 }
 
-galay::Timer::ptr 
-galay::GY_TimerManager::GetEaliestTimer()
+galay::kernel::Timer::ptr 
+galay::kernel::GY_TimerManager::GetEaliestTimer()
 {
     if (this->m_timers.empty())
         return nullptr;
@@ -176,20 +176,20 @@ galay::GY_TimerManager::GetEaliestTimer()
 }
 
 int 
-galay::GY_TimerManager::GetTimerfd(){ 
+galay::kernel::GY_TimerManager::GetTimerfd(){ 
     return this->m_timerfd;  
 }
 
 
 void 
-galay::GY_TimerManager::ExecuteTask()
+galay::kernel::GY_TimerManager::ExecuteTask()
 {
     Timer::ptr timer = GetEaliestTimer();
     timer->Execute();
 }
 
 
-galay::GY_TimerManager::~GY_TimerManager()
+galay::kernel::GY_TimerManager::~GY_TimerManager()
 {
     while (!m_timers.empty())
     {
@@ -197,100 +197,100 @@ galay::GY_TimerManager::~GY_TimerManager()
     }
 }
 
-galay::GY_Acceptor::GY_Acceptor(std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Acceptor::GY_Acceptor(std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_listentask = std::make_unique<GY_CreateConnTask>(scheduler);
 }
 
 int 
-galay::GY_Acceptor::GetListenFd()
+galay::kernel::GY_Acceptor::GetListenFd()
 {
     return this->m_listentask->GetFd();
 }
 
 void 
-galay::GY_Acceptor::SetEventType(int event_type)
+galay::kernel::GY_Acceptor::SetEventType(int event_type)
 {
 
 }
 
 void 
-galay::GY_Acceptor::ExecuteTask() 
+galay::kernel::GY_Acceptor::ExecuteTask() 
 {
     this->m_listentask->Execute();
 }
 
-galay::GY_Acceptor::~GY_Acceptor()
+galay::kernel::GY_Acceptor::~GY_Acceptor()
 {
     m_listentask.reset();
 }
 
 
-galay::GY_Receiver::GY_Receiver(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Receiver::GY_Receiver(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_recvTask = std::make_unique<GY_RecvTask>(fd, scheduler);
 }
 
 std::string& 
-galay::GY_Receiver::GetRBuffer()
+galay::kernel::GY_Receiver::GetRBuffer()
 {
     return this->m_recvTask->GetRBuffer();
 }
 
 void 
-galay::GY_Receiver::SetEventType(int event_type)
+galay::kernel::GY_Receiver::SetEventType(int event_type)
 {
 
 }
 
 void 
-galay::GY_Receiver::SetSSL(SSL* ssl)
+galay::kernel::GY_Receiver::SetSSL(SSL* ssl)
 {
     this->m_recvTask->SetSSL(ssl);
 }
 
 void 
-galay::GY_Receiver::ExecuteTask()
+galay::kernel::GY_Receiver::ExecuteTask()
 {
     this->m_recvTask->RecvAll();
 }
 
-galay::GY_Sender::GY_Sender(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Sender::GY_Sender(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_sendTask = std::make_unique<GY_SendTask>(fd, scheduler);
 }
 
 void 
-galay::GY_Sender::SetEventType(int event_type)
+galay::kernel::GY_Sender::SetEventType(int event_type)
 {
     
 }
 
 void 
-galay::GY_Sender::AppendWBuffer(std::string&& wbuffer)
+galay::kernel::GY_Sender::AppendWBuffer(std::string&& wbuffer)
 {
     this->m_sendTask->AppendWBuffer(std::forward<std::string&&>(wbuffer));
 }
 
 bool 
-galay::GY_Sender::WBufferEmpty()
+galay::kernel::GY_Sender::WBufferEmpty()
 {
     return this->m_sendTask->Empty();
 }
 
 void 
-galay::GY_Sender::ExecuteTask()
+galay::kernel::GY_Sender::ExecuteTask()
 {
     this->m_sendTask->SendAll();
 }
 
 void 
-galay::GY_Sender::SetSSL(SSL* ssl)
+galay::kernel::GY_Sender::SetSSL(SSL* ssl)
 {
     this->m_sendTask->SetSSL(ssl);
 }
 
-galay::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_fd = fd;
     this->m_is_ssl_accept = false;
@@ -306,31 +306,31 @@ galay::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> schedule
 }
 
 void 
-galay::GY_Connector::SetEventType(int event_type)
+galay::kernel::GY_Connector::SetEventType(int event_type)
 {
     this->m_eventType = event_type;
 }
 
-std::shared_ptr<galay::Timer> 
-galay::GY_Connector::AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func)
+std::shared_ptr<galay::kernel::Timer> 
+galay::kernel::GY_Connector::AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func)
 {
     return this->m_scheduler.lock()->AddTimer(during,exec_times,std::forward<std::function<std::any()>&&>(func));
 }
 
 void 
-galay::GY_Connector::SetContext(std::any&& context)
+galay::kernel::GY_Connector::SetContext(std::any&& context)
 {
     this->m_context = std::forward<std::any&&>(context);
 }
 
 std::any&&
-galay::GY_Connector::GetContext()
+galay::kernel::GY_Connector::GetContext()
 {
     return std::move(this->m_context);
 }
 
 galay::protocol::GY_Request::ptr 
-galay::GY_Connector::GetRequest()
+galay::kernel::GY_Connector::GetRequest()
 {
     protocol::GY_Request::ptr request = m_requests.front();
     m_requests.pop();
@@ -338,14 +338,14 @@ galay::GY_Connector::GetRequest()
 }
 
 void 
-galay::GY_Connector::PushResponse(std::string&& response)
+galay::kernel::GY_Connector::PushResponse(std::string&& response)
 {
     m_responses.push(response);
     m_SendCoroutine.Resume();
 }
 
 void 
-galay::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
+galay::kernel::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
 {
     m_requests.push(request);
     if(this->m_WaitingForRequest){
@@ -354,7 +354,7 @@ galay::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
 }
 
 void 
-galay::GY_Connector::ExecuteTask()
+galay::kernel::GY_Connector::ExecuteTask()
 {
     if(m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL() && !m_is_ssl_accept){
         int ret = IOFunction::NetIOFunction::TcpFunction::SSLAccept(this->m_ssl);
@@ -398,15 +398,15 @@ galay::GY_Connector::ExecuteTask()
 }
 
 void 
-galay::GY_Connector::SetSSLCtx(SSL_CTX* ctx)
+galay::kernel::GY_Connector::SetSSLCtx(SSL_CTX* ctx)
 {
     this->m_ssl = IOFunction::NetIOFunction::TcpFunction::SSLCreateObj(ctx,this->m_fd);
     this->m_receiver->SetSSL(this->m_ssl);
     this->m_sender->SetSSL(this->m_ssl);
 }
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> 
-galay::GY_Connector::CoBusinessExec()
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::kernel::GY_Connector::CoBusinessExec()
 {
     co_await std::suspend_always{};
     while(1)
@@ -426,29 +426,29 @@ galay::GY_Connector::CoBusinessExec()
             this->m_scheduler.lock()->DelObjector(this->m_fd);
         }
     }
-    co_return galay::kCoroutineFinished;
+    co_return kernel::kCoroutineFinished;
 }
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> 
-galay::GY_Connector::CoReceiveExec()
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::kernel::GY_Connector::CoReceiveExec()
 {
     while(1)
     {
         co_await std::suspend_always{};
         m_receiver->ExecuteTask();
         while(1){
-            if(!m_tempRequest) m_tempRequest = GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
+            if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kDataRequest));
             if(!m_tempRequest) {
-                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(kDataRequest));
+                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kDataRequest));
                 break;
             }
             std::string& buffer = m_receiver->GetRBuffer();
             if(buffer.length() == 0) break;
-            ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
-            if(type == ProtoJudgeType::kProtoFinished){
+            common::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
+            if(type == common::ProtoJudgeType::kProtoFinished){
                 PushRequest(std::move(m_tempRequest));
                 m_tempRequest = nullptr;
-            }else if(type == ProtoJudgeType::kProtoIncomplete)
+            }else if(type == common::ProtoJudgeType::kProtoIncomplete)
             {
                 break;
             }else{
@@ -457,11 +457,11 @@ galay::GY_Connector::CoReceiveExec()
             }
         }
     }
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return kernel::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> 
-galay::GY_Connector::CoSendExec()
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> 
+galay::kernel::GY_Connector::CoSendExec()
 {
     while(1)
     {
@@ -483,10 +483,10 @@ galay::GY_Connector::CoSendExec()
             this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
         }
     }
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return kernel::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::GY_Connector::~GY_Connector()
+galay::kernel::GY_Connector::~GY_Connector()
 {
     if(this->m_ssl){
         IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);

@@ -5,12 +5,12 @@
 #include <spdlog/async_logger.h>
 #include <spdlog/async.h>
 
-galay::GY_HttpAsyncClient client;
-galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
+galay::kernel::GY_HttpAsyncClient client;
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> func()
 {
     auto resp = co_await client.Get("http://183.2.172.185:80");
     std::cout << resp->EncodePdu();
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
 }
 
 int main()

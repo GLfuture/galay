@@ -1,17 +1,17 @@
 #include "waitgroup.h"
-galay::WaitGroup::WaitGroup()
+galay::kernel::WaitGroup::WaitGroup()
 {
     this->m_coNum.store(0);
 }
 
 void 
-galay::WaitGroup::Add(int num)
+galay::kernel::WaitGroup::Add(int num)
 {
     this->m_coNum.fetch_add(num);
 }
 
-galay::GroupAwaiter& 
-galay::WaitGroup::Wait()
+galay::kernel::GroupAwaiter& 
+galay::kernel::WaitGroup::Wait()
 {
     if(this->m_coNum.load() == 0) {
         this->m_awaiter = GroupAwaiter(false);
@@ -23,7 +23,7 @@ galay::WaitGroup::Wait()
 
 
 void 
-galay::WaitGroup::Done()
+galay::kernel::WaitGroup::Done()
 {
     this->m_coNum.fetch_sub(1);
     if(this->m_coNum.load() == 0){

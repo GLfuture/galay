@@ -1,29 +1,29 @@
 #include "threadpool.h"
 
-galay::GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
+galay::common::GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
 {
     this->m_func = func;
 }
 
 void 
-galay::GY_ThreadTask::Execute()
+galay::common::GY_ThreadTask::Execute()
 {
     this->m_func();
 }
 
-galay::GY_ThreadTask::~GY_ThreadTask()
+galay::common::GY_ThreadTask::~GY_ThreadTask()
 {
 
 }
 
-galay::ThreadPool::ThreadPool(int num)
+galay::common::ThreadPool::ThreadPool(int num)
 {
     m_terminate.store(false, std::memory_order_relaxed);
     m_threads.assign(0, NULL);
     create(num);
 }
 
-void galay::ThreadPool::run()
+void galay::common::ThreadPool::run()
 {
     while (1)
     {
@@ -39,7 +39,7 @@ void galay::ThreadPool::run()
     }
 }
 
-void galay::ThreadPool::create(int num)
+void galay::common::ThreadPool::create(int num)
 {
     for (int i = 0; i < num; i++)
     {
@@ -48,7 +48,7 @@ void galay::ThreadPool::create(int num)
     }
 }
 
-void galay::ThreadPool::wait_for_all_down()
+void galay::common::ThreadPool::wait_for_all_down()
 {
     for (int i = 0; i < m_threads.size(); i++)
     {
@@ -59,7 +59,7 @@ void galay::ThreadPool::wait_for_all_down()
     }
 }
 
-void galay::ThreadPool::reset(int num)
+void galay::common::ThreadPool::reset(int num)
 {
     int temp = num - m_threads.size();
     if (temp > 0)
@@ -75,7 +75,7 @@ void galay::ThreadPool::reset(int num)
     }
 }
 
-void galay::ThreadPool::destroy()
+void galay::common::ThreadPool::destroy()
 {
     if (!m_terminate.load())
     {
@@ -90,7 +90,7 @@ void galay::ThreadPool::destroy()
     }
 }
 
-galay::ThreadPool::~ThreadPool()
+galay::common::ThreadPool::~ThreadPool()
 {
     if (!m_terminate.load())
         destroy();

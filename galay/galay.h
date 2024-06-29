@@ -21,4 +21,16 @@
 #include "util/fileiofunction.h"
 #include "util/ratelimiter.h"
 
+
+namespace galay
+{
+    class GY_CoreBase
+    {
+    public:
+        using ptr = std::shared_ptr<GY_CoreBase>;
+        using wptr = std::weak_ptr<GY_CoreBase>;
+        using uptr = std::unique_ptr<GY_CoreBase>;
+    };
+}
+
 #endif

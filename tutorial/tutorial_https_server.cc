@@ -4,7 +4,7 @@
 #include <mutex>
 #include <signal.h>
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wptr ctrl)
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = ctrl.lock()->GetRequest();
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
@@ -17,10 +17,10 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
     if(request->GetHeadValue("connection").compare("close") == 0){
         ctrl.lock()->Close();
     }
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::GY_TcpServer::ptr server;
+galay::kernel::GY_TcpServer::ptr server;
 
 void signal_handler(int signo)
 {

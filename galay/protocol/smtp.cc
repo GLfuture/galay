@@ -1,13 +1,13 @@
 #include "smtp.h"
 
-galay::ProtoJudgeType 
+galay::common::ProtoJudgeType 
 galay::protocol::smtp::Smtp_Protocol:: DecodePdu(std::string& buffer)
 {
     int pos = buffer.find("\r\n");
-    if(pos == std::string::npos) return ProtoJudgeType::kProtoIncomplete;
+    if(pos == std::string::npos) return common::ProtoJudgeType::kProtoIncomplete;
     this->m_content = buffer.substr(0,pos);
     buffer.erase(0,pos + 2);
-    return ProtoJudgeType::kProtoFinished;
+    return common::ProtoJudgeType::kProtoFinished;
 }
 
 std::string 

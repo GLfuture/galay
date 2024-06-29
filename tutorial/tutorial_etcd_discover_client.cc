@@ -1,7 +1,7 @@
 #include "../galay/middleware/AsyncEtcd.h"
 #include "../galay/galay.h"
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> func()
 {
     galay::MiddleWare::AsyncEtcd::ServiceDiscovery discovery("http://127.0.0.1:2379");
     auto res = co_await discovery.Discovery("/app/api/login");
@@ -9,13 +9,13 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> func()
     for(auto [k,v]:m){
         std::cout << k << ": " << v <<'\n';
     }
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
 }
 
 
 int main()
 {
-    galay::GY_TcpCoroutine<> task = func();
+    galay::kernel::GY_TcpCoroutine<> task = func();
     getchar();
     galay::MiddleWare::AsyncEtcd::DistributedLock S_Lock("http://127.0.0.1:2379");
     S_Lock.Lock("/mutex/lock",10);

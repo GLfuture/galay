@@ -2,13 +2,13 @@
 #include <spdlog/spdlog.h>
 
 void 
-galay::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
+galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
 {
     this->m_builder = builder;
 }
 
 void 
-galay::GY_TcpServer::Start()
+galay::kernel::GY_TcpServer::Start()
 {
     for (int i = 0; i < m_builder->GetThreadNum(); ++i)
     {
@@ -26,7 +26,7 @@ galay::GY_TcpServer::Start()
 }
 
 void 
-galay::GY_TcpServer::Stop()
+galay::kernel::GY_TcpServer::Stop()
 {
     for (auto &scheduler : m_schedulers)
     {
@@ -34,39 +34,39 @@ galay::GY_TcpServer::Stop()
     }
 }
 
-galay::GY_TimerManager::ptr
-galay::GY_TcpServer::CreateTimerManager()
+galay::kernel::GY_TimerManager::ptr
+galay::kernel::GY_TcpServer::CreateTimerManager()
 {
     return std::make_shared<GY_TimerManager>();
 }
 
-galay::GY_IOScheduler::ptr
-galay::GY_TcpServer::CreateScheduler(GY_TcpServerBuilderBase::ptr builder)
+galay::kernel::GY_IOScheduler::ptr
+galay::kernel::GY_TcpServer::CreateScheduler(GY_TcpServerBuilderBase::ptr builder)
 {
     switch (builder->GetSchedulerType())
     {
-    case kEpollScheduler:
+    case common::kEpollScheduler:
         return std::make_shared<GY_EpollScheduler>(builder);
-    case kSelectScheduler:
+    case common::kSelectScheduler:
         return std::make_shared<GY_SelectScheduler>(builder);
     }
     return nullptr;
 }
 
-galay::GY_IOScheduler::wptr
-galay::GY_TcpServer::GetScheduler(int indx)
+galay::kernel::GY_IOScheduler::wptr
+galay::kernel::GY_TcpServer::GetScheduler(int indx)
 {
     return this->m_schedulers[indx];
 }
 
 
-galay::GY_Acceptor::ptr
-galay::GY_TcpServer::CreateAcceptor( GY_IOScheduler::ptr scheduler)
+galay::kernel::GY_Acceptor::ptr
+galay::kernel::GY_TcpServer::CreateAcceptor( GY_IOScheduler::ptr scheduler)
 {
     return std::make_shared<GY_Acceptor>(scheduler);
 }
 
-void galay::GY_TcpServer::WaitForThreads()
+void galay::kernel::GY_TcpServer::WaitForThreads()
 {
     for (auto &th : m_threads)
     {
@@ -75,7 +75,7 @@ void galay::GY_TcpServer::WaitForThreads()
     }
 }
 
-galay::GY_TcpServer::~GY_TcpServer()
+galay::kernel::GY_TcpServer::~GY_TcpServer()
 {
     for (int i = 0; i < this->m_schedulers.size(); ++i)
     {

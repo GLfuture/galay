@@ -15,31 +15,33 @@ namespace galay{
         virtual ~GY_Factory() = default;
     };
 
-    class GY_HttpServerBuilder;
-    class GY_HttpRouter;
-    class GY_TcpServer;
-
-
+    namespace kernel
+    {
+        class GY_HttpServerBuilder;
+        class GY_HttpRouter;
+        class GY_TcpServer;
+    }
+    
     class GY_RouterFactory{
     public:
-        static std::shared_ptr<GY_HttpRouter> CreateHttpRouter(); 
+        static std::shared_ptr<kernel::GY_HttpRouter> CreateHttpRouter(); 
     };
 
     class GY_ServerBuilderFactory{
     public:
-        static std::shared_ptr<GY_HttpServerBuilder> CreateHttpServerBuilder(\
-            int port,std::shared_ptr<GY_HttpRouter> router,\
-            SchedulerType type = kEpollScheduler,uint16_t thread_num = DEFAULT_THREAD_NUM);
-        static std::shared_ptr<GY_HttpServerBuilder> CreateHttpsServerBuilder(\
+        static std::shared_ptr<kernel::GY_HttpServerBuilder> CreateHttpServerBuilder(\
+            int port,std::shared_ptr<kernel::GY_HttpRouter> router,\
+            common::SchedulerType type = common::SchedulerType::kEpollScheduler,uint16_t thread_num = DEFAULT_THREAD_NUM);
+        static std::shared_ptr<kernel::GY_HttpServerBuilder> CreateHttpsServerBuilder(\
             const std::string& key_file,const std::string& cert_file, int port,\
-            std::shared_ptr<GY_HttpRouter> router,SchedulerType type = kEpollScheduler\
+            std::shared_ptr<kernel::GY_HttpRouter> router,common::SchedulerType type = common::SchedulerType::kEpollScheduler\
             ,uint16_t thread_num = DEFAULT_THREAD_NUM);
     };
 
     class GY_ServerFactory{
     public:
-        static std::shared_ptr<GY_TcpServer> CreateHttpServer(std::shared_ptr<GY_HttpServerBuilder> builder);
-        static std::shared_ptr<GY_TcpServer> CreateHttpsServer(std::shared_ptr<GY_HttpServerBuilder> builder);
+        static std::shared_ptr<kernel::GY_TcpServer> CreateHttpServer(std::shared_ptr<kernel::GY_HttpServerBuilder> builder);
+        static std::shared_ptr<kernel::GY_TcpServer> CreateHttpsServer(std::shared_ptr<kernel::GY_HttpServerBuilder> builder);
     };
 }
 

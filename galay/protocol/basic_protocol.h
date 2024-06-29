@@ -10,13 +10,12 @@ namespace galay
 {
     namespace protocol
     {
-
         class GY_Request{
         public:
             using ptr = std::shared_ptr<GY_Request>;
             using wptr = std::weak_ptr<GY_Request>;
             using uptr = std::unique_ptr<GY_Request>;
-            virtual ProtoJudgeType DecodePdu(std::string &buffer) = 0;
+            virtual galay::common::ProtoJudgeType DecodePdu(std::string &buffer) = 0;
             virtual void Clear() = 0;
         };
 

@@ -3,7 +3,8 @@
 #include <spdlog/spdlog.h>
 #include <mutex>
 #include <signal.h>
-galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wptr ctrl)
+#include <iostream>
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = ctrl.lock()->GetRequest();
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
@@ -13,7 +14,7 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
     std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
     response->SetBody(std::move(body));
     ctrl.lock()->PushResponse(response->EncodePdu());
-    galay::WaitGroup group;
+    galay::kernel::WaitGroup group;
     group.Add(1);
     //模拟耗时任务
     std::thread th([ctrl,&group](){
@@ -30,10 +31,10 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
         ctrl.lock()->Close();
     }
     ctrl.lock()->Done();
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::GY_TcpServer::ptr server;
+galay::kernel::GY_TcpServer::ptr server;
 
 void signal_handler(int signo)
 {
@@ -49,7 +50,7 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
     router->Get("/echo",test);
-    galay::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8082,router);
+    galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8082,router);
     server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;

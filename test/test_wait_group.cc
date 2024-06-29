@@ -2,10 +2,10 @@
 #include <thread>
 #include <iostream>
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus> func(std::thread& th)
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> func(std::thread& th)
 {
     std::cout << "func start\n";
-    galay::WaitGroup group;
+    galay::kernel::WaitGroup group;
     group.Add(1);
     th = std::thread([&](){
         std::cout << "thread start\n";

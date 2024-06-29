@@ -2,12 +2,12 @@
 #include <signal.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
-galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wptr ctrl)
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
     if(request->GetUri().compare("/smtp") == 0){
-        galay::GY_SmtpAsyncClient client("117.135.207.210", 25);
+        galay::kernel::GY_SmtpAsyncClient client("117.135.207.210", 25);
         auto resps1 = co_await client.Auth("bigdata_C1004@163.com", "EPOXVZMINXCXHXUO");
         // g++ 12 bug , 使用该方法赋值时，SendEmail函数编译器会报错
         // galay::protocol::smtp::SmtpMsgInfo msg{
@@ -39,11 +39,11 @@ galay::GY_TcpCoroutine<galay::CoroutineStatus> test(galay::GY_HttpController::wp
         response->SetBody(std::move(body));
     }
     ctrl.lock()->PushResponse(response->EncodePdu());
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
 }
 
 
-galay::GY_TcpServer::ptr server;
+galay::kernel::GY_TcpServer::ptr server;
 
 void signal_handler(int signum)
 {
@@ -61,7 +61,7 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
     router->Get("/smtp",test);
-    galay::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8080,router);
+    galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8080,router);
     server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;

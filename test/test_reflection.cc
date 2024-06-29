@@ -1,11 +1,11 @@
 #include "../galay/galay.h"
-
+#include <iostream>
 
 
 int main()
 {
     std::string buffer = "GET /path HTTP/1.1\r\n\r\n";
-    galay::protocol::GY_Request::ptr req = galay::GY_RequestFactory<>::GetInstance()->Create("galay::protocol::http::Http1_1_Request");
+    galay::protocol::GY_Request::ptr req = galay::common::GY_RequestFactory<>::GetInstance()->Create("galay::protocol::http::Http1_1_Request");
     if(req){
         req->DecodePdu(buffer);
         std::cout << "create success" << std::endl;

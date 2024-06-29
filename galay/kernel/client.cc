@@ -4,7 +4,7 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 
-galay::GY_HttpAsyncClient::GY_HttpAsyncClient()
+galay::kernel::GY_HttpAsyncClient::GY_HttpAsyncClient()
 {
     
     this->m_keepalive = false;
@@ -13,19 +13,19 @@ galay::GY_HttpAsyncClient::GY_HttpAsyncClient()
 }
 
 void 
-galay::GY_HttpAsyncClient::KeepAlive()
+galay::kernel::GY_HttpAsyncClient::KeepAlive()
 {
     this->m_keepalive = true;
 }
 
 void 
-galay::GY_HttpAsyncClient::CancleKeepalive()
+galay::kernel::GY_HttpAsyncClient::CancleKeepalive()
 {
     this->m_keepalive = false;
 }
 
 // void
-// galay::GY_HttpAsyncClient::Upgrade(const std::string& version)
+// galay::kernel::GY_HttpAsyncClient::Upgrade(const std::string& version)
 // {
 //     if(version.compare(this->m_version) > 0){
 //         this->m_version = version;
@@ -34,7 +34,7 @@ galay::GY_HttpAsyncClient::CancleKeepalive()
 // }
 
 // void
-// galay::GY_HttpAsyncClient::Downgrade(const std::string& version)
+// galay::kernel::GY_HttpAsyncClient::Downgrade(const std::string& version)
 // {
 //     if(version.compare(this->m_version) < 0){
 //         this->m_version = version;
@@ -43,25 +43,25 @@ galay::GY_HttpAsyncClient::CancleKeepalive()
 // }
 
 void 
-galay::GY_HttpAsyncClient::SetVersion(const std::string& version)
+galay::kernel::GY_HttpAsyncClient::SetVersion(const std::string& version)
 {
     this->m_version = version;
 }
 
 void 
-galay::GY_HttpAsyncClient::AddHeaderPair(const std::string& key, const std::string& value)
+galay::kernel::GY_HttpAsyncClient::AddHeaderPair(const std::string& key, const std::string& value)
 {
     this->m_headers[key] = value;
 }
 
 void 
-galay::GY_HttpAsyncClient::RemoveHeaderPair(const std::string& key)
+galay::kernel::GY_HttpAsyncClient::RemoveHeaderPair(const std::string& key)
 {
     this->m_headers.erase(key);
 }
 
-galay::HttpAwaiter
-galay::GY_HttpAsyncClient::Get(const std::string& url)
+galay::kernel::HttpAwaiter
+galay::kernel::GY_HttpAsyncClient::Get(const std::string& url)
 {
     protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
     request->SetMethod("GET");
@@ -79,8 +79,8 @@ galay::GY_HttpAsyncClient::Get(const std::string& url)
     return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
-galay::HttpAwaiter
-galay::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&body)
+galay::kernel::HttpAwaiter
+galay::kernel::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&body)
 {
     auto request = std::make_shared<protocol::http::Http1_1_Request>();
     request->SetMethod("POST");
@@ -99,8 +99,8 @@ galay::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&body)
     return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
-galay::HttpAwaiter
-galay::GY_HttpAsyncClient::Options(const std::string& url)
+galay::kernel::HttpAwaiter
+galay::kernel::GY_HttpAsyncClient::Options(const std::string& url)
 {
     protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
     request->SetMethod("OPTIONS");
@@ -118,7 +118,7 @@ galay::GY_HttpAsyncClient::Options(const std::string& url)
     return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
-void galay::GY_HttpAsyncClient::Close()
+void galay::kernel::GY_HttpAsyncClient::Close()
 {
     if (m_isconnected)
     {
@@ -128,7 +128,7 @@ void galay::GY_HttpAsyncClient::Close()
 }
 
 std::tuple<std::string,uint16_t,std::string> 
-galay::GY_HttpAsyncClient::ParseUrl(const std::string& url)
+galay::kernel::GY_HttpAsyncClient::ParseUrl(const std::string& url)
 {
     std::regex uriRegex(R"((http|https):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?(/.*)?)");
     std::smatch match;
@@ -156,7 +156,7 @@ galay::GY_HttpAsyncClient::ParseUrl(const std::string& url)
 }
 
 void 
-galay::GY_HttpAsyncClient::SetHttpHeaders(protocol::http::Http1_1_Request::ptr request)
+galay::kernel::GY_HttpAsyncClient::SetHttpHeaders(protocol::http::Http1_1_Request::ptr request)
 {
     if (!this->m_keepalive)
         request->SetHeadPair({"Connection", "close"});
@@ -167,7 +167,7 @@ galay::GY_HttpAsyncClient::SetHttpHeaders(protocol::http::Http1_1_Request::ptr r
 }
 
 int 
-galay::GY_HttpAsyncClient::Connect(const std::string& ip, uint16_t port)
+galay::kernel::GY_HttpAsyncClient::Connect(const std::string& ip, uint16_t port)
 {
     if (!this->m_isconnected)
     {
@@ -187,7 +187,7 @@ galay::GY_HttpAsyncClient::Connect(const std::string& ip, uint16_t port)
 }
 
 galay::protocol::http::Http1_1_Response::ptr
-galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
+galay::kernel::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
 {
     int len = 0 , offset = 0;
     do
@@ -218,12 +218,12 @@ galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
             spdlog::debug("[{}:{}] [Recv(fd:{}) [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, len, respStr);
             if (!respStr.empty())
             {
-                ProtoJudgeType type = response->DecodePdu(respStr);
-                if (type == ProtoJudgeType::kProtoIncomplete)
+                common::ProtoJudgeType type = response->DecodePdu(respStr);
+                if (type == common::ProtoJudgeType::kProtoIncomplete)
                 {
                     continue;
                 }
-                else if (type == ProtoJudgeType::kProtoFinished)
+                else if (type == common::ProtoJudgeType::kProtoFinished)
                 {
                     spdlog::info("[{}:{}] [Recv(fd:{}) [Success]]", __FILE__, __LINE__, this->m_fd);
                     if (!this->m_keepalive)
@@ -254,15 +254,15 @@ galay::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
     return nullptr;
 }
 
-galay::GY_SmtpAsyncClient::GY_SmtpAsyncClient(const std::string &host, uint16_t port)
+galay::kernel::GY_SmtpAsyncClient::GY_SmtpAsyncClient(const std::string &host, uint16_t port)
 {
     m_host = host;
     m_port = port;
     m_isconnected = false;
 }
 
-galay::SmtpAwaiter
-galay::GY_SmtpAsyncClient::Auth(std::string account, std::string password)
+galay::kernel::SmtpAwaiter
+galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string password)
 {
     std::queue<std::string> requests;
     galay::protocol::smtp::Smtp_Request request;
@@ -277,8 +277,8 @@ galay::GY_SmtpAsyncClient::Auth(std::string account, std::string password)
     return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
-galay::SmtpAwaiter
-galay::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::vector<std::string>& ToEmails,galay::protocol::smtp::SmtpMsgInfo msg)
+galay::kernel::SmtpAwaiter
+galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::vector<std::string>& ToEmails,galay::protocol::smtp::SmtpMsgInfo msg)
 {
     std::queue<std::string> requests;
     galay::protocol::smtp::Smtp_Request request;
@@ -295,8 +295,8 @@ galay::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::vector<std
     return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
-galay::SmtpAwaiter
-galay::GY_SmtpAsyncClient::Quit()
+galay::kernel::SmtpAwaiter
+galay::kernel::GY_SmtpAsyncClient::Quit()
 {
     std::queue<std::string> requests;
     galay::protocol::smtp::Smtp_Request request;
@@ -308,7 +308,7 @@ galay::GY_SmtpAsyncClient::Quit()
     return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
-void galay::GY_SmtpAsyncClient::Close()
+void galay::kernel::GY_SmtpAsyncClient::Close()
 {
     if (m_isconnected)
     {
@@ -318,7 +318,7 @@ void galay::GY_SmtpAsyncClient::Close()
 }
 
 int 
-galay::GY_SmtpAsyncClient::Connect() 
+galay::kernel::GY_SmtpAsyncClient::Connect() 
 {
     if (!this->m_isconnected)
     {
@@ -338,7 +338,7 @@ galay::GY_SmtpAsyncClient::Connect()
 }
 
 std::vector<galay::protocol::smtp::Smtp_Response::ptr>
-galay::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
+galay::kernel::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
 {
     if(Connect() == -1) return {};
     std::vector<galay::protocol::smtp::Smtp_Response::ptr> res;
@@ -375,12 +375,12 @@ galay::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
                 if (!respStr.empty())
                 {
                     galay::protocol::smtp::Smtp_Response::ptr response = std::make_shared<galay::protocol::smtp::Smtp_Response>();
-                    ProtoJudgeType type = response->Resp()->DecodePdu(respStr);
-                    if (type == ProtoJudgeType::kProtoIncomplete)
+                    common::ProtoJudgeType type = response->Resp()->DecodePdu(respStr);
+                    if (type == common::ProtoJudgeType::kProtoIncomplete)
                     {
                         continue;
                     }
-                    else if (type == ProtoJudgeType::kProtoFinished)
+                    else if (type == common::ProtoJudgeType::kProtoFinished)
                     {
                         spdlog::info("[{}:{}] [Recv(fd:{}) from {}:{} [Success]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
                         res.push_back(response);
@@ -411,15 +411,15 @@ galay::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
     return res;
 }
 
-galay::DnsAsyncClient::DnsAsyncClient(const std::string& host, uint16_t port)
+galay::kernel::DnsAsyncClient::DnsAsyncClient(const std::string& host, uint16_t port)
 {
     this->m_host = host;
     this->m_port = port;
     this->m_IsInit = false;
 }
 
-galay::DnsAwaiter 
-galay::DnsAsyncClient::QueryA(std::queue<std::string> domains)
+galay::kernel::DnsAwaiter 
+galay::kernel::DnsAsyncClient::QueryA(std::queue<std::string> domains)
 {
     if(!this->m_IsInit){
         this->m_fd = galay::IOFunction::NetIOFunction::UdpFunction::Sock();
@@ -453,8 +453,8 @@ galay::DnsAsyncClient::QueryA(std::queue<std::string> domains)
     return DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
 }
 
-galay::DnsAwaiter 
-galay::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
+galay::kernel::DnsAwaiter 
+galay::kernel::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
 {
     if(!this->m_IsInit){
         this->m_fd = galay::IOFunction::NetIOFunction::UdpFunction::Sock();
@@ -489,7 +489,7 @@ galay::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
 }
 
 galay::protocol::dns::Dns_Response::ptr 
-galay::DnsAsyncClient::ExecSendMsg(std::queue<std::string> reqStr)
+galay::kernel::DnsAsyncClient::ExecSendMsg(std::queue<std::string> reqStr)
 {
     protocol::dns::Dns_Response::ptr response = std::make_shared<protocol::dns::Dns_Response>();
     char buffer[MAX_UDP_LENGTH] = {0};
@@ -528,7 +528,7 @@ galay::DnsAsyncClient::ExecSendMsg(std::queue<std::string> reqStr)
 
 
 void 
-galay::DnsAsyncClient::Close()
+galay::kernel::DnsAsyncClient::Close()
 {
     if(this->m_IsInit){
         close(this->m_fd);

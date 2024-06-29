@@ -3,30 +3,30 @@
 
 
 void 
-galay::GY_HttpRouter::Get(const std::string &path, std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Get(const std::string &path, std::function<GY_TcpCoroutine<galay::kernel::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("GET", path, func);
 }
 
 void 
-galay::GY_HttpRouter::Post(const std::string &path, std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Post(const std::string &path, std::function<GY_TcpCoroutine<galay::kernel::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("POST", path, func);
 }
 
 void 
-galay::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const std::string &path, std::function<GY_TcpCoroutine<galay::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const std::string &path, std::function<GY_TcpCoroutine<galay::kernel::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     this->m_routes[mehtod][path] = func;
 }
 
 
-galay::GY_TcpCoroutine<galay::CoroutineStatus>
-galay::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
+galay::kernel::GY_TcpCoroutine<galay::kernel::CoroutineStatus>
+galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
 {
     auto request = std::dynamic_pointer_cast<protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
     WaitGroup group;
-    galay::GY_HttpController::ptr http_ctrl = std::make_shared<galay::GY_HttpController>(ctrl);
+    galay::kernel::GY_HttpController::ptr http_ctrl = std::make_shared<galay::kernel::GY_HttpController>(ctrl);
     http_ctrl->SetWaitGroup(&group);
     auto method_routers = m_routes.find(request->GetMethod());
     if (method_routers != m_routes.end())
@@ -63,5 +63,5 @@ galay::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
     }
     co_await group.Wait();
     ctrl.lock()->Done();
-    co_return galay::CoroutineStatus::kCoroutineFinished;
+    co_return galay::kernel::CoroutineStatus::kCoroutineFinished;
 }

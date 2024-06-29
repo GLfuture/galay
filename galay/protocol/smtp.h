@@ -11,12 +11,12 @@ namespace galay
     {
         namespace smtp
         {
-            class Smtp_Protocol : public GY_Request, public GY_Response,public GY_DynamicCreator<kRequestFactory,Smtp_Protocol>,public GY_DynamicCreator<kResponseFactory,Smtp_Protocol>
+            class Smtp_Protocol : public GY_Request, public GY_Response,public galay::common::GY_DynamicCreator<galay::common::kRequestFactory,Smtp_Protocol>,public galay::common::GY_DynamicCreator<galay::common::kResponseFactory,Smtp_Protocol>
             {
             public:
                 using ptr = std::shared_ptr<Smtp_Protocol>;
                 virtual std::string EncodePdu() override;
-                virtual ProtoJudgeType DecodePdu(std::string &buffer) override;
+                virtual galay::common::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 std::string GetContent();
                 void SetContent(std::string content);
                 virtual void Clear() override;

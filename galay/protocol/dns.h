@@ -84,12 +84,12 @@ namespace galay
                 std::queue<DnsAnswer> m_answers;
             };
 
-            class Dns_Request : public Dns_Protocol, public GY_Request, public GY_Response, public GY_DynamicCreator<kRequestFactory,Dns_Request>
+            class Dns_Request : public Dns_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<galay::common::kRequestFactory,Dns_Request>
             {
             public:
                 using ptr = std::shared_ptr<Dns_Request>;
                 // ignore
-                ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::common::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
                 virtual void Clear() override;
 
@@ -97,13 +97,13 @@ namespace galay
                 std::string ModifyHostname(std::string hostname);
             };
 
-            class Dns_Response : public Dns_Protocol, public GY_Request, public GY_Response, public GY_DynamicCreator<kResponseFactory,Dns_Response>
+            class Dns_Response : public Dns_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<galay::common::kResponseFactory,Dns_Response>
             {
             public:
                 using ptr = std::shared_ptr<Dns_Response>;
                 // ignore
                 std::string EncodePdu() override;
-                ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::common::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 virtual void Clear() override;
 
             protected:
