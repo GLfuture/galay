@@ -78,10 +78,6 @@ namespace galay
             using wptr = std::weak_ptr<GY_TcpServerBuilder>;
             using uptr = std::unique_ptr<GY_TcpServerBuilder>;
             GY_TcpServerBuilder();
-            // nessaray
-            // nessaray
-            // template <common::TcpCoreType CoreType>
-            // virtual void SetCoreBusiness(CoreType coreImpl);
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;
@@ -123,7 +119,7 @@ namespace galay
         };
 
         class GY_HttpRouter;
-
+ 
         class GY_HttpServerBuilder : public GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request, galay::protocol::http::Http1_1_Response>
         {
         public:
@@ -136,7 +132,6 @@ namespace galay
 
         private:
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
-
         private:
             std::shared_ptr<GY_HttpRouter> m_router;
         };

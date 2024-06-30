@@ -1,10 +1,24 @@
 #include "server.h"
+#include "../common/signalhandler.h"
+#include <csignal>
 #include <spdlog/spdlog.h>
 
 void 
 galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
 {
     this->m_builder = builder;
+    galay::common::GY_SignalHandler::GetInstance()->SetSignalHandler(SIGINT,[this](int signo){
+        Stop();
+    });
+    galay::common::GY_SignalHandler::GetInstance()->SetSignalHandler(SIGABRT,[this](int signo){
+        Stop();
+    });
+    galay::common::GY_SignalHandler::GetInstance()->SetSignalHandler(SIGPIPE,[this](int signo){
+        Stop();
+    });
+    galay::common::GY_SignalHandler::GetInstance()->SetSignalHandler(SIGALRM,[this](int signo){
+        Stop();
+    });
 }
 
 void 
@@ -32,6 +46,7 @@ galay::kernel::GY_TcpServer::Stop()
     {
         scheduler->Stop();
     }
+    m_schedulers.clear();
 }
 
 galay::kernel::GY_TimerManager::ptr

@@ -12,7 +12,7 @@
 
 namespace galay
 {
-    namespace common
+    namespace util
     {
         class GY_ThreadTask
         {
@@ -26,7 +26,7 @@ namespace galay
             std::function<void()> m_func;
         };
 
-        class ThreadPool
+        class GY_ThreadPool
         {
         private:
             void run();
@@ -36,8 +36,8 @@ namespace galay
             void wait_for_all_down();
 
         public:
-            using ptr = std::shared_ptr<ThreadPool>;
-            ThreadPool(int num);
+            using ptr = std::shared_ptr<GY_ThreadPool>;
+            GY_ThreadPool(int num);
             void reset(int num);
             template <typename F, typename... Args>
             inline auto Exec(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
@@ -58,7 +58,7 @@ namespace galay
 
             void destroy();
 
-            ~ThreadPool();
+            ~GY_ThreadPool();
 
         protected:
             std::queue<std::shared_ptr<GY_ThreadTask>> m_tasks;  // 任务队列

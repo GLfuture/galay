@@ -1,29 +1,29 @@
 #include "threadpool.h"
 
-galay::common::GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
+galay::util::GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
 {
     this->m_func = func;
 }
 
 void 
-galay::common::GY_ThreadTask::Execute()
+galay::util::GY_ThreadTask::Execute()
 {
     this->m_func();
 }
 
-galay::common::GY_ThreadTask::~GY_ThreadTask()
+galay::util::GY_ThreadTask::~GY_ThreadTask()
 {
 
 }
 
-galay::common::ThreadPool::ThreadPool(int num)
+galay::util::GY_ThreadPool::GY_ThreadPool(int num)
 {
     m_terminate.store(false, std::memory_order_relaxed);
     m_threads.assign(0, NULL);
     create(num);
 }
 
-void galay::common::ThreadPool::run()
+void galay::util::GY_ThreadPool::run()
 {
     while (1)
     {
@@ -39,16 +39,16 @@ void galay::common::ThreadPool::run()
     }
 }
 
-void galay::common::ThreadPool::create(int num)
+void galay::util::GY_ThreadPool::create(int num)
 {
     for (int i = 0; i < num; i++)
     {
-        std::shared_ptr<std::thread> th = std::make_shared<std::thread>(&ThreadPool::run, this);
+        std::shared_ptr<std::thread> th = std::make_shared<std::thread>(&GY_ThreadPool::run, this);
         m_threads.push_back(th);
     }
 }
 
-void galay::common::ThreadPool::wait_for_all_down()
+void galay::util::GY_ThreadPool::wait_for_all_down()
 {
     for (int i = 0; i < m_threads.size(); i++)
     {
@@ -59,7 +59,7 @@ void galay::common::ThreadPool::wait_for_all_down()
     }
 }
 
-void galay::common::ThreadPool::reset(int num)
+void galay::util::GY_ThreadPool::reset(int num)
 {
     int temp = num - m_threads.size();
     if (temp > 0)
@@ -75,7 +75,7 @@ void galay::common::ThreadPool::reset(int num)
     }
 }
 
-void galay::common::ThreadPool::destroy()
+void galay::util::GY_ThreadPool::destroy()
 {
     if (!m_terminate.load())
     {
@@ -90,7 +90,7 @@ void galay::common::ThreadPool::destroy()
     }
 }
 
-galay::common::ThreadPool::~ThreadPool()
+galay::util::GY_ThreadPool::~GY_ThreadPool()
 {
     if (!m_terminate.load())
         destroy();
