@@ -4,7 +4,6 @@
 #include <functional>
 #include <unordered_map>
 #include <list>
-#include <iostream>
 #include "../protocol/basic_protocol.h"
 #include "../util/typename.h"
 

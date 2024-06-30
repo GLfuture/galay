@@ -1,5 +1,4 @@
 #include "awaiter.h"
-#include <iostream>
 galay::kernel::CommonAwaiter::CommonAwaiter(bool IsSuspend,const std::any& result)
 {
     m_IsSuspend = IsSuspend;

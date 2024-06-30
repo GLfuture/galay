@@ -1,9 +1,10 @@
 #include "scheduler.h"
 #include "objector.h"
+#include "server.h"
 #include <sys/select.h>
 #include <spdlog/spdlog.h>
 
-galay::kernel::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder)
+galay::kernel::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond)
 {
     FD_ZERO(&m_rfds);
     FD_ZERO(&m_wfds);
@@ -12,6 +13,7 @@ galay::kernel::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::p
     this->m_builder = builder;
     this->m_userFunc = builder->GetUserFunction();
     this->m_timerfd = 0;
+    this->m_threadCond = threadCond;
 }
 
 galay::kernel::GY_TcpServerBuilderBase::wptr 
@@ -129,7 +131,7 @@ galay::kernel::GY_SelectScheduler::Start()
     timeval tv;
     tv.tv_sec = this->m_builder->GetScheWaitTime() / 1000;
     tv.tv_usec = this->m_builder->GetScheWaitTime() % 1000 * 1000;
-    while (1)
+    while (!this->IsStop())
     {
         memcpy(&read_set, &m_rfds, sizeof(fd_set));
         memcpy(&write_set, &m_wfds, sizeof(fd_set));
@@ -166,6 +168,8 @@ galay::kernel::GY_SelectScheduler::Start()
             }
         }
     } 
+    m_threadCond->DecreaseThread();
+    spdlog::info("[{}:{}] [Scheduler Exit Normally......]",__FILE__,__LINE__);
 }
 
 bool 
@@ -198,12 +202,13 @@ galay::kernel::GY_SelectScheduler::~GY_SelectScheduler()
 
 }
 
-galay::kernel::GY_EpollScheduler::GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder)
+galay::kernel::GY_EpollScheduler::GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond)
 {
     this->m_epollfd = epoll_create(1);
     this->m_builder = builder;
     this->m_events = new epoll_event[builder->GetMaxEventSize()];
     this->m_stop = false;
+    this->m_threadCond = threadCond;
     this->m_userFunc = builder->GetUserFunction();
 }
 
@@ -244,7 +249,7 @@ void
 galay::kernel::GY_EpollScheduler::Start() 
 {
     uint16_t eventSize = m_builder->GetMaxEventSize() , waitTime = m_builder->GetScheWaitTime();
-    while (1)
+    while (!IsStop())
     {
         int nready = epoll_wait(this->m_epollfd, m_events, eventSize, waitTime);
         if(IsStop()) break;
@@ -271,7 +276,8 @@ galay::kernel::GY_EpollScheduler::Start()
             }
         }
     }
-    
+    this->m_threadCond->DecreaseThread();
+    spdlog::info("[{}:{}] [Scheduler Exit Normally......]",__FILE__,__LINE__);
 }
 
 galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
@@ -358,7 +364,17 @@ galay::kernel::GY_EpollScheduler::AddEvent(int fd, int event_type)
 void 
 galay::kernel::GY_EpollScheduler::Stop() 
 {
-    this->m_stop = true;
+    if (!m_stop)
+    {
+        for (auto it = m_objectors.begin(); it != m_objectors.end(); ++it)
+        {
+            this->DelEvent(it->first, kEventRead | kEventWrite | kEventError);
+            spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, it->first);
+            close(it->first);
+        }
+        this->m_objectors.clear();
+        this->m_stop = true;
+    }
 }
 bool 
 galay::kernel::GY_EpollScheduler::IsStop() 

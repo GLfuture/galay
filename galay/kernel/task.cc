@@ -5,6 +5,7 @@ galay::kernel::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler
 {
     this->m_scheduler = scheduler;
     this->m_fd = CreateListenFd(this->m_scheduler.lock()->GetTcpServerBuilder());
+    this->m_ssl_ctx = nullptr;
     if(this->m_fd < 0) throw std::runtime_error("CreateListenFd error");
     if(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL()){
         auto sslConfig = this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetSSLConfig();
@@ -15,7 +16,6 @@ galay::kernel::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler
         if(IOFunction::NetIOFunction::TcpFunction::SSL_Config_Cert_And_Key(m_ssl_ctx, sslConfig->GetCertPath().c_str(), sslConfig->GetKeyPath().c_str()) == -1){
             throw std::runtime_error("SSL_Config_Cert_And_Key failed");
         };
-    
     }
 }
 

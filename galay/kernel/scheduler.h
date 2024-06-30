@@ -33,6 +33,7 @@ namespace galay
         class GY_Objector;
         class Timer;
         class GY_TimerManager;
+        class GY_ThreadCond;
 
         class GY_IOScheduler
         {
@@ -59,6 +60,7 @@ namespace galay
         protected:
             std::unordered_map<int, std::shared_ptr<GY_Objector>> m_objectors;
         };
+        
 
         class GY_SelectScheduler : public GY_IOScheduler
         {
@@ -66,7 +68,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_SelectScheduler>;
             using wptr = std::weak_ptr<GY_SelectScheduler>;
             using uptr = std::unique_ptr<GY_SelectScheduler>;
-            GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder);
+            GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond);
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
             virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
             virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
@@ -89,8 +91,9 @@ namespace galay
             fd_set m_efds;
             int m_maxfd = INT32_MIN;
             int m_minfd = INT32_MAX;
-            bool m_stop;
+            std::atomic_bool m_stop;
             GY_TcpServerBuilderBase::ptr m_builder;
+            std::shared_ptr<GY_ThreadCond> m_threadCond;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::string &, std::string &)> m_illegalFunc;
         };
@@ -102,7 +105,7 @@ namespace galay
             using uptr = std::unique_ptr<GY_EpollScheduler>;
             using wptr = std::weak_ptr<GY_EpollScheduler>;
 
-            GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder);
+            GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond);
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
             virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
             virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
@@ -122,8 +125,9 @@ namespace galay
             int m_epollfd;
             int m_timerfd;
             GY_TcpServerBuilderBase::ptr m_builder;
+            std::shared_ptr<GY_ThreadCond> m_threadCond;
             epoll_event *m_events;
-            bool m_stop;
+            std::atomic_bool m_stop;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::string &, std::string &)> m_illegalFunc;
         };

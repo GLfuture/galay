@@ -10,13 +10,13 @@ namespace galay
 {
     namespace common
     {
-        class GY_SignalHandler
+        class GY_SignalFactory
         {
         public:
-            static GY_SignalHandler* GetInstance();
+            static GY_SignalFactory* GetInstance();
             void SetSignalHandler(int signo, std::function<void(int)> func);
         private:
-            static std::unique_ptr<GY_SignalHandler> m_signalHandler;
+            static std::unique_ptr<GY_SignalFactory> m_signalHandler;
             std::unordered_map<int,std::list<std::function<void(int)>> > m_signalMap;
         };
     }

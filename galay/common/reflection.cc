@@ -1,5 +1,4 @@
 #include "reflection.h"
-#include <iostream>
 
 galay::common::GY_FactoryManager::uptr galay::common::GY_FactoryManager::m_FactoryManager;
 
