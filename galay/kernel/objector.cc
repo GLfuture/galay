@@ -452,7 +452,9 @@ galay::kernel::GY_Connector::CoReceiveExec()
             {
                 break;
             }else{
-                // To Do
+                std::string resp = this->m_scheduler.lock()->IllegalFunction();
+                this->m_controller->Close();
+                PushResponse(std::move(resp));
                 break;
             }
         }
@@ -474,10 +476,10 @@ galay::kernel::GY_Connector::CoSendExec()
         m_sender->ExecuteTask();
         if(m_sender->WBufferEmpty()){
             if(this->m_controller->IsClosed()){
-                this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
                 this->m_scheduler.lock()->DelObjector(this->m_fd);
             }else {
-                this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventWrite , EventType::kEventRead);
+                this->m_scheduler.lock()->ModEvent(this->m_fd, EventType::kEventWrite , EventType::kEventRead);
             }         
         }else{
             this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);

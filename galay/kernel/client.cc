@@ -266,10 +266,10 @@ galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string passwor
 {
     std::queue<std::string> requests;
     galay::protocol::smtp::Smtp_Request request;
-    requests.push(request.Hello()->GetContent());
-    requests.push(request.Auth()->GetContent());
-    requests.push(request.Account(account)->GetContent());
-    requests.push(request.Password(password)->GetContent());
+    requests.push(request.Hello()->EncodePdu());
+    requests.push(request.Auth()->EncodePdu());
+    requests.push(request.Account(account)->EncodePdu());
+    requests.push(request.Password(password)->EncodePdu());
     m_ExecSendMsg = [this, requests]() -> std::vector<protocol::smtp::Smtp_Response::ptr>
     {
         return ExecSendMsg(requests);
@@ -282,12 +282,12 @@ galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::ve
 {
     std::queue<std::string> requests;
     galay::protocol::smtp::Smtp_Request request;
-    requests.push(request.MailFrom(FromEmail)->GetContent());
+    requests.push(request.MailFrom(FromEmail)->EncodePdu());
     for(const auto& mail: ToEmails){
-        requests.push(request.RcptTo(mail)->GetContent());
+        requests.push(request.RcptTo(mail)->EncodePdu());
     }
-    requests.push(request.Data()->GetContent());
-    requests.push(request.Msg(msg)->GetContent());
+    requests.push(request.Data()->EncodePdu());
+    requests.push(request.Msg(msg)->EncodePdu());
     m_ExecSendMsg = [this,requests]() -> std::vector<protocol::smtp::Smtp_Response::ptr>
     {
         return ExecSendMsg(requests);
@@ -300,7 +300,7 @@ galay::kernel::GY_SmtpAsyncClient::Quit()
 {
     std::queue<std::string> requests;
     galay::protocol::smtp::Smtp_Request request;
-    requests.push(request.Quit()->GetContent());
+    requests.push(request.Quit()->EncodePdu());
     m_ExecSendMsg = [this, requests]() -> std::vector<protocol::smtp::Smtp_Response::ptr>
     {
         return ExecSendMsg(requests);
@@ -524,8 +524,6 @@ galay::kernel::DnsAsyncClient::ExecSendMsg(std::queue<std::string> reqStr)
     }
     return response;
 }
-
-
 
 void 
 galay::kernel::DnsAsyncClient::Close()

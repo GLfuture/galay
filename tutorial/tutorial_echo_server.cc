@@ -17,7 +17,6 @@ public:
         response->SetHeadPair({"Content-Type", "text/html"});
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
         response->SetBody(std::move(body));
-        ctrl.lock()->PushResponse(response->EncodePdu());
         galay::kernel::WaitGroup group;
         group.Add(1);
         // 模拟耗时任务
@@ -35,6 +34,22 @@ public:
         {
             ctrl.lock()->Close();
         }
+        //Close 要在 PushResponse 前，不然失效
+        ctrl.lock()->PushResponse(response->EncodePdu());
+        ctrl.lock()->Done();
+        co_return galay::common::CoroutineStatus::kCoroutineFinished;
+    }
+
+private:
+
+};
+
+class ChunckBusiness : public galay::GY_HttpCoreBase
+{
+public:
+    GY_TcpCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
+    {
+        std::cout << ctrl.lock()->GetRequest()->GetBody();
         ctrl.lock()->Done();
         co_return galay::common::CoroutineStatus::kCoroutineFinished;
     }
@@ -48,11 +63,21 @@ int main()
 {
     spdlog::set_level(spdlog::level::debug);
     Business business;
+    ChunckBusiness chunckbusiness;
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
     router->Get("/echo",std::bind(&Business::CoreBusiness,&business,std::placeholders::_1));
+    router->Post("/chuncked",std::bind(&ChunckBusiness::CoreBusiness,&chunckbusiness,std::placeholders::_1));
     galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8082,router);
+    builder->SetIllegalFunction([]()->std::string{
+        galay::protocol::http::Http1_1_Response response;
+        response.SetStatus(400);
+        response.SetVersion("1.1");
+        response.SetHeadPair({"Content-Type", "text/html"});
+        std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>400 Bad Request</body></html>";
+        response.SetBody(std::move(body));
+        return response.EncodePdu();
+    });
     galay::kernel::GY_TcpServer::ptr server = galay::GY_ServerFactory::CreateHttpServer(builder);
-    
     server->Start();
     return 0;
 }

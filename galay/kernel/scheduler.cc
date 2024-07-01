@@ -12,6 +12,7 @@ galay::kernel::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::p
     this->m_stop = false;
     this->m_builder = builder;
     this->m_userFunc = builder->GetUserFunction();
+    this->m_illegalFunc = builder->GetIllegalFunction();
     this->m_timerfd = 0;
     this->m_threadCond = threadCond;
 }
@@ -33,11 +34,11 @@ galay::kernel::GY_SelectScheduler::UserFunction(GY_Controller::ptr controller)
 }
 
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
-galay::kernel::GY_SelectScheduler::IllegalFunction(std::string& rbuffer,std::string& wbuffer)
+std::string 
+galay::kernel::GY_SelectScheduler::IllegalFunction()
 {
-    if(!this->m_illegalFunc) return {};
-    return this->m_illegalFunc(rbuffer,wbuffer);
+    if(!this->m_illegalFunc) return "";
+    return this->m_illegalFunc();
 }
 
 void 
@@ -210,6 +211,7 @@ galay::kernel::GY_EpollScheduler::GY_EpollScheduler(GY_TcpServerBuilderBase::ptr
     this->m_stop = false;
     this->m_threadCond = threadCond;
     this->m_userFunc = builder->GetUserFunction();
+    this->m_illegalFunc = builder->GetIllegalFunction();
 }
 
 galay::kernel::GY_TcpServerBuilderBase::wptr 
@@ -244,6 +246,7 @@ galay::kernel::GY_EpollScheduler::DelObjector(int fd)
 {
     m_objectors.erase(fd);
     close(fd);
+    spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, fd);
 }
 void 
 galay::kernel::GY_EpollScheduler::Start() 
@@ -287,10 +290,11 @@ galay::kernel::GY_EpollScheduler::UserFunction(GY_Controller::ptr controller)
     return this->m_userFunc(controller);
 }
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
-galay::kernel::GY_EpollScheduler::IllegalFunction(std::string& rbuffer,std::string& wbuffer) 
+std::string
+galay::kernel::GY_EpollScheduler::IllegalFunction() 
 {
-    return this->m_illegalFunc(rbuffer,wbuffer);
+    if(!this->m_illegalFunc) return "";
+    return this->m_illegalFunc();
 }
 
 

@@ -68,6 +68,7 @@ namespace galay
                 virtual void Clear() override;
             private:
                 galay::common::ProtoJudgeType ParseHead(const std::string &buffer);
+                galay::common::ProtoJudgeType ParseBody(std::string &buffer);
             private:
                 int ConvertUri(std::string aurl);
                 std::string EncodeUri(const std::string &s);

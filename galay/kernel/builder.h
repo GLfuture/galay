@@ -42,7 +42,7 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpServerBuilderBase>;
             using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) = 0;
-
+            virtual void SetIllegalFunction(std::function<std::string()> func) = 0;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) = 0;
             virtual void SetThreadNum(uint16_t threadnum) = 0;
@@ -65,6 +65,7 @@ namespace galay
             virtual uint32_t GetReadBufferLen() = 0;
             virtual uint16_t GetPort() = 0;
             virtual std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
+            virtual std::function<std::string()> GetIllegalFunction() = 0;
             virtual bool GetIsSSL() = 0;
             virtual std::string GetTypeName(galay::common::ClassNameType type) = 0;
             ~GY_TcpServerBuilderBase() = default;
@@ -79,6 +80,7 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpServerBuilder>;
             GY_TcpServerBuilder();
             virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)>> port_func) override;
+            virtual void SetIllegalFunction(std::function<std::string()> func) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;
             virtual void SetThreadNum(uint16_t threadnum) override;
@@ -99,6 +101,7 @@ namespace galay
             virtual uint32_t GetReadBufferLen() override;
             virtual uint16_t GetPort() override;
             virtual std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
+            virtual std::function<std::string()> GetIllegalFunction() override;
             virtual bool GetIsSSL() override;
             virtual std::string GetTypeName(galay::common::ClassNameType type) override;
             ~GY_TcpServerBuilder();
@@ -113,6 +116,7 @@ namespace galay
             std::atomic<galay::common::SchedulerType> m_scheduler_type;
             std::atomic_bool m_is_ssl;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userfunc;
+            std::function<std::string()> m_illegalfunc;
             GY_SSLConfig::ptr m_ssl_config;
 
             std::unordered_map<int, std::string> m_typeNames;

@@ -17,7 +17,13 @@ namespace galay
         public:
             void Get(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
             void Post(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
-
+            void Options(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Put(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Delete(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Patch(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Head(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Trace(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
+            void Connect(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
         protected:
             void RegisterRouter(const std::string &method, const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func);
             common::GY_TcpCoroutine<common::CoroutineStatus> RouteHttp(std::weak_ptr<GY_Controller> ctrl);

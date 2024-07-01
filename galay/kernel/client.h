@@ -6,15 +6,13 @@ namespace galay
 {
     namespace kernel
     {
-        class GY_TcpClientBase
+        class GY_ClientBase
         {
+        public:
+            virtual ~GY_ClientBase() = default;
         };
 
-        class GY_UdpClientBase
-        {
-        };
-
-        class GY_HttpAsyncClient : public GY_TcpClientBase
+        class GY_HttpAsyncClient : public GY_ClientBase
         {
         public:
             using ptr = std::shared_ptr<GY_HttpAsyncClient>;
@@ -55,7 +53,7 @@ namespace galay
             bool m_isconnected;
         };
 
-        class GY_SmtpAsyncClient : public GY_TcpClientBase
+        class GY_SmtpAsyncClient : public GY_ClientBase
         {
         public:
             GY_SmtpAsyncClient(const std::string &host, uint16_t port);
@@ -78,7 +76,7 @@ namespace galay
             std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()> m_ExecSendMsg;
         };
 
-        class DnsAsyncClient : public GY_UdpClientBase
+        class DnsAsyncClient : public GY_ClientBase
         {
         public:
             DnsAsyncClient(const std::string &host, uint16_t port = 53);

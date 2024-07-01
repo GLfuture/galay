@@ -3,11 +3,14 @@
 
 namespace galay
 {
-    class Websocket_Protocol
+    namespace protocol
     {
-    public:
-        
-    };
+        class Websocket_Protocol
+        {
+        public:
+            
+        };
+    }
 }
 
 

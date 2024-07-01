@@ -90,6 +90,13 @@ galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetUserFunction(std::pair<uint16_t
 }
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
+void 
+galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetIllegalFunction(std::function<std::string()> func)
+{
+    this->m_illegalfunc = func;
+}
+
+template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
 void
 galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetSchedulerType(galay::common::SchedulerType scheduler_type)
 {
@@ -200,6 +207,13 @@ std::function<galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>(gal
 galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetUserFunction()
 {
     return m_userfunc;
+}
+
+template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
+std::function<std::string()> 
+galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetIllegalFunction()
+{
+    return this->m_illegalfunc;
 }
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>

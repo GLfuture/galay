@@ -110,55 +110,8 @@ galay::protocol::http::Http1_1_Request::DecodePdu(std::string& buffer)
         buffer.erase(0,m_header_len);
         n = buffer.length();
     }
-    if(m_headers.contains("content-length")){
-        size_t length = std::stoul(m_headers["content-length"]);
-        if(length <= n) {
-            m_body = buffer.substr(0,length);
-            int invaild_len = 0;
-            for (int k = length; k < n - 1; ++k)
-            {
-                if (isalpha(buffer[k + 1]))
-                    break;
-                else
-                    ++invaild_len;
-            }
-            size_t res =  length + invaild_len;
-            spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
-            buffer.erase(0,res);
-            return galay::common::ProtoJudgeType::kProtoFinished;
-        }else{
-            spdlog::warn("[{}:{}] [[body is incomplete] [buffer len:{} Bytes]]",__FILE__,__LINE__,n);
-            return galay::common::ProtoJudgeType::kProtoIncomplete;
-        }
-    }else if(m_headers.contains("transfer-encoding") && m_headers["transfer-encoding"] == "chunked"){
-        while (!buffer.empty())
-        {
-            int pos = buffer.find_first_of("\r\n");
-            std::string temp = buffer.substr(0,pos);
-            int length;
-            try
-            {
-                length = std::stoi(temp);
-            }
-            catch (const std::exception &e)
-            {
-                buffer.clear();
-                spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-                return galay::common::ProtoJudgeType::kProtoIllegal;
-            }
-            if(length == 0){
-                buffer.erase(0,pos + 4);
-                spdlog::debug("[{}:{}] [[Chunck is finished] [Chunck Len:{} Bytes]]",__FILE__,__LINE__,pos+4);
-                return galay::common::ProtoJudgeType::kProtoFinished;
-            }else if(length + 4 + pos > buffer.length()){
-                spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
-                return galay::common::ProtoJudgeType::kProtoIncomplete;
-            }
-            this->m_body += buffer.substr(pos+2,length);
-            buffer.erase(0,pos + 4 + length);
-        }
-    } 
-    return galay::common::ProtoJudgeType::kProtoFinished;
+    galay::common::ProtoJudgeType state = ParseBody(buffer);
+    return state;
 }
 
 galay::common::ProtoJudgeType 
@@ -289,6 +242,62 @@ galay::protocol::http::Http1_1_Request::ParseHead(const std::string &buffer)
     return galay::common::ProtoJudgeType::kProtoFinished;
 }
 
+
+galay::common::ProtoJudgeType 
+galay::protocol::http::Http1_1_Request::ParseBody(std::string &buffer)
+{
+    size_t n = buffer.length();
+    if(m_headers.contains("transfer-encoding") && m_headers["transfer-encoding"].compare("chuncked") == 0){
+        while (!buffer.empty())
+        {
+            int pos = buffer.find_first_of("\r\n");
+            std::string temp = buffer.substr(0,pos);
+            int length;
+            try
+            {
+                length = std::stoi(temp);
+            }
+            catch (const std::exception &e)
+            {
+                buffer.clear();
+                spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
+                return galay::common::ProtoJudgeType::kProtoIllegal;
+            }
+            if(length == 0){
+                buffer.erase(0,pos + 4);
+                spdlog::debug("[{}:{}] [[Chunck is finished] [Chunck Len:{} Bytes]]",__FILE__,__LINE__,pos+4);
+                return galay::common::ProtoJudgeType::kProtoFinished;
+            }else if(length + 4 + pos > buffer.length()){
+                spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
+                return galay::common::ProtoJudgeType::kProtoIncomplete;
+            }
+            this->m_body += buffer.substr(pos+2,length);
+            buffer.erase(0,pos + 4 + length);
+        }
+        return galay::common::ProtoJudgeType::kProtoIncomplete;
+    } 
+    if(m_headers.contains("content-length")){
+        size_t length = std::stoul(m_headers["content-length"]);
+        if(length <= n) {
+            m_body = buffer.substr(0,length);
+            int invaild_len = 0;
+            for (int k = length; k < n - 1; ++k)
+            {
+                if (isalpha(buffer[k + 1]))
+                    break;
+                else
+                    ++invaild_len;
+            }
+            size_t res =  length + invaild_len;
+            spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
+            buffer.erase(0,res);
+        }else{
+            spdlog::warn("[{}:{}] [[body is incomplete] [buffer len:{} Bytes]]",__FILE__,__LINE__,n);
+            return galay::common::ProtoJudgeType::kProtoIncomplete;
+        }
+    }
+    return galay::common::ProtoJudgeType::kProtoFinished;
+}
 
 std::string 
 galay::protocol::http::Http1_1_Request::EncodePdu()

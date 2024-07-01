@@ -49,7 +49,7 @@ namespace galay
             virtual void DelObjector(int fd) = 0;
             virtual void Start() = 0;
             virtual common::GY_TcpCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) = 0;
-            virtual common::GY_TcpCoroutine<common::CoroutineStatus> IllegalFunction(std::string &rbuffer, std::string &wbuffer) = 0;
+            virtual std::string IllegalFunction() = 0;
             virtual int DelEvent(int fd, int event_type) = 0;
             virtual int ModEvent(int fd, int from, int to) = 0;
             virtual int AddEvent(int fd, int event_type) = 0;
@@ -76,7 +76,7 @@ namespace galay
             virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
             virtual void Start() override;
             virtual common::GY_TcpCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) override;
-            virtual common::GY_TcpCoroutine<common::CoroutineStatus> IllegalFunction(std::string &rbuffer, std::string &wbuffer) override;
+            virtual std::string IllegalFunction() override;
             virtual int DelEvent(int fd, int event_type) override;
             virtual int ModEvent(int fd, int from, int to) override;
             virtual int AddEvent(int fd, int event_type) override;
@@ -95,7 +95,7 @@ namespace galay
             GY_TcpServerBuilderBase::ptr m_builder;
             std::shared_ptr<GY_ThreadCond> m_threadCond;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
-            std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::string &, std::string &)> m_illegalFunc;
+            std::function<std::string()> m_illegalFunc;
         };
 
         class GY_EpollScheduler : public GY_IOScheduler
@@ -113,7 +113,7 @@ namespace galay
             virtual void DelObjector(int fd) override;
             virtual void Start() override;
             virtual common::GY_TcpCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) override;
-            virtual common::GY_TcpCoroutine<common::CoroutineStatus> IllegalFunction(std::string &rbuffer, std::string &wbuffer) override;
+            virtual std::string IllegalFunction() override;
             virtual int DelEvent(int fd, int event_type) override;
             virtual int ModEvent(int fd, int from, int to) override;
             virtual int AddEvent(int fd, int event_type) override;
@@ -129,7 +129,7 @@ namespace galay
             epoll_event *m_events;
             std::atomic_bool m_stop;
             std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
-            std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::string &, std::string &)> m_illegalFunc;
+            std::function<std::string()> m_illegalFunc;
         };
 
     }

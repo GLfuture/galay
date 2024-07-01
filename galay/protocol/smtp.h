@@ -17,7 +17,6 @@ namespace galay
                 using ptr = std::shared_ptr<Smtp_Protocol>;
                 virtual std::string EncodePdu() override;
                 virtual galay::common::ProtoJudgeType DecodePdu(std::string &buffer) override;
-                std::string GetContent();
                 void SetContent(std::string content);
                 virtual void Clear() override;
 

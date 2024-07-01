@@ -22,11 +22,6 @@ galay::protocol::smtp::Smtp_Protocol::Clear()
     this->m_content.clear();
 }
 
-std::string
-galay::protocol::smtp::Smtp_Protocol::GetContent()
-{
-    return this->m_content;
-}
 
 void 
 galay::protocol::smtp::Smtp_Protocol::SetContent(std::string content)
