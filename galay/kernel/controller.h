@@ -27,6 +27,9 @@ namespace galay
             void SetContext(std::any &&context);
             protocol::GY_Request::ptr GetRequest();
             void PushResponse(std::string &&response);
+            std::weak_ptr<common::GY_NetCoroutinePool> GetCoPool();
+
+
             std::any &&GetContext();
             std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
             // 协程结束时必须调用
@@ -44,7 +47,6 @@ namespace galay
         class GY_HttpController
         {
             friend class GY_HttpRouter;
-
         public:
             using ptr = std::shared_ptr<GY_HttpController>;
             using wptr = std::weak_ptr<GY_HttpController>;
@@ -52,6 +54,7 @@ namespace galay
             GY_HttpController(GY_Controller::wptr ctrl);
             void SetContext(std::any &&context);
             std::any &&GetContext();
+            std::weak_ptr<common::GY_NetCoroutinePool> GetCoPool();
             std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
             void Done();
             void Close();

@@ -11,12 +11,17 @@
 #include <shared_mutex>
 #include <unordered_map>
 #include <sys/timerfd.h>
-#include <sys/epoll.h>
+#include <sys/epoll.h> 
 
 #include "builder.h"
 
 namespace galay
 {
+    namespace common
+    {
+        class GY_NetCoroutinePool;
+    }
+
     namespace kernel
     {
 #define MAX_TIMERID 40, 000, 000, 000
@@ -43,22 +48,27 @@ namespace galay
             using uptr = std::unique_ptr<GY_IOScheduler>;
             GY_IOScheduler() = default;
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() = 0;
+            virtual std::shared_ptr<common::GY_NetCoroutinePool> GetCoroutinePool() = 0;
+            
             virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) = 0;
             virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) = 0;
             virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) = 0;
             virtual void DelObjector(int fd) = 0;
-            virtual void Start() = 0;
-            virtual common::GY_TcpCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) = 0;
+
+            virtual common::GY_NetCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) = 0;
             virtual std::string IllegalFunction() = 0;
             virtual int DelEvent(int fd, int event_type) = 0;
             virtual int ModEvent(int fd, int from, int to) = 0;
             virtual int AddEvent(int fd, int event_type) = 0;
+
+            virtual void Start() = 0;
             virtual void Stop() = 0;
             virtual bool IsStop() = 0;
             virtual ~GY_IOScheduler() = default;
 
         protected:
             std::unordered_map<int, std::shared_ptr<GY_Objector>> m_objectors;
+            std::queue<int> m_eraseQueue;
         };
         
 
@@ -70,20 +80,28 @@ namespace galay
             using uptr = std::unique_ptr<GY_SelectScheduler>;
             GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond);
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
+            virtual std::shared_ptr<common::GY_NetCoroutinePool> GetCoroutinePool() override;
+
             virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
             virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
             virtual void DelObjector(int fd) override;
+            
             virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
-            virtual void Start() override;
-            virtual common::GY_TcpCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) override;
+
+            virtual common::GY_NetCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) override;
             virtual std::string IllegalFunction() override;
+
             virtual int DelEvent(int fd, int event_type) override;
             virtual int ModEvent(int fd, int from, int to) override;
             virtual int AddEvent(int fd, int event_type) override;
+
+            virtual void Start() override;
             virtual bool IsStop() override;
             virtual void Stop() override;
-            virtual ~GY_SelectScheduler();
 
+            virtual ~GY_SelectScheduler();
+        private:
+            bool RealDelObjector(int fd);
         private:
             int m_timerfd;
             fd_set m_rfds;
@@ -94,7 +112,12 @@ namespace galay
             std::atomic_bool m_stop;
             GY_TcpServerBuilderBase::ptr m_builder;
             std::shared_ptr<GY_ThreadCond> m_threadCond;
-            std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+            std::shared_ptr<std::condition_variable> m_exitCond;
+            //协程相关
+            std::shared_ptr<common::GY_NetCoroutinePool> m_coPool;
+            std::shared_ptr<std::thread> m_coThread;
+            //函数相关
+            std::function<common::GY_NetCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
             std::function<std::string()> m_illegalFunc;
         };
 
@@ -107,29 +130,44 @@ namespace galay
 
             GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond);
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
+            virtual std::shared_ptr<common::GY_NetCoroutinePool> GetCoroutinePool() override;
+
             virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
             virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
             virtual void DelObjector(int fd) override;
-            virtual void Start() override;
-            virtual common::GY_TcpCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) override;
+            
+            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
+
+            virtual common::GY_NetCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller) override;
             virtual std::string IllegalFunction() override;
+
             virtual int DelEvent(int fd, int event_type) override;
             virtual int ModEvent(int fd, int from, int to) override;
             virtual int AddEvent(int fd, int event_type) override;
+            
+            virtual void Start() override;
             virtual void Stop() override;
             virtual bool IsStop() override;
+
             virtual ~GY_EpollScheduler();
+        private:
+            bool RealDelObjector(int fd);
 
         private:
             int m_epollfd;
             int m_timerfd;
             GY_TcpServerBuilderBase::ptr m_builder;
+            std::shared_ptr<std::condition_variable> m_exitCond;
             std::shared_ptr<GY_ThreadCond> m_threadCond;
             epoll_event *m_events;
             std::atomic_bool m_stop;
-            std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+            //协程相关
+            std::shared_ptr<common::GY_NetCoroutinePool> m_coPool;
+            std::shared_ptr<std::thread> m_coThread;
+            //函数相关
+            std::function<common::GY_NetCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
             std::function<std::string()> m_illegalFunc;
+
         };
 
     }

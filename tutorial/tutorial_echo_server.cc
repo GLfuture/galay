@@ -8,7 +8,7 @@
 class Business : public galay::GY_HttpCoreBase
 {
 public:
-    GY_TcpCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
+    GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
     {
         auto request = ctrl.lock()->GetRequest();
         auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
@@ -17,15 +17,15 @@ public:
         response->SetHeadPair({"Content-Type", "text/html"});
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
         response->SetBody(std::move(body));
-        galay::kernel::WaitGroup group;
+        galay::kernel::WaitGroup group(ctrl.lock()->GetCoPool());
         group.Add(1);
         // 模拟耗时任务
         std::thread th([ctrl, &group]()
-                       {
-        std::cout << "start ....\n";
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        if(!ctrl.expired()) ctrl.lock()->PushResponse("end....\n");
-        group.Done(); });
+        {
+            std::cout << "start ....\n";
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            group.Done(); 
+        });
         // 一定要detach,不能是join，否则线程内唤醒协程会死锁
         th.detach();
         std::cout << "wait....\n";
@@ -34,9 +34,12 @@ public:
         {
             ctrl.lock()->Close();
         }
+        std::cout << "end....\n";
         //Close 要在 PushResponse 前，不然失效
         ctrl.lock()->PushResponse(response->EncodePdu());
+        std::cout << "end....\n";
         ctrl.lock()->Done();
+        std::cout << "end....\n";
         co_return galay::common::CoroutineStatus::kCoroutineFinished;
     }
 
@@ -47,7 +50,7 @@ private:
 class ChunckBusiness : public galay::GY_HttpCoreBase
 {
 public:
-    GY_TcpCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
+    GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
     {
         std::cout << ctrl.lock()->GetRequest()->GetBody();
         ctrl.lock()->Done();
@@ -61,7 +64,7 @@ private:
 
 int main()
 {
-    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::info);
     Business business;
     ChunckBusiness chunckbusiness;
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
@@ -77,6 +80,7 @@ int main()
         response.SetBody(std::move(body));
         return response.EncodePdu();
     });
+    builder->SetThreadNum(4);
     galay::kernel::GY_TcpServer::ptr server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;

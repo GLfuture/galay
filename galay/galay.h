@@ -33,10 +33,10 @@ namespace galay
         using ptr = std::shared_ptr<GY_TcpCoreBase>;
         using wptr = std::weak_ptr<GY_TcpCoreBase>;
         using uptr = std::unique_ptr<GY_TcpCoreBase>;
-        using GY_TcpCoroutine = galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>;
+        using GY_NetCoroutine = galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>;
         using GY_Controller = galay::kernel::GY_Controller;
         
-        virtual GY_TcpCoroutine CoreBusiness(GY_Controller::wptr ctrl) = 0;
+        virtual GY_NetCoroutine CoreBusiness(GY_Controller::wptr ctrl) = 0;
     };
 
     class GY_HttpCoreBase
@@ -45,10 +45,10 @@ namespace galay
         using ptr = std::shared_ptr<GY_HttpCoreBase>;
         using wptr = std::weak_ptr<GY_HttpCoreBase>;
         using uptr = std::unique_ptr<GY_HttpCoreBase>;
-        using GY_TcpCoroutine = galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>;
+        using GY_NetCoroutine = galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>;
         using GY_HttpController = galay::kernel::GY_HttpController;
 
-        virtual GY_TcpCoroutine CoreBusiness(GY_HttpController::wptr ctrl) = 0;
+        virtual GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) = 0;
     };
 }
 

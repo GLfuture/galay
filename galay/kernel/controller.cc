@@ -14,12 +14,6 @@ galay::kernel::GY_Controller::SetContext(std::any&& context)
     this->m_connector.lock()->SetContext(std::forward<std::any>(context));
 }
 
-// void 
-// galay::kernel::GY_Controller::SetThisCoroutine(GY_TcpCoroutine<CoroutineStatus>&& coroutine)
-// {
-//     this->m_coroutine = std::forward<GY_TcpCoroutine<CoroutineStatus>&&>(coroutine);
-// }
-
 std::shared_ptr<galay::kernel::Timer> 
 galay::kernel::GY_Controller::AddTimer(uint64_t during, uint32_t exec_times,std::function<std::any()> &&func)
 {
@@ -44,12 +38,11 @@ galay::kernel::GY_Controller::GetContext()
     return this->m_connector.lock()->GetContext();
 }
 
-// galay::GY_TcpCoroutine<galay::CoroutineStatus>& 
-// galay::kernel::GY_Controller::GetThisCoroutine()
-// {
-//     if(&(this->m_coroutine)) return this->m_coroutine;
-//     throw std::runtime_error("m_coroutine is not valid");
-// }
+std::weak_ptr<galay::common::GY_NetCoroutinePool> 
+galay::kernel::GY_Controller::GetCoPool()
+{
+    return this->m_connector.lock()->GetCoPool();
+}
 
 void 
 galay::kernel::GY_Controller::Close()
@@ -123,6 +116,11 @@ galay::kernel::GY_HttpController::GetRequest()
     return this->m_request;
 }
 
+std::weak_ptr<galay::common::GY_NetCoroutinePool> 
+galay::kernel::GY_HttpController::GetCoPool()
+{
+    return this->m_ctrl.lock()->GetCoPool();
+}
 
 void 
 galay::kernel::GY_HttpController::PushResponse(std::string&& response)

@@ -429,7 +429,7 @@ galay::kernel::DnsAsyncClient::QueryA(std::queue<std::string> domains)
     protocol::dns::Dns_Request request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
-    header.m_id = galay::util::Random::random(0,MAX_UDP_LENGTH);
+    header.m_id = galay::util::Random::RandomInt(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
     galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;
@@ -464,7 +464,7 @@ galay::kernel::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
     protocol::dns::Dns_Request request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
-    header.m_id = galay::util::Random::random(0,MAX_UDP_LENGTH);
+    header.m_id = galay::util::Random::RandomInt(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
     galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;

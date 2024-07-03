@@ -4,7 +4,7 @@
 #include <mutex>
 #include <signal.h>
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = ctrl.lock()->GetRequest();
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();

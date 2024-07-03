@@ -3,7 +3,14 @@
 
 #include <coroutine>
 #include <functional>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
+#include <atomic>
+#include <map>
+#include <queue>
+#include <spdlog/spdlog.h>
 
 namespace galay
 {
@@ -17,6 +24,8 @@ namespace galay
             kCoroutineFinished,       // 协程结束
             kCoroutineWaitingForData, // 正在等待数据
         };
+
+        class GY_NetCoroutinePool;
 
         template <typename RESULT>
         class GY_TcpPromise
@@ -38,7 +47,7 @@ namespace galay
             // 获取状态
             inline CoroutineStatus GetStatus();
             inline void SetStatus(CoroutineStatus status);
-
+            inline void SetFinishFunc(std::function<void()> finshfunc);
         private:
             inline void rethrow_if_exception();
 
@@ -46,6 +55,7 @@ namespace galay
             std::exception_ptr m_exception = nullptr;
             RESULT m_result;
             CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
+            std::function<void()> m_finishFunc;
         };
 
         template <>
@@ -63,74 +73,23 @@ namespace galay
             // 获取状态
             inline CoroutineStatus GetStatus();
             inline void SetStatus(CoroutineStatus status);
-
+            inline void SetFinishFunc(std::function<void()> finshfunc);
         private:
             inline void rethrow_if_exception();
 
         private:
             std::exception_ptr m_exception = {};
             CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
+            std::function<void()> m_finishFunc;
         };
 
-        template <typename RESULT>
-        class GY_TcpPromiseSuspend
-        {
-        public:
-            using promise_type = GY_TcpPromiseSuspend<RESULT>;
-            inline static int get_return_object_on_alloaction_failure() noexcept;
-            inline std::coroutine_handle<GY_TcpPromiseSuspend> get_return_object();
-            inline std::suspend_always initial_suspend() noexcept;
-            inline std::suspend_always yield_value(const RESULT &value);
-            inline std::suspend_always yield_value(RESULT value);
-            inline std::suspend_always final_suspend() noexcept;
-            inline void unhandled_exception() noexcept;
-            inline void return_value(RESULT val) noexcept;
-            // 获取结果
-            inline RESULT GetResult();
-            inline void SetResult(RESULT result);
-
-            // 获取状态
-            inline CoroutineStatus GetStatus();
-            inline void SetStatus(CoroutineStatus status);
-
-        private:
-            inline void rethrow_if_exception();
-
-        private:
-            std::exception_ptr m_exception = nullptr;
-            RESULT m_result;
-            CoroutineStatus m_status = CoroutineStatus::kCoroutineSuspend;
-        };
-
-        template <>
-        class GY_TcpPromiseSuspend<void>
-        {
-        public:
-            inline static int get_return_object_on_alloaction_failure();
-            inline std::coroutine_handle<GY_TcpPromiseSuspend> get_return_object();
-            inline std::suspend_always initial_suspend() noexcept;
-            template <typename T>
-            inline std::suspend_always yield_value(const T &value);
-            inline std::suspend_always final_suspend() noexcept;
-            inline void unhandled_exception() noexcept;
-            inline void return_void() noexcept {}
-            // 获取状态
-            inline CoroutineStatus GetStatus();
-            inline void SetStatus(CoroutineStatus status);
-
-        private:
-            inline void rethrow_if_exception();
-
-        private:
-            std::exception_ptr m_exception = {};
-            CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
-        };
 
         template <typename RESULT>
         class GY_Coroutine
         {
         public:
             using promise_type = GY_TcpPromise<RESULT>;
+    
             GY_Coroutine(const GY_Coroutine &other) = delete;
             GY_Coroutine &operator=(GY_Coroutine &other) = delete;
             GY_Coroutine<RESULT> &operator=(const GY_Coroutine<RESULT> &other) = delete;
@@ -142,6 +101,8 @@ namespace galay
 
             void Resume() noexcept;
             bool Done() noexcept;
+            uint64_t GetCoId() const noexcept;
+
             ~GY_Coroutine();
 
         protected:
@@ -150,78 +111,56 @@ namespace galay
         };
 
         template <typename RESULT = CoroutineStatus>
-        class GY_TcpCoroutine : public GY_Coroutine<RESULT>
+        class GY_NetCoroutine : public GY_Coroutine<RESULT>
         {
         public:
             using promise_type = GY_TcpPromise<RESULT>;
-            using ptr = std::shared_ptr<GY_TcpCoroutine>;
-            using uptr = std::unique_ptr<GY_TcpCoroutine>;
-            using wptr = std::weak_ptr<GY_TcpCoroutine>;
+            using ptr = std::shared_ptr<GY_NetCoroutine>;
+            using uptr = std::unique_ptr<GY_NetCoroutine>;
+            using wptr = std::weak_ptr<GY_NetCoroutine>;
 
-            GY_TcpCoroutine() = default;
-            GY_TcpCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
-            GY_TcpCoroutine(GY_TcpCoroutine<RESULT> &&other) noexcept;
-            GY_TcpCoroutine<RESULT> &operator=(const GY_TcpCoroutine<RESULT> &other) = delete;
-            GY_TcpCoroutine<RESULT> &operator=(GY_TcpCoroutine<RESULT> &&other);
-            std::coroutine_handle<promise_type> GetCoroutine() const;
+            GY_NetCoroutine() = default;
+            GY_NetCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
+            GY_NetCoroutine(GY_NetCoroutine<RESULT> &&other) noexcept;
+            GY_NetCoroutine<RESULT> &operator=(const GY_NetCoroutine<RESULT> &other) = delete;
+            GY_NetCoroutine<RESULT> &operator=(GY_NetCoroutine<RESULT> &&other);
             // 是否是协程
             bool IsCoroutine();
             // 获取结果
             RESULT GetResult();
-            void SetResult(RESULT result);
             // 获取状态
             CoroutineStatus GetStatus();
-            void SetStatus(CoroutineStatus status);
-            ~GY_TcpCoroutine();
+            ~GY_NetCoroutine();
         };
+        
 
-        // not to use
-        template <typename RESULT>
-        class GY_CoroutineSuspend
+        class GY_NetCoroutinePool
         {
         public:
-            using promise_type = GY_TcpPromiseSuspend<RESULT>;
-            GY_CoroutineSuspend(const GY_CoroutineSuspend &other) = delete;
-            GY_CoroutineSuspend &operator=(GY_CoroutineSuspend &other) = delete;
-            GY_CoroutineSuspend<RESULT> &operator=(const GY_CoroutineSuspend<RESULT> &other) = delete;
-
-            GY_CoroutineSuspend<RESULT> &operator=(GY_CoroutineSuspend<RESULT> &&other);
-            GY_CoroutineSuspend() = default;
-            GY_CoroutineSuspend(std::coroutine_handle<promise_type> co_handle) noexcept;
-            GY_CoroutineSuspend(GY_CoroutineSuspend<RESULT> &&other) noexcept;
-            void Resume() noexcept;
-            bool Done() noexcept;
-            ~GY_CoroutineSuspend();
-
-        protected:
-            std::coroutine_handle<promise_type> m_handle;
-        };
-
-        template <typename RESULT = CoroutineStatus>
-        class GY_TcpCoroutineSuspend : public GY_CoroutineSuspend<RESULT>
-        {
-        public:
-            using promise_type = GY_TcpPromiseSuspend<RESULT>;
-            using ptr = std::shared_ptr<GY_TcpCoroutineSuspend>;
-            using uptr = std::unique_ptr<GY_TcpCoroutineSuspend>;
-            using wptr = std::weak_ptr<GY_TcpCoroutineSuspend>;
-
-            GY_TcpCoroutineSuspend<RESULT> &operator=(const GY_TcpCoroutineSuspend<RESULT> &other) = delete;
-
-            GY_TcpCoroutineSuspend() = default;
-            GY_TcpCoroutineSuspend(std::coroutine_handle<promise_type> co_handle) noexcept;
-            GY_TcpCoroutineSuspend(GY_TcpCoroutineSuspend<RESULT> &&other) noexcept;
-            GY_TcpCoroutineSuspend<RESULT> &operator=(GY_TcpCoroutineSuspend<RESULT> &&other);
-            std::coroutine_handle<promise_type> GetCoroutine() const;
-            // 是否是协程
-            bool IsCoroutine();
-            // 获取结果
-            RESULT GetResult();
-            void SetResult(RESULT result);
-            // 获取状态
-            CoroutineStatus GetStatus();
-            void SetStatus(CoroutineStatus status);
-            ~GY_TcpCoroutineSuspend();
+            using ptr = std::shared_ptr<GY_NetCoroutinePool>;
+            using wptr = std::weak_ptr<GY_NetCoroutinePool>;
+            using uptr = std::unique_ptr<GY_NetCoroutinePool>;
+            GY_NetCoroutinePool(std::shared_ptr<std::condition_variable> fcond);
+            void Start();
+            void Stop();
+            bool Contains(uint64_t coId);
+            bool Resume(uint64_t coId, bool always);
+            bool AddCoroutine(uint64_t coId, GY_NetCoroutine<CoroutineStatus>&& coroutine);
+            bool EraseCoroutine(uint64_t coId);
+            GY_NetCoroutine<CoroutineStatus>& GetCoroutine(std::pair<uint64_t,bool> id_always);
+            virtual ~GY_NetCoroutinePool();
+        private:
+            void RealEraseCoroutine(uint64_t coId);
+        private:
+            //pair<coid,exec times>
+            std::queue<std::pair<uint64_t,bool>> m_waitCoQueue;
+            std::map<uint64_t,GY_NetCoroutine<CoroutineStatus>> m_coroutines;
+            std::queue<uint64_t> m_eraseCoroutines;
+            std::atomic_bool m_stop;
+            std::mutex m_queueMtx;
+            std::shared_mutex m_mapMtx;
+            std::condition_variable m_cond;
+            std::shared_ptr<std::condition_variable> m_fcond;
         };
 
 #include "coroutine.inl"

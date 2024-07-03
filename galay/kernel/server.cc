@@ -31,13 +31,6 @@ galay::kernel::GY_ThreadCond::WaitForThreads()
 galay::kernel::GY_TcpServer::GY_TcpServer()
 {
     this->m_isStopped.store(false);
-}
-
-void 
-galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
-{
-    this->m_builder = builder;
-    this->m_threadCond = std::make_shared<GY_ThreadCond>(builder->GetThreadNum());
     galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGINT,[this](int signo){
         Stop();
     });
@@ -50,6 +43,13 @@ galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr build
     galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGALRM,[this](int signo){
         Stop();
     });
+}
+
+void 
+galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
+{
+    this->m_builder = builder;
+    this->m_threadCond = std::make_shared<GY_ThreadCond>(builder->GetThreadNum());
 }
 
 galay::kernel::GY_TcpServerBuilderBase::ptr 
@@ -85,11 +85,13 @@ galay::kernel::GY_TcpServer::Stop()
 {
     if (!m_isStopped.load())
     {
+        spdlog::info("[{}:{}] [GY_TcpServer.Stop]",__FILE__,__LINE__);
         for (auto &scheduler : m_schedulers)
         {
             scheduler->Stop();
         }
         m_threadCond->WaitForThreads();
+        spdlog::info("[{}:{}] [GY_TcpServer Exit Normally]",__FILE__,__LINE__);
         m_exitCond.notify_one();
     }
 }

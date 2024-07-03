@@ -6,7 +6,7 @@
 #include <spdlog/async.h>
 
 galay::kernel::GY_HttpAsyncClient client;
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> func()
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> func()
 {
     auto resp = co_await client.Get("http://183.2.172.185:80");
     std::cout << resp->EncodePdu();

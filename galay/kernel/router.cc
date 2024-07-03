@@ -3,72 +3,72 @@
 
 
 void 
-galay::kernel::GY_HttpRouter::Get(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Get(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("GET", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Post(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Post(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("POST", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Options(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Options(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("OPTIONS", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Put(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Put(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("PUT", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Delete(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Delete(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("DELETE", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Patch(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Patch(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("PATCH", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Head(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Head(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("HEAD", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Trace(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Trace(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("TRACE", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Connect(const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Connect(const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("CONNECT", path, func);
 }
 
 
 void 
-galay::kernel::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const std::string &path, std::function<common::GY_TcpCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const std::string &path, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)> func)
 {
     this->m_routes[mehtod][path] = func;
 }
 
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>
 galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
 {
     auto request = std::dynamic_pointer_cast<protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
-    WaitGroup group;
+    WaitGroup group(ctrl.lock()->GetCoPool());
     galay::kernel::GY_HttpController::ptr http_ctrl = std::make_shared<galay::kernel::GY_HttpController>(ctrl);
     http_ctrl->SetWaitGroup(&group);
     auto method_routers = m_routes.find(request->GetMethod());
@@ -79,7 +79,8 @@ galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
         {
             group.Add(1);
             http_ctrl->SetRequest(request);
-            m_coroBusiness = router->second(http_ctrl);
+            auto co = router->second(http_ctrl);
+            if(co.IsCoroutine() && co.GetStatus() != common::kCoroutineFinished) ctrl.lock()->GetCoPool().lock()->AddCoroutine(co.GetCoId(),std::move(co)) ;
         }
         else
         {

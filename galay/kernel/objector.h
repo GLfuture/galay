@@ -181,6 +181,7 @@ namespace galay
             GY_Connector(int fd, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
             void SetContext(std::any &&context);
             std::any &&GetContext();
+            std::weak_ptr<common::GY_NetCoroutinePool> GetCoPool();
             galay::protocol::GY_Request::ptr GetRequest();
             void PushResponse(std::string &&response);
             std::shared_ptr<galay::kernel::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
@@ -188,11 +189,10 @@ namespace galay
             virtual void ExecuteTask() override;
             virtual void SetSSLCtx(SSL_CTX *ctx);
             virtual ~GY_Connector();
-
         private:
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> CoBusinessExec();
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> CoReceiveExec();
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> CoSendExec();
+            galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> CoBusinessExec();
+            galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> CoReceiveExec();
+            galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> CoSendExec();
 
             void PushRequest(galay::protocol::GY_Request::ptr request);
 
@@ -201,19 +201,24 @@ namespace galay
             bool m_is_ssl_accept;
             SSL *m_ssl;
             std::weak_ptr<galay::kernel::GY_IOScheduler> m_scheduler;
-            bool m_WaitingForRequest;
             int m_eventType;
             std::shared_ptr<galay::kernel::GY_Controller> m_controller;
             GY_Receiver::uptr m_receiver;
             GY_Sender::uptr m_sender;
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_Maincoroutine;
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_UserCoroutine;
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_RecvCoroutine;
-            galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> m_SendCoroutine;
+            uint64_t m_MainCoId;
+            //select 没有et模式，会不断resume
+            bool m_MainWait;
+            uint64_t m_RecvCoId;
+            bool m_RecvWait;
+            uint64_t m_SendCoId;
+            bool m_SendWait;
+            uint64_t m_UserCoId;
+            bool m_UserWait;
             protocol::GY_Request::ptr m_tempRequest;
             std::queue<protocol::GY_Request::ptr> m_requests;
             std::queue<std::string> m_responses;
             std::any m_context;
+            std::shared_ptr<bool> m_exit;
         };
     }
 

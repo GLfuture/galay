@@ -37,7 +37,7 @@ namespace galay
             virtual ~GY_Server() = default;
         };
 
-        class GY_TcpServer : public GY_Server, public std::enable_shared_from_this<GY_TcpServer>
+        class GY_TcpServer : public GY_Server
         {
         public:
             using ptr = std::shared_ptr<GY_TcpServer>;

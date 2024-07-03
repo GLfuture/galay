@@ -2,6 +2,7 @@
 #include "task.h"
 #include "waitgroup.h"
 #include "../common/reflection.h"
+#include "../util/random.h"
 #include <spdlog/spdlog.h>
 
 
@@ -298,11 +299,25 @@ galay::kernel::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> 
     this->m_scheduler = scheduler;
     this->m_receiver = std::make_unique<GY_Receiver>(fd, scheduler);
     this->m_sender = std::make_unique<GY_Sender>(fd, scheduler);
-    this->m_WaitingForRequest = true;
+    this->m_exit = std::make_shared<bool>(false);
     this->m_controller = nullptr;
-    this->m_Maincoroutine = CoBusinessExec();
-    this->m_RecvCoroutine = CoReceiveExec();
-    this->m_SendCoroutine = CoSendExec();
+
+    auto Co = CoBusinessExec();
+    this->m_MainCoId = Co.GetCoId();
+    if(Co.IsCoroutine()){
+        this->m_scheduler.lock()->GetCoroutinePool()->AddCoroutine(this->m_MainCoId,std::move(Co));
+    }
+    Co = CoReceiveExec();
+    this->m_RecvCoId = Co.GetCoId();
+    if(Co.IsCoroutine()){
+        this->m_scheduler.lock()->GetCoroutinePool()->AddCoroutine(this->m_RecvCoId,std::move(Co));
+    }
+    Co = CoSendExec();
+    this->m_SendCoId = Co.GetCoId();
+    if(Co.IsCoroutine()){
+        this->m_scheduler.lock()->GetCoroutinePool()->AddCoroutine(this->m_SendCoId,std::move(Co));
+    }
+    spdlog::info("[{}:{}] [GY_Connector::GY_Connector() Business CoId = {}, Recv CoId = {}, Send CoId = {}]", __FILE__, __LINE__, this->m_MainCoId, this->m_RecvCoId, this->m_SendCoId);
 }
 
 void 
@@ -329,6 +344,12 @@ galay::kernel::GY_Connector::GetContext()
     return std::move(this->m_context);
 }
 
+std::weak_ptr<galay::common::GY_NetCoroutinePool> 
+galay::kernel::GY_Connector::GetCoPool()
+{
+    return this->m_scheduler.lock()->GetCoroutinePool();
+}
+
 galay::protocol::GY_Request::ptr 
 galay::kernel::GY_Connector::GetRequest()
 {
@@ -341,15 +362,16 @@ void
 galay::kernel::GY_Connector::PushResponse(std::string&& response)
 {
     m_responses.push(response);
-    m_SendCoroutine.Resume();
+    this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_SendCoId, true);
 }
 
 void 
 galay::kernel::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
 {
     m_requests.push(request);
-    if(this->m_WaitingForRequest){
-        m_Maincoroutine.Resume();
+    if(this->m_MainWait){
+        this->m_MainWait = false;
+        this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_MainCoId, true);
     }
 }
 
@@ -388,12 +410,15 @@ galay::kernel::GY_Connector::ExecuteTask()
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
     }
-    if(m_eventType & kEventRead){
-        this->m_RecvCoroutine.Resume();
+    if(!this->m_RecvWait) sleep(1);
+    if((m_eventType & kEventRead) && this->m_RecvWait){
+        this->m_RecvWait = false;
+        this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_RecvCoId, true);
     }
-    if(m_eventType & kEventWrite)
+    if((m_eventType & kEventWrite) && this->m_SendWait)
     {
-        this->m_SendCoroutine.Resume();
+        this->m_SendWait = false;
+        this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_SendCoId, true);
     }
 }
 
@@ -405,37 +430,46 @@ galay::kernel::GY_Connector::SetSSLCtx(SSL_CTX* ctx)
     this->m_sender->SetSSL(this->m_ssl);
 }
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoBusinessExec()
 {
-    co_await std::suspend_always{};
     while(1)
     {
         if(this->m_requests.empty()){
-            this->m_WaitingForRequest = true;
+            this->m_MainWait = true;
+            spdlog::info("[{}:{}] [CoBusinessExec BusinessCo Waiting..., Wait = {}]",__FILE__,__LINE__,this->m_MainWait);
             co_await std::suspend_always{};
         }
-        this->m_WaitingForRequest = false;
-        WaitGroup group;
+        WaitGroup group(this->m_scheduler.lock()->GetCoroutinePool());
         group.Add(1);
         this->m_controller->SetWaitGroup(&group);
-        this->m_UserCoroutine = this->m_scheduler.lock()->UserFunction(this->m_controller);
+        auto UserCoroutine = this->m_scheduler.lock()->UserFunction(this->m_controller);
+        if(UserCoroutine.IsCoroutine()){
+            this->m_UserCoId = UserCoroutine.GetCoId();
+            this->m_scheduler.lock()->GetCoroutinePool()->AddCoroutine(UserCoroutine.GetCoId(),std::move(UserCoroutine));
+        }
         co_await group.Wait();
         if(this->m_controller->IsClosed() && this->m_sender->WBufferEmpty()){
             this->m_scheduler.lock()->DelEvent(this->m_fd,EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
         }
     }
+    spdlog::info("[{}:{}] [CoBusinessExec BusinessCo Finished]",__FILE__,__LINE__);
     co_return common::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoReceiveExec()
 {
+    this->m_RecvWait = true;
+    auto exit = this->m_exit;
     while(1)
     {
+        spdlog::info("[{}:{}] [CoReceiveExec RecvCo Waiting..., Wait = {}]",__FILE__,__LINE__,this->m_RecvWait);
         co_await std::suspend_always{};
+        if(*exit) break;
         m_receiver->ExecuteTask();
+        this->m_RecvWait = true;
         while(1){
             if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
             if(!m_tempRequest) {
@@ -443,7 +477,10 @@ galay::kernel::GY_Connector::CoReceiveExec()
                 break;
             }
             std::string& buffer = m_receiver->GetRBuffer();
-            if(buffer.length() == 0) break;
+            if(buffer.length() == 0) {
+                spdlog::info("[{}:{}] [CoReceiveExec Recv Buffer Length = 0]",__FILE__,__LINE__);
+                break;
+            }
             common::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
             if(type == common::ProtoJudgeType::kProtoFinished){
                 PushRequest(std::move(m_tempRequest));
@@ -459,30 +496,38 @@ galay::kernel::GY_Connector::CoReceiveExec()
             }
         }
     }
+    spdlog::info("[{}:{}] [CoReceiveExec RecvCo Exit]",__FILE__,__LINE__);
     co_return common::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> 
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoSendExec()
 {
+    this->m_SendWait = true;
+    auto exit = this->m_exit;
     while(1)
     {
+        spdlog::info("[{}:{}] [CoSendExec SendCo Waiting..., Wait = {}]",__FILE__,__LINE__,this->m_SendWait);
         co_await std::suspend_always{};
+        if(*exit) break;
         while (!m_responses.empty())
         {
             m_sender->AppendWBuffer(std::move(m_responses.front()));
             m_responses.pop();
-        }
-        m_sender->ExecuteTask();
-        if(m_sender->WBufferEmpty()){
-            if(this->m_controller->IsClosed()){
-                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
-                this->m_scheduler.lock()->DelObjector(this->m_fd);
-            }else {
-                this->m_scheduler.lock()->ModEvent(this->m_fd, EventType::kEventWrite , EventType::kEventRead);
-            }         
-        }else{
-            this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+            m_sender->ExecuteTask();
+            this->m_SendWait = true; 
+            if(m_sender->WBufferEmpty()){
+                if(this->m_controller->IsClosed()){
+                    this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+                    this->m_scheduler.lock()->DelObjector(this->m_fd);
+                }else {
+                    this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventWrite);
+                    this->m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventRead | EventType::kEventError);
+                }      
+            }else{
+                this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+                break;
+            }
         }
     }
     co_return common::CoroutineStatus::kCoroutineFinished;
@@ -490,8 +535,14 @@ galay::kernel::GY_Connector::CoSendExec()
 
 galay::kernel::GY_Connector::~GY_Connector()
 {
+    spdlog::info("[{}:{}] [~GY_Connector]",__FILE__,__LINE__);
     if(this->m_ssl){
         IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
         this->m_ssl = nullptr;
     }
+    *(this->m_exit) = true;
+    this->m_scheduler.lock()->GetCoroutinePool()->EraseCoroutine(this->m_MainCoId);
+    this->m_scheduler.lock()->GetCoroutinePool()->EraseCoroutine(this->m_RecvCoId);
+    this->m_scheduler.lock()->GetCoroutinePool()->EraseCoroutine(this->m_SendCoId);
+    this->m_scheduler.lock()->GetCoroutinePool()->EraseCoroutine(this->m_UserCoId);
 }

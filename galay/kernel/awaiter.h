@@ -44,7 +44,7 @@ namespace galay
         {
         public:
             GroupAwaiter() = default;
-            GroupAwaiter(bool IsSuspend);
+            GroupAwaiter(std::weak_ptr<common::GY_NetCoroutinePool> coPool, bool IsSuspend);
             GroupAwaiter(GroupAwaiter &&other);
             GroupAwaiter &operator=(const GroupAwaiter &other);
             GroupAwaiter &operator=(GroupAwaiter &&other);
@@ -55,7 +55,8 @@ namespace galay
 
         private:
             bool m_IsSuspend;
-            std::coroutine_handle<> m_handle;
+            std::weak_ptr<common::GY_NetCoroutinePool> m_coPool;
+            uint64_t m_coId;
         };
 
         class HttpAwaiter

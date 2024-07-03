@@ -41,16 +41,18 @@ galay::kernel::CommonAwaiter::await_resume()
     return m_Result;
 }
 
-galay::kernel::GroupAwaiter::GroupAwaiter(bool IsSuspend)
+galay::kernel::GroupAwaiter::GroupAwaiter(std::weak_ptr<common::GY_NetCoroutinePool> coPool, bool IsSuspend)
 {
     this->m_IsSuspend = IsSuspend;
+    this->m_coPool = coPool;
 }
 
 galay::kernel::GroupAwaiter&
 galay::kernel::GroupAwaiter::operator=(const GroupAwaiter& other)
 {
     if(this != &other){
-        this->m_handle=other.m_handle;
+        this->m_coId=other.m_coId;
+        this->m_coPool=other.m_coPool;
         this->m_IsSuspend=other.m_IsSuspend;
     }
     return *this;
@@ -58,7 +60,8 @@ galay::kernel::GroupAwaiter::operator=(const GroupAwaiter& other)
 
 galay::kernel::GroupAwaiter::GroupAwaiter(GroupAwaiter&& other)
 {
-    this->m_handle=other.m_handle;
+    this->m_coId=other.m_coId;
+    this->m_coPool=other.m_coPool;
     this->m_IsSuspend = other.m_IsSuspend;
 }
 
@@ -66,7 +69,8 @@ galay::kernel::GroupAwaiter&
 galay::kernel::GroupAwaiter::operator=(GroupAwaiter&& other)
 {
     if(this != &other){
-        this->m_handle=other.m_handle;
+        this->m_coId=other.m_coId;
+        this->m_coPool=other.m_coPool;
         this->m_IsSuspend = other.m_IsSuspend;
     }
     return *this;
@@ -75,20 +79,19 @@ galay::kernel::GroupAwaiter::operator=(GroupAwaiter&& other)
 bool 
 galay::kernel::GroupAwaiter::await_ready()
 {
-    return !m_IsSuspend;
+    return !m_IsSuspend; 
 }
 
 void 
 galay::kernel::GroupAwaiter::Resume()
 {
-    if(this->m_handle) 
-        this->m_handle.resume();
+    if(this->m_IsSuspend) this->m_coPool.lock()->Resume(this->m_coId,false);
 }
 
 void 
 galay::kernel::GroupAwaiter::await_suspend(std::coroutine_handle<> handle)
 {
-    this->m_handle = handle;
+    this->m_coId = reinterpret_cast<uint64_t>(handle.address());
 }
 
 std::any 

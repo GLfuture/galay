@@ -83,7 +83,7 @@ galay::kernel::GY_TcpServerBuilder<Req,Resp>::GY_TcpServerBuilder()
 /// @param port_func 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
 void 
-galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetUserFunction(std::pair<uint16_t,std::function<galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>(galay::kernel::GY_Controller::wptr)>> port_func) 
+galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetUserFunction(std::pair<uint16_t,std::function<galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>(galay::kernel::GY_Controller::wptr)>> port_func) 
 {
     this->m_port.store(port_func.first);
     this->m_userfunc = port_func.second;
@@ -203,7 +203,7 @@ galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetPort()
 }
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
-std::function<galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus>(galay::kernel::GY_Controller::wptr)>
+std::function<galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>(galay::kernel::GY_Controller::wptr)>
 galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetUserFunction()
 {
     return m_userfunc;

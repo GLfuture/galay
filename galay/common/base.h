@@ -92,7 +92,7 @@ namespace galay
             {
                 //To do
                 a.CoreBusiness(std::declval<std::weak_ptr<kernel::GY_Controller>>)
-            } -> std::same_as<GY_TcpCoroutine<CoroutineStatus>>;
+            } -> std::same_as<GY_NetCoroutine<CoroutineStatus>>;
         };
 
         template <typename T>
@@ -100,7 +100,7 @@ namespace galay
             {
                 //To do
                 a.CoreBusiness(std::declval<std::weak_ptr<kernel::GY_HttpController>>)
-            } -> std::same_as<GY_TcpCoroutine<CoroutineStatus>>;
+            } -> std::same_as<GY_NetCoroutine<CoroutineStatus>>;
         };
 
         enum SchedulerType

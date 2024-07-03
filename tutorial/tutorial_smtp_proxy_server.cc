@@ -2,7 +2,7 @@
 #include <signal.h>
 #include <iostream>
 #include <spdlog/spdlog.h>
-galay::common::GY_TcpCoroutine<galay::common::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
     auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();

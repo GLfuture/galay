@@ -4,6 +4,7 @@
 ![Static Badge](https://img.shields.io/badge/License-MIT-yellow)
 ![Static Badge](https://img.shields.io/badge/Language-C%2B%2B-red%20) 
 ![Static Badge](https://img.shields.io/badge/Platfrom-Linux-red)
+![Static Badge](https://img.shields.io/badge/Architecture-x86%20x64-8A2BE2)
 
 ## 简介
 
