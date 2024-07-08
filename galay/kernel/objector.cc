@@ -1,6 +1,6 @@
 #include "objector.h"
 #include "task.h"
-#include "waitgroup.h"
+#include "../common/waitgroup.h"
 #include "../common/reflection.h"
 #include "../util/random.h"
 #include <spdlog/spdlog.h>
@@ -465,7 +465,6 @@ galay::kernel::GY_Connector::CoReceiveExec()
     auto exit = this->m_exit;
     while(1)
     {
-        spdlog::info("[{}:{}] [CoReceiveExec RecvCo Waiting..., Wait = {}]",__FILE__,__LINE__,this->m_RecvWait);
         co_await std::suspend_always{};
         if(*exit) break;
         m_receiver->ExecuteTask();
@@ -507,7 +506,6 @@ galay::kernel::GY_Connector::CoSendExec()
     auto exit = this->m_exit;
     while(1)
     {
-        spdlog::info("[{}:{}] [CoSendExec SendCo Waiting..., Wait = {}]",__FILE__,__LINE__,this->m_SendWait);
         co_await std::suspend_always{};
         if(*exit) break;
         while (!m_responses.empty())

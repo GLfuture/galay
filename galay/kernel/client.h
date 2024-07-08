@@ -30,9 +30,9 @@ namespace galay
             void AddHeaderPair(const std::string &key, const std::string &value);
             void RemoveHeaderPair(const std::string &key);
             // return http_response ptr
-            HttpAwaiter Get(const std::string &url);
-            HttpAwaiter Post(const std::string &url, std::string &&body);
-            HttpAwaiter Options(const std::string &url);
+            common::HttpAwaiter Get(const std::string &url);
+            common::HttpAwaiter Post(const std::string &url, std::string &&body);
+            common::HttpAwaiter Options(const std::string &url);
             void Close();
             virtual ~GY_HttpAsyncClient() = default;
 
@@ -57,9 +57,9 @@ namespace galay
         {
         public:
             GY_SmtpAsyncClient(const std::string &host, uint16_t port);
-            SmtpAwaiter Auth(std::string account, std::string password);
-            SmtpAwaiter SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg);
-            SmtpAwaiter Quit();
+            common::SmtpAwaiter Auth(std::string account, std::string password);
+            common::SmtpAwaiter SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg);
+            common::SmtpAwaiter Quit();
             void Close();
             virtual ~GY_SmtpAsyncClient() = default;
 
@@ -80,8 +80,8 @@ namespace galay
         {
         public:
             DnsAsyncClient(const std::string &host, uint16_t port = 53);
-            DnsAwaiter QueryA(std::queue<std::string> domains);
-            DnsAwaiter QueryAAAA(std::queue<std::string> domains);
+            common::DnsAwaiter QueryA(std::queue<std::string> domains);
+            common::DnsAwaiter QueryAAAA(std::queue<std::string> domains);
             void Close();
             virtual ~DnsAsyncClient() = default;
 

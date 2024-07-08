@@ -47,12 +47,17 @@ private:
 
 };
 
-class ChunckBusiness : public galay::GY_HttpCoreBase
+class WorkBusiness : public galay::GY_HttpCoreBase
 {
 public:
     GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
     {
-        std::cout << ctrl.lock()->GetRequest()->GetBody();
+        galay::protocol::http::Http1_1_Response response;
+        response.SetStatus(200);
+        response.SetVersion("1.1");
+        response.SetHeadPair({"Content-Type", "text/html"});
+        response.SetBody("liumingwen 202131060635\n");
+        ctrl.lock()->PushResponse(response.EncodePdu());
         ctrl.lock()->Done();
         co_return galay::common::CoroutineStatus::kCoroutineFinished;
     }
@@ -67,10 +72,11 @@ int main()
     spdlog::set_level(spdlog::level::info);
     Business business;
     ChunckBusiness chunckbusiness;
+    WorkBusiness workbusiness;
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
     router->Get("/echo",std::bind(&Business::CoreBusiness,&business,std::placeholders::_1));
     router->Post("/chuncked",std::bind(&ChunckBusiness::CoreBusiness,&chunckbusiness,std::placeholders::_1));
-    galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8082,router);
+    galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8899,router);
     builder->SetIllegalFunction([]()->std::string{
         galay::protocol::http::Http1_1_Response response;
         response.SetStatus(400);

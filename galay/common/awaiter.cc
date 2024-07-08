@@ -1,11 +1,11 @@
 #include "awaiter.h"
-galay::kernel::CommonAwaiter::CommonAwaiter(bool IsSuspend,const std::any& result)
+galay::common::CommonAwaiter::CommonAwaiter(bool IsSuspend,const std::any& result)
 {
     m_IsSuspend = IsSuspend;
     m_Result = result;
 }
 
-galay::kernel::CommonAwaiter::CommonAwaiter(CommonAwaiter&& other)
+galay::common::CommonAwaiter::CommonAwaiter(CommonAwaiter&& other)
 {
     if(this != &other){
         m_IsSuspend = other.m_IsSuspend;
@@ -13,8 +13,8 @@ galay::kernel::CommonAwaiter::CommonAwaiter(CommonAwaiter&& other)
     }
 }
 
-galay::kernel::CommonAwaiter&
-galay::kernel::CommonAwaiter::operator=(CommonAwaiter && other)
+galay::common::CommonAwaiter&
+galay::common::CommonAwaiter::operator=(CommonAwaiter && other)
 {
     if(this != &other){
         m_IsSuspend = other.m_IsSuspend;
@@ -24,31 +24,31 @@ galay::kernel::CommonAwaiter::operator=(CommonAwaiter && other)
 }
 
 bool 
-galay::kernel::CommonAwaiter::await_ready()
+galay::common::CommonAwaiter::await_ready()
 {
     return !m_IsSuspend;
 }
 
 void 
-galay::kernel::CommonAwaiter::await_suspend(std::coroutine_handle<> handle) 
+galay::common::CommonAwaiter::await_suspend(std::coroutine_handle<> handle) 
 {
     
 }
 
 std::any 
-galay::kernel::CommonAwaiter::await_resume()
+galay::common::CommonAwaiter::await_resume()
 {
     return m_Result;
 }
 
-galay::kernel::GroupAwaiter::GroupAwaiter(std::weak_ptr<common::GY_NetCoroutinePool> coPool, bool IsSuspend)
+galay::common::GroupAwaiter::GroupAwaiter(std::weak_ptr<common::GY_NetCoroutinePool> coPool, bool IsSuspend)
 {
     this->m_IsSuspend = IsSuspend;
     this->m_coPool = coPool;
 }
 
-galay::kernel::GroupAwaiter&
-galay::kernel::GroupAwaiter::operator=(const GroupAwaiter& other)
+galay::common::GroupAwaiter&
+galay::common::GroupAwaiter::operator=(const GroupAwaiter& other)
 {
     if(this != &other){
         this->m_coId=other.m_coId;
@@ -58,15 +58,15 @@ galay::kernel::GroupAwaiter::operator=(const GroupAwaiter& other)
     return *this;
 }
 
-galay::kernel::GroupAwaiter::GroupAwaiter(GroupAwaiter&& other)
+galay::common::GroupAwaiter::GroupAwaiter(GroupAwaiter&& other)
 {
     this->m_coId=other.m_coId;
     this->m_coPool=other.m_coPool;
     this->m_IsSuspend = other.m_IsSuspend;
 }
 
-galay::kernel::GroupAwaiter&
-galay::kernel::GroupAwaiter::operator=(GroupAwaiter&& other)
+galay::common::GroupAwaiter&
+galay::common::GroupAwaiter::operator=(GroupAwaiter&& other)
 {
     if(this != &other){
         this->m_coId=other.m_coId;
@@ -77,39 +77,39 @@ galay::kernel::GroupAwaiter::operator=(GroupAwaiter&& other)
 }
 
 bool 
-galay::kernel::GroupAwaiter::await_ready()
+galay::common::GroupAwaiter::await_ready()
 {
     return !m_IsSuspend; 
 }
 
 void 
-galay::kernel::GroupAwaiter::Resume()
+galay::common::GroupAwaiter::Resume()
 {
     if(this->m_IsSuspend) this->m_coPool.lock()->Resume(this->m_coId,false);
 }
 
 void 
-galay::kernel::GroupAwaiter::await_suspend(std::coroutine_handle<> handle)
+galay::common::GroupAwaiter::await_suspend(std::coroutine_handle<> handle)
 {
     this->m_coId = reinterpret_cast<uint64_t>(handle.address());
 }
 
 std::any 
-galay::kernel::GroupAwaiter::await_resume()
+galay::common::GroupAwaiter::await_resume()
 {
     return {};
 }
 
 
 //To Do
-galay::kernel::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::Http1_1_Response::ptr()>& Func,std::queue<std::future<void>>& futures)
+galay::common::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::Http1_1_Response::ptr()>& Func,std::queue<std::future<void>>& futures)
     :m_Func(Func),
      m_futures(futures)
 {
     this->m_IsSuspend = IsSuspend;
 }
 
-galay::kernel::HttpAwaiter::HttpAwaiter(HttpAwaiter&& other)
+galay::common::HttpAwaiter::HttpAwaiter(HttpAwaiter&& other)
     :m_Func(other.m_Func),
      m_futures(other.m_futures)
 {
@@ -119,8 +119,8 @@ galay::kernel::HttpAwaiter::HttpAwaiter(HttpAwaiter&& other)
     }
 } 
         
-galay::kernel::HttpAwaiter&
-galay::kernel::HttpAwaiter::operator=(HttpAwaiter &&other)
+galay::common::HttpAwaiter&
+galay::common::HttpAwaiter::operator=(HttpAwaiter &&other)
 {
     if(this != &other){
         this->m_IsSuspend = other.m_IsSuspend;
@@ -131,13 +131,14 @@ galay::kernel::HttpAwaiter::operator=(HttpAwaiter &&other)
 }
 
 bool 
-galay::kernel::HttpAwaiter::await_ready()
+galay::common::HttpAwaiter::await_ready()
 {
     return !m_IsSuspend;
 }
 
 //To Do
-void galay::kernel::HttpAwaiter::await_suspend(std::coroutine_handle<> handle)
+void 
+galay::common::HttpAwaiter::await_suspend(std::coroutine_handle<> handle)
 {
     m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
@@ -146,19 +147,19 @@ void galay::kernel::HttpAwaiter::await_suspend(std::coroutine_handle<> handle)
 }
 
 galay::protocol::http::Http1_1_Response::ptr 
-galay::kernel::HttpAwaiter::await_resume()
+galay::common::HttpAwaiter::await_resume()
 {
     return m_Result;
 }
 
-galay::kernel::SmtpAwaiter::SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func,std::queue<std::future<void>>& futures)
+galay::common::SmtpAwaiter::SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func,std::queue<std::future<void>>& futures)
     :m_Func(func),
      m_futures(futures)
 {
     this->m_IsSuspend = IsSuspend;
 }
 
-galay::kernel::SmtpAwaiter::SmtpAwaiter(SmtpAwaiter&& other)
+galay::common::SmtpAwaiter::SmtpAwaiter(SmtpAwaiter&& other)
     :m_Func(other.m_Func),
      m_futures(other.m_futures)
 {
@@ -166,8 +167,8 @@ galay::kernel::SmtpAwaiter::SmtpAwaiter(SmtpAwaiter&& other)
     m_Result = std::move(other.m_Result);
 }
 
-galay::kernel::SmtpAwaiter& 
-galay::kernel::SmtpAwaiter::operator=(SmtpAwaiter && other)
+galay::common::SmtpAwaiter& 
+galay::common::SmtpAwaiter::operator=(SmtpAwaiter && other)
 {
     if(this != &other)
     {
@@ -179,13 +180,13 @@ galay::kernel::SmtpAwaiter::operator=(SmtpAwaiter && other)
 }
 
 bool 
-galay::kernel::SmtpAwaiter::await_ready()
+galay::common::SmtpAwaiter::await_ready()
 {
     return !m_IsSuspend;
 }
 
 void 
-galay::kernel::SmtpAwaiter::await_suspend(std::coroutine_handle<> handle)
+galay::common::SmtpAwaiter::await_suspend(std::coroutine_handle<> handle)
 {
     this->m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
@@ -195,19 +196,19 @@ galay::kernel::SmtpAwaiter::await_suspend(std::coroutine_handle<> handle)
 
 
 std::vector<galay::protocol::smtp::Smtp_Response::ptr> 
-galay::kernel::SmtpAwaiter::await_resume()
+galay::common::SmtpAwaiter::await_resume()
 {
     return std::move(m_Result);
 }
 
-galay::kernel::DnsAwaiter::DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func,std::queue<std::future<void>>& futures)
+galay::common::DnsAwaiter::DnsAwaiter(bool IsSuspend,std::function<galay::protocol::dns::Dns_Response::ptr()>& func,std::queue<std::future<void>>& futures)
     :m_Func(func),
      m_futures(futures)
 {
     this->m_IsSuspend = IsSuspend;
 }
 
-galay::kernel::DnsAwaiter::DnsAwaiter(DnsAwaiter&& other)
+galay::common::DnsAwaiter::DnsAwaiter(DnsAwaiter&& other)
     :m_Func(other.m_Func),
      m_futures(other.m_futures)
 {
@@ -216,8 +217,8 @@ galay::kernel::DnsAwaiter::DnsAwaiter(DnsAwaiter&& other)
 }
 
 
-galay::kernel::DnsAwaiter&
-galay::kernel::DnsAwaiter::operator=(DnsAwaiter&& other)
+galay::common::DnsAwaiter&
+galay::common::DnsAwaiter::operator=(DnsAwaiter&& other)
 {
     if(this != &other)
     {
@@ -229,13 +230,13 @@ galay::kernel::DnsAwaiter::operator=(DnsAwaiter&& other)
 }
 
 bool 
-galay::kernel::DnsAwaiter::await_ready()
+galay::common::DnsAwaiter::await_ready()
 {
     return !m_IsSuspend;
 }
 
 void 
-galay::kernel::DnsAwaiter::await_suspend(std::coroutine_handle<> handle)
+galay::common::DnsAwaiter::await_suspend(std::coroutine_handle<> handle)
 {
     this->m_futures.emplace(std::async(std::launch::async,[this,handle](){
         m_Result = m_Func();
@@ -245,7 +246,7 @@ galay::kernel::DnsAwaiter::await_suspend(std::coroutine_handle<> handle)
 
 
 galay::protocol::dns::Dns_Response::ptr 
-galay::kernel::DnsAwaiter::await_resume()
+galay::common::DnsAwaiter::await_resume()
 {
     return this->m_Result;
 }

@@ -13,7 +13,7 @@
 
 namespace galay
 {
-    namespace kernel
+    namespace common
     {
         // return int
         class AwaiterBase

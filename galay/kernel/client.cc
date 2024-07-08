@@ -60,7 +60,7 @@ galay::kernel::GY_HttpAsyncClient::RemoveHeaderPair(const std::string& key)
     this->m_headers.erase(key);
 }
 
-galay::kernel::HttpAwaiter
+galay::common::HttpAwaiter
 galay::kernel::GY_HttpAsyncClient::Get(const std::string& url)
 {
     protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
@@ -76,10 +76,10 @@ galay::kernel::GY_HttpAsyncClient::Get(const std::string& url)
         if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
     };
-    return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
+    return common::HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
-galay::kernel::HttpAwaiter
+galay::common::HttpAwaiter
 galay::kernel::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&body)
 {
     auto request = std::make_shared<protocol::http::Http1_1_Request>();
@@ -96,10 +96,10 @@ galay::kernel::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&bo
         if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
     };
-    return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
+    return common::HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
-galay::kernel::HttpAwaiter
+galay::common::HttpAwaiter
 galay::kernel::GY_HttpAsyncClient::Options(const std::string& url)
 {
     protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
@@ -115,7 +115,7 @@ galay::kernel::GY_HttpAsyncClient::Options(const std::string& url)
         if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
     };
-    return HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
+    return common::HttpAwaiter(true, this->m_ExecMethod,this->m_futures);
 }
 
 void galay::kernel::GY_HttpAsyncClient::Close()
@@ -261,7 +261,7 @@ galay::kernel::GY_SmtpAsyncClient::GY_SmtpAsyncClient(const std::string &host, u
     m_isconnected = false;
 }
 
-galay::kernel::SmtpAwaiter
+galay::common::SmtpAwaiter
 galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string password)
 {
     std::queue<std::string> requests;
@@ -274,10 +274,10 @@ galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string passwor
     {
         return ExecSendMsg(requests);
     };
-    return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
+    return common::SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
-galay::kernel::SmtpAwaiter
+galay::common::SmtpAwaiter
 galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::vector<std::string>& ToEmails,galay::protocol::smtp::SmtpMsgInfo msg)
 {
     std::queue<std::string> requests;
@@ -292,10 +292,10 @@ galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail,const std::ve
     {
         return ExecSendMsg(requests);
     };
-    return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
+    return common::SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
-galay::kernel::SmtpAwaiter
+galay::common::SmtpAwaiter
 galay::kernel::GY_SmtpAsyncClient::Quit()
 {
     std::queue<std::string> requests;
@@ -305,7 +305,7 @@ galay::kernel::GY_SmtpAsyncClient::Quit()
     {
         return ExecSendMsg(requests);
     };
-    return SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
+    return common::SmtpAwaiter(true,m_ExecSendMsg,this->m_futures);
 }
 
 void galay::kernel::GY_SmtpAsyncClient::Close()
@@ -418,7 +418,7 @@ galay::kernel::DnsAsyncClient::DnsAsyncClient(const std::string& host, uint16_t 
     this->m_IsInit = false;
 }
 
-galay::kernel::DnsAwaiter 
+galay::common::DnsAwaiter 
 galay::kernel::DnsAsyncClient::QueryA(std::queue<std::string> domains)
 {
     if(!this->m_IsInit){
@@ -450,10 +450,10 @@ galay::kernel::DnsAsyncClient::QueryA(std::queue<std::string> domains)
     this->m_ExecSendMsg = [this,reqStrs](){
         return ExecSendMsg(reqStrs);
     };
-    return DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
+    return common::DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
 }
 
-galay::kernel::DnsAwaiter 
+galay::common::DnsAwaiter 
 galay::kernel::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
 {
     if(!this->m_IsInit){
@@ -485,7 +485,7 @@ galay::kernel::DnsAsyncClient::QueryAAAA(std::queue<std::string> domains)
     this->m_ExecSendMsg = [this,reqStrs](){
         return ExecSendMsg(reqStrs);
     };
-    return DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
+    return common::DnsAwaiter(true,this->m_ExecSendMsg,this->m_futures);
 }
 
 galay::protocol::dns::Dns_Response::ptr 

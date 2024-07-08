@@ -10,6 +10,7 @@ namespace galay
     {
         class GY_NetCoroutinePool;
     }
+
     namespace kernel
     {
         class WaitGroup
@@ -20,12 +21,12 @@ namespace galay
             using uptr = std::unique_ptr<WaitGroup>;
             WaitGroup(std::weak_ptr<common::GY_NetCoroutinePool> coPool);
             void Add(int num);
-            GroupAwaiter &Wait();
+            common::GroupAwaiter &Wait();
             void Done();
 
         private:
             std::atomic_int16_t m_coNum;
-            GroupAwaiter m_awaiter;
+            common::GroupAwaiter m_awaiter;
             std::weak_ptr<common::GY_NetCoroutinePool> m_coPool;
         };
     }
