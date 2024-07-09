@@ -49,7 +49,7 @@ void
 galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
 {
     this->m_builder = builder;
-    this->m_threadCond = std::make_shared<GY_ThreadCond>(builder->GetThreadNum());
+    this->m_threadCond = std::make_shared<GY_ThreadCond>(builder->GetNetThreadNum());
 }
 
 galay::kernel::GY_TcpServerBuilderBase::ptr 
@@ -61,7 +61,7 @@ galay::kernel::GY_TcpServer::GetServerBuilder()
 void 
 galay::kernel::GY_TcpServer::Start()
 {
-    for (int i = 0; i < m_builder->GetThreadNum(); ++i)
+    for (int i = 0; i < m_builder->GetNetThreadNum(); ++i)
     {
         GY_IOScheduler::ptr scheduler = CreateScheduler();
         GY_TimerManager::ptr timerManager = CreateTimerManager();
@@ -85,6 +85,7 @@ galay::kernel::GY_TcpServer::Stop()
 {
     if (!m_isStopped.load())
     {
+        m_isStopped.store(true);
         spdlog::info("[{}:{}] [GY_TcpServer.Stop]",__FILE__,__LINE__);
         for (auto &scheduler : m_schedulers)
         {
@@ -92,7 +93,7 @@ galay::kernel::GY_TcpServer::Stop()
         }
         m_threadCond->WaitForThreads();
         spdlog::info("[{}:{}] [GY_TcpServer Exit Normally]",__FILE__,__LINE__);
-        m_exitCond.notify_one();
+        m_exitCond.notify_all();
     }
 }
 

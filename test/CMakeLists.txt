@@ -5,6 +5,7 @@ set(SRC_LIST
     test_wait_group.cc
     test_reflection.cc
     test_signal.cc
+    test_threadpool.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

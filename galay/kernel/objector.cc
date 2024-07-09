@@ -369,10 +369,7 @@ void
 galay::kernel::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr request)
 {
     m_requests.push(request);
-    if(this->m_MainWait){
-        this->m_MainWait = false;
-        this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_MainCoId, true);
-    }
+    this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_MainCoId, true);
 }
 
 void 
@@ -410,14 +407,12 @@ galay::kernel::GY_Connector::ExecuteTask()
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
     }
-    if(!this->m_RecvWait) sleep(1);
-    if((m_eventType & kEventRead) && this->m_RecvWait){
-        this->m_RecvWait = false;
+    if(m_eventType & kEventRead){
+        m_receiver->ExecuteTask();
         this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_RecvCoId, true);
     }
-    if((m_eventType & kEventWrite) && this->m_SendWait)
+    if(m_eventType & kEventWrite)
     {
-        this->m_SendWait = false;
         this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_SendCoId, true);
     }
 }
@@ -436,8 +431,6 @@ galay::kernel::GY_Connector::CoBusinessExec()
     while(1)
     {
         if(this->m_requests.empty()){
-            this->m_MainWait = true;
-            spdlog::info("[{}:{}] [CoBusinessExec BusinessCo Waiting..., Wait = {}]",__FILE__,__LINE__,this->m_MainWait);
             co_await std::suspend_always{};
         }
         WaitGroup group(this->m_scheduler.lock()->GetCoroutinePool());
@@ -461,74 +454,84 @@ galay::kernel::GY_Connector::CoBusinessExec()
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoReceiveExec()
 {
-    this->m_RecvWait = true;
     auto exit = this->m_exit;
     while(1)
     {
         co_await std::suspend_always{};
         if(*exit) break;
-        m_receiver->ExecuteTask();
-        this->m_RecvWait = true;
-        while(1){
-            if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
-            if(!m_tempRequest) {
-                spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
-                break;
-            }
-            std::string& buffer = m_receiver->GetRBuffer();
-            if(buffer.length() == 0) {
-                spdlog::info("[{}:{}] [CoReceiveExec Recv Buffer Length = 0]",__FILE__,__LINE__);
-                break;
-            }
-            common::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
-            if(type == common::ProtoJudgeType::kProtoFinished){
-                PushRequest(std::move(m_tempRequest));
-                m_tempRequest = nullptr;
-            }else if(type == common::ProtoJudgeType::kProtoIncomplete)
-            {
-                break;
-            }else{
-                std::string resp = this->m_scheduler.lock()->IllegalFunction();
-                this->m_controller->Close();
-                PushResponse(std::move(resp));
-                break;
-            }
-        }
+        RealRecv();
     }
     spdlog::info("[{}:{}] [CoReceiveExec RecvCo Exit]",__FILE__,__LINE__);
     co_return common::CoroutineStatus::kCoroutineFinished;
 }
 
+void 
+galay::kernel::GY_Connector::RealRecv()
+{
+    while(1){
+        if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
+        if(!m_tempRequest) {
+            spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__,this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
+            break;
+        }
+        std::string& buffer = m_receiver->GetRBuffer();
+        if(buffer.length() == 0) {
+            spdlog::info("[{}:{}] [CoReceiveExec Recv Buffer Length = 0]",__FILE__,__LINE__);
+            break;
+        }
+        common::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
+        if(type == common::ProtoJudgeType::kProtoFinished){
+            PushRequest(std::move(m_tempRequest));
+            m_tempRequest = nullptr;
+        }else if(type == common::ProtoJudgeType::kProtoIncomplete)
+        {
+            break;
+        }else{
+            std::string resp = this->m_scheduler.lock()->IllegalFunction();
+            this->m_controller->Close();
+            PushResponse(std::move(resp));
+            break;
+        }
+    }
+}
+
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
 galay::kernel::GY_Connector::CoSendExec()
 {
-    this->m_SendWait = true;
     auto exit = this->m_exit;
     while(1)
     {
         co_await std::suspend_always{};
         if(*exit) break;
-        while (!m_responses.empty())
-        {
-            m_sender->AppendWBuffer(std::move(m_responses.front()));
-            m_responses.pop();
-            m_sender->ExecuteTask();
-            this->m_SendWait = true; 
-            if(m_sender->WBufferEmpty()){
-                if(this->m_controller->IsClosed()){
-                    this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
-                    this->m_scheduler.lock()->DelObjector(this->m_fd);
-                }else {
-                    this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventWrite);
-                    this->m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventRead | EventType::kEventError);
-                }      
-            }else{
-                this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
-                break;
-            }
-        }
+        RealSend();
     }
     co_return common::CoroutineStatus::kCoroutineFinished;
+}
+
+
+void 
+galay::kernel::GY_Connector::RealSend()
+{
+    while (!m_responses.empty())
+    {
+        if(m_sender->WBufferEmpty()){
+            m_sender->AppendWBuffer(std::move(m_responses.front()));
+            m_responses.pop();
+        }
+        m_sender->ExecuteTask();
+        if(m_sender->WBufferEmpty()){
+            if(this->m_controller->IsClosed()){
+                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+                this->m_scheduler.lock()->DelObjector(this->m_fd);
+            }else {
+                this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventWrite);
+                this->m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventRead | EventType::kEventError);
+            }      
+        }else{
+            this->m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventRead, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+            break;
+        }
+    }
 }
 
 galay::kernel::GY_Connector::~GY_Connector()

@@ -37,9 +37,7 @@ public:
         std::cout << "end....\n";
         //Close 要在 PushResponse 前，不然失效
         ctrl.lock()->PushResponse(response->EncodePdu());
-        std::cout << "end....\n";
         ctrl.lock()->Done();
-        std::cout << "end....\n";
         co_return galay::common::CoroutineStatus::kCoroutineFinished;
     }
 
@@ -79,7 +77,7 @@ int main()
         response.SetBody(std::move(body));
         return response.EncodePdu();
     });
-    builder->SetThreadNum(4);
+    builder->SetNetThreadNum(4);
     galay::kernel::GY_TcpServer::ptr server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;

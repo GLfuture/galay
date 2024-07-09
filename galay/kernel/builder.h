@@ -45,7 +45,7 @@ namespace galay
             virtual void SetIllegalFunction(std::function<std::string()> func) = 0;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) = 0;
-            virtual void SetThreadNum(uint16_t threadnum) = 0;
+            virtual void SetNetThreadNum(uint16_t threadnum) = 0;
             virtual void SetBacklog(uint16_t backlog) = 0;
             virtual void SetMaxEventSize(uint16_t max_event_size) = 0;
             virtual void SetScheWaitTime(uint16_t sche_wait_time) = 0;
@@ -57,7 +57,7 @@ namespace galay
             virtual const GY_SSLConfig::ptr GetSSLConfig() = 0;
 
             // 每一个端口对应的线程数
-            virtual uint16_t GetThreadNum() = 0;
+            virtual uint16_t GetNetThreadNum() = 0;
             virtual uint16_t GetBacklog() = 0;
             virtual galay::common::SchedulerType GetSchedulerType() = 0;
             virtual uint16_t GetMaxEventSize() = 0;
@@ -83,7 +83,7 @@ namespace galay
             virtual void SetIllegalFunction(std::function<std::string()> func) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;
-            virtual void SetThreadNum(uint16_t threadnum) override;
+            virtual void SetNetThreadNum(uint16_t threadnum) override;
             virtual void SetBacklog(uint16_t backlog) override;
             virtual void SetMaxEventSize(uint16_t max_event_size) override;
             virtual void SetScheWaitTime(uint16_t sche_wait_time) override;
@@ -93,7 +93,7 @@ namespace galay
             virtual void InitSSLServer(bool is_ssl) override;
             virtual const GY_SSLConfig::ptr GetSSLConfig() override;
             // 每一个端口对应的线程数
-            virtual uint16_t GetThreadNum() override;
+            virtual uint16_t GetNetThreadNum() override;
             virtual uint16_t GetBacklog() override;
             virtual galay::common::SchedulerType GetSchedulerType() override;
             virtual uint16_t GetMaxEventSize() override;

@@ -174,6 +174,12 @@ namespace galay
 
         class GY_Connector : public GY_Objector, public std::enable_shared_from_this<GY_Connector>
         {
+            struct Coroutine
+            {
+                uint64_t m_CoId;
+                bool m_IsCall;
+            };
+            
         public:
             using ptr = std::shared_ptr<GY_Connector>;
             using wptr = std::weak_ptr<GY_Connector>;
@@ -195,7 +201,8 @@ namespace galay
             galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> CoSendExec();
 
             void PushRequest(galay::protocol::GY_Request::ptr request);
-
+            void RealSend();
+            void RealRecv();
         private:
             int m_fd;
             bool m_is_ssl_accept;
@@ -206,14 +213,9 @@ namespace galay
             GY_Receiver::uptr m_receiver;
             GY_Sender::uptr m_sender;
             uint64_t m_MainCoId;
-            //select 没有et模式，会不断resume
-            bool m_MainWait;
             uint64_t m_RecvCoId;
-            bool m_RecvWait;
             uint64_t m_SendCoId;
-            bool m_SendWait;
             uint64_t m_UserCoId;
-            bool m_UserWait;
             protocol::GY_Request::ptr m_tempRequest;
             std::queue<protocol::GY_Request::ptr> m_requests;
             std::queue<std::string> m_responses;

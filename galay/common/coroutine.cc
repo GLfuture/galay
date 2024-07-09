@@ -1,7 +1,4 @@
 #include "coroutine.h"
-#include "signalhandler.h"
-#include <csignal>
-
 galay::common::GY_NetCoroutinePool::GY_NetCoroutinePool(std::shared_ptr<std::condition_variable> fcond)
 {
     this->m_stop.store(false);
@@ -26,7 +23,6 @@ galay::common::GY_NetCoroutinePool::Start()
             this->m_waitCoQueue.pop();
             if(Contains(id_always.first)){
                 auto& co = GetCoroutine(id_always);
-                spdlog::info("[{}:{}] [GY_NetCoroutinePool.Start CoId = {}, WaiQueue Size = {}]",__FILE__,__LINE__,co.GetCoId(),m_waitCoQueue.size());
                 if(co.IsCoroutine() && !co.Done() && co.GetStatus() != kCoroutineFinished) co.Resume();
                 else RealEraseCoroutine(id_always.first);
             }

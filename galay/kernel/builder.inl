@@ -105,7 +105,7 @@ galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetSchedulerType(galay::common::Sc
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
 void
-galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetThreadNum(uint16_t threadnum)
+galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetNetThreadNum(uint16_t threadnum)
 {
     m_threadnum.store(threadnum);
 }
@@ -176,7 +176,7 @@ galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetReadBufferLen()
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
 uint16_t
-galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetThreadNum()
+galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetNetThreadNum()
 {
     return m_threadnum.load();
 }

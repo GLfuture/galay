@@ -54,7 +54,7 @@ namespace galay
         private:
             std::exception_ptr m_exception = nullptr;
             RESULT m_result;
-            CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
+            CoroutineStatus m_status = CoroutineStatus::kCoroutineNotExist;
             std::function<void()> m_finishFunc;
         };
 
@@ -79,7 +79,7 @@ namespace galay
 
         private:
             std::exception_ptr m_exception = {};
-            CoroutineStatus m_status = CoroutineStatus::kCoroutineRunning;
+            CoroutineStatus m_status = CoroutineStatus::kCoroutineNotExist;
             std::function<void()> m_finishFunc;
         };
 

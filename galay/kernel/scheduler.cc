@@ -338,13 +338,18 @@ galay::kernel::GY_EpollScheduler::Start()
             }
         }
     }
-    spdlog::info("[{}:{}] [GY_EpollScheduler.Start Waiting For CoPool....]");
     std::mutex mtx;
     std::unique_lock lock(mtx);
     this->m_coPool->Stop();
-    this->m_exitCond->wait(lock);
+    auto start = std::chrono::system_clock::now();
+    this->m_exitCond->wait_for(lock,std::chrono::seconds(5));
+    auto end = std::chrono::system_clock::now();
     this->m_threadCond->DecreaseThread();
-    spdlog::info("[{}:{}] [Scheduler Exit Normally]",__FILE__,__LINE__);
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(end-start) < std::chrono::milliseconds(5 * 1000)) {
+        spdlog::info("[{}:{}] [Scheduler Exit Normally]",__FILE__,__LINE__);
+    }else {
+        spdlog::error("[{}:{}] [Scheduler Exit Abnormally]",__FILE__,__LINE__);
+    }
 }
 
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 

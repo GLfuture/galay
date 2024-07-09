@@ -19,7 +19,7 @@ galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(
     builder->SetPort(port);
     builder->SetRouter(router);
     builder->SetSchedulerType(type);
-    builder->SetThreadNum(thread_num);
+    builder->SetNetThreadNum(thread_num);
     return builder;
 }
 
@@ -32,7 +32,7 @@ galay::GY_ServerBuilderFactory::CreateHttpsServerBuilder(
     builder->SetPort(port);
     builder->SetRouter(router);
     builder->SetSchedulerType(type);
-    builder->SetThreadNum(thread_num);
+    builder->SetNetThreadNum(thread_num);
     builder->InitSSLServer(true);
     builder->GetSSLConfig()->SetCertPath(cert_file);
     builder->GetSSLConfig()->SetKeyPath(key_file);

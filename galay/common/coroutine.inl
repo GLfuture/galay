@@ -12,6 +12,7 @@ template <typename RESULT>
 std::coroutine_handle<galay::common::GY_TcpPromise<RESULT>> 
 galay::common::GY_TcpPromise<RESULT>::get_return_object() 
 { 
+    SetStatus(CoroutineStatus::kCoroutineRunning);
     return std::coroutine_handle<GY_TcpPromise>::from_promise(*this); 
 }
 
@@ -118,6 +119,7 @@ galay::common::GY_TcpPromise<void>::get_return_object_on_alloaction_failure()
 std::coroutine_handle<galay::common::GY_TcpPromise<void>>
 galay::common::GY_TcpPromise<void>::get_return_object()
 {
+    SetStatus(CoroutineStatus::kCoroutineRunning);
     return std::coroutine_handle<GY_TcpPromise>::from_promise(*this);
 }
 
@@ -131,12 +133,14 @@ template <typename T>
 std::suspend_always 
 galay::common::GY_TcpPromise<void>::yield_value(const T &value)
 {
+    SetStatus(CoroutineStatus::kCoroutineSuspend);
     return {};
 }
 
 std::suspend_always
 galay::common::GY_TcpPromise<void>::final_suspend() noexcept
 {
+    SetStatus(CoroutineStatus::kCoroutineFinished);
     return {};
 }
 
