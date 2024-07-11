@@ -328,9 +328,9 @@ galay::kernel::GY_EpollScheduler::Start()
         }
     }
     if(this->m_coPool->WaitForAllDone(5000)){
-        spdlog::info("[{}:{}] [Scheduler.Stop Success]",__FILE__,__LINE__);
+        spdlog::info("[{}:{}] [Scheduler Exit Normally]",__FILE__,__LINE__);
     }else{
-        spdlog::error("[{}:{}] [Scheduler.Stop Failed: Timeout]",__FILE__,__LINE__);
+        spdlog::error("[{}:{}] [Scheduler Exit Abnormally(timeout)]",__FILE__,__LINE__);
     }
 }
 

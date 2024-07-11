@@ -25,15 +25,13 @@ namespace galay
             GY_CreateConnTask(std::weak_ptr<GY_IOScheduler> scheduler);
             virtual void Execute() override;
             int GetFd();
-            virtual ~GY_CreateConnTask();
+            virtual ~GY_CreateConnTask() = default;
 
         protected:
             int CreateListenFd(std::weak_ptr<GY_TcpServerBuilderBase> builder);
             int CreateConn();
-
         protected:
             int m_fd;
-            SSL_CTX *m_ssl_ctx;
             std::weak_ptr<GY_IOScheduler> m_scheduler;
         };
 
@@ -43,10 +41,9 @@ namespace galay
             using ptr = std::shared_ptr<GY_RecvTask>;
             using wptr = std::weak_ptr<GY_RecvTask>;
             using uptr = std::unique_ptr<GY_RecvTask>;
-            GY_RecvTask(int fd, std::weak_ptr<GY_IOScheduler> scheduler);
+            GY_RecvTask(int fd,SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler);
             void RecvAll();
             std::string &GetRBuffer();
-            void SetSSL(SSL *ssl);
 
         protected:
             virtual void Execute() override;
@@ -64,11 +61,10 @@ namespace galay
             using ptr = std::shared_ptr<GY_SendTask>;
             using wptr = std::weak_ptr<GY_SendTask>;
             using uptr = std::unique_ptr<GY_SendTask>;
-            GY_SendTask(int fd, GY_IOScheduler::wptr scheduler);
+            GY_SendTask(int fd, SSL*ssl, GY_IOScheduler::wptr scheduler);
             void AppendWBuffer(std::string &&wbuffer);
             void FirstTryToSend();
             void SendAll();
-            void SetSSL(SSL *ssl);
             bool Empty() const;
 
         protected:
@@ -79,6 +75,22 @@ namespace galay
             SSL *m_ssl;
             GY_IOScheduler::wptr m_scheduler;
             std::string m_wbuffer;
+        };
+
+        class GY_CreateSSLConnTask: public GY_CreateConnTask
+        {
+        public:
+            using ptr = std::shared_ptr<GY_CreateSSLConnTask>;
+            using wptr = std::weak_ptr<GY_CreateSSLConnTask>;
+            using uptr = std::unique_ptr<GY_CreateSSLConnTask>;
+
+            GY_CreateSSLConnTask(std::weak_ptr<GY_IOScheduler> scheduler);
+            virtual ~GY_CreateSSLConnTask();
+        protected:
+            int CreateConn();
+            virtual void Execute() override;
+        protected:
+            SSL_CTX *m_sslCtx;
         };
     }
 }

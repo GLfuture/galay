@@ -13,6 +13,13 @@ namespace galay
         class GY_Controller;
         class GY_HttpController;
     }
+    
+    namespace html
+    {
+        extern const char* Html404NotFound;
+        extern const char* Html405MethodNotAllowed;
+    }
+
     namespace common
     {
 #define DEFAULT_BACKLOG 128

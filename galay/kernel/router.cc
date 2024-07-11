@@ -90,7 +90,7 @@ galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
             response->SetHeadPair({"Connection", "close"});
             response->SetHeadPair({"Content-Type", "text/html"});
             response->SetHeadPair({"Server", "galay server"});
-            response->SetBody("<html><head><meta charset=\"utf-8\"><title>404</title></head><body>Not Found</body></html>");
+            response->SetBody(html::Html404NotFound);
             ctrl.lock()->PushResponse(response->EncodePdu());
         }
     }
@@ -102,7 +102,7 @@ galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
         response->SetHeadPair({"Connection", "close"});
         response->SetHeadPair({"Content-Type", "text/html"});
         response->SetHeadPair({"Server", "galay server"});
-        response->SetBody("<html><head><meta charset=\"utf-8\"><title>405</title></head><body>Method Not Allowed</body></html>");
+        response->SetBody(html::Html405MethodNotAllowed);
         ctrl.lock()->PushResponse(response->EncodePdu());
     }
     co_await group.Wait();

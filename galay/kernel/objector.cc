@@ -200,7 +200,11 @@ galay::kernel::GY_TimerManager::~GY_TimerManager()
 
 galay::kernel::GY_Acceptor::GY_Acceptor(std::weak_ptr<GY_IOScheduler> scheduler)
 {
-    this->m_listentask = std::make_unique<GY_CreateConnTask>(scheduler);
+    if(scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL()){
+        this->m_listentask = std::make_unique<GY_CreateSSLConnTask>(scheduler);
+    }else{
+        this->m_listentask = std::make_unique<GY_CreateConnTask>(scheduler);
+    }
 }
 
 int 
@@ -227,9 +231,9 @@ galay::kernel::GY_Acceptor::~GY_Acceptor()
 }
 
 
-galay::kernel::GY_Receiver::GY_Receiver(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Receiver::GY_Receiver(int fd, SSL* ssl,std::weak_ptr<GY_IOScheduler> scheduler)
 {
-    this->m_recvTask = std::make_unique<GY_RecvTask>(fd, scheduler);
+    this->m_recvTask = std::make_unique<GY_RecvTask>(fd,ssl,scheduler);
 }
 
 std::string& 
@@ -245,20 +249,15 @@ galay::kernel::GY_Receiver::SetEventType(int event_type)
 }
 
 void 
-galay::kernel::GY_Receiver::SetSSL(SSL* ssl)
-{
-    this->m_recvTask->SetSSL(ssl);
-}
-
-void 
 galay::kernel::GY_Receiver::ExecuteTask()
 {
     this->m_recvTask->RecvAll();
 }
 
-galay::kernel::GY_Sender::GY_Sender(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Sender::GY_Sender(int fd, SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler)
 {
-    this->m_sendTask = std::make_unique<GY_SendTask>(fd, scheduler);
+    this->m_sendTask = std::make_unique<GY_SendTask>(fd, ssl, scheduler);
+    
 }
 
 void 
@@ -285,20 +284,14 @@ galay::kernel::GY_Sender::ExecuteTask()
     this->m_sendTask->SendAll();
 }
 
-void 
-galay::kernel::GY_Sender::SetSSL(SSL* ssl)
-{
-    this->m_sendTask->SetSSL(ssl);
-}
-
-galay::kernel::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_Connector::GY_Connector(int fd, SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_fd = fd;
     this->m_is_ssl_accept = false;
-    this->m_ssl = nullptr;
+    this->m_ssl = ssl;
     this->m_scheduler = scheduler;
-    this->m_receiver = std::make_unique<GY_Receiver>(fd, scheduler);
-    this->m_sender = std::make_unique<GY_Sender>(fd, scheduler);
+    this->m_receiver = std::make_unique<GY_Receiver>(fd, ssl, scheduler);
+    this->m_sender = std::make_unique<GY_Sender>(fd, ssl, scheduler);
     this->m_exit = std::make_shared<bool>(false);
     this->m_controller = nullptr;
 
@@ -317,7 +310,7 @@ galay::kernel::GY_Connector::GY_Connector(int fd, std::weak_ptr<GY_IOScheduler> 
     if(Co.IsCoroutine()){
         this->m_scheduler.lock()->GetCoroutinePool()->AddCoroutine(this->m_SendCoId,std::move(Co));
     }
-    spdlog::info("[{}:{}] [GY_Connector::GY_Connector() Business CoId = {}, Recv CoId = {}, Send CoId = {}]", __FILE__, __LINE__, this->m_MainCoId, this->m_RecvCoId, this->m_SendCoId);
+    spdlog::debug("[{}:{}] [GY_Connector::GY_Connector() Business CoId = {}, Recv CoId = {}, Send CoId = {}]", __FILE__, __LINE__, this->m_MainCoId, this->m_RecvCoId, this->m_SendCoId);
 }
 
 void 
@@ -375,35 +368,6 @@ galay::kernel::GY_Connector::PushRequest(galay::protocol::GY_Request::ptr reques
 void 
 galay::kernel::GY_Connector::ExecuteTask()
 {
-    if(m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL() && !m_is_ssl_accept){
-        int ret = IOFunction::NetIOFunction::TcpFunction::SSLAccept(this->m_ssl);
-        if (ret <= 0)
-        {
-            int ssl_err = SSL_get_error(this->m_ssl, ret);
-            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE || ssl_err == SSL_ERROR_WANT_ACCEPT)
-            {
-                return;
-            }
-            else
-            {
-                char msg[256];
-                ERR_error_string(ssl_err, msg);
-                spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}']", __FILE__, __LINE__, this->m_fd, msg);
-                IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
-                this->m_ssl = nullptr;
-                spdlog::error("[{}:{}] [socket(fd: {}) close]", __FILE__, __LINE__, this->m_fd);
-                m_scheduler.lock()->DelEvent(this->m_fd,EventType::kEventRead|EventType::kEventWrite|EventType::kEventError);
-                m_scheduler.lock()->DelObjector(this->m_fd);
-                close(this->m_fd);
-                return;
-            }
-        }else{
-            spdlog::debug("[{}:{}] [SSLAccept(fd: {}) Success]", __FILE__, __LINE__, this->m_fd);
-            m_scheduler.lock()->ModEvent(this->m_fd,EventType::kEventWrite,EventType::kEventRead);
-            m_is_ssl_accept = true;
-            return;
-        }
-    }
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
     }
@@ -415,14 +379,6 @@ galay::kernel::GY_Connector::ExecuteTask()
     {
         this->m_scheduler.lock()->GetCoroutinePool()->Resume(this->m_SendCoId, true);
     }
-}
-
-void 
-galay::kernel::GY_Connector::SetSSLCtx(SSL_CTX* ctx)
-{
-    this->m_ssl = IOFunction::NetIOFunction::TcpFunction::SSLCreateObj(ctx,this->m_fd);
-    this->m_receiver->SetSSL(this->m_ssl);
-    this->m_sender->SetSSL(this->m_ssl);
 }
 
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 

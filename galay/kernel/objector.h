@@ -143,11 +143,10 @@ namespace galay
             using ptr = std::shared_ptr<GY_Receiver>;
             using uptr = std::unique_ptr<GY_Receiver>;
             // 创建时既需要加入scheduler的事件中
-            GY_Receiver(int fd, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
+            GY_Receiver(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
             std::string &GetRBuffer();
             virtual void SetEventType(int event_type) override;
             virtual void ExecuteTask() override;
-            void SetSSL(SSL *ssl);
             virtual ~GY_Receiver() = default;
 
         private:
@@ -160,12 +159,11 @@ namespace galay
             using ptr = std::shared_ptr<GY_Sender>;
             using wptr = std::weak_ptr<GY_Sender>;
             using uptr = std::unique_ptr<GY_Sender>;
-            GY_Sender(int fd, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
+            GY_Sender(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
             void AppendWBuffer(std::string &&wbuffer);
             bool WBufferEmpty();
             virtual void SetEventType(int event_type) override;
             virtual void ExecuteTask() override;
-            void SetSSL(SSL *ssl);
             virtual ~GY_Sender() = default;
 
         private:
@@ -174,17 +172,11 @@ namespace galay
 
         class GY_Connector : public GY_Objector, public std::enable_shared_from_this<GY_Connector>
         {
-            struct Coroutine
-            {
-                uint64_t m_CoId;
-                bool m_IsCall;
-            };
-            
         public:
             using ptr = std::shared_ptr<GY_Connector>;
             using wptr = std::weak_ptr<GY_Connector>;
             using uptr = std::unique_ptr<GY_Connector>;
-            GY_Connector(int fd, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
+            GY_Connector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
             void SetContext(std::any &&context);
             std::any &&GetContext();
             std::weak_ptr<common::GY_NetCoroutinePool> GetCoPool();
@@ -193,7 +185,6 @@ namespace galay
             std::shared_ptr<galay::kernel::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
             virtual void SetEventType(int event_type) override;
             virtual void ExecuteTask() override;
-            virtual void SetSSLCtx(SSL_CTX *ctx);
             virtual ~GY_Connector();
         private:
             galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> CoBusinessExec();
