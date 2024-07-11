@@ -17,7 +17,7 @@ void test()
     }
     count.fetch_sub(1);
     if(count.load() == 0){
-        tp->Destory();
+        tp->Stop();
     }
 }
 
@@ -28,6 +28,6 @@ int main()
     for(int i = 0 ; i < 4 ; i ++){
         tp->AddTask(test);
     }
-    tp->WaitForAllDown();
+    tp->WaitForAllDone();
     return 0;
 }

@@ -40,8 +40,8 @@ namespace galay
             template <typename F, typename... Args>
             inline auto AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>;
             void Start(int num);
-            void WaitForAllDown();
-            void Destory();
+            bool WaitForAllDone(uint32_t timeout = 0);
+            void Stop();
             ~GY_ThreadPool();
 
         protected:

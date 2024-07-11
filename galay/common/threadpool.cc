@@ -24,7 +24,8 @@ galay::common::GY_ThreadPool::GY_ThreadPool()
     m_nums.store(0);
 }
 
-void galay::common::GY_ThreadPool::Run()
+void 
+galay::common::GY_ThreadPool::Run()
 {
     while (!m_terminate.load())
     {
@@ -40,7 +41,8 @@ void galay::common::GY_ThreadPool::Run()
     }
 }
 
-void galay::common::GY_ThreadPool::Start(int num)
+void 
+galay::common::GY_ThreadPool::Start(int num)
 {
     this->m_nums.store(num);
     for (int i = 0; i < num; i++)
@@ -55,11 +57,23 @@ void galay::common::GY_ThreadPool::Start(int num)
     }
 }
 
-void galay::common::GY_ThreadPool::WaitForAllDown()
+bool 
+galay::common::GY_ThreadPool::WaitForAllDone(uint32_t timeout)
 {
     std::mutex mtx;
     std::unique_lock<std::mutex> lock(mtx);
-    this->m_exitCond.wait(lock);
+    if(timeout == 0){
+        this->m_exitCond.wait(lock);
+    }else{
+        auto now = std::chrono::system_clock::now();
+        this->m_exitCond.wait_for(lock, std::chrono::milliseconds(timeout));
+        auto end = std::chrono::system_clock::now();
+        if(std::chrono::duration_cast<std::chrono::milliseconds>(end - now) >= std::chrono::milliseconds(timeout)){
+            if(this->m_nums.load() == 0) return true;
+            else return false;
+        }
+    }
+    return true;
 }
 
 void 
@@ -72,7 +86,7 @@ galay::common::GY_ThreadPool::Done()
 }
 
 void 
-galay::common::GY_ThreadPool::Destory()
+galay::common::GY_ThreadPool::Stop()
 {
     if (!m_terminate.load())
     {
@@ -85,6 +99,6 @@ galay::common::GY_ThreadPool::~GY_ThreadPool()
 {
     if (!m_terminate.load())
     {
-        Destory();
+        Stop();
     }
 }

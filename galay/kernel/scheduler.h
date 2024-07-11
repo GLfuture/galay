@@ -38,7 +38,6 @@ namespace galay
         class GY_Objector;
         class Timer;
         class GY_TimerManager;
-        class GY_ThreadCond;
 
         class GY_IOScheduler
         {
@@ -63,7 +62,6 @@ namespace galay
 
             virtual void Start() = 0;
             virtual void Stop() = 0;
-            virtual bool IsStop() = 0;
             virtual ~GY_IOScheduler() = default;
 
         protected:
@@ -78,7 +76,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_SelectScheduler>;
             using wptr = std::weak_ptr<GY_SelectScheduler>;
             using uptr = std::unique_ptr<GY_SelectScheduler>;
-            GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond);
+            GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder);
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
             virtual std::shared_ptr<common::GY_NetCoroutinePool> GetCoroutinePool() override;
 
@@ -96,7 +94,6 @@ namespace galay
             virtual int AddEvent(int fd, int event_type) override;
 
             virtual void Start() override;
-            virtual bool IsStop() override;
             virtual void Stop() override;
 
             virtual ~GY_SelectScheduler();
@@ -111,8 +108,6 @@ namespace galay
             int m_minfd = INT32_MAX;
             std::atomic_bool m_stop;
             GY_TcpServerBuilderBase::ptr m_builder;
-            std::shared_ptr<GY_ThreadCond> m_threadCond;
-            std::shared_ptr<std::condition_variable> m_exitCond;
             //协程相关
             std::shared_ptr<common::GY_NetCoroutinePool> m_coPool;
             std::shared_ptr<std::thread> m_coThread;
@@ -128,7 +123,7 @@ namespace galay
             using uptr = std::unique_ptr<GY_EpollScheduler>;
             using wptr = std::weak_ptr<GY_EpollScheduler>;
 
-            GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder,std::shared_ptr<GY_ThreadCond> threadCond);
+            GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder);
             virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder() override;
             virtual std::shared_ptr<common::GY_NetCoroutinePool> GetCoroutinePool() override;
 
@@ -147,7 +142,6 @@ namespace galay
             
             virtual void Start() override;
             virtual void Stop() override;
-            virtual bool IsStop() override;
 
             virtual ~GY_EpollScheduler();
         private:
@@ -157,10 +151,8 @@ namespace galay
             int m_epollfd;
             int m_timerfd;
             GY_TcpServerBuilderBase::ptr m_builder;
-            std::shared_ptr<std::condition_variable> m_exitCond;
-            std::shared_ptr<GY_ThreadCond> m_threadCond;
             epoll_event *m_events;
-            std::atomic_bool m_stop;
+            bool m_stop;
             //协程相关
             std::shared_ptr<common::GY_NetCoroutinePool> m_coPool;
             std::shared_ptr<std::thread> m_coThread;

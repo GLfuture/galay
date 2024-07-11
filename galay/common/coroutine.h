@@ -140,9 +140,10 @@ namespace galay
             using ptr = std::shared_ptr<GY_NetCoroutinePool>;
             using wptr = std::weak_ptr<GY_NetCoroutinePool>;
             using uptr = std::unique_ptr<GY_NetCoroutinePool>;
-            GY_NetCoroutinePool(std::shared_ptr<std::condition_variable> fcond);
+            GY_NetCoroutinePool();
             void Start();
             void Stop();
+            bool WaitForAllDone(uint32_t timeout = 0); //ms
             bool Contains(uint64_t coId);
             bool Resume(uint64_t coId, bool always);
             bool AddCoroutine(uint64_t coId, GY_NetCoroutine<CoroutineStatus>&& coroutine);
@@ -152,15 +153,15 @@ namespace galay
         private:
             void RealEraseCoroutine(uint64_t coId);
         private:
-            //pair<coid,exec times>
             std::queue<std::pair<uint64_t,bool>> m_waitCoQueue;
             std::map<uint64_t,GY_NetCoroutine<CoroutineStatus>> m_coroutines;
             std::queue<uint64_t> m_eraseCoroutines;
             std::atomic_bool m_stop;
+            std::atomic_bool m_isStopped;
             std::mutex m_queueMtx;
             std::shared_mutex m_mapMtx;
             std::condition_variable m_cond;
-            std::shared_ptr<std::condition_variable> m_fcond;
+            std::condition_variable m_exitCond;
         };
 
 #include "coroutine.inl"

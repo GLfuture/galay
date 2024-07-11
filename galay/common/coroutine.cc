@@ -1,8 +1,8 @@
 #include "coroutine.h"
-galay::common::GY_NetCoroutinePool::GY_NetCoroutinePool(std::shared_ptr<std::condition_variable> fcond)
+galay::common::GY_NetCoroutinePool::GY_NetCoroutinePool()
 {
     this->m_stop.store(false);
-    this->m_fcond = fcond;
+    this->m_isStopped.store(false);
 }
 
 void 
@@ -15,12 +15,14 @@ galay::common::GY_NetCoroutinePool::Start()
         while(!this->m_eraseCoroutines.empty())
         {
             RealEraseCoroutine(this->m_eraseCoroutines.front());
+            spdlog::debug("[{}:{}] [GY_NetCoroutinePool Erase CoId = {}]",__FILE__,__LINE__,this->m_eraseCoroutines.front());
             this->m_eraseCoroutines.pop();
         }
         while(!this->m_waitCoQueue.empty())
         {
             auto id_always = this->m_waitCoQueue.front();
             this->m_waitCoQueue.pop();
+            spdlog::debug("[{}:{}] [GY_NetCoroutinePool Resume CoId = {}]",__FILE__,__LINE__,id_always.first);
             if(Contains(id_always.first)){
                 auto& co = GetCoroutine(id_always);
                 if(co.IsCoroutine() && !co.Done() && co.GetStatus() != kCoroutineFinished) co.Resume();
@@ -30,7 +32,27 @@ galay::common::GY_NetCoroutinePool::Start()
         if(this->m_stop.load()) break;
     }
     spdlog::info("[{}:{}] [GY_NetCoroutinePool Exit Normally]",__FILE__,__LINE__);
-    this->m_fcond->notify_all();
+    m_exitCond.notify_one();
+    this->m_isStopped.store(true);
+}
+
+bool 
+galay::common::GY_NetCoroutinePool::WaitForAllDone(uint32_t timeout)
+{
+    std::mutex mtx;
+    std::unique_lock lock(mtx);
+    if(timeout == 0){
+        m_exitCond.wait(lock);
+    }else{
+        auto start = std::chrono::system_clock::now();
+        m_exitCond.wait_for(lock, std::chrono::milliseconds(timeout));
+        auto end = std::chrono::system_clock::now();
+        if(std::chrono::duration_cast<std::chrono::milliseconds>(end - start) >= std::chrono::milliseconds(timeout)){
+            if(m_isStopped.load() == true) return true;
+            else return false;
+        }
+    }
+    return true;
 }
 
 void 
@@ -39,7 +61,7 @@ galay::common::GY_NetCoroutinePool::Stop()
     if(!this->m_stop.load()){
         this->m_stop.store(true);
         spdlog::info("[{}:{}] [GY_NetCoroutinePool.Stop]",__FILE__,__LINE__);
-        this->m_cond.notify_all();
+        this->m_cond.notify_one();
     }
 }
 
@@ -65,7 +87,7 @@ galay::common::GY_NetCoroutinePool::AddCoroutine(uint64_t coId, GY_NetCoroutine<
 {
     std::unique_lock lock(this->m_mapMtx);
     if(coroutine.IsCoroutine()){
-        spdlog::info("[{}:{}] [GY_NetCoroutinePool.AddCoroutine CoId = {}]",__FILE__,__LINE__,coroutine.GetCoId());
+        spdlog::info("[{}:{}] [GY_NetCoroutinePool.AddCoroutine CoId = {}]",__FILE__,__LINE__,coId);
         this->m_coroutines.insert(std::make_pair(coId, std::forward<GY_NetCoroutine<CoroutineStatus>>(coroutine)));
         return true;
     }

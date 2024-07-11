@@ -2,27 +2,13 @@
 #define GALAY_SERVER_H
 
 #include "task.h"
+#include "../common/threadpool.h"
 #include <thread>
 
 namespace galay
 {
     namespace kernel
     {
-        class GY_ThreadCond
-        {
-        public:
-            using ptr = std::shared_ptr<GY_ThreadCond>;
-            using wptr = std::weak_ptr<GY_ThreadCond>;
-            using uptr = std::unique_ptr<GY_ThreadCond>;
-            GY_ThreadCond(uint16_t threadNum);
-            void WaitForThreads();
-            void DecreaseThread();
-        private:
-            std::atomic_int16_t m_threadNum;
-            std::mutex m_thMutex;
-            std::condition_variable m_thCond;
-        };
-
         class GY_Server
         {
         public:
@@ -57,11 +43,9 @@ namespace galay
             GY_Acceptor::ptr CreateAcceptor(GY_IOScheduler::ptr scheduler);
         private:
             GY_TcpServerBuilderBase::ptr m_builder;
-            std::vector<std::shared_ptr<std::thread>> m_threads;
+            common::GY_ThreadPool::ptr m_threadPool;
             std::vector<GY_IOScheduler::ptr> m_schedulers;
             std::atomic_bool m_isStopped;
-            GY_ThreadCond::ptr m_threadCond;
-            std::condition_variable m_exitCond;
         };
     }
 }

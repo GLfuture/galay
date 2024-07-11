@@ -268,7 +268,7 @@ template <typename RESULT>
 bool 
 galay::common::GY_NetCoroutine<RESULT>::IsCoroutine()
 {
-    return this->m_handle.address() != nullptr;
+    return this->m_handle != nullptr;
 }
 
 

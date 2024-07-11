@@ -3,31 +3,6 @@
 #include <csignal>
 #include <spdlog/spdlog.h>
 
-galay::kernel::GY_ThreadCond::GY_ThreadCond(uint16_t threadNum)
-{
-    this->m_threadNum.store(threadNum);
-}
-
-void 
-galay::kernel::GY_ThreadCond::DecreaseThread()
-{
-    this->m_threadNum.fetch_sub(1);
-    if (this->m_threadNum.load() == 0)
-    {
-        m_thCond.notify_one();
-    }
-}
-
-void 
-galay::kernel::GY_ThreadCond::WaitForThreads()
-{
-    std::unique_lock lock(this->m_thMutex);
-    m_thCond.wait(lock,[this](){
-        return m_threadNum.load() == 0;
-    });
-}
-
-
 galay::kernel::GY_TcpServer::GY_TcpServer()
 {
     this->m_isStopped.store(false);
@@ -49,7 +24,7 @@ void
 galay::kernel::GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
 {
     this->m_builder = builder;
-    this->m_threadCond = std::make_shared<GY_ThreadCond>(builder->GetNetThreadNum());
+    this->m_threadPool = std::make_shared<common::GY_ThreadPool>();
 }
 
 galay::kernel::GY_TcpServerBuilderBase::ptr 
@@ -61,6 +36,7 @@ galay::kernel::GY_TcpServer::GetServerBuilder()
 void 
 galay::kernel::GY_TcpServer::Start()
 {
+    this->m_threadPool->Start(this->m_builder->GetNetThreadNum());
     for (int i = 0; i < m_builder->GetNetThreadNum(); ++i)
     {
         GY_IOScheduler::ptr scheduler = CreateScheduler();
@@ -71,13 +47,16 @@ galay::kernel::GY_TcpServer::Start()
         scheduler->RegisterObjector(acceptor->GetListenFd(), acceptor);
         scheduler->AddEvent(acceptor->GetListenFd(), EventType::kEventRead | EventType::kEvnetEpollET);
         m_schedulers.push_back(scheduler);
-        m_threads.push_back(std::make_shared<std::thread>(&GY_IOScheduler::Start, scheduler));
-        m_threads.back()->detach();
+        m_threadPool->AddTask([scheduler](){
+            scheduler->Start();
+        });
     }
-    std::mutex mtx;
-    std::unique_lock lock(mtx);
-    m_exitCond.wait(lock);
-    spdlog::info("[{}:{}] [Program Exit Normally]",__FILE__,__LINE__);
+    if(this->m_threadPool->WaitForAllDone()){
+        spdlog::info("[{}:{}] [Program Exit Normally]",__FILE__,__LINE__);
+    }else{
+        spdlog::error("[{}:{}] [Program Exit Abnormally]",__FILE__,__LINE__);
+    }
+    
 }
 
 void 
@@ -91,9 +70,8 @@ galay::kernel::GY_TcpServer::Stop()
         {
             scheduler->Stop();
         }
-        m_threadCond->WaitForThreads();
+        m_threadPool->Stop();
         spdlog::info("[{}:{}] [GY_TcpServer Exit Normally]",__FILE__,__LINE__);
-        m_exitCond.notify_all();
     }
 }
 
@@ -110,9 +88,9 @@ galay::kernel::GY_TcpServer::CreateScheduler()
     switch (m_builder->GetSchedulerType())
     {
     case common::kEpollScheduler:
-        return std::make_shared<GY_EpollScheduler>(m_builder,m_threadCond);
+        return std::make_shared<GY_EpollScheduler>(m_builder);
     case common::kSelectScheduler:
-        return std::make_shared<GY_SelectScheduler>(m_builder,m_threadCond);
+        return std::make_shared<GY_SelectScheduler>(m_builder);
     }
     return nullptr;
 }
@@ -133,6 +111,4 @@ galay::kernel::GY_TcpServer::CreateAcceptor( GY_IOScheduler::ptr scheduler)
 galay::kernel::GY_TcpServer::~GY_TcpServer()
 {
     Stop();
-    m_schedulers.clear();
-    m_threads.clear();
 }

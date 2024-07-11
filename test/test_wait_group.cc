@@ -14,23 +14,27 @@ galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> func(galay::commo
         std::cout << "thread end\n";
         group.Done();
     });
+    th.detach();
     std::cout << "func waiting ....\n";
     co_await group.Wait();
-    pool.lock()->Stop();
     std::cout << "func end\n";
+    pool.lock()->Stop();
+    co_return galay::common::kCoroutineFinished;
 }
 
 int main()
 {
-    std::shared_ptr<std::condition_variable> cond = std::make_shared<std::condition_variable>();
-    galay::common::GY_NetCoroutinePool::ptr pool = std::make_shared<galay::common::GY_NetCoroutinePool>(cond);
+    spdlog::set_level(spdlog::level::debug);
+    galay::common::GY_NetCoroutinePool::ptr pool = std::make_shared<galay::common::GY_NetCoroutinePool>();
     std::thread th([pool]{
         pool->Start();
     });
+    th.detach();
     auto f = func(pool);
-    std::mutex mtx;
-    std::unique_lock lock(mtx);
-    cond->wait(lock);
+    uint64_t coId = f.GetCoId();
+    pool->AddCoroutine(coId, std::move(f));
+    std::cout << "main waiting...\n";
+    pool->WaitForAllDone();
     std::cout << "main end...\n";
     return 0;
 }
