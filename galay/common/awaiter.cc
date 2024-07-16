@@ -102,7 +102,7 @@ galay::common::GroupAwaiter::await_resume()
 
 
 //To Do
-galay::common::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::Http1_1_Response::ptr()>& Func,std::queue<std::future<void>>& futures)
+galay::common::HttpAwaiter::HttpAwaiter(bool IsSuspend,std::function<galay::protocol::http::HttpResponse::ptr()>& Func,std::queue<std::future<void>>& futures)
     :m_Func(Func),
      m_futures(futures)
 {
@@ -146,7 +146,7 @@ galay::common::HttpAwaiter::await_suspend(std::coroutine_handle<> handle)
     }));
 }
 
-galay::protocol::http::Http1_1_Response::ptr 
+galay::protocol::http::HttpResponse::ptr 
 galay::common::HttpAwaiter::await_resume()
 {
     return m_Result;

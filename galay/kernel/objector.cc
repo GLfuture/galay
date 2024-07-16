@@ -435,11 +435,11 @@ galay::kernel::GY_Connector::RealRecv()
             spdlog::info("[{}:{}] [CoReceiveExec Recv Buffer Length = 0]",__FILE__,__LINE__);
             break;
         }
-        common::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
-        if(type == common::ProtoJudgeType::kProtoFinished){
+        protocol::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
+        if(type == protocol::ProtoJudgeType::kProtoFinished){
             PushRequest(std::move(m_tempRequest));
             m_tempRequest = nullptr;
-        }else if(type == common::ProtoJudgeType::kProtoIncomplete)
+        }else if(type == protocol::ProtoJudgeType::kProtoIncomplete)
         {
             break;
         }else{

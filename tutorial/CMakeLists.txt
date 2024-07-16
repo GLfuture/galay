@@ -3,9 +3,9 @@ set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     tutorial_http_client.cc
     tutorial_echo_server.cc
-    tutorial_proxy_server.cc
+    #tutorial_proxy_server.cc
     tutorial_ratelimiter.cc
-    tutorial_smtp_proxy_server.cc
+    #tutorial_smtp_proxy_server.cc
     tutorial_dns_client.cc
     tutorial_https_server.cc
     )

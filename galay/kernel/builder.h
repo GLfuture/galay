@@ -124,7 +124,7 @@ namespace galay
 
         class GY_HttpRouter;
  
-        class GY_HttpServerBuilder : public GY_TcpServerBuilder<galay::protocol::http::Http1_1_Request, galay::protocol::http::Http1_1_Response>
+        class GY_HttpServerBuilder : public GY_TcpServerBuilder<galay::protocol::http::HttpRequest, galay::protocol::http::HttpResponse>
         {
         public:
             using ptr = std::shared_ptr<GY_HttpServerBuilder>;

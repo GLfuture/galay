@@ -110,7 +110,7 @@ galay::kernel::GY_HttpController::SetWaitGroup(WaitGroup* waitgroup)
     this->m_waitgroup = waitgroup;
 }
 
-galay::protocol::http::Http1_1_Request::ptr 
+galay::protocol::http::HttpRequest::ptr 
 galay::kernel::GY_HttpController::GetRequest()
 {
     return this->m_request;
@@ -129,7 +129,7 @@ galay::kernel::GY_HttpController::PushResponse(std::string&& response)
 }
 
 void 
-galay::kernel::GY_HttpController::SetRequest(protocol::http::Http1_1_Request::ptr request)
+galay::kernel::GY_HttpController::SetRequest(protocol::http::HttpRequest::ptr request)
 {
     this->m_request = request;
 }

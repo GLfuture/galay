@@ -7,7 +7,8 @@
 #include <optional>
 #include <functional>
 #include <future>
-#include "../protocol/http1_1.h"
+#include "coroutine.h"
+#include "../protocol/http.h"
 #include "../protocol/smtp.h"
 #include "../protocol/dns.h"
 
@@ -62,19 +63,19 @@ namespace galay
         class HttpAwaiter
         {
         public:
-            HttpAwaiter(bool IsSuspend, std::function<protocol::http::Http1_1_Response::ptr()> &Func, std::queue<std::future<void>> &futures);
+            HttpAwaiter(bool IsSuspend, std::function<protocol::http::HttpResponse::ptr()> &Func, std::queue<std::future<void>> &futures);
             HttpAwaiter(HttpAwaiter &&other);
             HttpAwaiter &operator=(const HttpAwaiter &) = delete;
             HttpAwaiter &operator=(HttpAwaiter &&other);
             virtual bool await_ready();
             virtual void await_suspend(std::coroutine_handle<> handle);
-            virtual protocol::http::Http1_1_Response::ptr await_resume();
+            virtual protocol::http::HttpResponse::ptr await_resume();
 
         private:
-            protocol::http::Http1_1_Response::ptr m_Result;
+            protocol::http::HttpResponse::ptr m_Result;
             bool m_IsSuspend;
             std::queue<std::future<void>> &m_futures;
-            std::function<protocol::http::Http1_1_Response::ptr()> &m_Func;
+            std::function<protocol::http::HttpResponse::ptr()> &m_Func;
             std::mutex m_mtx;
         };
 

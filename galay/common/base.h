@@ -3,6 +3,7 @@
 #include <string>
 #include <concepts>
 #include <memory>
+#include "../protocol/basic_protocol.h"
 #include "../common/coroutine.h"
 
 
@@ -18,6 +19,11 @@ namespace galay
     {
         extern const char* Html404NotFound;
         extern const char* Html405MethodNotAllowed;
+    }
+
+    namespace protocol
+    {
+        enum ProtoJudgeType;
     }
 
     namespace common
@@ -43,44 +49,27 @@ namespace galay
 
 #define DNS_QUERY_ID_MAX 1000
 
-        enum ProtoJudgeType
-        {
-            kProtoFinished,
-            kProtoIncomplete,
-            kProtoIllegal
-        };
+        
 
         template <typename T>
         concept TcpRequest = requires(T a) {
             {
                 // 会附带解析头部的职责
                 a.DecodePdu(std::declval<std::string &>())
-            } -> std::same_as<ProtoJudgeType>;
-
-            {
-                a.Clear()
-            } -> std::same_as<void>;
+            } -> std::same_as<protocol::ProtoJudgeType>;
         };
         template <typename T>
         concept TcpResponse = requires(T a) {
             {
                 a.EncodePdu()
             } -> std::same_as<std::string>;
-
-            {
-                a.Clear()
-            } -> std::same_as<void>;
         };
 
         template <typename T>
         concept UdpRequest = requires(T a) {
             {
                 a.DecodePdu(std::declval<std::string &>())
-            } -> std::same_as<ProtoJudgeType>;
-
-            {
-                a.Clear()
-            } -> std::same_as<void>;
+            } -> std::same_as<protocol::ProtoJudgeType>;
         };
 
         template <typename T>
@@ -88,28 +77,8 @@ namespace galay
             {
                 a.EncodePdu()
             } -> std::same_as<std::string>;
-
-            {
-                a.Clear()
-            } -> std::same_as<void>;
         };
-
-        template <typename T>
-        concept TcpCoreType = requires(T a) {
-            {
-                //To do
-                a.CoreBusiness(std::declval<std::weak_ptr<kernel::GY_Controller>>)
-            } -> std::same_as<GY_NetCoroutine<CoroutineStatus>>;
-        };
-
-        template <typename T>
-        concept HttpCoreType = requires(T a) {
-            {
-                //To do
-                a.CoreBusiness(std::declval<std::weak_ptr<kernel::GY_HttpController>>)
-            } -> std::same_as<GY_NetCoroutine<CoroutineStatus>>;
-        };
-
+        
         enum SchedulerType
         {
             kSelectScheduler, // select
@@ -118,8 +87,8 @@ namespace galay
 
         enum ClassNameType
         {
-            kClassNameRequest,  // protocol request 
-            kClassNameResponse, // protocol response 
+            kClassNameRequest,          // protocol request 
+            kClassNameResponse,         // protocol response 
             kClassNameCoreBusinuess,    //核心业务类
         };
     }

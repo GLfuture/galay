@@ -75,7 +75,15 @@ endif()
 #添加子目录
 add_subdirectory(galay)
 add_subdirectory(tutorial)
-add_subdirectory(test)
+
+find_path(GTEST_INCLUDE_DIR NAMES gtest)
+find_library(GTEST_LIB NAMES gtest)
+if (GTEST_INCLUDE_DIR AND GTEST_LIB) 
+  message(STATUS "gtest found")
+  add_subdirectory(test)
+else()
+  message(WARNING "gtest not found")
+endif()
 
 install(DIRECTORY ${HEADER_SRC_DIR}
         DESTINATION ${HEADER_DST_DIR}

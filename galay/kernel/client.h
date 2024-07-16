@@ -38,16 +38,16 @@ namespace galay
 
         private:
             virtual int Connect(const std::string &ip, uint16_t port);
-            protocol::http::Http1_1_Response::ptr ExecMethod(std::string reqStr);
+            protocol::http::HttpResponse::ptr ExecMethod(std::string reqStr);
             // addr  port  uri
             std::tuple<std::string, uint16_t, std::string> ParseUrl(const std::string &url);
-            void SetHttpHeaders(protocol::http::Http1_1_Request::ptr request);
+            void SetHttpHeaders(protocol::http::HttpRequest::ptr request);
 
         private:
             int m_fd;
             std::string m_version;
             std::queue<std::future<void>> m_futures;
-            std::function<protocol::http::Http1_1_Response::ptr()> m_ExecMethod;
+            std::function<protocol::http::HttpResponse::ptr()> m_ExecMethod;
             std::unordered_map<std::string, std::string> m_headers;
             bool m_keepalive;
             bool m_isconnected;

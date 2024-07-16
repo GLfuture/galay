@@ -7,16 +7,13 @@
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
     auto request = ctrl.lock()->GetRequest();
-    auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
-    response->SetStatus(200) ;
-    response->SetVersion("1.1");
-    response->SetHeadPair({"Content-Type", "text/html"});
+    auto response = std::make_shared<galay::protocol::http::HttpResponse>();
+    response->Header()->Code() = 200;
+    response->Header()->Version() = "1.1";
+    response->Header()->Headers()["Content-Type"] = "text/html";
     std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
-    response->SetBody(std::move(body));
+    response->Body() = std::move(body);
     ctrl.lock()->PushResponse(response->EncodePdu());
-    if(request->GetHeadValue("connection").compare("close") == 0){
-        ctrl.lock()->Close();
-    }
     co_return galay::common::CoroutineStatus::kCoroutineFinished;
 }
 

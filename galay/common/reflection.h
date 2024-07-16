@@ -4,7 +4,7 @@
 #include <functional>
 #include <unordered_map>
 #include <list>
-#include "../protocol/basic_protocol.h"
+#include <memory>
 #include "../util/typename.h"
 
 namespace galay

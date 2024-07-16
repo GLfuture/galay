@@ -67,14 +67,14 @@ galay::kernel::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const st
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>
 galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
 {
-    auto request = std::dynamic_pointer_cast<protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
+    auto request = std::dynamic_pointer_cast<protocol::http::HttpRequest>(ctrl.lock()->GetRequest());
     WaitGroup group(ctrl.lock()->GetCoPool());
     galay::kernel::GY_HttpController::ptr http_ctrl = std::make_shared<galay::kernel::GY_HttpController>(ctrl);
     http_ctrl->SetWaitGroup(&group);
-    auto method_routers = m_routes.find(request->GetMethod());
+    auto method_routers = m_routes.find(request->Header()->Method());
     if (method_routers != m_routes.end())
     {
-        auto router = method_routers->second.find(request->GetUri());
+        auto router = method_routers->second.find(request->Header()->Uri());
         if (router != method_routers->second.end())
         {
             group.Add(1);
@@ -84,25 +84,25 @@ galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
         }
         else
         {
-            auto response = std::make_shared<protocol::http::Http1_1_Response>();
-            response->SetStatus(protocol::http::Http1_1_Response::NotFound_404);
-            response->SetVersion("1.1");
-            response->SetHeadPair({"Connection", "close"});
-            response->SetHeadPair({"Content-Type", "text/html"});
-            response->SetHeadPair({"Server", "galay server"});
-            response->SetBody(html::Html404NotFound);
+            auto response = std::make_shared<protocol::http::HttpResponse>();
+            response->Header()->Code() = protocol::http::NotFound_404;
+            response->Header()->Version() = "1.1";
+            response->Header()->Headers()["Connection"] = "close";
+            response->Header()->Headers()["Content-Type"] = "text/html";
+            response->Header()->Headers()["Server"] = "galay server";
+            response->Body() = html::Html404NotFound;
             ctrl.lock()->PushResponse(response->EncodePdu());
         }
     }
     else
     {
-        auto response = std::make_shared<protocol::http::Http1_1_Response>();
-        response->SetStatus(protocol::http::Http1_1_Response::MethodNotAllowed_405);
-        response->SetVersion("1.1");
-        response->SetHeadPair({"Connection", "close"});
-        response->SetHeadPair({"Content-Type", "text/html"});
-        response->SetHeadPair({"Server", "galay server"});
-        response->SetBody(html::Html405MethodNotAllowed);
+        auto response = std::make_shared<protocol::http::HttpResponse>();
+        response->Header()->Code() = protocol::http::MethodNotAllowed_405;
+        response->Header()->Version() = "1.1";
+        response->Header()->Headers()["Connection"] = "close";
+        response->Header()->Headers()["Content-Type"] = "text/html";
+        response->Header()->Headers()["Server"] = "galay server";
+        response->Body() = html::Html405MethodNotAllowed;
         ctrl.lock()->PushResponse(response->EncodePdu());
     }
     co_await group.Wait();

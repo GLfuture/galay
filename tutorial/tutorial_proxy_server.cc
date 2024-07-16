@@ -8,16 +8,19 @@ galay::kernel::GY_HttpAsyncClient client;
 
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> test_http_proxy(galay::kernel::GY_HttpController::wptr ctrl)
 {
-    auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
-    auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
+    auto request = std::dynamic_pointer_cast<galay::protocol::http::HttpRequest>(ctrl.lock()->GetRequest());
+    auto response = std::make_shared<galay::protocol::http::HttpResponse>();
     client.KeepAlive();
     auto response1 = co_await client.Get("http://183.2.172.42:80");
     client.Close();
-    response->SetBody(response1->GetBody());
-    response->SetStatus(response1->GetStatus());
-    response->SetVersion(response1->GetVersion());
-    response->SetHeaders(response1->GetHeaders());
+    response->Body() = response1->Body();
+    response->Header()->Code() = response1->Header()->Code();
+    response->Header()->Version() = response1->Header()->Version();
+    for(auto [k,v]: response1->Header()->Headers()){
+        response->Header()->Headers()[k] = v;
+    }
     ctrl.lock()->PushResponse(response->EncodePdu());
+    ctrl.lock()->Done();
     co_return galay::common::CoroutineStatus::kCoroutineFinished;
 }
 

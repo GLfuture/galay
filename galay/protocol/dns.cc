@@ -77,20 +77,11 @@ galay::protocol::dns::Dns_Request::EncodePdu()
     return std::string(begin, len);
 }
 
-galay::common::ProtoJudgeType 
+galay::protocol::ProtoJudgeType 
 galay::protocol::dns::Dns_Request::DecodePdu(std::string &buffer)
 {
-    return galay::common::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoJudgeType::kProtoFinished;
 }
-
-void 
-galay::protocol::dns::Dns_Request::Clear()
-{
-    while(!this->m_answers.empty()) this->m_answers.pop();
-    while(!this->m_questions.empty()) this->m_questions.pop();
-    this->m_header = {};
-}
-
 
 std::string 
 galay::protocol::dns::Dns_Request::ModifyHostname(std::string hostname)
@@ -104,7 +95,7 @@ galay::protocol::dns::Dns_Request::ModifyHostname(std::string hostname)
     return res + static_cast<char>(0);
 }
 
-galay::common::ProtoJudgeType 
+galay::protocol::ProtoJudgeType 
 galay::protocol::dns::Dns_Response::DecodePdu(std::string &buffer)
 {
     char *begin = new char[buffer.length()];
@@ -189,7 +180,7 @@ galay::protocol::dns::Dns_Response::DecodePdu(std::string &buffer)
 
     delete[] begin;
     buffer.clear();
-    return galay::common::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoJudgeType::kProtoFinished;
 }
 
 bool 
@@ -275,12 +266,4 @@ std::string
 galay::protocol::dns::Dns_Response::EncodePdu()
 {
     return "";
-}
-
-void 
-galay::protocol::dns::Dns_Response::Clear()
-{
-    while(!this->m_answers.empty()) this->m_answers.pop();
-    while(!this->m_questions.empty()) this->m_questions.pop();
-    this->m_header = {};
 }

@@ -1,6 +1,6 @@
 #ifndef GALAY_FACTORY_H
 #define GALAY_FACTORY_H
-#include "../protocol/basic_protocol.h"
+#include "../common/base.h"
 #include <memory>
 
 

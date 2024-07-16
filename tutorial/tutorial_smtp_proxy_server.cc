@@ -4,8 +4,8 @@
 #include <spdlog/spdlog.h>
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> test(galay::kernel::GY_HttpController::wptr ctrl)
 {
-    auto request = std::dynamic_pointer_cast<galay::protocol::http::Http1_1_Request>(ctrl.lock()->GetRequest());
-    auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
+    auto request = std::dynamic_pointer_cast<galay::protocol::http::HttpRequest>(ctrl.lock()->GetRequest());
+    auto response = std::make_shared<galay::protocol::http::HttpResponse>();
     if(request->GetUri().compare("/smtp") == 0){
         galay::kernel::GY_SmtpAsyncClient client("117.135.207.210", 25);
         auto resps1 = co_await client.Auth("bigdata_C1004@163.com", "EPOXVZMINXCXHXUO");

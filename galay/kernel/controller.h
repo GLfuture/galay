@@ -58,17 +58,17 @@ namespace galay
             std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
             void Done();
             void Close();
-            protocol::http::Http1_1_Request::ptr GetRequest();
+            protocol::http::HttpRequest::ptr GetRequest();
             void PushResponse(std::string &&response);
 
         protected:
             void SetWaitGroup(WaitGroup *waitgroup);
-            void SetRequest(protocol::http::Http1_1_Request::ptr request);
+            void SetRequest(protocol::http::HttpRequest::ptr request);
 
         private:
             galay::kernel::GY_Controller::wptr m_ctrl;
             galay::kernel::WaitGroup *m_waitgroup;
-            protocol::http::Http1_1_Request::ptr m_request;
+            protocol::http::HttpRequest::ptr m_request;
         };
     }
 }

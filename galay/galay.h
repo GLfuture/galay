@@ -13,7 +13,7 @@
 #include "kernel/router.h"
 
 //protocol
-#include "protocol/http1_1.h"
+#include "protocol/http.h"
 #include "protocol/smtp.h"
 
 //util

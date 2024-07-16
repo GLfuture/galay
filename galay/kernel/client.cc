@@ -63,15 +63,15 @@ galay::kernel::GY_HttpAsyncClient::RemoveHeaderPair(const std::string& key)
 galay::common::HttpAwaiter
 galay::kernel::GY_HttpAsyncClient::Get(const std::string& url)
 {
-    protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
-    request->SetMethod("GET");
-    request->SetVersion(this->m_version);
+    protocol::http::HttpRequest::ptr request = std::make_shared<protocol::http::HttpRequest>();
+    request->Header()->Method() = "GET";
+    request->Header()->Version() = this->m_version;
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
-    request->SetUri(std::get<2>(res));
+    request->Header()->Uri() = std::get<2>(res);
     SetHttpHeaders(request);
     std::string host = std::get<0>(res);
     uint16_t port = std::get<1>(res);
-    this->m_ExecMethod = [this, request, host , port]() -> galay::protocol::http::Http1_1_Response::ptr
+    this->m_ExecMethod = [this, request, host , port]() -> galay::protocol::http::HttpResponse::ptr
     {
         if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
@@ -82,16 +82,16 @@ galay::kernel::GY_HttpAsyncClient::Get(const std::string& url)
 galay::common::HttpAwaiter
 galay::kernel::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&body)
 {
-    auto request = std::make_shared<protocol::http::Http1_1_Request>();
-    request->SetMethod("POST");
-    request->SetVersion(this->m_version);
+    auto request = std::make_shared<protocol::http::HttpRequest>();
+    request->Header()->Method() = "POST";
+    request->Header()->Version() = this->m_version;
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
-    request->SetUri(std::get<2>(res));
+    request->Header()->Uri() = std::get<2>(res);
     SetHttpHeaders(request);
     std::string host = std::get<0>(res);
     uint16_t port = std::get<1>(res);
-    request->SetBody(std::forward<std::string&&>(body));
-    this->m_ExecMethod = [this, request,host,port]() -> galay::protocol::http::Http1_1_Response::ptr
+    request->Body() = std::forward<std::string&&>(body);
+    this->m_ExecMethod = [this, request,host,port]() -> galay::protocol::http::HttpResponse::ptr
     {
         if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
@@ -102,15 +102,15 @@ galay::kernel::GY_HttpAsyncClient::Post(const std::string& url ,std::string &&bo
 galay::common::HttpAwaiter
 galay::kernel::GY_HttpAsyncClient::Options(const std::string& url)
 {
-    protocol::http::Http1_1_Request::ptr request = std::make_shared<protocol::http::Http1_1_Request>();
-    request->SetMethod("OPTIONS");
-    request->SetVersion(this->m_version);
+    protocol::http::HttpRequest::ptr request = std::make_shared<protocol::http::HttpRequest>();
+    request->Header()->Method() = "OPTIONS";
+    request->Header()->Version() = this->m_version;
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
-    request->SetUri(std::get<2>(res));
+    request->Header()->Uri() = std::get<2>(res);
     SetHttpHeaders(request);
     std::string host = std::get<0>(res);
     uint16_t port = std::get<1>(res);
-    this->m_ExecMethod = [this, request, host , port]() -> galay::protocol::http::Http1_1_Response::ptr
+    this->m_ExecMethod = [this, request, host , port]() -> galay::protocol::http::HttpResponse::ptr
     {
         if(Connect(host,port) == -1) return nullptr;
         return ExecMethod(request->EncodePdu());
@@ -156,14 +156,16 @@ galay::kernel::GY_HttpAsyncClient::ParseUrl(const std::string& url)
 }
 
 void 
-galay::kernel::GY_HttpAsyncClient::SetHttpHeaders(protocol::http::Http1_1_Request::ptr request)
+galay::kernel::GY_HttpAsyncClient::SetHttpHeaders(protocol::http::HttpRequest::ptr request)
 {
     if (!this->m_keepalive)
-        request->SetHeadPair({"Connection", "close"});
+        request->Header()->Headers()["Connection"] = "close";
     else
-        request->SetHeadPair({"Connection", "keepalive"});
-    request->SetHeadPair({"Server", "galay-server"});
-    request->SetHeaders(this->m_headers);
+        request->Header()->Headers()["Connection"] = "keepalive";
+    request->Header()->Headers()["Server"] = "galay-server";
+    for(auto &[k,v] : this->m_headers){
+        request->Header()->Headers()[k] = v;
+    }
 }
 
 int 
@@ -186,7 +188,7 @@ galay::kernel::GY_HttpAsyncClient::Connect(const std::string& ip, uint16_t port)
     return 0;
 }
 
-galay::protocol::http::Http1_1_Response::ptr
+galay::protocol::http::HttpResponse::ptr
 galay::kernel::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
 {
     int len = 0 , offset = 0;
@@ -205,7 +207,7 @@ galay::kernel::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
             return nullptr;
         }
     } while (offset < reqStr.size());
-    protocol::http::Http1_1_Response::ptr response = std::make_shared<protocol::http::Http1_1_Response>();
+    protocol::http::HttpResponse::ptr response = std::make_shared<protocol::http::HttpResponse>();
     char buffer[1024];
     std::string respStr;
     do
@@ -218,12 +220,12 @@ galay::kernel::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
             spdlog::debug("[{}:{}] [Recv(fd:{}) [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, len, respStr);
             if (!respStr.empty())
             {
-                common::ProtoJudgeType type = response->DecodePdu(respStr);
-                if (type == common::ProtoJudgeType::kProtoIncomplete)
+                protocol::ProtoJudgeType type = response->DecodePdu(respStr);
+                if (type == protocol::ProtoJudgeType::kProtoIncomplete)
                 {
                     continue;
                 }
-                else if (type == common::ProtoJudgeType::kProtoFinished)
+                else if (type == protocol::ProtoJudgeType::kProtoFinished)
                 {
                     spdlog::info("[{}:{}] [Recv(fd:{}) [Success]]", __FILE__, __LINE__, this->m_fd);
                     if (!this->m_keepalive)
@@ -375,12 +377,12 @@ galay::kernel::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
                 if (!respStr.empty())
                 {
                     galay::protocol::smtp::Smtp_Response::ptr response = std::make_shared<galay::protocol::smtp::Smtp_Response>();
-                    common::ProtoJudgeType type = response->Resp()->DecodePdu(respStr);
-                    if (type == common::ProtoJudgeType::kProtoIncomplete)
+                    protocol::ProtoJudgeType type = response->Resp()->DecodePdu(respStr);
+                    if (type == protocol::ProtoJudgeType::kProtoIncomplete)
                     {
                         continue;
                     }
-                    else if (type == common::ProtoJudgeType::kProtoFinished)
+                    else if (type == protocol::ProtoJudgeType::kProtoFinished)
                     {
                         spdlog::info("[{}:{}] [Recv(fd:{}) from {}:{} [Success]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port);
                         res.push_back(response);

@@ -11,12 +11,12 @@ public:
     GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
     {
         auto request = ctrl.lock()->GetRequest();
-        auto response = std::make_shared<galay::protocol::http::Http1_1_Response>();
-        response->SetStatus(200);
-        response->SetVersion("1.1");
-        response->SetHeadPair({"Content-Type", "text/html"});
+        auto response = std::make_shared<galay::protocol::http::HttpResponse>();
+        response->Header()->Code() = 200;
+        response->Header()->Version() = "1.1";
+        response->Header()->Headers()["Content-Type"] = "text/html";
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
-        response->SetBody(std::move(body));
+        response->Body() = std::move(body);
         galay::kernel::WaitGroup group(ctrl.lock()->GetCoPool());
         group.Add(1);
         // 模拟耗时任务
@@ -30,7 +30,7 @@ public:
         th.detach();
         std::cout << "wait....\n";
         co_await group.Wait();
-        if (request->GetHeadValue("connection").compare("close") == 0)
+        if (request->Header()->Headers().contains("connection")&& request->Header()->Headers()["connection"].compare("close") == 0)
         {
             ctrl.lock()->Close();
         }
@@ -50,7 +50,7 @@ class ChunckBusiness : public galay::GY_HttpCoreBase
 public:
     GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) override
     {
-        std::cout << ctrl.lock()->GetRequest()->GetBody();
+        std::cout << ctrl.lock()->GetRequest()->Body();
         ctrl.lock()->Done();
         co_return galay::common::CoroutineStatus::kCoroutineFinished;
     }
@@ -69,12 +69,12 @@ int main()
     router->Post("/chuncked",std::bind(&ChunckBusiness::CoreBusiness,&chunckbusiness,std::placeholders::_1));
     galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8899,router);
     builder->SetIllegalFunction([]()->std::string{
-        galay::protocol::http::Http1_1_Response response;
-        response.SetStatus(400);
-        response.SetVersion("1.1");
-        response.SetHeadPair({"Content-Type", "text/html"});
+        galay::protocol::http::HttpResponse response;
+        response.Header()->Code() = 400;
+        response.Header()->Version() = "1.1";
+        response.Header()->Headers()["Content-Type"] = "text/html";
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>400 Bad Request</body></html>";
-        response.SetBody(std::move(body));
+        response.Body() = std::move(body);
         return response.EncodePdu();
     });
     builder->SetNetThreadNum(4);
