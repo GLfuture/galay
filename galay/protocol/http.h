@@ -54,6 +54,10 @@ namespace galay
                 std::string& Body();
                 galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
+                //chunck
+                bool StartChunck();
+                std::string ChunckStream(std::string&& buffer);
+                std::string EndChunck();
             private:
                 galay::protocol::ProtoJudgeType GetHttpBody(std::string& buffer);
                 galay::protocol::ProtoJudgeType GetChunckBody(std::string& buffer);
@@ -89,6 +93,10 @@ namespace galay
                 std::string& Body();
                 std::string EncodePdu() override;
                 galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
+                //chunck
+                bool StartChunck();
+                std::string ChunckStream(std::string&& buffer);
+                std::string EndChunck();
             private:
                 galay::protocol::ProtoJudgeType GetHttpBody(std::string& buffer);
                 galay::protocol::ProtoJudgeType GetChunckBody(std::string& buffer);

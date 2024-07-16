@@ -486,10 +486,48 @@ galay::protocol::http::HttpRequest::DecodePdu(std::string& buffer)
 std::string 
 galay::protocol::http::HttpRequest::EncodePdu()
 {
+    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
+        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+        return m_header->ToString();
+    }
     if(!m_header->Headers().contains("Content-Length") && !m_header->Headers().contains("content-length")){
         m_header->Headers()["Content-Length"] = std::to_string(m_body.length());
     }
     return m_header->ToString() + m_body + "\r\n\r\n";
+}
+
+bool 
+galay::protocol::http::HttpRequest::StartChunck()
+{
+    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
+        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+        return true;
+    }
+    if(m_header->Headers().contains("content-length")){
+        m_header->Headers().erase("content-length");
+    }
+    if(m_header->Headers().contains("Content-Length")){
+        m_header->Headers().erase("Content-Length");
+    }
+    m_header->Headers()["Transfer-Encoding"] = "chunked";
+    return true;
+}
+
+std::string 
+galay::protocol::http::HttpRequest::ChunckStream(std::string&& buffer)
+{
+    size_t length = buffer.length();
+    std::string res = std::to_string(length);
+    res += "\r\n";
+    res += buffer;
+    res += "\r\n";
+    return std::move(res);
+}
+
+std::string 
+galay::protocol::http::HttpRequest::EndChunck()
+{
+    return "0\r\n\r\n";
 }
 
 galay::protocol::http::HttpRequestHeader::ptr 
@@ -859,6 +897,10 @@ galay::protocol::http::HttpResponse::Body()
 std::string 
 galay::protocol::http::HttpResponse::EncodePdu()
 {
+    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
+        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+        return m_header->ToString();
+    }
     if(!m_header->Headers().contains("Content-Length") && !m_header->Headers().contains("content-length")){
         m_header->Headers()["Content-Length"] = std::to_string(m_body.length());
     }
@@ -932,6 +974,41 @@ galay::protocol::http::HttpResponse::DecodePdu(std::string& buffer)
     }
     return galay::protocol::ProtoJudgeType::kProtoFinished;
 }
+
+bool 
+galay::protocol::http::HttpResponse::StartChunck()
+{
+    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
+        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+        return true;
+    }
+    if(m_header->Headers().contains("content-length")){
+        m_header->Headers().erase("content-length");
+    }
+    if(m_header->Headers().contains("Content-Length")){
+        m_header->Headers().erase("Content-Length");
+    }
+    m_header->Headers()["Transfer-Encoding"] = "chunked";
+    return true;
+}
+
+std::string 
+galay::protocol::http::HttpResponse::ChunckStream(std::string&& buffer)
+{
+    size_t length = buffer.length();
+    std::string res = std::to_string(length);
+    res += "\r\n";
+    res += buffer;
+    res += "\r\n";
+    return std::move(res);
+}
+
+std::string 
+galay::protocol::http::HttpResponse::EndChunck()
+{
+    return "0\r\n\r\n";
+}
+
 
 galay::protocol::ProtoJudgeType 
 galay::protocol::http::HttpResponse::GetHttpBody(std::string& buffer)
