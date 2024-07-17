@@ -4,6 +4,92 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 
+bool 
+galay::kernel::GY_TcpClient::Socket()
+{
+    this->m_fd = IOFunction::NetIOFunction::TcpFunction::Sock();
+    if(this->m_fd <= 0) {
+        spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
+        return false;
+    }
+    spdlog::info("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
+    return true;
+}
+
+bool 
+galay::kernel::GY_TcpClient::Connect(const std::string &ip, uint16_t port)
+{
+    int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, ip , port);
+    if (ret < 0)
+    {
+        spdlog::error("[{}:{}] [Connect(fd:{}) to {}:{} failed]", __FILE__, __LINE__, this->m_fd, ip , port);
+        Close();
+        return false;
+    }
+    spdlog::info("[{}:{}] [Connect(fd:{}) to {}:{} success]", __FILE__, __LINE__, this->m_fd,  ip , port);
+    return true;
+}
+
+bool 
+galay::kernel::GY_TcpClient::Send(std::string &&buffer)
+{
+    size_t offset = 0, n = buffer.size();
+    do{
+        int ret = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, buffer.data() + offset, n - offset);
+        if( ret < 0)
+        {
+            spdlog::error("[{}:{}] [Send(fd:{}) failed, Call GY_TcpClient.Close, Error Msg: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+            Close();
+            return false;
+        }
+        else if(ret == 0)
+        {
+            spdlog::error("[{}:{}] [fd:{} Close, Call GY_TcpClient.Close]", __FILE__, __LINE__, this->m_fd);
+            Close();
+            return false;
+        }
+        offset += ret;
+    }while(offset < n);
+    buffer.clear();
+    return true;
+}
+
+bool 
+galay::kernel::GY_TcpClient::Recv(std::string &buffer, size_t length)
+{
+    char* temp = new char[length + 1];
+    size_t offset = 0;
+    do{
+        int ret = IOFunction::NetIOFunction::TcpFunction::Recv(this->m_fd, temp + offset, length);
+        if(ret < 0)
+        {
+            spdlog::error("[{}:{}] [Recv(fd:{}) failed, GY_TcpClient.Close, Error Msg: {}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+            Close();
+            return false;
+        }
+        else if(ret == 0)
+        {
+            spdlog::error("[{}:{}] [fd:{} Close, Call GY_TcpClient.Close]", __FILE__, __LINE__,this->m_fd);
+            Close();
+            return false;
+        }
+        offset += ret;
+    }while(offset < length);
+    buffer.assign(temp, length);
+    delete[] temp;
+    return true;
+}
+
+bool 
+galay::kernel::GY_TcpClient::Close()
+{
+    if(close(this->m_fd) == -1) {
+        spdlog::error("[{}:{}] [Close(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+        return false;
+    }
+    return true;
+}
+
 galay::kernel::GY_HttpAsyncClient::GY_HttpAsyncClient()
 {
     
@@ -24,23 +110,6 @@ galay::kernel::GY_HttpAsyncClient::CancleKeepalive()
     this->m_keepalive = false;
 }
 
-// void
-// galay::kernel::GY_HttpAsyncClient::Upgrade(const std::string& version)
-// {
-//     if(version.compare(this->m_version) > 0){
-//         this->m_version = version;
-//     }
-//     spdlog::debug("[{}:{}] [now version] [{}]",__FILE__,__LINE__,this->m_version);
-// }
-
-// void
-// galay::kernel::GY_HttpAsyncClient::Downgrade(const std::string& version)
-// {
-//     if(version.compare(this->m_version) < 0){
-//         this->m_version = version;
-//     }
-//     spdlog::debug("[{}:{}] [now version] [{}]",__FILE__,__LINE__,this->m_version);
-// }
 
 void 
 galay::kernel::GY_HttpAsyncClient::SetVersion(const std::string& version)
@@ -194,7 +263,7 @@ galay::kernel::GY_HttpAsyncClient::ExecMethod(std::string reqStr)
     int len = 0 , offset = 0;
     do
     {
-        len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, reqStr, reqStr.size());
+        len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, reqStr.data()+offset, reqStr.size());
         if (len > 0)
         {
             spdlog::debug("[{}:{}] [Send(fd:{}) [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, len, reqStr.substr(0, len));
@@ -351,7 +420,7 @@ galay::kernel::GY_SmtpAsyncClient::ExecSendMsg(std::queue<std::string> requests)
         int len;
         do
         {
-            len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, reqStr, reqStr.size());
+            len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, reqStr.data(), reqStr.size());
             if (len > 0)
             {
                 spdlog::debug("[{}:{}] [Send(fd:{}) to {}:{} [Len:{} Bytes] [Msg:{}]]", __FILE__, __LINE__, this->m_fd, this->m_host, this->m_port, len, reqStr);

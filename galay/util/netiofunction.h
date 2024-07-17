@@ -51,8 +51,8 @@ namespace galay
                 static int Bind(int fd, uint16_t port);
                 static int Listen(int fd, uint16_t backlog);
                 static int Accept(int fd);
-                static ssize_t Recv(int fd, char *buffer, uint32_t len);
-                static ssize_t Send(int fd, const std::string &buffer, uint32_t len);
+                static ssize_t Recv(int fd, char* buffer, uint32_t len);
+                static ssize_t Send(int fd, const char* buffer, uint32_t len);
                 // for server
                 static SSL_CTX *SSL_Init_Server(long min_version, long max_version);
                 // for client
@@ -65,7 +65,7 @@ namespace galay
                 static int SSLAccept(SSL *ssl);
                 static int SSLConnect(SSL *ssl);
                 static int SSLRecv(SSL *ssl, char *buffer, int len);
-                static int SSLSend(SSL *ssl, const std::string &buffer, int len);
+                static int SSLSend(SSL *ssl, const char* buffer, int len);
                 static void SSLDestory(SSL *ssl);
                 static void SSLDestory(std::vector<SSL *> ssls, SSL_CTX *ctx);
 

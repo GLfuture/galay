@@ -10,15 +10,17 @@ galay::common::CommonAwaiter::CommonAwaiter(CommonAwaiter&& other)
     if(this != &other){
         m_IsSuspend = other.m_IsSuspend;
         m_Result = std::move(other.m_Result);
+        other.m_Result.reset();
     }
 }
 
 galay::common::CommonAwaiter&
-galay::common::CommonAwaiter::operator=(CommonAwaiter && other)
+galay::common::CommonAwaiter::operator=(CommonAwaiter&& other)
 {
     if(this != &other){
         m_IsSuspend = other.m_IsSuspend;
         m_Result = std::move(other.m_Result);
+        other.m_Result.reset();
     }
     return *this;
 }

@@ -222,9 +222,9 @@ galay::kernel::GY_SendTask::Execute()
         }
         size_t len;
         if(!this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL()){
-            len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, this->m_wbuffer, this->m_wbuffer.length());
+            len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
         }else{
-            len = IOFunction::NetIOFunction::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer, this->m_wbuffer.length());
+            len = IOFunction::NetIOFunction::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
         }
         if (len == -1)
         {

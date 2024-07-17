@@ -287,7 +287,6 @@ galay::kernel::GY_Sender::ExecuteTask()
 galay::kernel::GY_Connector::GY_Connector(int fd, SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler)
 {
     this->m_fd = fd;
-    this->m_is_ssl_accept = false;
     this->m_ssl = ssl;
     this->m_scheduler = scheduler;
     this->m_receiver = std::make_unique<GY_Receiver>(fd, ssl, scheduler);

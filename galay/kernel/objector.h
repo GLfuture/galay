@@ -178,12 +178,13 @@ namespace galay
             using uptr = std::unique_ptr<GY_Connector>;
             GY_Connector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
             void SetContext(std::any &&context);
+            void PushResponse(std::string &&response);
+            virtual void SetEventType(int event_type) override;
+            std::shared_ptr<galay::kernel::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
             std::any &&GetContext();
             std::weak_ptr<common::GY_NetCoroutinePool> GetCoPool();
             galay::protocol::GY_Request::ptr GetRequest();
-            void PushResponse(std::string &&response);
-            std::shared_ptr<galay::kernel::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func);
-            virtual void SetEventType(int event_type) override;
+           
             virtual void ExecuteTask() override;
             virtual ~GY_Connector();
         private:
@@ -196,7 +197,6 @@ namespace galay
             void RealRecv();
         private:
             int m_fd;
-            bool m_is_ssl_accept;
             SSL *m_ssl;
             std::weak_ptr<galay::kernel::GY_IOScheduler> m_scheduler;
             int m_eventType;

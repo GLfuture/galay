@@ -88,14 +88,14 @@ int galay::IOFunction::NetIOFunction::TcpFunction::Accept(int fd)
     return accept(fd, (sockaddr *)&sin, &len);
 }
 
-ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Recv(int fd , char *buffer , uint32_t len)
+ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Recv(int fd, char* buffer, uint32_t len)
 {
     return recv(fd, buffer, len, 0);
 }
 
-ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Send(int fd,const std::string& buffer , uint32_t len)
+ssize_t galay::IOFunction::NetIOFunction::TcpFunction::Send(int fd, const char* buffer , uint32_t len)
 {
-    return send(fd, buffer.c_str() ,len,0);
+    return send(fd, buffer, len, 0);
 }
 
 SSL_CTX* galay::IOFunction::NetIOFunction::TcpFunction::SSL_Init_Server(long min_version, long max_version)
@@ -147,9 +147,9 @@ int galay::IOFunction::NetIOFunction::TcpFunction::SSLRecv(SSL* ssl,char* buffer
 }
 
 
-int galay::IOFunction::NetIOFunction::TcpFunction::SSLSend(SSL* ssl,const std::string& buffer,int len)
+int galay::IOFunction::NetIOFunction::TcpFunction::SSLSend(SSL* ssl,const char* buffer,int len)
 {
-    return SSL_write(ssl,buffer.c_str(),len);
+    return SSL_write(ssl,buffer,len);
 }
 
 int galay::IOFunction::NetIOFunction::TcpFunction::SSLAccept(SSL* ssl)
