@@ -30,6 +30,7 @@ namespace galay
                 std::map<std::string,std::string>& Headers();
                 std::string ToString();
                 bool FromString(std::string_view str);
+                void CopyFrom(HttpRequestHeader::ptr header);
             private:
                 void ParseArgs(std::string uri);
                 std::string ConvertFromUri(std::string&& url, bool convert_plus_to_space);
@@ -49,7 +50,8 @@ namespace galay
             {
             public:
                 using ptr = std::shared_ptr<HttpRequest>;
-
+                using wptr = std::weak_ptr<HttpRequest>;
+                using uptr = std::unique_ptr<HttpRequest>;
                 HttpRequestHeader::ptr Header();
                 std::string& Body();
                 galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
@@ -88,6 +90,8 @@ namespace galay
             {
             public:
                 using ptr = std::shared_ptr<HttpResponse>;
+                using wptr = std::weak_ptr<HttpResponse>;
+                using uptr = std::weak_ptr<HttpResponse>;
                 
                 HttpResponseHeader::ptr Header();
                 std::string& Body();
@@ -105,6 +109,9 @@ namespace galay
                 HttpResponseHeader::ptr m_header;
                 std::string m_body;
             };
+
+
+            extern HttpRequest::ptr DefaultHttpRequest();
         }
     }
 

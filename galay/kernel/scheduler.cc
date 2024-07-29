@@ -5,45 +5,15 @@
 #include <sys/select.h>
 #include <spdlog/spdlog.h>
 
-galay::kernel::GY_SelectScheduler::GY_SelectScheduler(GY_TcpServerBuilderBase::ptr builder)
+galay::kernel::GY_SelectScheduler::GY_SelectScheduler(uint64_t timeout)
 {
     FD_ZERO(&m_rfds);
     FD_ZERO(&m_wfds);
     FD_ZERO(&m_efds);
     this->m_stop = false;
-    this->m_builder = builder;
-    this->m_userFunc = builder->GetUserFunction();
-    this->m_illegalFunc = builder->GetIllegalFunction();
     this->m_timerfd = 0;
-    this->m_coPool = std::make_shared<common::GY_NetCoroutinePool>();
-    this->m_coThread = std::make_shared<std::thread>([this](){
-        m_coPool->Start();
-    });
-    this->m_coThread->detach();
-}
-
-galay::kernel::GY_TcpServerBuilderBase::wptr 
-galay::kernel::GY_SelectScheduler::GetTcpServerBuilder()
-{
-    return this->m_builder;
-}
-
-/// @brief 
-/// @param controller 
-/// @return coroutine
-galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
-galay::kernel::GY_SelectScheduler::UserFunction(GY_Controller::ptr controller)
-{
-    if(!this->m_userFunc) return {};
-    return this->m_userFunc(controller);
-}
-
-
-std::string 
-galay::kernel::GY_SelectScheduler::IllegalFunction()
-{
-    if(!this->m_illegalFunc) return "";
-    return this->m_illegalFunc();
+    this->m_timeout = timeout;
+    this->m_maxfd = 0;
 }
 
 void 
@@ -64,7 +34,7 @@ void
 galay::kernel::GY_SelectScheduler::DelObjector(int fd)
 {
     this->m_eraseQueue.push(fd);
-    spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, fd);
+    spdlog::debug("[{}:{}] [DelObjector(fd :{}) close]", __FILE__, __LINE__, fd);
 }
 
 bool 
@@ -140,13 +110,34 @@ galay::kernel::GY_SelectScheduler::AddTimer(uint64_t during, uint32_t exec_times
     return timerManager->AddTimer(during, exec_times, std::forward<std::function<std::any()>&&>(func));
 }
 
+
+
+void
+galay::kernel::GY_SelectScheduler::Stop()
+{
+    if (!m_stop)
+    {
+        FD_ZERO(&m_rfds);
+        FD_ZERO(&m_wfds);
+        FD_ZERO(&m_efds);
+        for (auto it = m_objectors.begin(); it != m_objectors.end(); ++it)
+        {
+            this->DelEvent(it->first, kEventRead | kEventWrite | kEventError);
+            spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, it->first);
+            close(it->first);
+        }
+        this->m_objectors.clear();
+        this->m_stop = true;
+    }
+}
+
 void 
 galay::kernel::GY_SelectScheduler::Start()
 {
     fd_set read_set, write_set, excep_set;
     timeval tv;
-    tv.tv_sec = this->m_builder->GetScheWaitTime() / 1000;
-    tv.tv_usec = this->m_builder->GetScheWaitTime() % 1000 * 1000;
+    tv.tv_sec = this->m_timeout / 1000;
+    tv.tv_usec = this->m_timeout % 1000 * 1000;
     while (!m_stop)
     {
         memcpy(&read_set, &m_rfds, sizeof(fd_set));
@@ -184,71 +175,32 @@ galay::kernel::GY_SelectScheduler::Start()
                 }
                 if(eventType != 0){
                     auto objector = m_objectors[fd];
-                    objector->SetEventType(eventType);
-                    objector->ExecuteTask();
+                    if(objector){
+                        objector->SetEventType(eventType);
+                        objector->ExecuteTask();
+                    }
                 }
             }
         }
-        tv.tv_sec = this->m_builder->GetScheWaitTime() / 1000;
-        tv.tv_usec = this->m_builder->GetScheWaitTime() % 1000 * 1000;
+        tv.tv_sec = this->m_timeout / 1000;
+        tv.tv_usec = this->m_timeout % 1000 * 1000;
     } 
-    if(this->m_coPool->WaitForAllDone(5000)){
-        spdlog::info("[{}:{}] [Scheduler Exit Normally]",__FILE__,__LINE__);
-    }else{
-        spdlog::error("[{}:{}] [Scheduler Exit Abnormally(Timeout)]",__FILE__,__LINE__);
-    }
-}
-
-void
-galay::kernel::GY_SelectScheduler::Stop()
-{
-    if (!m_stop)
-    {
-        FD_ZERO(&m_rfds);
-        FD_ZERO(&m_wfds);
-        FD_ZERO(&m_efds);
-        for (auto it = m_objectors.begin(); it != m_objectors.end(); ++it)
-        {
-            this->DelEvent(it->first, kEventRead | kEventWrite | kEventError);
-            spdlog::debug("[{}:{}] [socket(fd :{}) close]", __FILE__, __LINE__, it->first);
-            close(it->first);
-        }
-        this->m_objectors.clear();
-        this->m_stop = true;
-        this->m_coPool->Stop();
-    }
-}
-
-std::shared_ptr<galay::common::GY_NetCoroutinePool> 
-galay::kernel::GY_SelectScheduler::GetCoroutinePool()
-{
-    return this->m_coPool;
 }
 
 galay::kernel::GY_SelectScheduler::~GY_SelectScheduler()
 {
-
+    if(!m_stop){
+        Stop();
+    }
 }
 
-galay::kernel::GY_EpollScheduler::GY_EpollScheduler(GY_TcpServerBuilderBase::ptr builder)
+galay::kernel::GY_EpollScheduler::GY_EpollScheduler(uint32_t eventSize, uint64_t timeout)
 {
     this->m_epollfd = epoll_create(1);
-    this->m_builder = builder;
-    this->m_events = new epoll_event[builder->GetMaxEventSize()];
+    this->m_events = new epoll_event[eventSize];
     this->m_stop = false;
-    this->m_userFunc = builder->GetUserFunction();
-    this->m_illegalFunc = builder->GetIllegalFunction();
-    this->m_coPool = std::make_shared<common::GY_NetCoroutinePool>();
-    this->m_coThread = std::make_shared<std::thread>([this](){
-        m_coPool->Start();
-    });
-    this->m_coThread->detach();
-}
-
-galay::kernel::GY_TcpServerBuilderBase::wptr 
-galay::kernel::GY_EpollScheduler::GetTcpServerBuilder() 
-{
-    return this->m_builder;
+    this->m_timeout = timeout;
+    this->m_eventSize = eventSize;
 }
 
 void 
@@ -293,10 +245,9 @@ galay::kernel::GY_EpollScheduler::RealDelObjector(int fd)
 void 
 galay::kernel::GY_EpollScheduler::Start() 
 {
-    uint16_t eventSize = m_builder->GetMaxEventSize() , waitTime = m_builder->GetScheWaitTime();
     while (!m_stop)
     {
-        int nready = epoll_wait(this->m_epollfd, m_events, eventSize, waitTime);
+        int nready = epoll_wait(this->m_epollfd, m_events, m_eventSize, m_timeout);
         if(m_stop) break;
         if(nready < 0){
             spdlog::error("[{}:{}] [[epoll_wait error(tid: {})] [Errmsg:{}]]",__FILE__,__LINE__,std::hash<std::thread::id>{}(std::this_thread::get_id()),strerror(errno));
@@ -322,32 +273,14 @@ galay::kernel::GY_EpollScheduler::Start()
             if(eventType != 0){
                 int fd = m_events[nready].data.fd;
                 auto objector = m_objectors[fd];
-                objector->SetEventType(eventType);
-                objector->ExecuteTask();
+                if(objector){
+                    objector->SetEventType(eventType);
+                    objector->ExecuteTask();
+                }
             }
         }
     }
-    if(this->m_coPool->WaitForAllDone(5000)){
-        spdlog::info("[{}:{}] [Scheduler Exit Normally]",__FILE__,__LINE__);
-    }else{
-        spdlog::error("[{}:{}] [Scheduler Exit Abnormally(timeout)]",__FILE__,__LINE__);
-    }
 }
-
-galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
-galay::kernel::GY_EpollScheduler::UserFunction(GY_Controller::ptr controller) 
-{
-    if(!this->m_userFunc) return {};
-    return this->m_userFunc(controller);
-}
-
-std::string
-galay::kernel::GY_EpollScheduler::IllegalFunction() 
-{
-    if(!this->m_illegalFunc) return "";
-    return this->m_illegalFunc();
-}
-
 
 int 
 galay::kernel::GY_EpollScheduler::DelEvent(int fd, int event_type) 
@@ -429,18 +362,99 @@ galay::kernel::GY_EpollScheduler::Stop()
         }
         this->m_objectors.clear();
         this->m_stop = true;
-        this->m_coPool->Stop();
     }
-}
-
-std::shared_ptr<galay::common::GY_NetCoroutinePool> 
-galay::kernel::GY_EpollScheduler::GetCoroutinePool()
-{
-    return this->m_coPool;
 }
 
 galay::kernel::GY_EpollScheduler::~GY_EpollScheduler()
 {
     close(this->m_epollfd);
     delete [] this->m_events;
+}
+
+
+galay::kernel::GY_SIOManager::GY_SIOManager(GY_TcpServerBuilderBase::ptr builder)
+{
+    this->m_stop = false;
+    this->m_builder = builder;
+    switch(builder->GetSchedulerType())
+    {
+        case common::SchedulerType::kEpollScheduler:
+        {
+            this->m_ioScheduler = std::make_shared<GY_EpollScheduler>(builder->GetMaxEventSize(), builder->GetScheWaitTime());
+            break;
+        }
+        case common::SchedulerType::kSelectScheduler:
+        {
+            this->m_ioScheduler = std::make_shared<GY_SelectScheduler>(builder->GetScheWaitTime());
+            break;
+        }
+    }
+    this->m_userFunc = builder->GetUserFunction();
+    this->m_illegalFunc = builder->GetIllegalFunction();
+    this->m_coPool = std::make_shared<common::GY_NetCoroutinePool>();
+    m_coPool->Start();
+}
+
+void 
+galay::kernel::GY_SIOManager::Start()
+{
+    m_ioScheduler->Start();
+    if(this->m_coPool->WaitForAllDone(5000)){
+        spdlog::info("[{}:{}] [Scheduler Exit Normally]",__FILE__,__LINE__);
+    }else{
+        spdlog::error("[{}:{}] [Scheduler Exit Abnormally(timeout)]",__FILE__,__LINE__);
+    }
+}
+
+void 
+galay::kernel::GY_SIOManager::Stop()
+{
+    if(!m_stop)
+    {
+        this->m_ioScheduler->Stop();
+        this->m_coPool->Stop();
+        this->m_stop = true;
+    }
+}
+
+galay::kernel::GY_IOScheduler::ptr 
+galay::kernel::GY_SIOManager::GetIOScheduler()
+{
+    return m_ioScheduler;
+}
+
+galay::kernel::GY_TcpServerBuilderBase::wptr 
+galay::kernel::GY_SIOManager::GetTcpServerBuilder()
+{
+    return this->m_builder;
+}
+
+std::shared_ptr<galay::common::GY_NetCoroutinePool> 
+galay::kernel::GY_SIOManager::GetCoroutinePool()
+{
+    return this->m_coPool;
+}
+
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> 
+galay::kernel::GY_SIOManager::UserFunction(GY_Controller::ptr controller)
+{
+    if(!this->m_userFunc) return {};
+    return this->m_userFunc(controller);
+}
+
+
+std::string 
+galay::kernel::GY_SIOManager::IllegalFunction()
+{
+    if(!this->m_illegalFunc) return "";
+    return this->m_illegalFunc();
+}
+
+galay::kernel::GY_SIOManager::~GY_SIOManager()
+{
+    if(!m_stop)
+    {
+        this->Stop();
+        m_stop = true;
+    }
 }

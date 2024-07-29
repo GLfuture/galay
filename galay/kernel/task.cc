@@ -1,19 +1,33 @@
 #include "task.h"
 #include <spdlog/spdlog.h>
 
-galay::kernel::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_CreateConnTask::GY_CreateConnTask(std::weak_ptr<GY_SIOManager> ioManager)
 {
-    this->m_scheduler = scheduler;
-    this->m_fd = CreateListenFd(this->m_scheduler.lock()->GetTcpServerBuilder());
+    this->m_ioManager = ioManager;
+    this->m_success = false;
+    this->m_fd = CreateListenFd(this->m_ioManager.lock()->GetTcpServerBuilder());
     if(this->m_fd < 0) throw std::runtime_error("CreateListenFd error");
 }
 
-void galay::kernel::GY_CreateConnTask::Execute()
+void 
+galay::kernel::GY_CreateConnTask::Execute()
 {
     while(1)
     {
         if(CreateConn() == -1) break;
     }
+}
+
+bool 
+galay::kernel::GY_CreateConnTask::Success() 
+{
+    return m_success;
+}
+
+std::string 
+galay::kernel::GY_CreateConnTask::Error()
+{
+    return m_error;
 }
 
 int 
@@ -25,10 +39,14 @@ galay::kernel::GY_CreateConnTask::CreateConn()
         if (errno != EINTR && errno != EWOULDBLOCK && errno != ECONNABORTED && errno != EPROTO)
         {
             spdlog::error("[{}:{}] [[Accept error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
         }
         else
         {
             spdlog::debug("[{}:{}] [[Accept warn(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
         }
         return -1;
     }
@@ -38,18 +56,24 @@ galay::kernel::GY_CreateConnTask::CreateConn()
     {
         close(connfd);
         spdlog::error("[{}:{}] [[IO_Set_No_Block error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         return -1;
     }
     spdlog::debug("[{}:{}] [IO_Set_No_Block Success(fd:{})]", __FILE__, __LINE__, connfd);
-    std::shared_ptr<GY_Connector> connector = std::make_shared<GY_Connector>(connfd, nullptr, this->m_scheduler);
-    m_scheduler.lock()->RegisterObjector(connfd, connector);
+    std::shared_ptr<GY_Connector> connector = std::make_shared<GY_Connector>(connfd, nullptr, this->m_ioManager);
+    m_ioManager.lock()->GetIOScheduler()->RegisterObjector(connfd, connector);
     
-    if (m_scheduler.lock()->AddEvent(connfd, EventType::kEventRead | EventType::kEvnetEpollET | EventType::kEventError) == -1)
+    if (m_ioManager.lock()->GetIOScheduler()->AddEvent(connfd, EventType::kEventRead | EventType::kEvnetEpollET | EventType::kEventError) == -1)
     {
         close(connfd);
         spdlog::error("[{}:{}] [AddEvent error(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, connfd, strerror(errno));
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         return -1;
     }
+    m_success = true;
+    if(!m_error.empty()) m_error.clear();
     spdlog::debug("[{}:{}] [AddEvent success(fd:{})]", __FILE__, __LINE__, connfd);
     return connfd;
 }
@@ -60,12 +84,16 @@ galay::kernel::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuild
     int fd = IOFunction::NetIOFunction::TcpFunction::Sock();
     if (fd <= 0)
     {
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         spdlog::error("[{}:{}] [[Sock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
         return -1;
     }
     int ret = IOFunction::NetIOFunction::TcpFunction::ReuseAddr(fd);
     if (ret == -1)
     {
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         spdlog::error("[{}:{}] [[ReuseAddr(fd: {}) error] [Errmsg:{}]]", __FILE__, __LINE__, fd, strerror(errno));
         close(fd);
         return -1;
@@ -74,6 +102,8 @@ galay::kernel::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuild
     ret = IOFunction::NetIOFunction::TcpFunction::Bind(fd, builder.lock()->GetPort());
     if (ret == -1)
     {
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         spdlog::error("[{}:{}] [[Bind(fd: {}) error] [Errmsg:{}]]", __FILE__, __LINE__, fd, strerror(errno));
         close(fd);
         return -1;
@@ -81,6 +111,8 @@ galay::kernel::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuild
     ret = IOFunction::NetIOFunction::TcpFunction::Listen(fd, builder.lock()->GetBacklog());
     if (ret == -1)
     {
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         spdlog::error("[{}:{}] [[Listen(fd: {}) error] [Errmsg:{}]]", __FILE__, __LINE__, fd, strerror(errno));
         close(fd);
         return -1;
@@ -88,6 +120,8 @@ galay::kernel::GY_CreateConnTask::CreateListenFd(std::weak_ptr<GY_TcpServerBuild
     ret = IOFunction::NetIOFunction::TcpFunction::IO_Set_No_Block(fd);
     if (ret == -1)
     {
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         spdlog::error("[{}:{}] [[IO_Set_No_Block(fd: {}) error] [Errmsg:{}]]", __FILE__, __LINE__, fd, strerror(errno));
         close(fd);
         return -1;
@@ -102,11 +136,12 @@ galay::kernel::GY_CreateConnTask::GetFd()
     return this->m_fd;
 }
 
-galay::kernel::GY_RecvTask::GY_RecvTask(int fd, SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler)
+galay::kernel::GY_RecvTask::GY_RecvTask(int fd, SSL* ssl, GY_IOScheduler::wptr scheduler)
 {
     this->m_fd = fd;
     this->m_ssl = ssl;
     this->m_scheduler = scheduler;
+    this->m_success = false;
 }
 
 
@@ -114,6 +149,18 @@ void
 galay::kernel::GY_RecvTask::RecvAll()
 {
     Execute();
+}
+
+bool 
+galay::kernel::GY_RecvTask::Success()
+{
+    return this->m_success;
+}
+
+std::string 
+galay::kernel::GY_RecvTask::Error()
+{
+    return this->m_error;
 }
 
 std::string&
@@ -126,21 +173,21 @@ galay::kernel::GY_RecvTask::GetRBuffer()
 void 
 galay::kernel::GY_RecvTask::Execute()
 {
-    uint32_t BufferLen = m_scheduler.lock()->GetTcpServerBuilder().lock()->GetReadBufferLen();
-    char buffer[BufferLen] = {0};
+    char buffer[DEFAULT_RBUFFER_LENGTH] = {0};
     while (1)
     {
-        bzero(buffer, BufferLen);
+        bzero(buffer, DEFAULT_RBUFFER_LENGTH);
         ssize_t len;
-        if(!this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL()){
-            len = IOFunction::NetIOFunction::TcpFunction::Recv(this->m_fd, buffer, BufferLen);
+        if(!m_ssl){
+            len = IOFunction::NetIOFunction::TcpFunction::Recv(this->m_fd, buffer, DEFAULT_RBUFFER_LENGTH);
         }else{
-            len = IOFunction::NetIOFunction::TcpFunction::SSLRecv(this->m_ssl,buffer,BufferLen);
+            len = IOFunction::NetIOFunction::TcpFunction::SSLRecv(this->m_ssl,buffer,DEFAULT_RBUFFER_LENGTH);
         }
         if (len == -1)
         {
             if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
             {
+                if(m_success) m_success = false;
                 spdlog::error("[{}:{}] [Fail(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 close(this->m_fd);
                 this->m_scheduler.lock()->DelObjector(this->m_fd);
@@ -148,12 +195,17 @@ galay::kernel::GY_RecvTask::Execute()
             }
             else
             {
+                m_success = true;
+                if(!m_error.empty()) m_error.clear();
+                m_error = strerror(errno);
                 spdlog::debug("[{}:{}] [[Recv warn(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             }
             return;
         }
         else if (len == 0)
         {
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
             spdlog::info("[{}:{}] [Recv warn(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
             this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
@@ -172,24 +224,13 @@ galay::kernel::GY_SendTask::GY_SendTask(int fd, SSL* ssl, GY_IOScheduler::wptr s
     this->m_fd = fd;
     this->m_ssl = ssl;
     this->m_scheduler = scheduler;
+    this->m_success = false;
 }
 
 void 
 galay::kernel::GY_SendTask::AppendWBuffer(std::string &&wbuffer)
 {
     this->m_wbuffer.append(std::forward<std::string &&>(wbuffer));
-}
-
-void 
-galay::kernel::GY_SendTask::FirstTryToSend()
-{
-    if (this->m_wbuffer.empty())
-        return;
-    Execute();
-    if (!this->m_wbuffer.empty())
-    {
-        this->m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventWrite);
-    }
 }
 
 void 
@@ -208,6 +249,18 @@ galay::kernel::GY_SendTask::Empty() const
     return this->m_wbuffer.empty();
 }
 
+bool 
+galay::kernel::GY_SendTask::Success()
+{
+    return m_success;
+}
+
+std::string 
+galay::kernel::GY_SendTask::Error()
+{
+    return m_error;
+}
+
 void 
 galay::kernel::GY_SendTask::Execute()
 {
@@ -217,17 +270,21 @@ galay::kernel::GY_SendTask::Execute()
     {
         if (this->m_wbuffer.size() == offset)
         {
+            m_success = true;
+            if(!m_error.empty()) m_error.clear();
             this->m_wbuffer.clear();
             return;
         }
         size_t len;
-        if(!this->m_scheduler.lock()->GetTcpServerBuilder().lock()->GetIsSSL()){
+        if(!m_ssl){
             len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
         }else{
             len = IOFunction::NetIOFunction::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
         }
         if (len == -1)
         {
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
             if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
             {
                 spdlog::error("[{}:{}] [Send error(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
@@ -244,6 +301,8 @@ galay::kernel::GY_SendTask::Execute()
         }
         else if (len == 0)
         {
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
             spdlog::info("[{}:{}] [Send info(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
             this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
@@ -258,10 +317,10 @@ galay::kernel::GY_SendTask::Execute()
 }
 
 
-galay::kernel::GY_CreateSSLConnTask::GY_CreateSSLConnTask(std::weak_ptr<GY_IOScheduler> scheduler)
-    : GY_CreateConnTask(scheduler)
+galay::kernel::GY_CreateSSLConnTask::GY_CreateSSLConnTask(std::weak_ptr<GY_SIOManager> ioManager)
+    : GY_CreateConnTask(ioManager)
 {
-    auto sslConfig = scheduler.lock()->GetTcpServerBuilder().lock()->GetSSLConfig();
+    auto sslConfig = ioManager.lock()->GetTcpServerBuilder().lock()->GetSSLConfig();
     long minVersion = sslConfig->GetMinSSLVersion();
     long maxVersion = sslConfig->GetMaxSSLVersion();
     this->m_sslCtx = IOFunction::NetIOFunction::TcpFunction::SSL_Init_Server(minVersion,maxVersion);
@@ -289,10 +348,14 @@ galay::kernel::GY_CreateSSLConnTask::CreateConn()
         if (errno != EINTR && errno != EWOULDBLOCK && errno != ECONNABORTED && errno != EPROTO)
         {
             spdlog::error("[{}:{}] [[Accept error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
         }
         else
         {
             spdlog::debug("[{}:{}] [[Accept warn(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+            if(m_success) m_success = false;
+            m_error = strerror(errno);
         }
         return -1;
     }
@@ -302,12 +365,14 @@ galay::kernel::GY_CreateSSLConnTask::CreateConn()
     {
         close(connfd);
         spdlog::error("[{}:{}] [[IO_Set_No_Block error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, connfd, strerror(errno));
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         return -1;
     }
     spdlog::debug("[{}:{}] [IO_Set_No_Block Success(fd:{})]", __FILE__, __LINE__, connfd);
     SSL* ssl = IOFunction::NetIOFunction::TcpFunction::SSLCreateObj(m_sslCtx,connfd);
-    std::shared_ptr<GY_Connector> connector = std::make_shared<GY_Connector>(connfd, ssl, this->m_scheduler);
-    m_scheduler.lock()->RegisterObjector(connfd, connector);
+    std::shared_ptr<GY_Connector> connector = std::make_shared<GY_Connector>(connfd, ssl, this->m_ioManager);
+    m_ioManager.lock()->GetIOScheduler()->RegisterObjector(connfd, connector);
     int retryTimes = 0;
     do{
         ret = IOFunction::NetIOFunction::TcpFunction::SSLAccept(ssl);
@@ -320,8 +385,10 @@ galay::kernel::GY_CreateSSLConnTask::CreateConn()
             IOFunction::NetIOFunction::TcpFunction::SSLDestory(ssl);
             ssl = nullptr;
             spdlog::error("[{}:{}] [socket(fd: {}) close]", __FILE__, __LINE__, connfd);
-            m_scheduler.lock()->DelObjector(connfd);
+            m_ioManager.lock()->GetIOScheduler()->DelObjector(connfd);
             close(connfd);
+            if(m_success) m_success = false;
+            m_error = "SSLAccept over times";
             return -1;
         }
         if (ret <= 0)
@@ -336,19 +403,23 @@ galay::kernel::GY_CreateSSLConnTask::CreateConn()
                 char msg[256];
                 ERR_error_string(ssl_err, msg);
                 spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}']", __FILE__, __LINE__, connfd, msg);
+                if(m_success) m_success = false;
+                m_error = msg;
                 IOFunction::NetIOFunction::TcpFunction::SSLDestory(ssl);
                 ssl = nullptr;
                 spdlog::error("[{}:{}] [socket(fd: {}) close]", __FILE__, __LINE__, connfd);
-                m_scheduler.lock()->DelObjector(connfd);
+                m_ioManager.lock()->GetIOScheduler()->DelObjector(connfd);
                 close(connfd);
                 return -1;
             }
         }
     }while (ret <= 0);
     spdlog::info("[{}:{}] [SSL_Accept success(fd:{})]", __FILE__, __LINE__, this->m_fd);
-     if (m_scheduler.lock()->AddEvent(connfd, EventType::kEventRead | EventType::kEvnetEpollET | EventType::kEventError) == -1)
+    if (m_ioManager.lock()->GetIOScheduler()->AddEvent(connfd, EventType::kEventRead | EventType::kEvnetEpollET | EventType::kEventError) == -1)
     {
         close(connfd);
+        if(m_success) m_success = false;
+        m_error = strerror(errno);
         spdlog::error("[{}:{}] [AddEvent error(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, connfd, strerror(errno));
         return -1;
     }

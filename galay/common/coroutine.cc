@@ -8,6 +8,15 @@ galay::common::GY_NetCoroutinePool::GY_NetCoroutinePool()
 void 
 galay::common::GY_NetCoroutinePool::Start()
 {
+    this->m_thread = std::make_shared<std::thread>([this](){
+        Run();
+    });
+    this->m_thread->detach();
+}
+
+void 
+galay::common::GY_NetCoroutinePool::Run()
+{
     while (!this->m_stop.load())
     {
         std::unique_lock lock(this->m_queueMtx);
@@ -20,13 +29,12 @@ galay::common::GY_NetCoroutinePool::Start()
         }
         while(!this->m_waitCoQueue.empty())
         {
-            auto id_always = this->m_waitCoQueue.front();
+            auto id = this->m_waitCoQueue.front();
             this->m_waitCoQueue.pop();
-            spdlog::debug("[{}:{}] [GY_NetCoroutinePool Resume CoId = {}]",__FILE__,__LINE__,id_always.first);
-            if(Contains(id_always.first)){
-                auto& co = GetCoroutine(id_always);
+            if(Contains(id)){
+                auto& co = GetCoroutine(id);
                 if(co.IsCoroutine() && !co.Done() && co.GetStatus() != kCoroutineFinished) co.Resume();
-                else RealEraseCoroutine(id_always.first);
+                else RealEraseCoroutine(id);
             }
         }
         if(this->m_stop.load()) break;
@@ -73,18 +81,19 @@ galay::common::GY_NetCoroutinePool::Contains(uint64_t coId)
 }
 
 bool 
-galay::common::GY_NetCoroutinePool::Resume(uint64_t coId, bool always)
+galay::common::GY_NetCoroutinePool::Resume(uint64_t coId)
 {
     if(!m_coroutines.contains(coId)) return false;
-    this->m_waitCoQueue.push(std::make_pair(coId, always));
+    this->m_waitCoQueue.push(coId);
     spdlog::info("[{}:{}] [GY_NetCoroutinePool.Resume CoId = {}]", __FILE__ , __LINE__ , coId);
     this->m_cond.notify_one();
     return true;
 }
 
 bool 
-galay::common::GY_NetCoroutinePool::AddCoroutine(uint64_t coId, GY_NetCoroutine<CoroutineStatus>&& coroutine)
+galay::common::GY_NetCoroutinePool::AddCoroutine(GY_NetCoroutine<CoroutineStatus>&& coroutine)
 {
+    uint64_t coId = coroutine.GetCoId();
     std::unique_lock lock(this->m_mapMtx);
     if(coroutine.IsCoroutine()){
         spdlog::info("[{}:{}] [GY_NetCoroutinePool.AddCoroutine CoId = {}]",__FILE__,__LINE__,coId);
@@ -95,10 +104,10 @@ galay::common::GY_NetCoroutinePool::AddCoroutine(uint64_t coId, GY_NetCoroutine<
 }
 
 galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>& 
-galay::common::GY_NetCoroutinePool::GetCoroutine(std::pair<uint64_t,bool> id_always)
+galay::common::GY_NetCoroutinePool::GetCoroutine(uint64_t id)
 {
     std::shared_lock lock(this->m_mapMtx);
-    return m_coroutines[id_always.first];
+    return m_coroutines[id];
 }
 
 bool 

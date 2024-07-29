@@ -9,10 +9,7 @@ namespace galay
     namespace common
     {
         class GY_NetCoroutinePool;
-    }
 
-    namespace kernel
-    {
         class WaitGroup
         {
         public:
@@ -23,7 +20,6 @@ namespace galay
             void Add(int num);
             common::GroupAwaiter &Wait();
             void Done();
-
         private:
             std::atomic_int16_t m_coNum;
             common::GroupAwaiter m_awaiter;

@@ -63,7 +63,7 @@ galay::kernel::GY_Controller::Done()
 }
 
 void 
-galay::kernel::GY_Controller::SetWaitGroup(WaitGroup* waitgroup)
+galay::kernel::GY_Controller::SetWaitGroup(common::WaitGroup* waitgroup)
 {
     this->m_group = waitgroup;
 }
@@ -105,7 +105,7 @@ galay::kernel::GY_HttpController::AddTimer(uint64_t during, uint32_t exec_times,
 }
 
 void 
-galay::kernel::GY_HttpController::SetWaitGroup(WaitGroup* waitgroup)
+galay::kernel::GY_HttpController::SetWaitGroup(common::WaitGroup* waitgroup)
 {
     this->m_waitgroup = waitgroup;
 }

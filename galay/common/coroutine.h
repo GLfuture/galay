@@ -145,15 +145,17 @@ namespace galay
             void Stop();
             bool WaitForAllDone(uint32_t timeout = 0); //ms
             bool Contains(uint64_t coId);
-            bool Resume(uint64_t coId, bool always);
-            bool AddCoroutine(uint64_t coId, GY_NetCoroutine<CoroutineStatus>&& coroutine);
+            bool Resume(uint64_t coId);
+            bool AddCoroutine(GY_NetCoroutine<CoroutineStatus>&& coroutine);
             bool EraseCoroutine(uint64_t coId);
-            GY_NetCoroutine<CoroutineStatus>& GetCoroutine(std::pair<uint64_t,bool> id_always);
+            GY_NetCoroutine<CoroutineStatus>& GetCoroutine(uint64_t id);
             virtual ~GY_NetCoroutinePool();
         private:
             void RealEraseCoroutine(uint64_t coId);
+            void Run();
         private:
-            std::queue<std::pair<uint64_t,bool>> m_waitCoQueue;
+            std::shared_ptr<std::thread> m_thread;
+            std::queue<uint64_t> m_waitCoQueue;
             std::map<uint64_t,GY_NetCoroutine<CoroutineStatus>> m_coroutines;
             std::queue<uint64_t> m_eraseCoroutines;
             std::atomic_bool m_stop;

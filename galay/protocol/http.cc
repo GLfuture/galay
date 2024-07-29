@@ -173,6 +173,16 @@ galay::protocol::http::HttpRequestHeader::ToString()
 }
 
 void 
+galay::protocol::http::HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
+{
+    this->m_method = header->m_method;
+    this->m_uri = header->m_uri;
+    this->m_version = header->m_version;
+    this->m_argList = header->m_argList;
+    this->m_headers = header->m_headers;
+}
+
+void 
 galay::protocol::http::HttpRequestHeader::ParseArgs(std::string uri)
 {
     int argindx = uri.find('?');
@@ -790,7 +800,7 @@ galay::protocol::http::HttpResponseHeader::CodeMsg(int status)
         return "Not Modified";
     case HttpResponseStatus::UseProxy_305:
         return "Use Proxy";
-    case HttpResponseStatus::unused_306:
+    case HttpResponseStatus::Unused_306:
         return "unused";
     case HttpResponseStatus::TemporaryRedirect_307:
         return "Temporary Redirect";
@@ -1077,3 +1087,16 @@ galay::protocol::http::HttpResponse::GetChunckBody(std::string& buffer)
 }
 
 
+//function 
+
+galay::protocol::http::HttpRequest::ptr 
+galay::protocol::http::DefaultHttpRequest()
+{
+    HttpRequest::ptr request = std::make_shared<HttpRequest>();
+    HttpRequestHeader::ptr header = request->Header();
+    header->Version() = "1.1";
+    header->Uri() = "/";
+    header->Headers()["Server"] = "Galay-Server";
+    header->Headers()["Connection"] = "keep-alive"; 
+    return request;
+}

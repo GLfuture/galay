@@ -84,7 +84,7 @@ namespace galay
                 SeeOther_303 = 303,
                 NotModified_304 = 304,
                 UseProxy_305 = 305,
-                unused_306 = 306,
+                Unused_306 = 306,
                 TemporaryRedirect_307 = 307,
                 PermanentRedirect_308 = 308,
 

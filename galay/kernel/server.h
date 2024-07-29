@@ -19,7 +19,7 @@ namespace galay
             virtual void Stop() = 0;
             virtual GY_TcpServerBuilderBase::ptr GetServerBuilder() = 0;
             virtual void SetServerBuilder(kernel::GY_TcpServerBuilderBase::ptr builder) = 0;
-            virtual GY_IOScheduler::wptr GetScheduler(int indx) = 0;
+            virtual GY_SIOManager::wptr GetScheduler(int indx) = 0;
             virtual ~GY_Server() = default;
         };
 
@@ -34,17 +34,16 @@ namespace galay
             virtual void Stop() override;
             virtual GY_TcpServerBuilderBase::ptr GetServerBuilder() override;
             virtual void SetServerBuilder(GY_TcpServerBuilderBase::ptr builder) override;
-            virtual GY_IOScheduler::wptr GetScheduler(int indx) override;
+            virtual GY_SIOManager::wptr GetScheduler(int indx) override;
 
             virtual ~GY_TcpServer();
         private:
-            GY_IOScheduler::ptr CreateScheduler();
             GY_TimerManager::ptr CreateTimerManager();
-            GY_Acceptor::ptr CreateAcceptor(GY_IOScheduler::ptr scheduler);
+            GY_Acceptor::ptr CreateAcceptor(GY_SIOManager::ptr ioManager);
         private:
             GY_TcpServerBuilderBase::ptr m_builder;
             common::GY_ThreadPool::ptr m_threadPool;
-            std::vector<GY_IOScheduler::ptr> m_schedulers;
+            std::vector<GY_SIOManager::ptr> m_ioManagers;
             std::atomic_bool m_isStopped;
         };
     }

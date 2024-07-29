@@ -68,9 +68,9 @@ galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>
 galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
 {
     auto request = std::dynamic_pointer_cast<protocol::http::HttpRequest>(ctrl.lock()->GetRequest());
-    WaitGroup group(ctrl.lock()->GetCoPool());
-    galay::kernel::GY_HttpController::ptr http_ctrl = std::make_shared<galay::kernel::GY_HttpController>(ctrl);
-    http_ctrl->SetWaitGroup(&group);
+    common::WaitGroup group(ctrl.lock()->GetCoPool());
+    m_httpCtrl = std::make_shared<galay::kernel::GY_HttpController>(ctrl);
+    m_httpCtrl->SetWaitGroup(&group);
     auto method_routers = m_routes.find(request->Header()->Method());
     if (method_routers != m_routes.end())
     {
@@ -78,9 +78,9 @@ galay::kernel::GY_HttpRouter::RouteHttp(std::weak_ptr<GY_Controller> ctrl)
         if (router != method_routers->second.end())
         {
             group.Add(1);
-            http_ctrl->SetRequest(request);
-            auto co = router->second(http_ctrl);
-            if(co.IsCoroutine() && co.GetStatus() != common::kCoroutineFinished) ctrl.lock()->GetCoPool().lock()->AddCoroutine(co.GetCoId(),std::move(co)) ;
+            m_httpCtrl->SetRequest(request);
+            auto co = router->second(m_httpCtrl);
+            if(co.IsCoroutine() && co.GetStatus() != common::kCoroutineFinished) ctrl.lock()->GetCoPool().lock()->AddCoroutine(std::move(co)) ;
         }
         else
         {

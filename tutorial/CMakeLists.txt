@@ -6,8 +6,8 @@ set(SRC_LIST
     #tutorial_proxy_server.cc
     tutorial_ratelimiter.cc
     #tutorial_smtp_proxy_server.cc
-    tutorial_dns_client.cc
-    tutorial_https_server.cc
+    #tutorial_dns_client.cc
+    #tutorial_https_server.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

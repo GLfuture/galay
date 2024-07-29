@@ -36,12 +36,12 @@ namespace galay
             void Done();
 
         protected:
-            void SetWaitGroup(WaitGroup *waitgroup);
+            void SetWaitGroup(common::WaitGroup *waitgroup);
 
         private:
             std::weak_ptr<galay::kernel::GY_Connector> m_connector;
             bool m_close;
-            WaitGroup *m_group;
+            common::WaitGroup *m_group;
         };
 
         class GY_HttpController
@@ -62,12 +62,12 @@ namespace galay
             void PushResponse(std::string &&response);
 
         protected:
-            void SetWaitGroup(WaitGroup *waitgroup);
+            void SetWaitGroup(common::WaitGroup *waitgroup);
             void SetRequest(protocol::http::HttpRequest::ptr request);
 
         private:
             galay::kernel::GY_Controller::wptr m_ctrl;
-            galay::kernel::WaitGroup *m_waitgroup;
+            galay::common::WaitGroup *m_waitgroup;
             protocol::http::HttpRequest::ptr m_request;
         };
     }

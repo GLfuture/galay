@@ -29,8 +29,9 @@ namespace galay
             common::GY_NetCoroutine<common::CoroutineStatus> RouteHttp(std::weak_ptr<GY_Controller> ctrl);
 
         private:
-            std::unordered_map<std::string, std::unordered_map<std::string, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)>>> m_routes;
             uint64_t m_coId;
+            std::shared_ptr<GY_HttpController> m_httpCtrl;
+            std::unordered_map<std::string, std::unordered_map<std::string, std::function<common::GY_NetCoroutine<common::CoroutineStatus>(std::weak_ptr<GY_HttpController>)>>> m_routes;
         };
     }
 }

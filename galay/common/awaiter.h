@@ -55,7 +55,7 @@ namespace galay
             std::any await_resume();
 
         private:
-            bool m_IsSuspend;
+            std::atomic_bool m_IsSuspend;
             std::weak_ptr<common::GY_NetCoroutinePool> m_coPool;
             uint64_t m_coId;
         };

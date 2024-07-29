@@ -138,12 +138,6 @@ galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetScheWaitTime(uint16_t sche_wait
     m_sche_wait_time.store(sche_wait_time);
 }
 
-template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
-void 
-galay::kernel::GY_TcpServerBuilder<Req,Resp>::SetReadBufferLen(uint32_t rbuffer_len)
-{
-    m_rbuffer_len.store(rbuffer_len);
-}
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
 void 
@@ -165,13 +159,6 @@ uint16_t
 galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetScheWaitTime()
 {
     return m_sche_wait_time.load();
-}
-
-template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>
-uint32_t
-galay::kernel::GY_TcpServerBuilder<Req,Resp>::GetReadBufferLen()
-{
-    return m_rbuffer_len.load();
 }
 
 template<galay::common::TcpRequest Req,galay::common::TcpResponse Resp>

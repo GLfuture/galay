@@ -49,7 +49,6 @@ namespace galay
             virtual void SetBacklog(uint16_t backlog) = 0;
             virtual void SetMaxEventSize(uint16_t max_event_size) = 0;
             virtual void SetScheWaitTime(uint16_t sche_wait_time) = 0;
-            virtual void SetReadBufferLen(uint32_t rbuffer_len) = 0;
             virtual void SetPort(uint16_t port) = 0;
 
             //SSL env
@@ -62,7 +61,6 @@ namespace galay
             virtual galay::common::SchedulerType GetSchedulerType() = 0;
             virtual uint16_t GetMaxEventSize() = 0;
             virtual uint16_t GetScheWaitTime() = 0;
-            virtual uint32_t GetReadBufferLen() = 0;
             virtual uint16_t GetPort() = 0;
             virtual std::function<common::GY_NetCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() = 0;
             virtual std::function<std::string()> GetIllegalFunction() = 0;
@@ -87,7 +85,6 @@ namespace galay
             virtual void SetBacklog(uint16_t backlog) override;
             virtual void SetMaxEventSize(uint16_t max_event_size) override;
             virtual void SetScheWaitTime(uint16_t sche_wait_time) override;
-            virtual void SetReadBufferLen(uint32_t rbuffer_len) override;
             virtual void SetPort(uint16_t port) override;
             //开启SSL env
             virtual void InitSSLServer(bool is_ssl) override;
@@ -98,7 +95,6 @@ namespace galay
             virtual galay::common::SchedulerType GetSchedulerType() override;
             virtual uint16_t GetMaxEventSize() override;
             virtual uint16_t GetScheWaitTime() override;
-            virtual uint32_t GetReadBufferLen() override;
             virtual uint16_t GetPort() override;
             virtual std::function<common::GY_NetCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> GetUserFunction() override;
             virtual std::function<std::string()> GetIllegalFunction() override;

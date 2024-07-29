@@ -5,26 +5,51 @@
 #include <spdlog/async_logger.h>
 #include <spdlog/async.h>
 
-galay::kernel::GY_HttpAsyncClient client;
-galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> func()
+galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> func(galay::common::GY_NetCoroutinePool::wptr pool, galay::kernel::GY_SelectScheduler::wptr scheduler)
 {
-    auto resp = co_await client.Get("http://183.2.172.185:80");
-    std::cout << resp->EncodePdu();
-    co_return galay::common::CoroutineStatus::kCoroutineFinished;
+    // galay::kernel::GY_TcpClient::ptr client = std::make_shared<galay::kernel::GY_TcpClient>(pool, scheduler);
+    // client->Socket();
+    // auto result = client->Connect("127.0.0.1", 8899);
+    // co_await result->Wait();
+    // if(!result->Success()) std::cout << result->Error() << std::endl;
+    // result = client->Send("GET /echo HTTP/1.1\r\n\r\n");
+    // co_await result->Wait();
+    // if(!result->Success()) std::cout << result->Error() << std::endl;
+    // std::string res;
+    // result = client->Recv(res);
+    // co_await result->Wait();
+    // if(!result->Success()) std::cout << result->Error() << std::endl;
+    // else std::cout << res << std::endl;
+    // client->Close();
+    // pool.lock()->Stop();
+    // scheduler.lock()->Stop();
+    // co_return galay::common::kCoroutineFinished;
+    co_await std::suspend_always{};
+    galay::kernel::GY_HttpAsyncClient::ptr client = std::make_shared<galay::kernel::GY_HttpAsyncClient>(pool, scheduler);
+    auto req = galay::protocol::http::DefaultHttpRequest();
+    std::cout << req->Header()->Version() << '\n';
+    auto res = client->Get("http://180.101.50.242", req);
+    co_await res->Wait();
+    std::cout << res->GetResponse()->Body() << '\n';
+    co_return galay::common::kCoroutineFinished;
 }
+
 
 int main()
 {
-    //遇到debug级别日志立即刷新
-    spdlog::flush_on(spdlog::level::debug);
-    spdlog::init_thread_pool(8192, 1);
-    auto rotating_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("client.log", 1024*1024*10, 3);
-    std::vector<spdlog::sink_ptr> sinks {rotating_sink};
-    auto logger = std::make_shared<spdlog::async_logger>("logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
-    logger->set_level(spdlog::level::debug);
-    spdlog::set_default_logger(logger);
-    auto co = func();
+    spdlog::set_level(spdlog::level::debug);
+    galay::common::GY_NetCoroutinePool::ptr pool = std::make_shared<galay::common::GY_NetCoroutinePool>();
+    pool->Start();
+    galay::kernel::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::kernel::GY_SelectScheduler>(50);
+    galay::common::GY_ThreadPool::ptr threadPool = std::make_shared<galay::common::GY_ThreadPool>();
+    threadPool->Start(1);
+    threadPool->AddTask([&](){ scheduler->Start(); });
+    auto co = func(pool, scheduler);
+    uint64_t coId = co.GetCoId();
+    pool->AddCoroutine(std::move(co));
+    pool->Resume(coId);
     getchar();
-    std::cout << "main" << std::endl;
+    pool->WaitForAllDone(5000);
+    threadPool->WaitForAllDone(5000);
     return 0;
 }

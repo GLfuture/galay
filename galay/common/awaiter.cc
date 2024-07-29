@@ -55,7 +55,7 @@ galay::common::GroupAwaiter::operator=(const GroupAwaiter& other)
     if(this != &other){
         this->m_coId=other.m_coId;
         this->m_coPool=other.m_coPool;
-        this->m_IsSuspend=other.m_IsSuspend;
+        this->m_IsSuspend.store(other.m_IsSuspend.load());
     }
     return *this;
 }
@@ -64,7 +64,7 @@ galay::common::GroupAwaiter::GroupAwaiter(GroupAwaiter&& other)
 {
     this->m_coId=other.m_coId;
     this->m_coPool=other.m_coPool;
-    this->m_IsSuspend = other.m_IsSuspend;
+    this->m_IsSuspend.store(other.m_IsSuspend.load());
 }
 
 galay::common::GroupAwaiter&
@@ -73,7 +73,7 @@ galay::common::GroupAwaiter::operator=(GroupAwaiter&& other)
     if(this != &other){
         this->m_coId=other.m_coId;
         this->m_coPool=other.m_coPool;
-        this->m_IsSuspend = other.m_IsSuspend;
+        this->m_IsSuspend.store(other.m_IsSuspend.load());
     }
     return *this;
 }
@@ -81,13 +81,16 @@ galay::common::GroupAwaiter::operator=(GroupAwaiter&& other)
 bool 
 galay::common::GroupAwaiter::await_ready()
 {
-    return !m_IsSuspend; 
+    return !m_IsSuspend.load(); 
 }
 
 void 
 galay::common::GroupAwaiter::Resume()
 {
-    if(this->m_IsSuspend) this->m_coPool.lock()->Resume(this->m_coId,false);
+    if(this->m_IsSuspend) {
+        this->m_coPool.lock()->Resume(this->m_coId);
+        this->m_IsSuspend = false;
+    }
 }
 
 void 

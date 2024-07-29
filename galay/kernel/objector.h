@@ -16,6 +16,7 @@ namespace galay
 {
     namespace kernel
     {
+        class GY_SIOManager;
         class GY_IOScheduler;
         class GY_CreateConnTask;
         class GY_RecvTask;
@@ -126,7 +127,7 @@ namespace galay
             using wptr = std::weak_ptr<GY_Acceptor>;
             using ptr = std::shared_ptr<GY_Acceptor>;
             using uptr = std::unique_ptr<GY_Acceptor>;
-            GY_Acceptor(std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
+            GY_Acceptor(std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
             int GetListenFd();
             virtual void SetEventType(int event_type) override;
             inline virtual void ExecuteTask() override;
@@ -143,7 +144,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_Receiver>;
             using uptr = std::unique_ptr<GY_Receiver>;
             // 创建时既需要加入scheduler的事件中
-            GY_Receiver(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
+            GY_Receiver(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> ioManager);
             std::string &GetRBuffer();
             virtual void SetEventType(int event_type) override;
             virtual void ExecuteTask() override;
@@ -176,7 +177,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_Connector>;
             using wptr = std::weak_ptr<GY_Connector>;
             using uptr = std::unique_ptr<GY_Connector>;
-            GY_Connector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_IOScheduler> scheduler);
+            GY_Connector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
             void SetContext(std::any &&context);
             void PushResponse(std::string &&response);
             virtual void SetEventType(int event_type) override;
@@ -198,7 +199,7 @@ namespace galay
         private:
             int m_fd;
             SSL *m_ssl;
-            std::weak_ptr<galay::kernel::GY_IOScheduler> m_scheduler;
+            std::weak_ptr<galay::kernel::GY_SIOManager> m_ioManager;
             int m_eventType;
             std::shared_ptr<galay::kernel::GY_Controller> m_controller;
             GY_Receiver::uptr m_receiver;
@@ -212,6 +213,19 @@ namespace galay
             std::queue<std::string> m_responses;
             std::any m_context;
             std::shared_ptr<bool> m_exit;
+        };
+
+        class GY_ClientExcutor: public GY_Objector
+        {
+        public:
+            using ptr = std::shared_ptr<GY_ClientExcutor>;
+            using wptr = std::weak_ptr<GY_ClientExcutor>;
+            using uptr = std::unique_ptr<GY_ClientExcutor>;
+            GY_ClientExcutor(std::function<void()>&& func);
+            virtual void SetEventType(int event_type) override;
+            virtual void ExecuteTask() override;
+        private:
+            std::function<void()> m_func;
         };
     }
 
