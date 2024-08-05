@@ -565,7 +565,7 @@ galay::protocol::http::HttpRequest::GetHttpBody(std::string &buffer)
             if(buffer.substr(length,4).compare("\r\n\r\n") == 0) {
                 res += 4;
             }  
-            spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
+            spdlog::trace("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
             buffer.erase(0,res);
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
@@ -1032,7 +1032,7 @@ galay::protocol::http::HttpResponse::GetHttpBody(std::string& buffer)
             if(buffer.substr(length,4).compare("\r\n\r\n") == 0) {
                 res += 4;
             }  
-            spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
+            spdlog::trace("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
             buffer.erase(0,res);
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [Body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);

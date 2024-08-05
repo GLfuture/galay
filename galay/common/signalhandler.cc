@@ -12,7 +12,6 @@ galay::common::GY_SignalFactory::GetInstance()
     return m_signalHandler.get();
 }
 
-
 void 
 galay::common::GY_SignalFactory::SetSignalHandler(int signo, std::function<void(int)> func)
 {

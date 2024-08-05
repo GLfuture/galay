@@ -84,7 +84,7 @@ namespace galay
                 std::queue<DnsAnswer> m_answers;
             };
 
-            class Dns_Request : public Dns_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<GY_Request,Dns_Request>
+            class Dns_Request : public Dns_Protocol, public GY_SRequest, public GY_SResponse, public galay::common::GY_DynamicCreator<GY_SRequest,Dns_Request>
             {
             public:
                 using ptr = std::shared_ptr<Dns_Request>;
@@ -95,7 +95,7 @@ namespace galay
                 std::string ModifyHostname(std::string hostname);
             };
 
-            class Dns_Response : public Dns_Protocol, public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<GY_Response,Dns_Response>
+            class Dns_Response : public Dns_Protocol, public GY_SRequest, public GY_SResponse, public galay::common::GY_DynamicCreator<GY_SResponse,Dns_Response>
             {
             public:
                 using ptr = std::shared_ptr<Dns_Response>;

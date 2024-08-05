@@ -11,10 +11,11 @@ namespace galay
     {
         namespace smtp
         {
-            class Smtp_Protocol : public GY_Request, public GY_Response,public galay::common::GY_DynamicCreator<GY_Request,Smtp_Protocol>,public galay::common::GY_DynamicCreator<GY_Response,Smtp_Protocol>
+            class SmtpProtocol : public GY_SRequest, public GY_SResponse
+                ,public galay::common::GY_DynamicCreator<GY_SRequest,SmtpProtocol>,public galay::common::GY_DynamicCreator<GY_SResponse,SmtpProtocol>
             {
             public:
-                using ptr = std::shared_ptr<Smtp_Protocol>;
+                using ptr = std::shared_ptr<SmtpProtocol>;
                 virtual std::string EncodePdu() override;
                 virtual galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 void SetContent(std::string content);
@@ -30,39 +31,39 @@ namespace galay
                 std::string m_charset = "utf8mb4";
             };
 
-            class Smtp_Request
+            class SmtpRequest
             {
             public:
-                using ptr = std::shared_ptr<Smtp_Request>;
-                using wpt = std::weak_ptr<Smtp_Request>;
-                using uptr = std::unique_ptr<Smtp_Request>;
-                Smtp_Request();
-                Smtp_Protocol::ptr Hello();
-                Smtp_Protocol::ptr Auth();
-                Smtp_Protocol::ptr Account(std::string account);
-                Smtp_Protocol::ptr Password(std::string password);
-                Smtp_Protocol::ptr MailFrom(std::string from_mail);
-                Smtp_Protocol::ptr RcptTo(std::string to_mail);
-                Smtp_Protocol::ptr Data();
-                Smtp_Protocol::ptr Msg(const SmtpMsgInfo& msg);
-                Smtp_Protocol::ptr Quit();
+                using ptr = std::shared_ptr<SmtpRequest>;
+                using wpt = std::weak_ptr<SmtpRequest>;
+                using uptr = std::unique_ptr<SmtpRequest>;
+                SmtpRequest();
+                SmtpProtocol::ptr Hello();
+                SmtpProtocol::ptr Auth();
+                SmtpProtocol::ptr Account(std::string account);
+                SmtpProtocol::ptr Password(std::string password);
+                SmtpProtocol::ptr MailFrom(std::string from_mail);
+                SmtpProtocol::ptr RcptTo(std::string to_mail);
+                SmtpProtocol::ptr Data();
+                SmtpProtocol::ptr Msg(const SmtpMsgInfo& msg);
+                SmtpProtocol::ptr Quit();
 
             private:
-                Smtp_Protocol::ptr m_smtp_str;
+                SmtpProtocol::ptr m_smtp_str;
                 std::string m_frommail;
                 std::queue<std::string> m_tomails;
             };
 
-            class Smtp_Response
+            class SmtpResponse
             {
             public:
-                using ptr = std::shared_ptr<Smtp_Response>;
-                using wptr = std::weak_ptr<Smtp_Response>;
-                using uptr = std::unique_ptr<Smtp_Response>;
-                Smtp_Response();
-                Smtp_Protocol::ptr Resp();
+                using ptr = std::shared_ptr<SmtpResponse>;
+                using wptr = std::weak_ptr<SmtpResponse>;
+                using uptr = std::unique_ptr<SmtpResponse>;
+                SmtpResponse();
+                SmtpProtocol::ptr Resp();
             private:
-                Smtp_Protocol::ptr m_smtp_str;
+                SmtpProtocol::ptr m_smtp_str;
             };
         }
     }

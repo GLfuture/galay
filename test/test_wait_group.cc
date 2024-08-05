@@ -2,10 +2,10 @@
 #include <thread>
 #include <iostream>
 
-galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> func(galay::common::GY_NetCoroutinePool::wptr pool)
+galay::common::GY_NetCoroutine func()
 {
     std::cout << "func start\n";
-    galay::common::WaitGroup group(pool);
+    galay::common::WaitGroup group;
     group.Add(1);
     std::thread th = std::thread([&](){
         std::cout << "thread start\n";
@@ -18,21 +18,17 @@ galay::common::GY_NetCoroutine<galay::common::CoroutineStatus> func(galay::commo
     std::cout << "func waiting ....\n";
     co_await group.Wait();
     std::cout << "func end\n";
-    pool.lock()->Stop();
+    galay::common::GY_NetCoroutinePool::GetInstance()->Stop();
     co_return galay::common::kCoroutineFinished;
 }
 
 int main()
 {
     spdlog::set_level(spdlog::level::debug);
-    galay::common::GY_NetCoroutinePool::ptr pool = std::make_shared<galay::common::GY_NetCoroutinePool>();
-    pool->Start();
-    auto f = func(pool);
-    uint64_t coId = f.GetCoId();
-    pool->AddCoroutine(std::move(f));
-    pool->Resume(coId);
+    auto f = func();
+    galay::common::GY_NetCoroutinePool::GetInstance()->Resume(f.GetCoId());
     std::cout << "main waiting...\n";
-    pool->WaitForAllDone();
+    galay::common::GY_NetCoroutinePool::GetInstance()->WaitForAllDone();
     std::cout << "main end...\n";
     return 0;
 }

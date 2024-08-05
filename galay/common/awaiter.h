@@ -7,7 +7,6 @@
 #include <optional>
 #include <functional>
 #include <future>
-#include "coroutine.h"
 #include "../protocol/http.h"
 #include "../protocol/smtp.h"
 #include "../protocol/dns.h"
@@ -45,7 +44,7 @@ namespace galay
         {
         public:
             GroupAwaiter() = default;
-            GroupAwaiter(std::weak_ptr<common::GY_NetCoroutinePool> coPool, bool IsSuspend);
+            GroupAwaiter(bool IsSuspend);
             GroupAwaiter(GroupAwaiter &&other);
             GroupAwaiter &operator=(const GroupAwaiter &other);
             GroupAwaiter &operator=(GroupAwaiter &&other);
@@ -55,9 +54,8 @@ namespace galay
             std::any await_resume();
 
         private:
-            std::atomic_bool m_IsSuspend;
-            std::weak_ptr<common::GY_NetCoroutinePool> m_coPool;
             uint64_t m_coId;
+            std::atomic_bool m_IsSuspend;
         };
 
         class HttpAwaiter
@@ -82,20 +80,20 @@ namespace galay
         class SmtpAwaiter
         {
         public:
-            SmtpAwaiter(bool IsSuspend, std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()> &func, std::queue<std::future<void>> &futures);
+            SmtpAwaiter(bool IsSuspend, std::function<std::vector<protocol::smtp::SmtpResponse::ptr>()> &func, std::queue<std::future<void>> &futures);
             SmtpAwaiter(SmtpAwaiter &&other);
             SmtpAwaiter &operator=(const SmtpAwaiter &) = delete;
             SmtpAwaiter &operator=(SmtpAwaiter &&other);
             virtual bool await_ready();
             virtual void await_suspend(std::coroutine_handle<> handle);
-            virtual std::vector<protocol::smtp::Smtp_Response::ptr> await_resume();
+            virtual std::vector<protocol::smtp::SmtpResponse::ptr> await_resume();
             ~SmtpAwaiter() = default;
 
         private:
             bool m_IsSuspend;
             std::queue<std::future<void>> &m_futures;
-            std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()> &m_Func;
-            std::vector<protocol::smtp::Smtp_Response::ptr> m_Result;
+            std::function<std::vector<protocol::smtp::SmtpResponse::ptr>()> &m_Func;
+            std::vector<protocol::smtp::SmtpResponse::ptr> m_Result;
         };
 
         class DnsAwaiter

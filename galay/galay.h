@@ -5,12 +5,17 @@
 #include "common/base.h"
 #include "common/signalhandler.h"
 #include "common/threadpool.h"
+#include "common/coroutine.h"
 
 //kernel
 #include "kernel/client.h"
 #include "kernel/server.h"
 #include "kernel/factory.h"
 #include "kernel/router.h"
+#include "kernel/builder.h"
+#include "kernel/controller.h"
+#include "kernel/scheduler.h"
+#include "kernel/result.h"
 
 //protocol
 #include "protocol/http.h"
@@ -31,10 +36,10 @@ namespace galay
         using ptr = std::shared_ptr<GY_TcpCoreBase>;
         using wptr = std::weak_ptr<GY_TcpCoreBase>;
         using uptr = std::unique_ptr<GY_TcpCoreBase>;
-        using GY_NetCoroutine = galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>;
-        using GY_Controller = galay::kernel::GY_Controller;
+        using GY_NetCoroutine = common::GY_NetCoroutine;
+        using GY_Controller = kernel::GY_Controller;
         
-        virtual GY_NetCoroutine CoreBusiness(GY_Controller::wptr ctrl) = 0;
+        virtual GY_NetCoroutine CoreBusiness(GY_Controller::ptr ctrl) = 0;
     };
 
     class GY_HttpCoreBase
@@ -43,10 +48,10 @@ namespace galay
         using ptr = std::shared_ptr<GY_HttpCoreBase>;
         using wptr = std::weak_ptr<GY_HttpCoreBase>;
         using uptr = std::unique_ptr<GY_HttpCoreBase>;
-        using GY_NetCoroutine = galay::common::GY_NetCoroutine<galay::common::CoroutineStatus>;
-        using GY_HttpController = galay::kernel::GY_HttpController;
+        using GY_NetCoroutine = common::GY_NetCoroutine;
+        using GY_HttpController = kernel::GY_HttpController;
 
-        virtual GY_NetCoroutine CoreBusiness(GY_HttpController::wptr ctrl) = 0;
+        virtual GY_NetCoroutine CoreBusiness(GY_HttpController::ptr ctrl) = 0;
     };
 }
 

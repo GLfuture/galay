@@ -46,7 +46,7 @@ namespace galay
                 std::map<std::string, std::string> m_headers;     // 字段
             };
 
-            class HttpRequest : public GY_Request, public GY_Response, public galay::common::GY_DynamicCreator<GY_Request,HttpRequest>
+            class HttpRequest : public GY_SRequest, public GY_CRequest, public galay::common::GY_DynamicCreator<GY_SRequest,HttpRequest>, public galay::common::GY_DynamicCreator<GY_CRequest,HttpRequest>
             {
             public:
                 using ptr = std::shared_ptr<HttpRequest>;
@@ -86,7 +86,7 @@ namespace galay
                 std::map<std::string, std::string> m_headers;
             };
 
-            class HttpResponse : public GY_Response, public GY_Request, public galay::common::GY_DynamicCreator<GY_Response,HttpResponse>
+            class HttpResponse : public GY_SResponse, public GY_CResponse, public galay::common::GY_DynamicCreator<GY_SResponse,HttpResponse>, public galay::common::GY_DynamicCreator<GY_CResponse,HttpResponse>
             {
             public:
                 using ptr = std::shared_ptr<HttpResponse>;

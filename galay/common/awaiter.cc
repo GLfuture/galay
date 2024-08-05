@@ -1,4 +1,5 @@
 #include "awaiter.h"
+#include "coroutine.h"
 galay::common::CommonAwaiter::CommonAwaiter(bool IsSuspend,const std::any& result)
 {
     m_IsSuspend = IsSuspend;
@@ -43,10 +44,9 @@ galay::common::CommonAwaiter::await_resume()
     return m_Result;
 }
 
-galay::common::GroupAwaiter::GroupAwaiter(std::weak_ptr<common::GY_NetCoroutinePool> coPool, bool IsSuspend)
+galay::common::GroupAwaiter::GroupAwaiter(bool IsSuspend)
 {
     this->m_IsSuspend = IsSuspend;
-    this->m_coPool = coPool;
 }
 
 galay::common::GroupAwaiter&
@@ -54,7 +54,6 @@ galay::common::GroupAwaiter::operator=(const GroupAwaiter& other)
 {
     if(this != &other){
         this->m_coId=other.m_coId;
-        this->m_coPool=other.m_coPool;
         this->m_IsSuspend.store(other.m_IsSuspend.load());
     }
     return *this;
@@ -63,7 +62,6 @@ galay::common::GroupAwaiter::operator=(const GroupAwaiter& other)
 galay::common::GroupAwaiter::GroupAwaiter(GroupAwaiter&& other)
 {
     this->m_coId=other.m_coId;
-    this->m_coPool=other.m_coPool;
     this->m_IsSuspend.store(other.m_IsSuspend.load());
 }
 
@@ -72,7 +70,6 @@ galay::common::GroupAwaiter::operator=(GroupAwaiter&& other)
 {
     if(this != &other){
         this->m_coId=other.m_coId;
-        this->m_coPool=other.m_coPool;
         this->m_IsSuspend.store(other.m_IsSuspend.load());
     }
     return *this;
@@ -88,7 +85,7 @@ void
 galay::common::GroupAwaiter::Resume()
 {
     if(this->m_IsSuspend) {
-        this->m_coPool.lock()->Resume(this->m_coId);
+        GY_NetCoroutinePool::GetInstance()->Resume(this->m_coId);
         this->m_IsSuspend = false;
     }
 }
@@ -157,7 +154,7 @@ galay::common::HttpAwaiter::await_resume()
     return m_Result;
 }
 
-galay::common::SmtpAwaiter::SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()>& func,std::queue<std::future<void>>& futures)
+galay::common::SmtpAwaiter::SmtpAwaiter(bool IsSuspend,std::function<std::vector<protocol::smtp::SmtpResponse::ptr>()>& func,std::queue<std::future<void>>& futures)
     :m_Func(func),
      m_futures(futures)
 {
@@ -200,7 +197,7 @@ galay::common::SmtpAwaiter::await_suspend(std::coroutine_handle<> handle)
 }
 
 
-std::vector<galay::protocol::smtp::Smtp_Response::ptr> 
+std::vector<galay::protocol::smtp::SmtpResponse::ptr> 
 galay::common::SmtpAwaiter::await_resume()
 {
     return std::move(m_Result);

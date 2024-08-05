@@ -20,8 +20,8 @@ galay::common::GY_ThreadTask::~GY_ThreadTask()
 galay::common::GY_ThreadPool::GY_ThreadPool()
 {
     m_terminate.store(false, std::memory_order_relaxed);
-    m_threads.assign(0, NULL);
     m_nums.store(0);
+    m_isDone.store(false);
 }
 
 void 
@@ -47,13 +47,13 @@ galay::common::GY_ThreadPool::Start(int num)
     this->m_nums.store(num);
     for (int i = 0; i < num; i++)
     {
-        std::shared_ptr<std::thread> th = std::make_shared<std::thread>([this](){
+        auto th = std::make_unique<std::thread>([this](){
             Run();
             spdlog::info("[{}:{}] [Thread Exit Normally]",__FILE__,__LINE__);
             Done();
         });
         th->detach();
-        m_threads.push_back(th);
+        m_threads.push_back(std::move(th));
     }
 }
 
@@ -76,12 +76,19 @@ galay::common::GY_ThreadPool::WaitForAllDone(uint32_t timeout)
     return true;
 }
 
+bool 
+galay::common::GY_ThreadPool::IsDone()
+{
+    return this->m_isDone.load();
+}
+
 void 
 galay::common::GY_ThreadPool::Done()
 {
     this->m_nums.fetch_sub(1);
     if(this->m_nums.load() == 0){
         this->m_exitCond.notify_one();
+        this->m_isDone.store(true);
     }
 }
 

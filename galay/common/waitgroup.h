@@ -16,14 +16,13 @@ namespace galay
             using ptr = std::shared_ptr<WaitGroup>;
             using wptr = std::weak_ptr<WaitGroup>;
             using uptr = std::unique_ptr<WaitGroup>;
-            WaitGroup(std::weak_ptr<common::GY_NetCoroutinePool> coPool);
+            WaitGroup();
             void Add(int num);
             common::GroupAwaiter &Wait();
             void Done();
         private:
             std::atomic_int16_t m_coNum;
             common::GroupAwaiter m_awaiter;
-            std::weak_ptr<common::GY_NetCoroutinePool> m_coPool;
         };
     }
 }

@@ -1,7 +1,8 @@
 #ifndef GALAY_CLIENT_H
 #define GALAY_CLIENT_H
-#include "scheduler.h"
 #include "../common/threadpool.h"
+#include "../common/awaiter.h"
+#include <openssl/ssl.h>
 
 namespace galay
 {
@@ -11,30 +12,13 @@ namespace galay
 
     namespace kernel
     {   
+        class GY_IOScheduler;
         class GY_RecvTask;
         class GY_SendTask;
-        class GY_TcpClient;
-        class GY_HttpAsyncClient;
+        class TcpResult;
+        class HttpResult;
+        class SmtpResult;
 
-        class TcpResult
-        {
-            friend class GY_TcpClient;
-            friend class GY_HttpAsyncClient;
-        public:
-            using ptr = std::shared_ptr<TcpResult>;
-            using wptr = std::weak_ptr<TcpResult>;
-            TcpResult(common::GY_NetCoroutinePool::wptr coPool);
-            bool Success();
-            std::string Error();
-            void AddTaskNum(uint16_t taskNum);
-            galay::common::GroupAwaiter& Wait();
-            void Done();
-
-        protected:
-            bool m_success;
-            std::string m_errMsg;
-            std::shared_ptr<common::WaitGroup> m_waitGroup;
-        };
         //noblock
         class GY_TcpClient
         {
@@ -42,48 +26,41 @@ namespace galay
             using ptr = std::shared_ptr<GY_TcpClient>;
             using wptr = std::weak_ptr<GY_TcpClient>;
             using uptr = std::unique_ptr<GY_TcpClient>;
-            GY_TcpClient(common::GY_NetCoroutinePool::wptr coPool, GY_IOScheduler::wptr scheduler);
-            //simple
-            TcpResult::ptr Socket();
-            TcpResult::ptr Connect(const std::string &ip, uint16_t port);
-            TcpResult::ptr Send(std::string &&buffer);
-            TcpResult::ptr Recv(std::string &buffer);
-            TcpResult::ptr Close();
-            //ssl
-            TcpResult::ptr SSLSocket(long minVersion, long maxVersion);
-            TcpResult::ptr SSLConnect(const std::string &ip, uint16_t port);
-            TcpResult::ptr SSLSend(std::string &&buffer);
-            TcpResult::ptr SSLRecv(std::string &buffer);
-            TcpResult::ptr SSLClose();
-
-            bool Connected();
-            common::GY_NetCoroutinePool::wptr GetCoPool();
-
+            GY_TcpClient(std::weak_ptr<GY_IOScheduler> scheduler);
+            void IsSSL(bool isSSL);
+            common::GY_NetCoroutine Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<TcpResult> result, bool autoClose);
+            common::GY_NetCoroutine Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<TcpResult> result, bool autoClose);
+            void CloseConn();
             virtual ~GY_TcpClient();
         private:
-            void SetResult(TcpResult::ptr result, bool success, std::string &&errMsg);
+            //simple
+            std::shared_ptr<TcpResult> Socket();
+            std::shared_ptr<TcpResult> Connect(const std::string &ip, uint16_t port);
+            std::shared_ptr<TcpResult> Send(std::string &&buffer);
+            std::shared_ptr<TcpResult> Recv(std::string &buffer);
+            std::shared_ptr<TcpResult> Close();
+            //ssl
+            std::shared_ptr<TcpResult> SSLSocket(long minVersion, long maxVersion);
+            std::shared_ptr<TcpResult> SSLConnect(const std::string &ip, uint16_t port);
+            std::shared_ptr<TcpResult> SSLSend(std::string &&buffer);
+            std::shared_ptr<TcpResult> SSLRecv(std::string &buffer);
+            std::shared_ptr<TcpResult> SSLClose();
+
+            bool Socketed();
+            bool Connected();
+        private:
+            void SetResult(std::shared_ptr<TcpResult> result, bool success, std::string &&errMsg);
         private:
             int m_fd;
+            bool m_isSSL;
+            bool m_isSocket;
             bool m_isConnected;
-            SSL_CTX *m_ctx = nullptr;
             SSL *m_ssl = nullptr;
-            GY_IOScheduler::wptr m_scheduler;
-            common::GY_NetCoroutinePool::wptr m_coPool;
+            SSL_CTX *m_ctx = nullptr;
+            std::weak_ptr<GY_IOScheduler> m_scheduler;
             common::GY_ThreadPool::ptr m_threadPool;
             std::shared_ptr<GY_RecvTask> m_recvTask;
             std::shared_ptr<GY_SendTask> m_sendTask;
-        };
-        
-        class HttpResult: public TcpResult
-        {
-            friend class GY_HttpAsyncClient;
-        public:
-            using ptr = std::shared_ptr<HttpResult>;
-            using wptr = std::weak_ptr<HttpResult>;
-            HttpResult(common::GY_NetCoroutinePool::wptr coPool);
-            protocol::http::HttpResponse::ptr GetResponse();
-        private:
-            protocol::http::HttpResponse::ptr m_response;
         };
 
         class GY_HttpAsyncClient
@@ -92,20 +69,19 @@ namespace galay
             using ptr = std::shared_ptr<GY_HttpAsyncClient>;
             using wptr = std::weak_ptr<GY_HttpAsyncClient>;
             using uptr = std::unique_ptr<GY_HttpAsyncClient>;
-            GY_HttpAsyncClient(common::GY_NetCoroutinePool::wptr coPool, GY_IOScheduler::wptr scheduler);
+            GY_HttpAsyncClient(std::weak_ptr<GY_IOScheduler> scheduler);
             // return response ptr
-            HttpResult::ptr Get(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Post(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Options(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Put(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Delete(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Head(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Trace(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
-            HttpResult::ptr Patch(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Get(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Post(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Options(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Put(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Delete(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Head(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Trace(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            std::shared_ptr<HttpResult> Patch(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose = false);
+            void CloseConn();
             virtual ~GY_HttpAsyncClient() = default;
         private:
-            
-            common::GY_NetCoroutine<common::CoroutineStatus> Unary(std::string host, uint16_t port, std::string &&request, HttpResult::ptr result, bool autoClose);
             std::tuple<std::string,uint16_t,std::string> ParseUrl(const std::string& url);
         private:
             GY_TcpClient::ptr m_tcpClient;
@@ -114,24 +90,23 @@ namespace galay
         class GY_SmtpAsyncClient
         {
         public:
-            GY_SmtpAsyncClient(const std::string &host, uint16_t port);
-            common::SmtpAwaiter Auth(std::string account, std::string password);
-            common::SmtpAwaiter SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg);
-            common::SmtpAwaiter Quit();
-            void Close();
+            using ptr = std::shared_ptr<GY_SmtpAsyncClient>;
+            using wptr = std::weak_ptr<GY_SmtpAsyncClient>;
+            using uptr = std::unique_ptr<GY_SmtpAsyncClient>;
+            GY_SmtpAsyncClient(std::weak_ptr<GY_IOScheduler> scheduler);
+
+            void Connect(const std::string& url);
+            std::shared_ptr<SmtpResult> Auth(std::string account, std::string password);
+            std::shared_ptr<SmtpResult> SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg);
+            std::shared_ptr<SmtpResult> Quit();
+            void CloseConn();
             virtual ~GY_SmtpAsyncClient() = default;
-
         private:
-            virtual int Connect();
-            std::vector<galay::protocol::smtp::Smtp_Response::ptr> ExecSendMsg(std::queue<std::string> requests);
-
+            std::tuple<std::string,uint16_t> ParseUrl(const std::string& url);
         private:
-            int m_fd;
             std::string m_host;
             uint16_t m_port;
-            bool m_isconnected;
-            std::queue<std::future<void>> m_futures;
-            std::function<std::vector<protocol::smtp::Smtp_Response::ptr>()> m_ExecSendMsg;
+            GY_TcpClient::ptr m_tcpClient;
         };
 
         class DnsAsyncClient
@@ -145,7 +120,6 @@ namespace galay
 
         private:
             galay::protocol::dns::Dns_Response::ptr ExecSendMsg(std::queue<std::string> reqStr);
-
         private:
             int m_fd;
             bool m_IsInit;

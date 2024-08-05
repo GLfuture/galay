@@ -41,17 +41,19 @@ namespace galay
             inline auto AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>;
             void Start(int num);
             bool WaitForAllDone(uint32_t timeout = 0);
+            bool IsDone();
             void Stop();
             ~GY_ThreadPool();
 
         protected:
             std::queue<std::shared_ptr<GY_ThreadTask>> m_tasks;  // 任务队列
-            std::vector<std::shared_ptr<std::thread>> m_threads; // 工作线程
+            std::vector<std::unique_ptr<std::thread>> m_threads; // 工作线程
             std::mutex m_mtx;
             std::condition_variable m_workCond; // worker
             std::condition_variable m_exitCond; 
             std::atomic_uint8_t m_nums;
             std::atomic_bool m_terminate;   // 结束线程池
+            std::atomic_bool m_isDone;
         };
 
         template <typename F, typename... Args>

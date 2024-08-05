@@ -1,4 +1,8 @@
 #include "server.h"
+#include "builder.h"
+#include "objector.h"
+#include "scheduler.h"
+#include "../common/coroutine.h"
 #include "../common/signalhandler.h"
 #include <csignal>
 #include <spdlog/spdlog.h>
@@ -36,6 +40,7 @@ galay::kernel::GY_TcpServer::GetServerBuilder()
 void 
 galay::kernel::GY_TcpServer::Start()
 {
+    common::GY_NetCoroutinePool::GetInstance()->Start();
     this->m_threadPool->Start(this->m_builder->GetNetThreadNum());
     for (int i = 0; i < m_builder->GetNetThreadNum(); ++i)
     {
@@ -45,18 +50,23 @@ galay::kernel::GY_TcpServer::Start()
         ioManager->GetIOScheduler()->RegiserTimerManager(timerfd, timerManager);
         typename GY_Acceptor::ptr acceptor = CreateAcceptor(ioManager);
         ioManager->GetIOScheduler()->RegisterObjector(acceptor->GetListenFd(), acceptor);
-        ioManager->GetIOScheduler()->AddEvent(acceptor->GetListenFd(), EventType::kEventRead | EventType::kEvnetEpollET);
+        ioManager->GetIOScheduler()->AddEvent(acceptor->GetListenFd(), EventType::kEventRead | EventType::kEventEpollET);
         m_ioManagers.push_back(ioManager);
         m_threadPool->AddTask([ioManager](){
             ioManager->Start();
         });
     }
     if(this->m_threadPool->WaitForAllDone()){
-        spdlog::info("[{}:{}] [Program Exit Normally]",__FILE__,__LINE__);
+        spdlog::info("[{}:{}] [ThreadPool Exit Normally]",__FILE__,__LINE__);
     }else{
-        spdlog::error("[{}:{}] [Program Exit Abnormally]",__FILE__,__LINE__);
+        spdlog::error("[{}:{}] [ThreadPool Exit Abnormally]",__FILE__,__LINE__);
     }
-    
+    if(common::GY_NetCoroutinePool::GetInstance()->IsDone() || common::GY_NetCoroutinePool::GetInstance()->WaitForAllDone()){
+        spdlog::info("[{}:{}] [CoroutinePool Exit Normally]",__FILE__,__LINE__);
+    }else{
+        spdlog::error("[{}:{}] [CoroutinePool Exit Abnormally(timeout)]",__FILE__,__LINE__);
+    }
+    spdlog::info("[{}:{}] [Server Exit Normally]",__FILE__,__LINE__);
 }
 
 void 
@@ -71,7 +81,7 @@ galay::kernel::GY_TcpServer::Stop()
             ioManager->Stop();
         }
         m_threadPool->Stop();
-        spdlog::info("[{}:{}] [GY_TcpServer Exit Normally]",__FILE__,__LINE__);
+        common::GY_NetCoroutinePool::GetInstance()->Stop();
     }
 }
 
@@ -83,7 +93,7 @@ galay::kernel::GY_TcpServer::CreateTimerManager()
 }
 
 galay::kernel::GY_SIOManager::wptr
-galay::kernel::GY_TcpServer::GetScheduler(int indx)
+galay::kernel::GY_TcpServer::GetManager(int indx)
 {
     return this->m_ioManagers[indx];
 }

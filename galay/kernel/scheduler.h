@@ -11,27 +11,30 @@
 #include <shared_mutex>
 #include <unordered_map>
 #include <sys/timerfd.h>
-#include <sys/epoll.h> 
+#include <sys/epoll.h>
+#include "../common/base.h"
 
-#include "builder.h"
 
 namespace galay
 {
     namespace common
     {
+        class GY_NetCoroutine;
         class GY_NetCoroutinePool;
     }
 
     namespace kernel
     {
 #define MAX_TIMERID 40, 000, 000, 000
+        class GY_TcpServerBuilderBase;
+        class GY_Controller;
 
         enum EventType
         {
             kEventRead = 0x1,
             kEventWrite = 0x2,
             kEventError = 0x4,
-            kEvnetEpollET = 0x8,       // epoll et模式
+            kEventEpollET = 0x8,       // epoll et模式
             kEventEpollOneShot = 0x16, // epoll oneshot模式
         };
 
@@ -56,7 +59,7 @@ namespace galay
             virtual int DelEvent(int fd, int event_type) = 0;
             virtual int ModEvent(int fd, int from, int to) = 0;
             virtual int AddEvent(int fd, int event_type) = 0;
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) = 0;
+            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) = 0;
             virtual ~GY_IOScheduler() = default;
 
         protected:
@@ -84,7 +87,7 @@ namespace galay
             virtual void Start() override;
             virtual void Stop() override;
 
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
+            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) override;
             virtual ~GY_SelectScheduler();
         private:
             bool RealDelObjector(int fd);
@@ -115,7 +118,7 @@ namespace galay
             virtual int DelEvent(int fd, int event_type) override;
             virtual int ModEvent(int fd, int from, int to) override;
             virtual int AddEvent(int fd, int event_type) override;
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<std::any()> &&func) override;
+            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) override;
             virtual void Start() override;
             virtual void Stop() override;
 
@@ -141,23 +144,20 @@ namespace galay
             using wptr = std::weak_ptr<GY_SIOManager>;
             using uptr = std::unique_ptr<GY_SIOManager>;
 
-            GY_SIOManager(GY_TcpServerBuilderBase::ptr builder);
+            GY_SIOManager(std::shared_ptr<GY_TcpServerBuilderBase> builder);
             virtual void Start();
             virtual void Stop();
             virtual GY_IOScheduler::ptr GetIOScheduler();
-            virtual GY_TcpServerBuilderBase::wptr GetTcpServerBuilder();
-            virtual std::shared_ptr<common::GY_NetCoroutinePool> GetCoroutinePool();
-            virtual common::GY_NetCoroutine<common::CoroutineStatus> UserFunction(GY_Controller::ptr controller);
+            virtual std::weak_ptr<GY_TcpServerBuilderBase> GetTcpServerBuilder();
+            virtual void UserFunction(std::shared_ptr<GY_Controller> controller);
             virtual std::string IllegalFunction();
             virtual ~GY_SIOManager();
         private:
             bool m_stop;
             GY_IOScheduler::ptr m_ioScheduler;
-            GY_TcpServerBuilderBase::ptr m_builder;
-            //协程相关
-            std::shared_ptr<common::GY_NetCoroutinePool> m_coPool;
+            std::shared_ptr<GY_TcpServerBuilderBase> m_builder;
             //函数相关
-            std::function<common::GY_NetCoroutine<common::CoroutineStatus>(GY_Controller::wptr)> m_userFunc;
+            std::function<void(std::shared_ptr<GY_Controller>)> m_userFunc;
             std::function<std::string()> m_illegalFunc;
         };
     }

@@ -4,7 +4,6 @@
 #include <concepts>
 #include <memory>
 #include "../protocol/basic_protocol.h"
-#include "../common/coroutine.h"
 
 
 namespace galay
@@ -49,6 +48,8 @@ namespace galay
 
 #define DNS_QUERY_ID_MAX 1000
 
+#define DEFAULT_COROUTINE_POOL_THREADNUM 4
+
         
 
         template <typename T>
@@ -90,6 +91,15 @@ namespace galay
             kClassNameRequest,          // protocol request 
             kClassNameResponse,         // protocol response 
             kClassNameCoreBusinuess,    //核心业务类
+        };
+
+        enum CoroutineStatus
+        {
+            kCoroutineNotExist,       // 协程不存在
+            kCoroutineRunning,        // 协程运行
+            kCoroutineSuspend,        // 协程挂起
+            kCoroutineFinished,       // 协程结束
+            kCoroutineWaitingForData, // 正在等待数据
         };
     }
 }

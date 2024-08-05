@@ -1,15 +1,16 @@
 #ifndef GALAY_TASK_H
 #define GALAY_TASK_H
 
-#include "scheduler.h"
 #include "../util/netiofunction.h"
-#include "objector.h"
-#include <any>
 
 namespace galay
 {
     namespace kernel
-    {
+    {   
+        class GY_IOScheduler;
+        class GY_SIOManager;
+        class GY_TcpServerBuilderBase;
+
         class GY_Task
         {
         public:
@@ -60,7 +61,7 @@ namespace galay
             SSL *m_ssl;
             bool m_success;
             std::string m_error;
-            GY_IOScheduler::wptr m_scheduler;
+            std::weak_ptr<GY_IOScheduler> m_scheduler;
             std::string m_rbuffer;
         };
 
@@ -70,7 +71,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_SendTask>;
             using wptr = std::weak_ptr<GY_SendTask>;
             using uptr = std::unique_ptr<GY_SendTask>;
-            GY_SendTask(int fd, SSL*ssl, GY_IOScheduler::wptr scheduler);
+            GY_SendTask(int fd, SSL*ssl, std::weak_ptr<GY_IOScheduler> scheduler);
             void AppendWBuffer(std::string &&wbuffer);
             void SendAll();
             bool Empty() const;
@@ -84,8 +85,8 @@ namespace galay
             SSL *m_ssl;
             bool m_success;
             std::string m_error;
-            GY_IOScheduler::wptr m_scheduler;
             std::string m_wbuffer;
+            std::weak_ptr<GY_IOScheduler> m_scheduler;
         };
 
         class GY_CreateSSLConnTask: public GY_CreateConnTask

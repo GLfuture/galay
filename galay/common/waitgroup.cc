@@ -1,8 +1,7 @@
 #include "waitgroup.h"
-galay::common::WaitGroup::WaitGroup(std::weak_ptr<common::GY_NetCoroutinePool> coPool)
+galay::common::WaitGroup::WaitGroup()
 {
     this->m_coNum.store(0);
-    this->m_coPool = coPool;
 }
 
 void 
@@ -15,9 +14,9 @@ galay::common::GroupAwaiter&
 galay::common::WaitGroup::Wait()
 {
     if(this->m_coNum.load() == 0) {
-        this->m_awaiter = common::GroupAwaiter(m_coPool,false);
+        this->m_awaiter = common::GroupAwaiter(false);
     }else{
-        this->m_awaiter = common::GroupAwaiter(m_coPool,true);
+        this->m_awaiter = common::GroupAwaiter(true);
     }
     return this->m_awaiter;
 }
@@ -26,7 +25,7 @@ galay::common::WaitGroup::Wait()
 void 
 galay::common::WaitGroup::Done()
 {
-    this->m_coNum.fetch_sub(1);
+    if(this->m_coNum.load() > 0) this->m_coNum.fetch_sub(1);
     if(this->m_coNum.load() == 0){
         this->m_awaiter.Resume();
     }
