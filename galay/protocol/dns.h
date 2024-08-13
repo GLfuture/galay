@@ -70,7 +70,7 @@ namespace galay
 
             #pragma pack()
 
-            class Dns_Protocol
+            class DnsProtocol
             {
             public:
                 DnsHeader GetHeader();
@@ -84,10 +84,10 @@ namespace galay
                 std::queue<DnsAnswer> m_answers;
             };
 
-            class Dns_Request : public Dns_Protocol, public GY_SRequest, public GY_SResponse, public galay::common::GY_DynamicCreator<GY_SRequest,Dns_Request>
+            class DnsRequest : public DnsProtocol, public GY_SRequest, public GY_SResponse, public galay::common::GY_DynamicCreator<GY_SRequest,DnsRequest>
             {
             public:
-                using ptr = std::shared_ptr<Dns_Request>;
+                using ptr = std::shared_ptr<DnsRequest>;
                 // ignore
                 galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
@@ -95,10 +95,10 @@ namespace galay
                 std::string ModifyHostname(std::string hostname);
             };
 
-            class Dns_Response : public Dns_Protocol, public GY_SRequest, public GY_SResponse, public galay::common::GY_DynamicCreator<GY_SResponse,Dns_Response>
+            class DnsResponse : public DnsProtocol, public GY_SRequest, public GY_SResponse, public galay::common::GY_DynamicCreator<GY_SResponse,DnsResponse>
             {
             public:
-                using ptr = std::shared_ptr<Dns_Response>;
+                using ptr = std::shared_ptr<DnsResponse>;
                 // ignore
                 std::string EncodePdu() override;
                 galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;

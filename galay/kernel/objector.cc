@@ -199,12 +199,12 @@ galay::kernel::GY_TimerManager::~GY_TimerManager()
     }
 }
 
-galay::kernel::GY_Acceptor::GY_Acceptor(std::weak_ptr<GY_SIOManager> manager)
+galay::kernel::GY_TcpAcceptor::GY_TcpAcceptor(std::weak_ptr<GY_SIOManager> manager)
 {
     if(manager.lock()->GetTcpServerBuilder().lock()->GetIsSSL()){
-        this->m_listentask = std::make_unique<GY_CreateSSLConnTask>(manager);
+        this->m_listentask = std::make_unique<GY_TcpCreateSSLConnTask>(manager);
     }else{
-        this->m_listentask = std::make_unique<GY_CreateConnTask>(manager);
+        this->m_listentask = std::make_unique<GY_TcpCreateConnTask>(manager);
     }
     this->m_readCallback += [this](){
         this->m_listentask->Execute();
@@ -212,34 +212,34 @@ galay::kernel::GY_Acceptor::GY_Acceptor(std::weak_ptr<GY_SIOManager> manager)
 }
 
 int 
-galay::kernel::GY_Acceptor::GetListenFd()
+galay::kernel::GY_TcpAcceptor::GetListenFd()
 {
     return this->m_listentask->GetFd();
 }
 galay::kernel::Callback& 
-galay::kernel::GY_Acceptor::OnRead()
+galay::kernel::GY_TcpAcceptor::OnRead()
 {
     return m_readCallback;
 }
 
 galay::kernel::Callback& 
-galay::kernel::GY_Acceptor::OnWrite()
+galay::kernel::GY_TcpAcceptor::OnWrite()
 {
     return m_sendCallback;
 }
 
-galay::kernel::GY_Acceptor::~GY_Acceptor()
+galay::kernel::GY_TcpAcceptor::~GY_TcpAcceptor()
 {
     m_listentask.reset();
 }
 
-galay::kernel::GY_Connector::GY_Connector(int fd, SSL* ssl, std::weak_ptr<GY_SIOManager> ioManager)
+galay::kernel::GY_TcpConnector::GY_TcpConnector(int fd, SSL* ssl, std::weak_ptr<GY_SIOManager> ioManager)
 {
     this->m_fd = fd;
     this->m_ssl = ssl;
     this->m_ioManager = ioManager;
-    this->m_recvTask = std::make_unique<GY_RecvTask>(fd, ssl, ioManager.lock()->GetIOScheduler());
-    this->m_sendTask = std::make_unique<GY_SendTask>(fd, ssl, ioManager.lock()->GetIOScheduler());
+    this->m_recvTask = std::make_unique<GY_TcpRecvTask>(fd, ssl, ioManager.lock()->GetIOScheduler());
+    this->m_sendTask = std::make_unique<GY_TcpSendTask>(fd, ssl, ioManager.lock()->GetIOScheduler());
     this->m_exit = std::make_shared<bool>(false);
     this->m_controller = nullptr;
     this->m_readCallback += [this](){
@@ -248,7 +248,7 @@ galay::kernel::GY_Connector::GY_Connector(int fd, SSL* ssl, std::weak_ptr<GY_SIO
 }
 
 void 
-galay::kernel::GY_Connector::Close()
+galay::kernel::GY_TcpConnector::Close()
 {
     this->m_ioManager.lock()->GetIOScheduler()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
     this->m_ioManager.lock()->GetIOScheduler()->DelObjector(this->m_fd);
@@ -256,57 +256,57 @@ galay::kernel::GY_Connector::Close()
 }
 
 std::shared_ptr<galay::kernel::Timer> 
-galay::kernel::GY_Connector::AddTimer(uint64_t during, uint32_t exec_times,std::function<void(std::shared_ptr<Timer>)> &&func)
+galay::kernel::GY_TcpConnector::AddTimer(uint64_t during, uint32_t exec_times,std::function<void(std::shared_ptr<Timer>)> &&func)
 {
     return this->m_ioManager.lock()->GetIOScheduler()->AddTimer(during,exec_times,std::forward<std::function<void(std::shared_ptr<Timer>)>>(func));
 }
 
 void 
-galay::kernel::GY_Connector::SetContext(std::any&& context)
+galay::kernel::GY_TcpConnector::SetContext(std::any&& context)
 {
     this->m_context = std::forward<std::any&&>(context);
 }
 
 std::any&&
-galay::kernel::GY_Connector::GetContext()
+galay::kernel::GY_TcpConnector::GetContext()
 {
     return std::move(this->m_context);
 }
 
 galay::protocol::GY_SRequest::ptr 
-galay::kernel::GY_Connector::GetRequest()
+galay::kernel::GY_TcpConnector::GetRequest()
 {
     return m_requests.front();
 }
 
 void 
-galay::kernel::GY_Connector::PopRequest()
+galay::kernel::GY_TcpConnector::PopRequest()
 {
     m_requests.pop();
 }
 
 bool 
-galay::kernel::GY_Connector::HasRequest()
+galay::kernel::GY_TcpConnector::HasRequest()
 {
     return !m_requests.empty();
 }
 
 galay::kernel::Callback& 
-galay::kernel::GY_Connector::OnRead()
+galay::kernel::GY_TcpConnector::OnRead()
 {
     return m_readCallback;
 }
 
 galay::kernel::Callback&
-galay::kernel::GY_Connector::OnWrite()
+galay::kernel::GY_TcpConnector::OnWrite()
 {
     return m_sendCallback;
 }
 
-galay::kernel::TcpResult::ptr 
-galay::kernel::GY_Connector::Send(std::string&& response)
+galay::kernel::NetResult::ptr 
+galay::kernel::GY_TcpConnector::Send(std::string&& response)
 {
-    galay::kernel::TcpResult::ptr result = std::make_shared<TcpResult>();
+    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
     this->m_sendTask->AppendWBuffer(std::forward<std::string>(response));
     this->m_sendTask->SendAll();
     if(this->m_sendTask->Empty()){
@@ -326,7 +326,7 @@ end:
 
 //先send再加epoll 
 void 
-galay::kernel::GY_Connector::RealSend(TcpResult::ptr result)
+galay::kernel::GY_TcpConnector::RealSend(NetResult::ptr result)
 {
     this->m_sendTask->SendAll();
     if(this->m_sendTask->Empty())
@@ -341,7 +341,7 @@ galay::kernel::GY_Connector::RealSend(TcpResult::ptr result)
 }
 
 void 
-galay::kernel::GY_Connector::RealRecv()
+galay::kernel::GY_TcpConnector::RealRecv()
 {
     if(!this->m_controller) {
         this->m_controller = std::make_shared<GY_Controller>(shared_from_this());
@@ -383,9 +383,9 @@ galay::kernel::GY_Connector::RealRecv()
     this->m_ioManager.lock()->UserFunction(this->m_controller);
 }
 
-galay::kernel::GY_Connector::~GY_Connector()
+galay::kernel::GY_TcpConnector::~GY_TcpConnector()
 {
-    spdlog::info("[{}:{}] [~GY_Connector]",__FILE__, __LINE__);
+    spdlog::info("[{}:{}] [~GY_TcpConnector]",__FILE__, __LINE__);
     if(this->m_ssl){
         IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
         this->m_ssl = nullptr;

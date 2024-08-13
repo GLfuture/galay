@@ -11,7 +11,7 @@ namespace galay
         class GY_TcpServerBuilderBase;
         class GY_SIOManager;
         class GY_TimerManager;
-        class GY_Acceptor;
+        class GY_TcpAcceptor;
 
         class GY_Server
         {
@@ -43,7 +43,7 @@ namespace galay
             virtual ~GY_TcpServer();
         private:
             std::shared_ptr<GY_TimerManager> CreateTimerManager();
-            std::shared_ptr<GY_Acceptor> CreateAcceptor(std::shared_ptr<GY_SIOManager> ioManager);
+            std::shared_ptr<GY_TcpAcceptor> CreateAcceptor(std::shared_ptr<GY_SIOManager> ioManager);
         private:
             std::shared_ptr<GY_TcpServerBuilderBase> m_builder;
             common::GY_ThreadPool::ptr m_threadPool;

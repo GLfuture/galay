@@ -158,7 +158,7 @@ galay::common::GY_NetCoroutinePool::EraseCoroutine(uint64_t coId)
     std::unique_lock lock(this->m_eraseMtx);
     if(!m_coroutines.contains(coId)) return false;
     this->m_eraseCoroutines.insert(coId);
-    spdlog::info("[{}:{}] [EraseCoroutine CoId={}]",__FILE__,__LINE__,coId);
+    spdlog::debug("[{}:{}] [EraseCoroutine CoId={}]",__FILE__,__LINE__,coId);
     return true;
 }
 
@@ -167,7 +167,7 @@ galay::common::GY_NetCoroutinePool::RealEraseCoroutine(uint64_t coId)
 {
     std::unique_lock lock(this->m_mapMtx);
     m_coroutines.erase(coId);
-    spdlog::info("[{}:{}] [RealEraseCoroutine CoId={}]",__FILE__,__LINE__,coId);
+    spdlog::debug("[{}:{}] [RealEraseCoroutine CoId={}]",__FILE__,__LINE__,coId);
 }
 
 galay::common::GY_NetCoroutinePool::~GY_NetCoroutinePool()

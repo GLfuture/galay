@@ -19,18 +19,18 @@ namespace galay
             virtual std::string Error() = 0;
         };
 
-        class GY_CreateConnTask : public GY_Task
+        class GY_TcpCreateConnTask : public GY_Task
         {
         public:
-            using ptr = std::shared_ptr<GY_CreateConnTask>;
-            using wptr = std::weak_ptr<GY_CreateConnTask>;
-            using uptr = std::unique_ptr<GY_CreateConnTask>;
-            GY_CreateConnTask(std::weak_ptr<GY_SIOManager> scheduler);
+            using ptr = std::shared_ptr<GY_TcpCreateConnTask>;
+            using wptr = std::weak_ptr<GY_TcpCreateConnTask>;
+            using uptr = std::unique_ptr<GY_TcpCreateConnTask>;
+            GY_TcpCreateConnTask(std::weak_ptr<GY_SIOManager> scheduler);
             virtual void Execute() override;
             virtual bool Success() override;
             virtual std::string Error() override;
             int GetFd();
-            virtual ~GY_CreateConnTask() = default;
+            virtual ~GY_TcpCreateConnTask() = default;
 
         protected:
             int CreateListenFd(std::weak_ptr<GY_TcpServerBuilderBase> builder);
@@ -42,13 +42,13 @@ namespace galay
             std::weak_ptr<GY_SIOManager> m_ioManager;
         };
 
-        class GY_RecvTask : public GY_Task
+        class GY_TcpRecvTask : public GY_Task
         {
         public:
-            using ptr = std::shared_ptr<GY_RecvTask>;
-            using wptr = std::weak_ptr<GY_RecvTask>;
-            using uptr = std::unique_ptr<GY_RecvTask>;
-            GY_RecvTask(int fd, SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler);
+            using ptr = std::shared_ptr<GY_TcpRecvTask>;
+            using wptr = std::weak_ptr<GY_TcpRecvTask>;
+            using uptr = std::unique_ptr<GY_TcpRecvTask>;
+            GY_TcpRecvTask(int fd, SSL* ssl, std::weak_ptr<GY_IOScheduler> scheduler);
             void RecvAll();
             std::string &GetRBuffer();
             virtual bool Success() override;
@@ -65,13 +65,13 @@ namespace galay
             std::string m_rbuffer;
         };
 
-        class GY_SendTask : public GY_Task
+        class GY_TcpSendTask : public GY_Task
         {
         public:
-            using ptr = std::shared_ptr<GY_SendTask>;
-            using wptr = std::weak_ptr<GY_SendTask>;
-            using uptr = std::unique_ptr<GY_SendTask>;
-            GY_SendTask(int fd, SSL*ssl, std::weak_ptr<GY_IOScheduler> scheduler);
+            using ptr = std::shared_ptr<GY_TcpSendTask>;
+            using wptr = std::weak_ptr<GY_TcpSendTask>;
+            using uptr = std::unique_ptr<GY_TcpSendTask>;
+            GY_TcpSendTask(int fd, SSL*ssl, std::weak_ptr<GY_IOScheduler> scheduler);
             void AppendWBuffer(std::string &&wbuffer);
             void SendAll();
             bool Empty() const;
@@ -89,15 +89,15 @@ namespace galay
             std::weak_ptr<GY_IOScheduler> m_scheduler;
         };
 
-        class GY_CreateSSLConnTask: public GY_CreateConnTask
+        class GY_TcpCreateSSLConnTask: public GY_TcpCreateConnTask
         {
         public:
-            using ptr = std::shared_ptr<GY_CreateSSLConnTask>;
-            using wptr = std::weak_ptr<GY_CreateSSLConnTask>;
-            using uptr = std::unique_ptr<GY_CreateSSLConnTask>;
+            using ptr = std::shared_ptr<GY_TcpCreateSSLConnTask>;
+            using wptr = std::weak_ptr<GY_TcpCreateSSLConnTask>;
+            using uptr = std::unique_ptr<GY_TcpCreateSSLConnTask>;
 
-            GY_CreateSSLConnTask(std::weak_ptr<GY_SIOManager> scheduler);
-            virtual ~GY_CreateSSLConnTask();
+            GY_TcpCreateSSLConnTask(std::weak_ptr<GY_SIOManager> scheduler);
+            virtual ~GY_TcpCreateSSLConnTask();
         protected:
             int CreateConn();
             virtual void Execute() override;

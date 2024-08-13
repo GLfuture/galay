@@ -6,7 +6,7 @@ set(SRC_LIST
     #tutorial_proxy_server.cc
     tutorial_ratelimiter.cc
     tutorial_smtp_client.cc
-    #tutorial_dns_client.cc
+    tutorial_dns_client.cc
     #tutorial_https_server.cc
     )
 foreach(SRC ${SRC_LIST})

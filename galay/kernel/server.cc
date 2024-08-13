@@ -48,7 +48,7 @@ galay::kernel::GY_TcpServer::Start()
         GY_TimerManager::ptr timerManager = CreateTimerManager();
         int timerfd = timerManager->GetTimerfd();
         ioManager->GetIOScheduler()->RegiserTimerManager(timerfd, timerManager);
-        typename GY_Acceptor::ptr acceptor = CreateAcceptor(ioManager);
+        typename GY_TcpAcceptor::ptr acceptor = CreateAcceptor(ioManager);
         ioManager->GetIOScheduler()->RegisterObjector(acceptor->GetListenFd(), acceptor);
         ioManager->GetIOScheduler()->AddEvent(acceptor->GetListenFd(), EventType::kEventRead | EventType::kEventEpollET);
         m_ioManagers.push_back(ioManager);
@@ -99,10 +99,10 @@ galay::kernel::GY_TcpServer::GetManager(int indx)
 }
 
 
-galay::kernel::GY_Acceptor::ptr
+galay::kernel::GY_TcpAcceptor::ptr
 galay::kernel::GY_TcpServer::CreateAcceptor( GY_SIOManager::ptr ioManager)
 {
-    return std::make_shared<GY_Acceptor>(ioManager);
+    return std::make_shared<GY_TcpAcceptor>(ioManager);
 }
 
 galay::kernel::GY_TcpServer::~GY_TcpServer()

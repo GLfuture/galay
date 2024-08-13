@@ -1,7 +1,7 @@
 #include "stringutil.h"
 
 std::vector<std::string> 
-galay::util::StringUtil::Spilt_With_Char(const std::string &str, const char symbol)
+galay::util::StringUtil::SpiltWithChar(const std::string &str, const char symbol)
 {
     std::vector<std::string> result;
     for (int i = 0; i < str.size(); i++)
@@ -18,7 +18,7 @@ galay::util::StringUtil::Spilt_With_Char(const std::string &str, const char symb
 
 
 std::vector<std::string>
-galay::util::StringUtil::Spilt_With_Str(const std::string &str, const std::string& symbol)
+galay::util::StringUtil::SpiltWithStr(const std::string &str, const std::string& symbol)
 {
     std::vector<std::string> result;
     if (symbol.empty())
@@ -109,7 +109,7 @@ galay::util::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &st
 
 #if __cplusplus >= 201703L
 std::vector<std::string_view> 
-galay::util::StringUtil::Spilt_With_Char(std::string_view str, const char symbol)
+galay::util::StringUtil::SpiltWithChar(std::string_view str, const char symbol)
 {
     std::vector<std::string_view> result;
     for (int i = 0; i < str.size(); i++)
@@ -125,7 +125,7 @@ galay::util::StringUtil::Spilt_With_Char(std::string_view str, const char symbol
 }
 
 std::vector<std::string_view> 
-galay::util::StringUtil::Spilt_With_Str(std::string_view str, std::string_view symbol)
+galay::util::StringUtil::SpiltWithStr(std::string_view str, std::string_view symbol)
 {
     std::vector<std::string_view> result;
     if (symbol.empty())

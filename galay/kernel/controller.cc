@@ -3,7 +3,7 @@
 #include "objector.h"
 #include "result.h"
 
-galay::kernel::GY_Controller::GY_Controller(std::weak_ptr<GY_Connector> connector)
+galay::kernel::GY_Controller::GY_Controller(std::weak_ptr<GY_TcpConnector> connector)
 {
     this->m_connector = connector;
 }
@@ -32,7 +32,7 @@ galay::kernel::GY_Controller::PopRequest()
     this->m_connector.lock()->PopRequest();
 }
 
-galay::kernel::TcpResult::ptr 
+galay::kernel::NetResult::ptr 
 galay::kernel::GY_Controller::Send(std::string&& response)
 {
     return this->m_connector.lock()->Send(std::forward<std::string>(response));
@@ -87,7 +87,7 @@ galay::kernel::GY_HttpController::GetRequest()
     return request;
 }
 
-galay::kernel::TcpResult::ptr
+galay::kernel::NetResult::ptr
 galay::kernel::GY_HttpController::Send(std::string &&response)
 {
     return this->m_ctrl->Send(std::forward<std::string>(response));

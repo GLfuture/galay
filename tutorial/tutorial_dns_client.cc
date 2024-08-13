@@ -2,46 +2,47 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
-galay::kernel::DnsAsyncClient client("114.114.114.114");
-galay::common::GY_Coroutine func()
+galay::common::GY_ThreadPool::ptr threadPool = std::make_shared<galay::common::GY_ThreadPool>();
+
+galay::common::GY_Coroutine func(galay::kernel::GY_SelectScheduler::wptr scheduler)
 {
-    std::queue<std::string> q;
-    q.push("www.baidu.com");
-    q.push("www.sogou.com");
-    q.push("qq.com");
-    auto resp = co_await client.QueryA(q);
-    auto ans = resp->GetAnswerQueue();
-    while(!ans.empty())
-    {
-        auto item = ans.front();
-        ans.pop();
-        if(item.m_type == galay::protocol::dns::kDnsQueryCname){
-            std::cout << item.m_aname << " has cname : " << item.m_data << '\n';
-        }else if(item.m_type == galay::protocol::dns::kDnsQueryA){
-            std::cout << item.m_aname << " has ipv4 : "<< item.m_data <<'\n';
-        }
+    galay::kernel::DnsAsyncClient client(scheduler);
+    auto res = client.QueryA("114.114.114.114", 53, "www.baidu.com");
+    co_await res->Wait();
+    while(res->HasCName()) {
+        std::cout << "cname: " << res->GetCName() << std::endl;
     }
-    resp = co_await client.QueryAAAA(q);
-    ans = resp->GetAnswerQueue();
-    while(!ans.empty())
+    while (res->HasA())
     {
-        auto item = ans.front();
-        ans.pop();
-        if(item.m_type == galay::protocol::dns::kDnsQueryCname){
-            std::cout << item.m_aname << " has cname : " << item.m_data << '\n';
-        }else if(item.m_type == galay::protocol::dns::kDnsQueryAAAA){
-            std::cout << item.m_aname << " has ipv6 : "<< item.m_data <<'\n';
-        }
+        std::cout << "ipv4: " << res->GetA() << std::endl;
     }
-    client.Close();
-    co_return galay::common::CoroutineStatus::kCoroutineFinished;
+    res = client.QueryAAAA("114.114.114.114", 53, "www.baidu.com");
+    co_await res->Wait();
+    while (res->HasAAAA())
+    {
+        std::cout << "ipv6: " << res->GetAAAA() << std::endl;
+    }
+    res = client.QueryPtr("114.114.114.114", 53, "127.0.0.1");
+    co_await res->Wait();
+    while (res->HasPtr())
+    {
+        std::cout << "ptr: " << res->GetPtr() << std::endl;
+    }
+    galay::common::GY_NetCoroutinePool::GetInstance()->Stop();
+    scheduler.lock()->Stop();
+    threadPool->Stop();
+    co_return galay::common::kCoroutineFinished;
 }
 
 int main()
 {
-    //遇到debug级别日志立即刷新
-    //spdlog::set_level(spdlog::level::err);
-    auto co = func();
-    getchar();
+    spdlog::set_level(spdlog::level::debug);
+    galay::kernel::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::kernel::GY_SelectScheduler>(50);
+    threadPool->Start(1);
+    galay::common::GY_NetCoroutinePool::GetInstance()->Start();
+    threadPool->AddTask([&](){ scheduler->Start(); });
+    auto co = func(scheduler);
+    if(!galay::common::GY_NetCoroutinePool::GetInstance()->IsDone()) galay::common::GY_NetCoroutinePool::GetInstance()->WaitForAllDone();
+    if(!threadPool->IsDone()) threadPool->WaitForAllDone();
     return 0;
 }

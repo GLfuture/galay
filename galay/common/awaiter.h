@@ -57,63 +57,6 @@ namespace galay
             uint64_t m_coId;
             std::atomic_bool m_IsSuspend;
         };
-
-        class HttpAwaiter
-        {
-        public:
-            HttpAwaiter(bool IsSuspend, std::function<protocol::http::HttpResponse::ptr()> &Func, std::queue<std::future<void>> &futures);
-            HttpAwaiter(HttpAwaiter &&other);
-            HttpAwaiter &operator=(const HttpAwaiter &) = delete;
-            HttpAwaiter &operator=(HttpAwaiter &&other);
-            virtual bool await_ready();
-            virtual void await_suspend(std::coroutine_handle<> handle);
-            virtual protocol::http::HttpResponse::ptr await_resume();
-
-        private:
-            protocol::http::HttpResponse::ptr m_Result;
-            bool m_IsSuspend;
-            std::queue<std::future<void>> &m_futures;
-            std::function<protocol::http::HttpResponse::ptr()> &m_Func;
-            std::mutex m_mtx;
-        };
-
-        class SmtpAwaiter
-        {
-        public:
-            SmtpAwaiter(bool IsSuspend, std::function<std::vector<protocol::smtp::SmtpResponse::ptr>()> &func, std::queue<std::future<void>> &futures);
-            SmtpAwaiter(SmtpAwaiter &&other);
-            SmtpAwaiter &operator=(const SmtpAwaiter &) = delete;
-            SmtpAwaiter &operator=(SmtpAwaiter &&other);
-            virtual bool await_ready();
-            virtual void await_suspend(std::coroutine_handle<> handle);
-            virtual std::vector<protocol::smtp::SmtpResponse::ptr> await_resume();
-            ~SmtpAwaiter() = default;
-
-        private:
-            bool m_IsSuspend;
-            std::queue<std::future<void>> &m_futures;
-            std::function<std::vector<protocol::smtp::SmtpResponse::ptr>()> &m_Func;
-            std::vector<protocol::smtp::SmtpResponse::ptr> m_Result;
-        };
-
-        class DnsAwaiter
-        {
-        public:
-            DnsAwaiter(bool IsSuspend, std::function<galay::protocol::dns::Dns_Response::ptr()> &func, std::queue<std::future<void>> &futures);
-            DnsAwaiter(DnsAwaiter &&other);
-            DnsAwaiter &operator=(const DnsAwaiter &other) = delete;
-            DnsAwaiter &operator=(DnsAwaiter &&other);
-            virtual bool await_ready();
-            virtual void await_suspend(std::coroutine_handle<> handle);
-            virtual protocol::dns::Dns_Response::ptr await_resume();
-            ~DnsAwaiter() = default;
-
-        private:
-            bool m_IsSuspend;
-            std::queue<std::future<void>> &m_futures;
-            protocol::dns::Dns_Response::ptr m_Result;
-            std::function<galay::protocol::dns::Dns_Response::ptr()> &m_Func;
-        };
     }
 }
 

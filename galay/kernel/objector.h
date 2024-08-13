@@ -18,11 +18,11 @@ namespace galay
     {
         class GY_SIOManager;
         class GY_IOScheduler;
-        class GY_CreateConnTask;
-        class GY_RecvTask;
-        class GY_SendTask;
+        class GY_TcpCreateConnTask;
+        class GY_TcpRecvTask;
+        class GY_TcpSendTask;
         class GY_Controller;
-        class TcpResult;
+        class NetResult;
 
         class Callback
         {
@@ -136,34 +136,34 @@ namespace galay
             std::priority_queue<Timer::ptr, std::vector<Timer::ptr>, TimerCompare> m_timers;
         };
 
-        class GY_Acceptor: public GY_Objector
+        class GY_TcpAcceptor: public GY_Objector
         {
         public:
-            using wptr = std::weak_ptr<GY_Acceptor>;
-            using ptr = std::shared_ptr<GY_Acceptor>;
-            using uptr = std::unique_ptr<GY_Acceptor>;
-            GY_Acceptor(std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
+            using wptr = std::weak_ptr<GY_TcpAcceptor>;
+            using ptr = std::shared_ptr<GY_TcpAcceptor>;
+            using uptr = std::unique_ptr<GY_TcpAcceptor>;
+            GY_TcpAcceptor(std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
             int GetListenFd();
             virtual Callback& OnRead() override;
             virtual Callback& OnWrite() override;
-            virtual ~GY_Acceptor();
+            virtual ~GY_TcpAcceptor();
 
         private:
-            std::unique_ptr<GY_CreateConnTask> m_listentask;
+            std::unique_ptr<GY_TcpCreateConnTask> m_listentask;
             Callback m_readCallback;
             Callback m_sendCallback;
         };
 
-        class GY_Connector: public GY_Objector, public std::enable_shared_from_this<GY_Connector>
+        class GY_TcpConnector: public GY_Objector, public std::enable_shared_from_this<GY_TcpConnector>
         {
         public:
-            using ptr = std::shared_ptr<GY_Connector>;
-            using wptr = std::weak_ptr<GY_Connector>;
-            using uptr = std::unique_ptr<GY_Connector>;
-            GY_Connector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
+            using ptr = std::shared_ptr<GY_TcpConnector>;
+            using wptr = std::weak_ptr<GY_TcpConnector>;
+            using uptr = std::unique_ptr<GY_TcpConnector>;
+            GY_TcpConnector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
             void Close();
             void SetContext(std::any &&context);
-            std::shared_ptr<TcpResult> Send(std::string &&response);
+            std::shared_ptr<NetResult> Send(std::string &&response);
             std::shared_ptr<galay::kernel::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func);
             std::any &&GetContext();
             galay::protocol::GY_SRequest::ptr GetRequest();
@@ -171,9 +171,9 @@ namespace galay
             bool HasRequest();
             virtual Callback& OnRead() override;
             virtual Callback& OnWrite() override;
-            virtual ~GY_Connector();
+            virtual ~GY_TcpConnector();
         private:
-            void RealSend(std::shared_ptr<TcpResult> result);
+            void RealSend(std::shared_ptr<NetResult> result);
             void RealRecv();
         private:
             int m_fd;
@@ -182,8 +182,8 @@ namespace galay
             uint64_t m_mainCoId;
             std::shared_ptr<bool> m_exit;
             protocol::GY_SRequest::ptr m_tempRequest;
-            std::unique_ptr<GY_RecvTask> m_recvTask;
-            std::unique_ptr<GY_SendTask> m_sendTask;
+            std::unique_ptr<GY_TcpRecvTask> m_recvTask;
+            std::unique_ptr<GY_TcpSendTask> m_sendTask;
             std::queue<protocol::GY_SRequest::ptr> m_requests;
             std::weak_ptr<galay::kernel::GY_SIOManager> m_ioManager;
             std::shared_ptr<galay::kernel::GY_Controller> m_controller;
