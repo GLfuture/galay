@@ -8,7 +8,8 @@
 #include "../protocol/dns.h"
 
 namespace galay{
-    namespace common{
+    namespace coroutine
+    {
         class GroupAwaiter;
         class WaitGroup;
     }
@@ -34,14 +35,14 @@ namespace galay{
             bool Success();
             std::string Error();
             void AddTaskNum(uint16_t taskNum);
-            common::GroupAwaiter& Wait();
+            coroutine::GroupAwaiter& Wait();
         protected:
             bool m_success;
             //tcp:一次请求(std::string) ,多次请求(std::queue<std::string>)
             //udp:struct UdpResInfo
             std::any m_result;   
             std::string m_errMsg;
-            std::shared_ptr<common::WaitGroup> m_waitGroup;
+            std::shared_ptr<coroutine::WaitGroup> m_waitGroup;
         };
 
         class HttpResult: public NetResult

@@ -4,62 +4,62 @@
 
 
 void 
-galay::kernel::GY_HttpRouter::Get(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Get(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("GET", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Post(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Post(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("POST", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Options(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Options(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("OPTIONS", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Put(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Put(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("PUT", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Delete(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Delete(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("DELETE", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Patch(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Patch(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("PATCH", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Head(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Head(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("HEAD", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Trace(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Trace(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("TRACE", path, func);
 }
 
 void 
-galay::kernel::GY_HttpRouter::Connect(const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::Connect(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     RegisterRouter("CONNECT", path, func);
 }
 
 
 void 
-galay::kernel::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const std::string &path, std::function<common::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
+galay::kernel::GY_HttpRouter::RegisterRouter(const std::string &mehtod, const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func)
 {
     this->m_routes[mehtod][path] = [func](std::shared_ptr<GY_HttpController> ctrl){
         func(ctrl);

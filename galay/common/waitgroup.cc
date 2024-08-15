@@ -1,29 +1,29 @@
 #include "waitgroup.h"
-galay::common::WaitGroup::WaitGroup()
+galay::coroutine::WaitGroup::WaitGroup()
 {
     this->m_coNum.store(0);
 }
 
 void 
-galay::common::WaitGroup::Add(int num)
+galay::coroutine::WaitGroup::Add(int num)
 {
     this->m_coNum.fetch_add(num);
 }
 
-galay::common::GroupAwaiter& 
-galay::common::WaitGroup::Wait()
+galay::coroutine::GroupAwaiter& 
+galay::coroutine::WaitGroup::Wait()
 {
     if(this->m_coNum.load() == 0) {
-        this->m_awaiter = common::GroupAwaiter(false);
+        this->m_awaiter = coroutine::GroupAwaiter(false);
     }else{
-        this->m_awaiter = common::GroupAwaiter(true);
+        this->m_awaiter = coroutine::GroupAwaiter(true);
     }
     return this->m_awaiter;
 }
 
 
 void 
-galay::common::WaitGroup::Done()
+galay::coroutine::WaitGroup::Done()
 {
     if(this->m_coNum.load() > 0) this->m_coNum.fetch_sub(1);
     if(this->m_coNum.load() == 0){

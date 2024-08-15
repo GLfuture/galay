@@ -5,7 +5,7 @@
 
 namespace galay
 {
-    namespace common{
+    namespace coroutine {
         class WaitGroup;
     }
 
@@ -28,8 +28,8 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpClient>;
             GY_TcpClient(std::weak_ptr<GY_IOScheduler> scheduler);
             void IsSSL(bool isSSL);
-            common::GY_NetCoroutine Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<NetResult> result, bool autoClose);
-            common::GY_NetCoroutine Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<NetResult> result, bool autoClose);
+            coroutine::GY_NetCoroutine Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<NetResult> result, bool autoClose);
+            coroutine::GY_NetCoroutine Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<NetResult> result, bool autoClose);
             std::shared_ptr<NetResult> CloseConn();
             virtual ~GY_TcpClient();
         private:
@@ -114,7 +114,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_UdpClient>;
             using wptr = std::weak_ptr<GY_UdpClient>;
             GY_UdpClient(std::weak_ptr<GY_IOScheduler> scheduler);
-            common::GY_NetCoroutine Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<NetResult> result);
+            coroutine::GY_NetCoroutine Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<NetResult> result);
             std::shared_ptr<NetResult> CloseSocket();
             bool Socketed();
             virtual ~GY_UdpClient();

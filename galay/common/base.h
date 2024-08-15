@@ -93,14 +93,6 @@ namespace galay
             kClassNameCoreBusinuess,    //核心业务类
         };
 
-        enum CoroutineStatus
-        {
-            kCoroutineNotExist,       // 协程不存在
-            kCoroutineRunning,        // 协程运行
-            kCoroutineSuspend,        // 协程挂起
-            kCoroutineFinished,       // 协程结束
-            kCoroutineWaitingForData, // 正在等待数据
-        };
     }
 }
 #endif

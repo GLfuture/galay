@@ -83,7 +83,7 @@ galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(const std::string &Fil
 void 
 galay::IOFunction::FileIOFunction::ZeroCopyFile::WriteFile(const std::string &FileName, const std::string &Content,bool IsBinary)
 {
-    int fd = open(FileName.c_str(),O_WRONLY | O_CREAT);
+    int fd = open(FileName.c_str(),O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if(fd == -1) {
         std::string path = std::filesystem::current_path();
         spdlog::error("[{}:{}] [open file: {} failed, now path is {}]",__FILE__,__LINE__ ,FileName,path);

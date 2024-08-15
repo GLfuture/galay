@@ -1,95 +1,69 @@
 #include "smtp.h"
 
-galay::protocol::ProtoJudgeType 
-galay::protocol::smtp::SmtpProtocol:: DecodePdu(std::string& buffer)
-{
-    int pos = buffer.find("\r\n");
-    if(pos == std::string::npos) return protocol::ProtoJudgeType::kProtoIncomplete;
-    this->m_content = buffer.substr(0,pos);
-    buffer.erase(0,pos + 2);
-    return protocol::ProtoJudgeType::kProtoFinished;
-}
-
 std::string 
-galay::protocol::smtp::SmtpProtocol::EncodePdu()
+galay::protocol::smtp::SmtpHelper::Hello(SmtpRequest& request)
 {
-    return this->m_content;
+    request.m_content = "HELO MSG";
+    return request.EncodePdu();
 }
 
-void 
-galay::protocol::smtp::SmtpProtocol::SetContent(std::string content)
+std::string
+galay::protocol::smtp::SmtpHelper::Auth(SmtpRequest& request)
 {
-    this->m_content = content;
+    request.m_content = "AUTH LOGIN";
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpRequest::SmtpRequest()
+std::string
+galay::protocol::smtp::SmtpHelper::Account(SmtpRequest& request, std::string account)
 {
-    m_smtp_str = std::make_shared<SmtpProtocol>();
+    request.m_content = security::Base64Util::base64_encode(account);
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Hello()
+std::string
+galay::protocol::smtp::SmtpHelper::Password(SmtpRequest& request, std::string password)
 {
-    m_smtp_str->SetContent("HELO MSG\r\n");
-    return m_smtp_str;
+    request.m_content = security::Base64Util::base64_encode(password);
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Auth()
+std::string
+galay::protocol::smtp::SmtpHelper::MailFrom(SmtpRequest& request, std::string from_mail)
 {
-    m_smtp_str->SetContent("AUTH LOGIN\r\n");
-    return m_smtp_str;
-}
-
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Account(std::string account)
-{
-    m_smtp_str->SetContent(security::Base64Util::base64_encode(account) + "\r\n");
-    return m_smtp_str;
-}
-
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Password(std::string password)
-{
-    m_smtp_str->SetContent(security::Base64Util::base64_encode(password) + "\r\n");
-    return m_smtp_str;
-}
-
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::MailFrom(std::string from_mail)
-{
-    m_frommail = from_mail;
+    request.m_frommail = from_mail;
     std::string res = "MAIL FROM: <";
-    m_smtp_str->SetContent(res + from_mail + ">\r\n");
-    return m_smtp_str;
+    request.m_content = res + from_mail + '>';
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::RcptTo(std::string to_mail)
+std::string
+galay::protocol::smtp::SmtpHelper::RcptTo(SmtpRequest& request, std::string to_mail)
 {
-    m_tomails.push(to_mail);
+    request.m_tomails.push(to_mail);
     std::string res = "RCPT TO: <";
-    m_smtp_str->SetContent(res + to_mail + ">\r\n");
-    return m_smtp_str;
+    request.m_content = res + to_mail + '>';
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Data()
+std::string
+galay::protocol::smtp::SmtpHelper::Data(SmtpRequest& request)
 {
-    m_smtp_str->SetContent("DATA\r\n");
-    return m_smtp_str;
+    request.m_content = "DATA";
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Msg(const SmtpMsgInfo& msg)
+std::string
+galay::protocol::smtp::SmtpHelper::Msg(SmtpRequest& request, const SmtpMsgInfo& msg)
 {
     std::string res = "From: <";
-    res += m_frommail + ">\r\nTo: ";
-    while (!m_tomails.empty())
+    res += request.m_frommail + ">\r\nTo: ";
+    request.m_frommail = "";
+    while (!request.m_tomails.empty())
     {
-        res = res + "<" + m_tomails.front() + ">";
-        m_tomails.pop();
-        if (!m_tomails.empty())
+        res = res + "<" + request.m_tomails.front() + ">";
+        request.m_tomails.pop();
+        if (!request.m_tomails.empty())
         {
             res += ", ";
         }
@@ -99,25 +73,61 @@ galay::protocol::smtp::SmtpRequest::Msg(const SmtpMsgInfo& msg)
         }
     }
     res = res + "Subject: " + msg.m_subject + "\r\nContent-Type: " + msg.m_content_type +\
-        ";charset=" + msg.m_charset + "\r\n\r\n" + msg.m_content + "\r\n\r\n.\r\n\r\n";
-    m_smtp_str->SetContent(res);
-    return m_smtp_str;
+        ";charset=" + msg.m_charset + "\r\n\r\n" + msg.m_content + "\r\n\r\n.\r\n";
+    request.m_content = std::move(res);
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr 
-galay::protocol::smtp::SmtpRequest::Quit()
+std::string
+galay::protocol::smtp::SmtpHelper::Quit(SmtpRequest& request)
 {
-    m_smtp_str->SetContent("QUIT\r\n\r\n");
-    return m_smtp_str;
+    request.m_content = "QUIT\r\n";
+    return request.EncodePdu();
 }
 
-galay::protocol::smtp::SmtpResponse::SmtpResponse()
+galay::protocol::ProtoJudgeType 
+galay::protocol::smtp::SmtpRequest::DecodePdu(std::string& buffer)
 {
-    this->m_smtp_str = std::make_shared<SmtpProtocol>();
+    int pos = buffer.find("\r\n");
+    if(pos == std::string::npos) return protocol::ProtoJudgeType::kProtoIncomplete;
+    this->m_content = buffer.substr(0,pos);
+    buffer.erase(0,pos + 2);
+    return protocol::ProtoJudgeType::kProtoFinished;
 }
 
-galay::protocol::smtp::SmtpProtocol::ptr
-galay::protocol::smtp::SmtpResponse::Resp()
+std::string 
+galay::protocol::smtp::SmtpRequest::EncodePdu()
 {
-    return m_smtp_str;
+    return this->m_content + "\r\n";
+}
+
+std::string& 
+galay::protocol::smtp::SmtpRequest::GetContent()
+{
+    return this->m_content;
+}
+
+
+galay::protocol::ProtoJudgeType 
+galay::protocol::smtp::SmtpResponse::DecodePdu(std::string &buffer)
+{
+    int pos = buffer.find("\r\n");
+    if(pos == std::string::npos) return protocol::ProtoJudgeType::kProtoIncomplete;
+    this->m_content = buffer.substr(0,pos);
+    buffer.erase(0,pos + 2);
+    return protocol::ProtoJudgeType::kProtoFinished;
+}
+
+
+std::string 
+galay::protocol::smtp::SmtpResponse::EncodePdu()
+{
+    return this->m_content + "\r\n";
+}
+
+
+std::string& 
+galay::protocol::smtp::SmtpResponse::GetContent()
+{
+    return this->m_content;
 }

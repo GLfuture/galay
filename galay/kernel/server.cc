@@ -40,7 +40,7 @@ galay::kernel::GY_TcpServer::GetServerBuilder()
 void 
 galay::kernel::GY_TcpServer::Start()
 {
-    common::GY_NetCoroutinePool::GetInstance()->Start();
+    coroutine::GY_NetCoroutinePool::GetInstance()->Start();
     this->m_threadPool->Start(this->m_builder->GetNetThreadNum());
     for (int i = 0; i < m_builder->GetNetThreadNum(); ++i)
     {
@@ -61,7 +61,7 @@ galay::kernel::GY_TcpServer::Start()
     }else{
         spdlog::error("[{}:{}] [ThreadPool Exit Abnormally]",__FILE__,__LINE__);
     }
-    if(common::GY_NetCoroutinePool::GetInstance()->IsDone() || common::GY_NetCoroutinePool::GetInstance()->WaitForAllDone()){
+    if(coroutine::GY_NetCoroutinePool::GetInstance()->IsDone() || coroutine::GY_NetCoroutinePool::GetInstance()->WaitForAllDone()){
         spdlog::info("[{}:{}] [CoroutinePool Exit Normally]",__FILE__,__LINE__);
     }else{
         spdlog::error("[{}:{}] [CoroutinePool Exit Abnormally(timeout)]",__FILE__,__LINE__);
@@ -81,7 +81,7 @@ galay::kernel::GY_TcpServer::Stop()
             ioManager->Stop();
         }
         m_threadPool->Stop();
-        common::GY_NetCoroutinePool::GetInstance()->Stop();
+        coroutine::GY_NetCoroutinePool::GetInstance()->Stop();
     }
 }
 

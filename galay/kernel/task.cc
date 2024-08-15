@@ -266,7 +266,7 @@ galay::kernel::GY_TcpSendTask::Error()
 void 
 galay::kernel::GY_TcpSendTask::Execute()
 {
-    spdlog::info("[{}:{}] [Send(fd:{})] [Len:{} Package:{}]", __FILE__, __LINE__, this->m_fd, this->m_wbuffer.length(), this->m_wbuffer);
+    spdlog::debug("[{}:{}] [Send(fd:{})] [Len:{} Package:{}]", __FILE__, __LINE__, this->m_fd, this->m_wbuffer.length(), this->m_wbuffer);
     int offset = 0;
     while (1)
     {

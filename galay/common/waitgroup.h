@@ -6,10 +6,8 @@
 
 namespace galay
 {
-    namespace common
+    namespace coroutine
     {
-        class GY_NetCoroutinePool;
-
         class WaitGroup
         {
         public:
@@ -18,11 +16,11 @@ namespace galay
             using uptr = std::unique_ptr<WaitGroup>;
             WaitGroup();
             void Add(int num);
-            common::GroupAwaiter &Wait();
+            GroupAwaiter &Wait();
             void Done();
         private:
             std::atomic_int16_t m_coNum;
-            common::GroupAwaiter m_awaiter;
+            GroupAwaiter m_awaiter;
         };
     }
 }

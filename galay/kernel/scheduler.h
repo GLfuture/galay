@@ -17,7 +17,7 @@
 
 namespace galay
 {
-    namespace common
+    namespace coroutine
     {
         class GY_NetCoroutine;
         class GY_NetCoroutinePool;

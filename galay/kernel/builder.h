@@ -9,7 +9,7 @@
 
 namespace galay
 {
-    namespace common
+    namespace coroutine
     {
         class GY_NetCoroutine;
     }
@@ -44,7 +44,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_TcpServerBuilderBase>;
             using uptr = std::unique_ptr<GY_TcpServerBuilderBase>;
             using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_NetCoroutine(GY_Controller::ptr)>> port_func) = 0;
+            virtual void SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func) = 0;
             virtual void SetIllegalFunction(std::function<std::string()> func) = 0;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) = 0;
@@ -91,7 +91,7 @@ namespace galay
                 return true;
             }
 
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_NetCoroutine(GY_Controller::ptr)>> port_func) override;
+            virtual void SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func) override;
             virtual void SetIllegalFunction(std::function<std::string()> func) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;
@@ -125,7 +125,7 @@ namespace galay
             std::atomic_int16_t m_sche_wait_time;
             std::atomic<galay::common::SchedulerType> m_scheduler_type;
             std::atomic_bool m_is_ssl;
-            std::function<common::GY_NetCoroutine(GY_Controller::ptr)> m_userfunc;
+            std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> m_userfunc;
             std::function<std::string()> m_illegalfunc;
             GY_SSLConfig::ptr m_ssl_config;
 
@@ -145,7 +145,7 @@ namespace galay
             void SetRouter(std::shared_ptr<GY_HttpRouter> router);
 
         private:
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<common::GY_NetCoroutine(GY_Controller::ptr)>> port_func) override;
+            virtual void SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func) override;
         private:
             std::shared_ptr<GY_HttpRouter> m_router;
         };

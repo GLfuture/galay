@@ -388,7 +388,7 @@ galay::kernel::GY_SIOManager::GY_SIOManager(GY_TcpServerBuilderBase::ptr builder
     }
     this->m_userFunc = builder->GetUserFunction();
     this->m_illegalFunc = builder->GetIllegalFunction();
-    common::GY_NetCoroutinePool::GetInstance()->Start();
+    coroutine::GY_NetCoroutinePool::GetInstance()->Start();
 }
 
 void 

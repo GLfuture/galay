@@ -237,10 +237,10 @@ galay::kernel::GY_TcpConnector::GY_TcpConnector(int fd, SSL* ssl, std::weak_ptr<
 {
     this->m_fd = fd;
     this->m_ssl = ssl;
+    this->m_isClosed = false;
     this->m_ioManager = ioManager;
     this->m_recvTask = std::make_unique<GY_TcpRecvTask>(fd, ssl, ioManager.lock()->GetIOScheduler());
     this->m_sendTask = std::make_unique<GY_TcpSendTask>(fd, ssl, ioManager.lock()->GetIOScheduler());
-    this->m_exit = std::make_shared<bool>(false);
     this->m_controller = nullptr;
     this->m_readCallback += [this](){
         RealRecv();
@@ -250,9 +250,13 @@ galay::kernel::GY_TcpConnector::GY_TcpConnector(int fd, SSL* ssl, std::weak_ptr<
 void 
 galay::kernel::GY_TcpConnector::Close()
 {
-    this->m_ioManager.lock()->GetIOScheduler()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
-    this->m_ioManager.lock()->GetIOScheduler()->DelObjector(this->m_fd);
-    close(this->m_fd);
+    if(!m_isClosed) 
+    {
+        this->m_ioManager.lock()->GetIOScheduler()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
+        this->m_ioManager.lock()->GetIOScheduler()->DelObjector(this->m_fd);
+        close(this->m_fd);
+        this->m_isClosed = true;
+    }
 }
 
 std::shared_ptr<galay::kernel::Timer> 
@@ -270,7 +274,9 @@ galay::kernel::GY_TcpConnector::SetContext(std::any&& context)
 std::any&&
 galay::kernel::GY_TcpConnector::GetContext()
 {
-    return std::move(this->m_context);
+    std::any &&context = std::move(this->m_context);
+    this->m_context = std::any();
+    return std::forward<std::any>(context);
 }
 
 galay::protocol::GY_SRequest::ptr 
@@ -349,7 +355,7 @@ galay::kernel::GY_TcpConnector::RealRecv()
     m_recvTask->RecvAll();
     while(true)
     {
-        if(!m_tempRequest) m_tempRequest = common::GY_SRequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
+        if(!m_tempRequest) m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
         if(!m_tempRequest) 
         {
             spdlog::error("[{}:{}] [CoReceiveExec Create RequestObj Fail, TypeName: {}]",__FILE__,__LINE__, this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
@@ -363,7 +369,7 @@ galay::kernel::GY_TcpConnector::RealRecv()
         if(type == protocol::ProtoJudgeType::kProtoFinished)
         {
             m_requests.push(m_tempRequest);
-            m_tempRequest = common::GY_SRequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
+            m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
         }
         else if(type == protocol::ProtoJudgeType::kProtoIncomplete)
         {
@@ -385,12 +391,11 @@ galay::kernel::GY_TcpConnector::RealRecv()
 
 galay::kernel::GY_TcpConnector::~GY_TcpConnector()
 {
-    spdlog::info("[{}:{}] [~GY_TcpConnector]",__FILE__, __LINE__);
+    spdlog::debug("[{}:{}] [~GY_TcpConnector]",__FILE__, __LINE__);
     if(this->m_ssl){
         IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
         this->m_ssl = nullptr;
     }
-    *(this->m_exit) = true;
 }
 
 galay::kernel::Callback& 

@@ -72,7 +72,7 @@ galay::kernel::GY_TcpServerBuilder::GY_TcpServerBuilder()
 }
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetUserFunction(std::pair<uint16_t,std::function<galay::common::GY_NetCoroutine(galay::kernel::GY_Controller::ptr)>> port_func) 
+galay::kernel::GY_TcpServerBuilder::SetUserFunction(std::pair<uint16_t,std::function<galay::coroutine::GY_NetCoroutine(galay::kernel::GY_Controller::ptr)>> port_func) 
 {
     this->m_port.store(port_func.first);
     this->m_userfunc = port_func.second;
@@ -246,7 +246,7 @@ galay::kernel::GY_HttpServerBuilder::SetRouter(std::shared_ptr<GY_HttpRouter> ro
 
 
 void 
-galay::kernel::GY_HttpServerBuilder::SetUserFunction(std::pair<uint16_t, std::function<common::GY_NetCoroutine(GY_Controller::ptr)>> port_func)
+galay::kernel::GY_HttpServerBuilder::SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func)
 {
     GY_TcpServerBuilder::SetUserFunction(port_func);
 }

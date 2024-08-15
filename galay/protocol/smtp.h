@@ -11,18 +11,6 @@ namespace galay
     {
         namespace smtp
         {
-            class SmtpProtocol : public GY_SRequest, public GY_SResponse
-                ,public galay::common::GY_DynamicCreator<GY_SRequest,SmtpProtocol>,public galay::common::GY_DynamicCreator<GY_SResponse,SmtpProtocol>
-            {
-            public:
-                using ptr = std::shared_ptr<SmtpProtocol>;
-                virtual std::string EncodePdu() override;
-                virtual galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
-                void SetContent(std::string content);
-            protected:
-                std::string m_content;
-            };
-
             struct SmtpMsgInfo
             {
                 std::string m_subject;
@@ -31,39 +19,52 @@ namespace galay
                 std::string m_charset = "utf8mb4";
             };
 
-            class SmtpRequest
+            class SmtpRequest;
+
+            class SmtpHelper
             {
+            public:
+                static std::string Hello(SmtpRequest& request);
+                static std::string Auth(SmtpRequest& request);
+                static std::string Account(SmtpRequest& request, std::string account);
+                static std::string Password(SmtpRequest& request, std::string password);
+                static std::string MailFrom(SmtpRequest& request, std::string from_mail);
+                static std::string RcptTo(SmtpRequest& request, std::string to_mail);
+                static std::string Data(SmtpRequest& request);
+                static std::string Msg(SmtpRequest& request, const SmtpMsgInfo& msg);
+                static std::string Quit(SmtpRequest& request);
+            };
+
+            class SmtpRequest: public GY_Request, public common::GY_DynamicCreator<GY_Request,SmtpRequest>
+            {
+                friend class SmtpHelper;
             public:
                 using ptr = std::shared_ptr<SmtpRequest>;
                 using wpt = std::weak_ptr<SmtpRequest>;
                 using uptr = std::unique_ptr<SmtpRequest>;
-                SmtpRequest();
-                SmtpProtocol::ptr Hello();
-                SmtpProtocol::ptr Auth();
-                SmtpProtocol::ptr Account(std::string account);
-                SmtpProtocol::ptr Password(std::string password);
-                SmtpProtocol::ptr MailFrom(std::string from_mail);
-                SmtpProtocol::ptr RcptTo(std::string to_mail);
-                SmtpProtocol::ptr Data();
-                SmtpProtocol::ptr Msg(const SmtpMsgInfo& msg);
-                SmtpProtocol::ptr Quit();
-
+                SmtpRequest() = default;
+                virtual ProtoJudgeType DecodePdu(std::string &buffer) override;
+                virtual std::string EncodePdu() override;
+                std::string& GetContent();
             private:
-                SmtpProtocol::ptr m_smtp_str;
+                //content不带\r\n
+                std::string m_content;
                 std::string m_frommail;
                 std::queue<std::string> m_tomails;
             };
 
-            class SmtpResponse
+            class SmtpResponse: public GY_Response, public common::GY_DynamicCreator<GY_Response,SmtpResponse>
             {
             public:
                 using ptr = std::shared_ptr<SmtpResponse>;
                 using wptr = std::weak_ptr<SmtpResponse>;
                 using uptr = std::unique_ptr<SmtpResponse>;
-                SmtpResponse();
-                SmtpProtocol::ptr Resp();
+                SmtpResponse() = default;
+                virtual ProtoJudgeType DecodePdu(std::string &buffer) override;
+                virtual std::string EncodePdu() override;
+                std::string& GetContent();
             private:
-                SmtpProtocol::ptr m_smtp_str;
+                std::string m_content;
             };
         }
     }

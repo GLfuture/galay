@@ -179,8 +179,7 @@ namespace galay
             int m_fd;
             SSL *m_ssl;
             std::any m_context;
-            uint64_t m_mainCoId;
-            std::shared_ptr<bool> m_exit;
+            std::atomic_bool m_isClosed;
             protocol::GY_SRequest::ptr m_tempRequest;
             std::unique_ptr<GY_TcpRecvTask> m_recvTask;
             std::unique_ptr<GY_TcpSendTask> m_sendTask;

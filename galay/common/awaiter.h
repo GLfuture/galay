@@ -13,7 +13,7 @@
 
 namespace galay
 {
-    namespace common
+    namespace coroutine
     {
         // return int
         class AwaiterBase

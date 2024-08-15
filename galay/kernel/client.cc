@@ -26,7 +26,7 @@ galay::kernel::GY_TcpClient::IsSSL(bool isSSL)
     this->m_isSSL = isSSL;
 }
 
-galay::common::GY_NetCoroutine 
+galay::coroutine::GY_NetCoroutine 
 galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, NetResult::ptr result, bool autoClose)
 {
     std::string request = std::forward<std::string>(buffer);
@@ -40,28 +40,28 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
             auto res = Connect(host, port);
             co_await res->Wait();
             if(!res->Success()) {
-                res->m_errMsg = "Connect:" + res->Error();
+                result->m_errMsg = "Connect:" + res->Error();
                 spdlog::error("[{}:{}] [Unary.Connect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res->Error());
                 result->Done();
-                co_return common::CoroutineStatus::kCoroutineFinished;
+                co_return coroutine::CoroutineStatus::kCoroutineFinished;
             }
         }
         auto res = Send(std::move(request));
         co_await res->Wait();
         if(!res->Success()) {
-            res->m_errMsg = "Send:" + res->Error();
+            result->m_errMsg = "Send:" + res->Error();
             spdlog::error("[{}:{}] [Unary.Send(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
             result->Done();
-            co_return common::CoroutineStatus::kCoroutineFinished;
+            co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         std::string temp;
         res = Recv(temp);
         co_await res->Wait();
         if(!res->Success()) {
-            res->m_errMsg = "Send:" + res->Error();
-            spdlog::error("[{}:{}] [Unary.Recv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
+            result->m_errMsg = "Send:" + res->Error();
+            spdlog::error("[{}:{}] [Unary.Recv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, temp, res->Error());
             result->Done();
-            co_return common::CoroutineStatus::kCoroutineFinished;
+            co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         spdlog::debug("[{}:{}] [Unary.Recv Buffer: {}]", __FILE__, __LINE__, temp);
         result->m_result = std::move(temp);
@@ -79,28 +79,28 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
             auto res = SSLConnect(host, port);
             co_await res->Wait();
             if(!res->Success()) {
-                res->m_errMsg = "SSLConnect:" + res->Error();
+                result->m_errMsg = "SSLConnect:" + res->Error();
                 spdlog::error("[{}:{}] [Unary.SSLConnect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res->Error());
                 result->Done();
-                co_return common::CoroutineStatus::kCoroutineFinished;
+                co_return coroutine::CoroutineStatus::kCoroutineFinished;
             }
         }
         auto res = SSLSend(std::move(request));
         co_await res->Wait();
         if(!res->Success()) {
-            res->m_errMsg = "SSLSend:" + res->Error();
+            result->m_errMsg = "SSLSend:" + res->Error();
             spdlog::error("[{}:{}] [Unary.SSLSend(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
             result->Done();
-            co_return common::CoroutineStatus::kCoroutineFinished;
+            co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         std::string temp;
         res = SSLRecv(temp);
         co_await res->Wait();
         if(!res->Success()) {
-            res->m_errMsg = "SSLRecv:" + res->Error();
+            result->m_errMsg = "SSLRecv:" + res->Error();
             spdlog::error("[{}:{}] [Unary.SSLRecv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
             result->Done();
-            co_return common::CoroutineStatus::kCoroutineFinished;
+            co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         spdlog::debug("[{}:{}] [Unary.SSLRecv Buffer: {}]", __FILE__, __LINE__, temp);
         result->m_result = std::move(temp);
@@ -111,10 +111,10 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
         }
         result->Done();
     }
-    co_return common::CoroutineStatus::kCoroutineFinished;
+    co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::common::GY_NetCoroutine 
+galay::coroutine::GY_NetCoroutine 
 galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<NetResult> result, bool autoClose)
 {
     std::queue<std::string> responses;
@@ -131,7 +131,7 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<s
             result->m_result = responses;
             spdlog::error("[{}:{}] [UnaryError:{}]", __FILE__, __LINE__, res->Error());
             result->Done();
-            co_return common::CoroutineStatus::kCoroutineFinished;
+            co_return coroutine::CoroutineStatus::kCoroutineFinished;
         } 
         else
         {
@@ -142,7 +142,7 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<s
     result->m_result = responses;
     if(!result->m_errMsg.empty()) result->m_errMsg.clear();
     result->Done();
-    co_return common::CoroutineStatus::kCoroutineFinished;
+    co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
 std::shared_ptr<galay::kernel::NetResult>
@@ -706,10 +706,10 @@ galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string passwor
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
-    requests.push(request.Hello()->EncodePdu());
-    requests.push(request.Auth()->EncodePdu());
-    requests.push(request.Account(account)->EncodePdu());
-    requests.push(request.Password(password)->EncodePdu());
+    requests.push(protocol::smtp::SmtpHelper::Hello(request));
+    requests.push(protocol::smtp::SmtpHelper::Auth(request));
+    requests.push(protocol::smtp::SmtpHelper::Account(request, account));
+    requests.push(protocol::smtp::SmtpHelper::Password(request, password));
     this->m_tcpClient->Unary(this->m_host, this->m_port, requests, result, false);
     return result;
 }
@@ -721,13 +721,13 @@ galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail, const std::v
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
-    requests.push(request.MailFrom(FromEmail)->EncodePdu());
+    requests.push(protocol::smtp::SmtpHelper::MailFrom(request, FromEmail));
     for (auto &to : ToEmails)
     {
-        requests.push(request.RcptTo(to)->EncodePdu());
+        requests.push(protocol::smtp::SmtpHelper::RcptTo(request, to));
     }
-    requests.push(request.Data()->EncodePdu());
-    requests.push(request.Msg(msg)->EncodePdu());
+    requests.push(protocol::smtp::SmtpHelper::Data(request));
+    requests.push(protocol::smtp::SmtpHelper::Msg(request, msg));
     this->m_tcpClient->Unary(this->m_host, this->m_port, requests, result, false);
     return result;
 }
@@ -739,7 +739,7 @@ galay::kernel::GY_SmtpAsyncClient::Quit()
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
-    requests.push(request.Quit()->EncodePdu());
+    requests.push(protocol::smtp::SmtpHelper::Quit(request));
     this->m_tcpClient->Unary(this->m_host, this->m_port, requests, result, false);
     return result;
 }
@@ -793,7 +793,7 @@ galay::kernel::GY_UdpClient::GY_UdpClient(std::weak_ptr<GY_IOScheduler> schedule
     this->m_isSocketed = false;
 }
 
-galay::common::GY_NetCoroutine 
+galay::coroutine::GY_NetCoroutine 
 galay::kernel::GY_UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<NetResult> result)
 {
     result->AddTaskNum(1);
@@ -809,7 +809,7 @@ galay::kernel::GY_UdpClient::Unary(std::string host, uint16_t port, std::string 
         result->m_errMsg = res->Error();
         spdlog::error("[{}:{}] [Unary.SendTo(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res->Error());
         result->Done();
-        co_return common::CoroutineStatus::kCoroutineFinished;
+        co_return coroutine::CoroutineStatus::kCoroutineFinished;
     } 
     UdpResInfo info;
     res = RecvFrom(info.m_host, info.m_port, info.m_buffer);
@@ -819,13 +819,13 @@ galay::kernel::GY_UdpClient::Unary(std::string host, uint16_t port, std::string 
         result->m_errMsg = res->Error();
         spdlog::error("[{}:{}] [Unary.RecvFrom(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res->Error());
         result->Done();
-        co_return common::CoroutineStatus::kCoroutineFinished;
+        co_return coroutine::CoroutineStatus::kCoroutineFinished;
     }
     if(!result->m_errMsg.empty()) result->m_errMsg.clear();
     result->m_result = info;
     result->m_success = true;
     result->Done();
-    co_return common::CoroutineStatus::kCoroutineFinished;
+    co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
 std::shared_ptr<galay::kernel::NetResult> 

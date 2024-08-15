@@ -6,7 +6,7 @@ galay::kernel::NetResult::NetResult()
 {
     m_success = false;
     m_errMsg = "";
-    m_waitGroup = std::make_shared<common::WaitGroup>();
+    m_waitGroup = std::make_shared<coroutine::WaitGroup>();
 }
 
 bool 
@@ -27,7 +27,7 @@ galay::kernel::NetResult::AddTaskNum(uint16_t taskNum)
     m_waitGroup->Add(taskNum);
 }
 
-galay::common::GroupAwaiter&
+galay::coroutine::GroupAwaiter&
 galay::kernel::NetResult::Wait()
 {
     return m_waitGroup->Wait();
@@ -67,7 +67,7 @@ galay::kernel::SmtpResult::GetResponse()
         auto response = responses.front();
         responses.pop();
         protocol::smtp::SmtpResponse smtp;
-        smtp.Resp()->DecodePdu(response);
+        smtp.DecodePdu(response);
         smtpResponses.push(smtp);
     }
     return smtpResponses;

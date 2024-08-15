@@ -17,9 +17,16 @@
 
 namespace galay
 {
-    namespace common
+    namespace coroutine
     {
-
+        enum CoroutineStatus
+        {
+            kCoroutineNotExist,       // 协程不存在
+            kCoroutineRunning,        // 协程运行
+            kCoroutineSuspend,        // 协程挂起
+            kCoroutineFinished,       // 协程结束
+            kCoroutineWaitingForData, // 正在等待数据
+        };
         class GY_NetCoroutinePool;
         class GY_Coroutine;
         class GY_NetCoroutine;

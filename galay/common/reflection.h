@@ -17,10 +17,8 @@ namespace galay
     };
 
     namespace protocol{
-        class GY_SRequest;
-        class GY_SResponse;
-        class GY_CRequest;
-        class GY_CResponse;
+        class GY_Request;
+        class GY_Response;
     }
 
     namespace common
@@ -39,67 +37,35 @@ namespace galay
 
         //必须满足构造函数参数相同且都继承自同一基类
         template <typename... Targs>
-        class GY_SRequestFactory
+        class GY_RequestFactory
         {
         public:
-            using ptr = std::shared_ptr<GY_SRequestFactory>;
-            using uptr = std::unique_ptr<GY_SRequestFactory>;
-            using wptr = std::weak_ptr<GY_SRequestFactory>;
-            static GY_SRequestFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_SRequest>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::GY_SRequest> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_SRequestFactory() = default;
+            using ptr = std::shared_ptr<GY_RequestFactory>;
+            using uptr = std::unique_ptr<GY_RequestFactory>;
+            using wptr = std::weak_ptr<GY_RequestFactory>;
+            static GY_RequestFactory<Targs...> *GetInstance();
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...args)> func);
+            std::shared_ptr<galay::protocol::GY_Request> Create(const std::string &typeName, Targs &&...args);
+            virtual ~GY_RequestFactory() = default;
         private:
-            static GY_SRequestFactory* m_sReqFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_SRequest>(Targs &&...)>> m_mapCreateFunction;
+            static GY_RequestFactory* m_ReqFactory;
+            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename... Targs>
-        class GY_SResponseFactory
+        class GY_ResponseFactory
         {
         public:
-            using ptr = std::shared_ptr<GY_SResponseFactory>;
-            using uptr = std::unique_ptr<GY_SResponseFactory>;
-            using wptr = std::weak_ptr<GY_SResponseFactory>;
-            static GY_SResponseFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_SResponse>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::GY_SResponse> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_SResponseFactory() = default;
+            using ptr = std::shared_ptr<GY_ResponseFactory>;
+            using uptr = std::unique_ptr<GY_ResponseFactory>;
+            using wptr = std::weak_ptr<GY_ResponseFactory>;
+            static GY_ResponseFactory<Targs...> *GetInstance();
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...args)> func);
+            std::shared_ptr<galay::protocol::GY_Response> Create(const std::string &typeName, Targs &&...args);
+            virtual ~GY_ResponseFactory() = default;
         private:
-            static GY_SResponseFactory* m_sRespFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_SResponse>(Targs &&...)>> m_mapCreateFunction;
-        };
-
-        template <typename... Targs>
-        class GY_CRequestFactory
-        {
-        public:
-            using ptr = std::shared_ptr<GY_CRequestFactory>;
-            using uptr = std::unique_ptr<GY_CRequestFactory>;
-            using wptr = std::weak_ptr<GY_CRequestFactory>;
-            static GY_CRequestFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_CRequest>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::GY_CRequest> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_CRequestFactory() = default;
-        private:
-            static GY_CRequestFactory* m_cReqFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_CRequest>(Targs &&...)>> m_mapCreateFunction;
-        };
-
-        template <typename... Targs>
-        class GY_CResponseFactory
-        {
-        public:
-            using ptr = std::shared_ptr<GY_CResponseFactory>;
-            using uptr = std::unique_ptr<GY_CResponseFactory>;
-            using wptr = std::weak_ptr<GY_CResponseFactory>;
-            static GY_CResponseFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_CResponse>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::GY_CResponse> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_CResponseFactory() = default;
-        private:
-            static GY_CResponseFactory* m_cRespFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_CResponse>(Targs &&...)>> m_mapCreateFunction;
+            static GY_ResponseFactory* m_RespFactory;
+            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename... Targs>
@@ -147,7 +113,7 @@ namespace galay
 
         //偏特化
         template <typename T, typename... Targs>
-        class Register<protocol::GY_SRequest,T,Targs...>
+        class Register<protocol::GY_Request,T,Targs...>
         {
         public:
             explicit Register();
@@ -155,23 +121,7 @@ namespace galay
         };
 
         template <typename T, typename... Targs>
-        class Register<protocol::GY_SResponse,T,Targs...>
-        {
-        public:
-            explicit Register();
-            inline void do_nothing() const {};
-        };
-
-        template <typename T, typename... Targs>
-        class Register<protocol::GY_CRequest,T,Targs...>
-        {
-        public:
-            explicit Register();
-            inline void do_nothing() const {};
-        };
-
-        template <typename T, typename... Targs>
-        class Register<protocol::GY_CResponse,T,Targs...>
+        class Register<protocol::GY_Response,T,Targs...>
         {
         public:
             explicit Register();
