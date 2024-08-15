@@ -4,7 +4,7 @@
 
 galay::common::GY_ThreadPool::ptr threadPool = std::make_shared<galay::common::GY_ThreadPool>();
 
-galay::common::GY_Coroutine func(galay::kernel::GY_SelectScheduler::wptr scheduler)
+galay::coroutine::GY_Coroutine func(galay::kernel::GY_SelectScheduler::wptr scheduler)
 {
     galay::kernel::DnsAsyncClient client(scheduler);
     auto res = client.QueryA("114.114.114.114", 53, "www.baidu.com");
@@ -28,10 +28,10 @@ galay::common::GY_Coroutine func(galay::kernel::GY_SelectScheduler::wptr schedul
     {
         std::cout << "ptr: " << res->GetPtr() << std::endl;
     }
-    galay::common::GY_NetCoroutinePool::GetInstance()->Stop();
+    galay::coroutine::GY_NetCoroutinePool::GetInstance()->Stop();
     scheduler.lock()->Stop();
     threadPool->Stop();
-    co_return galay::common::kCoroutineFinished;
+    co_return galay::coroutine::kCoroutineFinished;
 }
 
 int main()
@@ -39,10 +39,10 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     galay::kernel::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::kernel::GY_SelectScheduler>(50);
     threadPool->Start(1);
-    galay::common::GY_NetCoroutinePool::GetInstance()->Start();
+    galay::coroutine::GY_NetCoroutinePool::GetInstance()->Start();
     threadPool->AddTask([&](){ scheduler->Start(); });
     auto co = func(scheduler);
-    if(!galay::common::GY_NetCoroutinePool::GetInstance()->IsDone()) galay::common::GY_NetCoroutinePool::GetInstance()->WaitForAllDone();
+    if(!galay::coroutine::GY_NetCoroutinePool::GetInstance()->IsDone()) galay::coroutine::GY_NetCoroutinePool::GetInstance()->WaitForAllDone();
     if(!threadPool->IsDone()) threadPool->WaitForAllDone();
     return 0;
 }

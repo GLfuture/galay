@@ -20,7 +20,7 @@ public:
         auto res = ctrl->Send(response->EncodePdu());
         co_await res->Wait();
         ctrl->Close();
-        co_return galay::common::CoroutineStatus::kCoroutineFinished;
+        co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
     }
 
 private:
@@ -41,7 +41,7 @@ public:
         }
         res = ctrl->Send(request->EndChunck());
         co_await res->Wait();
-        co_return galay::common::CoroutineStatus::kCoroutineFinished;
+        co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
     }
 
 private:
@@ -70,4 +70,4 @@ int main()
     galay::kernel::GY_TcpServer::ptr server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;
-}
+}  
