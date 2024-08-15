@@ -9,7 +9,7 @@ namespace galay
 {
     namespace protocol
     {
-        enum ProtoJudgeType
+        enum ProtoType
         {
             kProtoFinished,
             kProtoIncomplete,
@@ -21,7 +21,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_SRequest>;
             using wptr = std::weak_ptr<GY_SRequest>;
             using uptr = std::unique_ptr<GY_SRequest>;
-            virtual ProtoJudgeType DecodePdu(std::string &buffer) = 0;
+            virtual ProtoType DecodePdu(std::string &buffer) = 0;
         };
 
         class GY_CResponse{
@@ -29,7 +29,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_CResponse>;
             using wptr = std::weak_ptr<GY_CResponse>;
             using uptr = std::unique_ptr<GY_CResponse>;
-            virtual ProtoJudgeType DecodePdu(std::string &buffer) = 0;
+            virtual ProtoType DecodePdu(std::string &buffer) = 0;
         };
 
         class GY_SResponse{
@@ -54,7 +54,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_Request>;
             using wptr = std::weak_ptr<GY_Request>;
             using uptr = std::unique_ptr<GY_Request>;
-            virtual ProtoJudgeType DecodePdu(std::string &buffer) = 0;
+            virtual ProtoType DecodePdu(std::string &buffer) = 0;
             virtual std::string EncodePdu() = 0;
         };
 
@@ -64,7 +64,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_Response>;
             using wptr = std::weak_ptr<GY_Response>;
             using uptr = std::unique_ptr<GY_Response>;
-            virtual ProtoJudgeType DecodePdu(std::string &buffer) = 0;
+            virtual ProtoType DecodePdu(std::string &buffer) = 0;
             virtual std::string EncodePdu() = 0;
         };
         

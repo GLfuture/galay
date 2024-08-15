@@ -85,14 +85,14 @@ galay::protocol::smtp::SmtpHelper::Quit(SmtpRequest& request)
     return request.EncodePdu();
 }
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::smtp::SmtpRequest::DecodePdu(std::string& buffer)
 {
     int pos = buffer.find("\r\n");
-    if(pos == std::string::npos) return protocol::ProtoJudgeType::kProtoIncomplete;
+    if(pos == std::string::npos) return protocol::ProtoType::kProtoIncomplete;
     this->m_content = buffer.substr(0,pos);
     buffer.erase(0,pos + 2);
-    return protocol::ProtoJudgeType::kProtoFinished;
+    return protocol::ProtoType::kProtoFinished;
 }
 
 std::string 
@@ -108,14 +108,14 @@ galay::protocol::smtp::SmtpRequest::GetContent()
 }
 
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::smtp::SmtpResponse::DecodePdu(std::string &buffer)
 {
     int pos = buffer.find("\r\n");
-    if(pos == std::string::npos) return protocol::ProtoJudgeType::kProtoIncomplete;
+    if(pos == std::string::npos) return protocol::ProtoType::kProtoIncomplete;
     this->m_content = buffer.substr(0,pos);
     buffer.erase(0,pos + 2);
-    return protocol::ProtoJudgeType::kProtoFinished;
+    return protocol::ProtoType::kProtoFinished;
 }
 
 

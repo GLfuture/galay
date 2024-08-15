@@ -89,7 +89,7 @@ namespace galay
             public:
                 using ptr = std::shared_ptr<DnsRequest>;
                 // ignore
-                galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
             protected:
                 std::string ModifyHostname(std::string hostname);
@@ -101,7 +101,7 @@ namespace galay
                 using ptr = std::shared_ptr<DnsResponse>;
                 // ignore
                 std::string EncodePdu() override;
-                galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
             protected:
                 static bool IsPointer(int in);
                 std::string DealAnswer(unsigned short type, char *buffer, std::string data);

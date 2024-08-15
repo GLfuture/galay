@@ -22,7 +22,7 @@ namespace galay
 
     namespace protocol
     {
-        enum ProtoJudgeType;
+        enum ProtoType;
     }
 
     namespace common
@@ -57,7 +57,7 @@ namespace galay
             {
                 // 会附带解析头部的职责
                 a.DecodePdu(std::declval<std::string &>())
-            } -> std::same_as<protocol::ProtoJudgeType>;
+            } -> std::same_as<protocol::ProtoType>;
         };
         template <typename T>
         concept TcpResponse = requires(T a) {
@@ -70,7 +70,7 @@ namespace galay
         concept UdpRequest = requires(T a) {
             {
                 a.DecodePdu(std::declval<std::string &>())
-            } -> std::same_as<protocol::ProtoJudgeType>;
+            } -> std::same_as<protocol::ProtoType>;
         };
 
         template <typename T>

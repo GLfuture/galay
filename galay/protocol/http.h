@@ -152,15 +152,15 @@ namespace galay
                 using uptr = std::unique_ptr<HttpRequest>;
                 HttpRequestHeader::ptr Header();
                 std::string& Body();
-                galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
                 //chunck
                 bool StartChunck();
                 std::string ChunckStream(std::string&& buffer);
                 std::string EndChunck();
             private:
-                galay::protocol::ProtoJudgeType GetHttpBody(std::string& buffer);
-                galay::protocol::ProtoJudgeType GetChunckBody(std::string& buffer);
+                galay::protocol::ProtoType GetHttpBody(std::string& buffer);
+                galay::protocol::ProtoType GetChunckBody(std::string& buffer);
             private:
                 HttpProStatus m_status = kHttpHeader;
                 HttpRequestHeader::ptr m_header;
@@ -194,14 +194,14 @@ namespace galay
                 HttpResponseHeader::ptr Header();
                 std::string& Body();
                 std::string EncodePdu() override;
-                galay::protocol::ProtoJudgeType DecodePdu(std::string &buffer) override;
+                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
                 //chunck
                 bool StartChunck();
                 std::string ChunckStream(std::string&& buffer);
                 std::string EndChunck();
             private:
-                galay::protocol::ProtoJudgeType GetHttpBody(std::string& buffer);
-                galay::protocol::ProtoJudgeType GetChunckBody(std::string& buffer);
+                galay::protocol::ProtoType GetHttpBody(std::string& buffer);
+                galay::protocol::ProtoType GetChunckBody(std::string& buffer);
             private:
                 HttpProStatus m_status = kHttpHeader;
                 HttpResponseHeader::ptr m_header;

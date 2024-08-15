@@ -77,10 +77,10 @@ galay::protocol::dns::DnsRequest::EncodePdu()
     return std::string(begin, len);
 }
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::dns::DnsRequest::DecodePdu(std::string &buffer)
 {
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 std::string 
@@ -95,7 +95,7 @@ galay::protocol::dns::DnsRequest::ModifyHostname(std::string hostname)
     return res + static_cast<char>(0);
 }
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::dns::DnsResponse::DecodePdu(std::string &buffer)
 {
     char *begin = new char[buffer.length()];
@@ -180,7 +180,7 @@ galay::protocol::dns::DnsResponse::DecodePdu(std::string &buffer)
 
     delete[] begin;
     buffer.clear();
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 bool 

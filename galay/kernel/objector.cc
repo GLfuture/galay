@@ -365,13 +365,13 @@ galay::kernel::GY_TcpConnector::RealRecv()
         if(!m_recvTask->Success()){
             spdlog::error("[{}:{}] [CoReceiveExec RecvAll Fail, error is {}]", __FILE__, __LINE__, m_recvTask->Error());
         }
-        protocol::ProtoJudgeType type = m_tempRequest->DecodePdu(buffer);
-        if(type == protocol::ProtoJudgeType::kProtoFinished)
+        protocol::ProtoType type = m_tempRequest->DecodePdu(buffer);
+        if(type == protocol::ProtoType::kProtoFinished)
         {
             m_requests.push(m_tempRequest);
             m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
         }
-        else if(type == protocol::ProtoJudgeType::kProtoIncomplete)
+        else if(type == protocol::ProtoType::kProtoIncomplete)
         {
             break;
         }

@@ -426,7 +426,7 @@ galay::protocol::http::HttpRequestHeader::FromHexToI(const std::string& s, size_
 }
 
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::http::HttpRequest::DecodePdu(std::string& buffer)
 {
     size_t n = buffer.length();
@@ -437,15 +437,15 @@ galay::protocol::http::HttpRequest::DecodePdu(std::string& buffer)
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
             {
                 spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                return galay::protocol::ProtoJudgeType::kProtoIllegal;
+                return galay::protocol::ProtoType::kProtoIllegal;
             }
             spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
-            return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+            return galay::protocol::ProtoType::kProtoIncomplete;
         }
         else if (pos + 4 > HTTP_HEADER_MAX_LEN)
         {
             spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            return galay::protocol::ProtoJudgeType::kProtoIllegal;
+            return galay::protocol::ProtoType::kProtoIllegal;
         }
         else{
             spdlog::debug("[{}:{}] [[Header complete] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
@@ -453,7 +453,7 @@ galay::protocol::http::HttpRequest::DecodePdu(std::string& buffer)
             std::string_view header = buffer;
             if(!m_header->FromString(header.substr(0,pos))){
                 buffer.clear();
-                return galay::protocol::ProtoJudgeType::kProtoIllegal;
+                return galay::protocol::ProtoType::kProtoIllegal;
             };
             buffer.erase(0,pos + 4);
         }
@@ -471,18 +471,18 @@ galay::protocol::http::HttpRequest::DecodePdu(std::string& buffer)
     {
     case kHttpBody:
     {
-        galay::protocol::ProtoJudgeType status = GetHttpBody(buffer);
-        if(status == galay::protocol::ProtoJudgeType::kProtoIncomplete) return status;
-        else if(status == galay::protocol::ProtoJudgeType::kProtoFinished) {
+        galay::protocol::ProtoType status = GetHttpBody(buffer);
+        if(status == galay::protocol::ProtoType::kProtoIncomplete) return status;
+        else if(status == galay::protocol::ProtoType::kProtoFinished) {
             this->m_status = kHttpHeader;
         }
         break;
     }
     case kHttpChunck:
     {
-        galay::protocol::ProtoJudgeType status = GetChunckBody(buffer);
-        if(status == galay::protocol::ProtoJudgeType::kProtoIncomplete) return status;
-        else if(status == galay::protocol::ProtoJudgeType::kProtoFinished) {
+        galay::protocol::ProtoType status = GetChunckBody(buffer);
+        if(status == galay::protocol::ProtoType::kProtoIncomplete) return status;
+        else if(status == galay::protocol::ProtoType::kProtoFinished) {
             this->m_status = kHttpHeader;
         }
         break;
@@ -490,7 +490,7 @@ galay::protocol::http::HttpRequest::DecodePdu(std::string& buffer)
     default:
         break;
     }
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 std::string 
@@ -553,7 +553,7 @@ galay::protocol::http::HttpRequest::Body()
     return this->m_body;
 }
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::http::HttpRequest::GetHttpBody(std::string &buffer)
 {
     size_t n = buffer.length();
@@ -569,24 +569,24 @@ galay::protocol::http::HttpRequest::GetHttpBody(std::string &buffer)
             buffer.erase(0,res);
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
-            return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+            return galay::protocol::ProtoType::kProtoIncomplete;
         }
     }else{
         size_t pos = buffer.find_last_of("\r\n\r\n");
         if(pos == std::string::npos){
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
-                return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+                return galay::protocol::ProtoType::kProtoIncomplete;
             }
         }else{
             m_body = buffer.substr(0,pos);
             buffer.erase(0,pos + 4);
         }
     }
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::http::HttpRequest::GetChunckBody(std::string& buffer)
 {
     while (!buffer.empty())
@@ -602,7 +602,7 @@ galay::protocol::http::HttpRequest::GetChunckBody(std::string& buffer)
         {
             buffer.clear();
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-            return galay::protocol::ProtoJudgeType::kProtoIllegal;
+            return galay::protocol::ProtoType::kProtoIllegal;
         }
         if(length == 0){
             buffer.erase(0,pos + 4);
@@ -610,12 +610,12 @@ galay::protocol::http::HttpRequest::GetChunckBody(std::string& buffer)
             break;
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
-            return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+            return galay::protocol::ProtoType::kProtoIncomplete;
         }
         this->m_body += buffer.substr(pos+2,length);
         buffer.erase(0,pos + 4 + length);
     }
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 std::string& 
@@ -918,7 +918,7 @@ galay::protocol::http::HttpResponse::EncodePdu()
 }
 
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::http::HttpResponse::DecodePdu(std::string& buffer)
 {
     size_t n = buffer.length();
@@ -929,15 +929,15 @@ galay::protocol::http::HttpResponse::DecodePdu(std::string& buffer)
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
             {
                 spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                return galay::protocol::ProtoJudgeType::kProtoIllegal;
+                return galay::protocol::ProtoType::kProtoIllegal;
             }
             spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
-            return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+            return galay::protocol::ProtoType::kProtoIncomplete;
         }
         else if (pos + 4 > HTTP_HEADER_MAX_LEN)
         {
             spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            return galay::protocol::ProtoJudgeType::kProtoIllegal;
+            return galay::protocol::ProtoType::kProtoIllegal;
         }
         else{
             spdlog::debug("[{}:{}] [[Header complete] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
@@ -945,7 +945,7 @@ galay::protocol::http::HttpResponse::DecodePdu(std::string& buffer)
             std::string_view header = buffer;
             if(!m_header->FromString(header.substr(0,pos))){
                 buffer.clear();
-                return galay::protocol::ProtoJudgeType::kProtoIllegal;
+                return galay::protocol::ProtoType::kProtoIllegal;
             };
             buffer.erase(0,pos + 4);
         }
@@ -963,18 +963,18 @@ galay::protocol::http::HttpResponse::DecodePdu(std::string& buffer)
     {
     case kHttpBody:
     {
-        galay::protocol::ProtoJudgeType status = GetHttpBody(buffer);
-        if(status == galay::protocol::ProtoJudgeType::kProtoIncomplete) return status;
-        else if(status == galay::protocol::ProtoJudgeType::kProtoFinished) {
+        galay::protocol::ProtoType status = GetHttpBody(buffer);
+        if(status == galay::protocol::ProtoType::kProtoIncomplete) return status;
+        else if(status == galay::protocol::ProtoType::kProtoFinished) {
             this->m_status = kHttpHeader;
         }
         break;
     }
     case kHttpChunck:
     {
-        galay::protocol::ProtoJudgeType status = GetChunckBody(buffer);
-        if(status == galay::protocol::ProtoJudgeType::kProtoIncomplete) return status;
-        else if(status == galay::protocol::ProtoJudgeType::kProtoFinished) {
+        galay::protocol::ProtoType status = GetChunckBody(buffer);
+        if(status == galay::protocol::ProtoType::kProtoIncomplete) return status;
+        else if(status == galay::protocol::ProtoType::kProtoFinished) {
             this->m_status = kHttpHeader;
         }
         break;
@@ -982,7 +982,7 @@ galay::protocol::http::HttpResponse::DecodePdu(std::string& buffer)
     default:
         break;
     }
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 bool 
@@ -1020,7 +1020,7 @@ galay::protocol::http::HttpResponse::EndChunck()
 }
 
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::http::HttpResponse::GetHttpBody(std::string& buffer)
 {
     size_t n = buffer.length();
@@ -1036,25 +1036,25 @@ galay::protocol::http::HttpResponse::GetHttpBody(std::string& buffer)
             buffer.erase(0,res);
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [Body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
-            return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+            return galay::protocol::ProtoType::kProtoIncomplete;
         }
     }else{
         size_t pos = buffer.find_last_of("\r\n\r\n");
         if(pos == std::string::npos){
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
-                return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+                return galay::protocol::ProtoType::kProtoIncomplete;
             }
         }else{
             m_body = buffer.substr(0,pos);
             buffer.erase(0,pos + 4);
         }
     }
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 
-galay::protocol::ProtoJudgeType 
+galay::protocol::ProtoType 
 galay::protocol::http::HttpResponse::GetChunckBody(std::string& buffer)
 {
     while (!buffer.empty())
@@ -1070,7 +1070,7 @@ galay::protocol::http::HttpResponse::GetChunckBody(std::string& buffer)
         {
             buffer.clear();
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-            return galay::protocol::ProtoJudgeType::kProtoIllegal;
+            return galay::protocol::ProtoType::kProtoIllegal;
         }
         if(length == 0){
             buffer.erase(0,pos + 4);
@@ -1078,12 +1078,12 @@ galay::protocol::http::HttpResponse::GetChunckBody(std::string& buffer)
             break;
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
-            return galay::protocol::ProtoJudgeType::kProtoIncomplete;
+            return galay::protocol::ProtoType::kProtoIncomplete;
         }
         this->m_body += buffer.substr(pos+2,length);
         buffer.erase(0,pos + 4 + length);
     }
-    return galay::protocol::ProtoJudgeType::kProtoFinished;
+    return galay::protocol::ProtoType::kProtoFinished;
 }
 
 

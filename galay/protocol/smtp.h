@@ -43,7 +43,7 @@ namespace galay
                 using wpt = std::weak_ptr<SmtpRequest>;
                 using uptr = std::unique_ptr<SmtpRequest>;
                 SmtpRequest() = default;
-                virtual ProtoJudgeType DecodePdu(std::string &buffer) override;
+                virtual ProtoType DecodePdu(std::string &buffer) override;
                 virtual std::string EncodePdu() override;
                 std::string& GetContent();
             private:
@@ -60,7 +60,7 @@ namespace galay
                 using wptr = std::weak_ptr<SmtpResponse>;
                 using uptr = std::unique_ptr<SmtpResponse>;
                 SmtpResponse() = default;
-                virtual ProtoJudgeType DecodePdu(std::string &buffer) override;
+                virtual ProtoType DecodePdu(std::string &buffer) override;
                 virtual std::string EncodePdu() override;
                 std::string& GetContent();
             private:
