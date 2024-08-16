@@ -1,7 +1,7 @@
 #ifndef GALAY_HTTP_1_1_H
 #define GALAY_HTTP_1_1_H
 
-#include "basic_protocol.h"
+#include "protocol.h"
 #include <vector>
 #include <assert.h>
 #include <algorithm>
@@ -152,15 +152,15 @@ namespace galay
                 using uptr = std::unique_ptr<HttpRequest>;
                 HttpRequestHeader::ptr Header();
                 std::string& Body();
-                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
+                int DecodePdu(const std::string &buffer) override;
                 std::string EncodePdu() override;
                 //chunck
                 bool StartChunck();
                 std::string ChunckStream(std::string&& buffer);
                 std::string EndChunck();
             private:
-                galay::protocol::ProtoType GetHttpBody(std::string& buffer);
-                galay::protocol::ProtoType GetChunckBody(std::string& buffer);
+                int GetHttpBody(const std::string& buffer, int elength);
+                int GetChunckBody(const std::string& buffer, int elength);
             private:
                 HttpProStatus m_status = kHttpHeader;
                 HttpRequestHeader::ptr m_header;
@@ -194,14 +194,14 @@ namespace galay
                 HttpResponseHeader::ptr Header();
                 std::string& Body();
                 std::string EncodePdu() override;
-                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
+                int DecodePdu(const std::string &buffer) override;
                 //chunck
                 bool StartChunck();
                 std::string ChunckStream(std::string&& buffer);
                 std::string EndChunck();
             private:
-                galay::protocol::ProtoType GetHttpBody(std::string& buffer);
-                galay::protocol::ProtoType GetChunckBody(std::string& buffer);
+                int GetHttpBody(const std::string& buffer, int eLength);
+                int GetChunckBody(const std::string& buffer, int eLength);
             private:
                 HttpProStatus m_status = kHttpHeader;
                 HttpResponseHeader::ptr m_header;

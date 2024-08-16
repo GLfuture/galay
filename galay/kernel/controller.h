@@ -25,10 +25,10 @@ namespace galay
             //关闭连接
             void Close();
             //获取之前存入的上下文
-            std::any &&GetContext();
+            std::any &GetContext();
             void SetContext(std::any &&context);
             //获取请求队列的第一个请求
-            protocol::GY_SRequest::ptr GetRequest();
+            protocol::GY_Request::ptr GetRequest();
             //请求出队
             void PopRequest();
             //发送数据 返会一个NetResult 需要调用NetResult.Wait()
@@ -47,7 +47,7 @@ namespace galay
             using uptr = std::unique_ptr<GY_HttpController>;
             GY_HttpController(GY_Controller::ptr ctrl);
             void SetContext(std::any &&context);
-            std::any &&GetContext();
+            std::any &GetContext();
             std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func);
             void Close();
             //获取请求并出队

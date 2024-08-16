@@ -20,7 +20,7 @@ galay::kernel::GY_Controller::AddTimer(uint64_t during, uint32_t exec_times, std
     return this->m_connector.lock()->AddTimer(during, exec_times, std::forward<std::function<void(std::shared_ptr<Timer>)>>(func));
 }
 
-galay::protocol::GY_SRequest::ptr
+galay::protocol::GY_Request::ptr
 galay::kernel::GY_Controller::GetRequest()
 {
     return this->m_connector.lock()->GetRequest();
@@ -38,7 +38,7 @@ galay::kernel::GY_Controller::Send(std::string&& response)
     return this->m_connector.lock()->Send(std::forward<std::string>(response));
 }
 
-std::any&&
+std::any&
 galay::kernel::GY_Controller::GetContext()
 {
     return this->m_connector.lock()->GetContext();
@@ -67,7 +67,7 @@ galay::kernel::GY_HttpController::SetContext(std::any&& context)
     this->m_ctrl->SetContext(std::forward<std::any&&>(context));
 }
 
-std::any&& 
+std::any&
 galay::kernel::GY_HttpController::GetContext()
 {
     return this->m_ctrl->GetContext();

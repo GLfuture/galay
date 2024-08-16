@@ -1,5 +1,5 @@
-#ifndef GALAY_BASIC_PROTOCOL_H
-#define GALAY_BASIC_PROTOCOL_H
+#ifndef GALAY_PROTOCOL_H
+#define GALAY_PROTOCOL_H
 
 #include <string>
 #include <memory>
@@ -9,11 +9,11 @@ namespace galay
 {
     namespace protocol
     {
-        enum ProtoType
+        enum ProtoParseType
         {
-            kProtoFinished,
-            kProtoIncomplete,
-            kProtoIllegal
+            kProtoParseSuccess,
+            kProtoParseIncomplete,
+            kProtoParseIllegal,
         };
 
         class GY_SRequest{
@@ -21,7 +21,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_SRequest>;
             using wptr = std::weak_ptr<GY_SRequest>;
             using uptr = std::unique_ptr<GY_SRequest>;
-            virtual ProtoType DecodePdu(std::string &buffer) = 0;
+            virtual int DecodePdu(const std::string &buffer) = 0;
         };
 
         class GY_CResponse{
@@ -29,7 +29,7 @@ namespace galay
             using ptr = std::shared_ptr<GY_CResponse>;
             using wptr = std::weak_ptr<GY_CResponse>;
             using uptr = std::unique_ptr<GY_CResponse>;
-            virtual ProtoType DecodePdu(std::string &buffer) = 0;
+            virtual int DecodePdu(const std::string &buffer) = 0;
         };
 
         class GY_SResponse{
@@ -54,8 +54,17 @@ namespace galay
             using ptr = std::shared_ptr<GY_Request>;
             using wptr = std::weak_ptr<GY_Request>;
             using uptr = std::unique_ptr<GY_Request>;
-            virtual ProtoType DecodePdu(std::string &buffer) = 0;
+            virtual int DecodePdu(const std::string &buffer) = 0;
             virtual std::string EncodePdu() = 0;
+            virtual bool ParseIncomplete() final;
+            virtual bool ParseIllegal() final;
+            virtual bool ParseSuccess() final;
+        protected:
+            virtual void Incomplete() final;
+            virtual void Illegal() final;
+            virtual void Success() final;
+        private:
+            ProtoParseType m_parseStatus;
         };
 
         class GY_Response: public GY_SResponse, public GY_CResponse
@@ -64,8 +73,17 @@ namespace galay
             using ptr = std::shared_ptr<GY_Response>;
             using wptr = std::weak_ptr<GY_Response>;
             using uptr = std::unique_ptr<GY_Response>;
-            virtual ProtoType DecodePdu(std::string &buffer) = 0;
+            virtual int DecodePdu(const std::string &buffer) = 0;
             virtual std::string EncodePdu() = 0;
+            virtual bool ParseIncomplete() final;
+            virtual bool ParseIllegal() final;
+            virtual bool ParseSuccess() final;
+        protected:
+            virtual void Incomplete() final;
+            virtual void Illegal() final;
+            virtual void Success() final;
+        private:
+            ProtoParseType m_parseStatus;
         };
         
     }

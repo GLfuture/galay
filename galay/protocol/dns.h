@@ -1,6 +1,6 @@
 #ifndef GALAY_DNS_H
 #define GALAY_DNS_H
-#include "basic_protocol.h"
+#include "protocol.h"
 #include "../util/stringutil.h"
 #include <queue>
 #include <string.h>
@@ -88,21 +88,24 @@ namespace galay
             {
             public:
                 using ptr = std::shared_ptr<DnsRequest>;
-                // ignore
-                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
                 std::string EncodePdu() override;
+                // ignore
+                int DecodePdu(const std::string &buffer) override;
             protected:
                 std::string ModifyHostname(std::string hostname);
+                int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);
+                bool IsPointer(int in);
             };
 
             class DnsResponse : public DnsProtocol, public GY_Response, public galay::common::GY_DynamicCreator<GY_Response,DnsResponse>
             {
             public:
                 using ptr = std::shared_ptr<DnsResponse>;
+                int DecodePdu(const std::string &buffer) override;
                 // ignore
                 std::string EncodePdu() override;
-                galay::protocol::ProtoType DecodePdu(std::string &buffer) override;
             protected:
+                std::string ModifyHostname(std::string hostname);
                 static bool IsPointer(int in);
                 std::string DealAnswer(unsigned short type, char *buffer, std::string data);
                 int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);

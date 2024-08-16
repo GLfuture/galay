@@ -3,7 +3,7 @@
 #include <string>
 #include <concepts>
 #include <memory>
-#include "../protocol/basic_protocol.h"
+#include "../protocol/protocol.h"
 
 
 namespace galay
@@ -18,11 +18,6 @@ namespace galay
     {
         extern const char* Html404NotFound;
         extern const char* Html405MethodNotAllowed;
-    }
-
-    namespace protocol
-    {
-        enum ProtoType;
     }
 
     namespace common
@@ -56,8 +51,8 @@ namespace galay
         concept TcpRequest = requires(T a) {
             {
                 // 会附带解析头部的职责
-                a.DecodePdu(std::declval<std::string &>())
-            } -> std::same_as<protocol::ProtoType>;
+                a.DecodePdu(std::declval<const std::string&>())
+            } -> std::same_as<int>;
         };
         template <typename T>
         concept TcpResponse = requires(T a) {
@@ -69,8 +64,8 @@ namespace galay
         template <typename T>
         concept UdpRequest = requires(T a) {
             {
-                a.DecodePdu(std::declval<std::string &>())
-            } -> std::same_as<protocol::ProtoType>;
+                a.DecodePdu(std::declval<const std::string &>())
+            } -> std::same_as<int>;
         };
 
         template <typename T>

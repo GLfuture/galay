@@ -252,6 +252,7 @@ galay::kernel::GY_TcpConnector::Close()
 {
     if(!m_isClosed) 
     {
+        spdlog::info("[{}:{}] [Close Connection(fd: {})]", __FILE__, __LINE__, this->m_fd);
         this->m_ioManager.lock()->GetIOScheduler()->DelEvent(this->m_fd, EventType::kEventRead | EventType::kEventWrite | EventType::kEventError);
         this->m_ioManager.lock()->GetIOScheduler()->DelObjector(this->m_fd);
         close(this->m_fd);
@@ -268,18 +269,16 @@ galay::kernel::GY_TcpConnector::AddTimer(uint64_t during, uint32_t exec_times,st
 void 
 galay::kernel::GY_TcpConnector::SetContext(std::any&& context)
 {
-    this->m_context = std::forward<std::any&&>(context);
+    this->m_context = std::forward<std::any>(context);
 }
 
-std::any&&
+std::any&
 galay::kernel::GY_TcpConnector::GetContext()
 {
-    std::any &&context = std::move(this->m_context);
-    this->m_context = std::any();
-    return std::forward<std::any>(context);
+    return this->m_context;
 }
 
-galay::protocol::GY_SRequest::ptr 
+galay::protocol::GY_Request::ptr 
 galay::kernel::GY_TcpConnector::GetRequest()
 {
     if(m_requests.empty()) return nullptr;
@@ -321,10 +320,11 @@ galay::kernel::GY_TcpConnector::Send(std::string&& response)
         goto end;
     }else{
         result->AddTaskNum(1);
+        result->m_errMsg = "Waiting";
         m_sendCallback += [result,this](){
             RealSend(result);
         };
-        result->m_errMsg = "Waiting";
+        this->m_ioManager.lock()->GetIOScheduler()->ModEvent(this->m_fd, EventType::kEventRead, EventType::kEventWrite | EventType::kEventError | EventType::kEventEpollET);
     }
 end:
     return result;
@@ -366,19 +366,21 @@ galay::kernel::GY_TcpConnector::RealRecv()
         if(!m_recvTask->Success()){
             if(buffer.empty()) return;
         }
-        protocol::ProtoType type = m_tempRequest->DecodePdu(buffer);
-        if(type == protocol::ProtoType::kProtoFinished)
+        int eLen = m_tempRequest->DecodePdu(buffer);
+        if(m_tempRequest->ParseSuccess())
         {
+            buffer.erase(0, eLen);
             m_requests.push(m_tempRequest);
             m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
         }
-        else if(type == protocol::ProtoType::kProtoIncomplete)
+        else if(m_tempRequest->ParseIncomplete())
         {
             break;
         }
-        else
+        else if(m_tempRequest->ParseIllegal())
         {
             m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
+            this->m_controller->SetContext(buffer);
             this->m_ioManager.lock()->WrongHandle(this->m_controller);
             return;
         }
@@ -389,7 +391,6 @@ galay::kernel::GY_TcpConnector::RealRecv()
 
 galay::kernel::GY_TcpConnector::~GY_TcpConnector()
 {
-    spdlog::debug("[{}:{}] [~GY_TcpConnector]",__FILE__, __LINE__);
     if(this->m_ssl){
         IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
         this->m_ssl = nullptr;

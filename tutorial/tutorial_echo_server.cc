@@ -52,6 +52,8 @@ galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::kernel::GY_HttpControll
     response.Body() = std::move(body);
     auto res = ctrl->Send(response.EncodePdu());
     co_await res->Wait();
+    std::cout << "ready to close\n";
+    std::cout << std::any_cast<std::string>(ctrl->GetContext()) << '\n';
     ctrl->Close();
     co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
 }

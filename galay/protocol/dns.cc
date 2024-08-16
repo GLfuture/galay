@@ -77,10 +77,62 @@ galay::protocol::dns::DnsRequest::EncodePdu()
     return std::string(begin, len);
 }
 
-galay::protocol::ProtoType 
-galay::protocol::dns::DnsRequest::DecodePdu(std::string &buffer)
+int 
+galay::protocol::dns::DnsRequest::DecodePdu(const std::string &buffer)
 {
-    return galay::protocol::ProtoType::kProtoFinished;
+    char *begin = new char[buffer.length()];
+    char *temp = begin;
+    bzero(temp, buffer.length());
+    memcpy(temp, buffer.c_str(), buffer.length());
+    unsigned short id;
+    memcpy(&id, temp, sizeof(unsigned short));
+    temp += sizeof(unsigned short);
+    m_header.m_id = ntohs(id);
+    unsigned short flag;
+    memcpy(&flag, temp, sizeof(unsigned short));
+    temp += sizeof(unsigned short);
+    flag = ntohs(flag);
+    m_header.m_flags.m_qr = (flag >> 15) & 0x01;
+    m_header.m_flags.m_opcode = (flag >> 11) & 0x0F;
+    m_header.m_flags.m_aa = (flag >> 10) & 0x01;
+    m_header.m_flags.m_tc = (flag >> 9) & 0x01;
+    m_header.m_flags.m_rd = (flag >> 8) & 0x01;
+    m_header.m_flags.m_ra = (flag >> 7) & 0x01;
+    m_header.m_flags.m_zero = (flag >> 4) & 0x07;
+    m_header.m_flags.m_rcode = flag & 0x0F;
+    unsigned short questions;
+    memcpy(&questions, temp, sizeof(unsigned short));
+    temp += sizeof(unsigned short);
+    m_header.m_questions = ntohs(questions);
+    unsigned short answers_RRs;
+    memcpy(&answers_RRs, temp, sizeof(unsigned short));
+    temp += sizeof(unsigned short);
+    m_header.m_answers_RRs = ntohs(answers_RRs);
+    unsigned short authority_RRs;
+    memcpy(&authority_RRs, temp, sizeof(unsigned short));
+    temp += sizeof(unsigned short);
+    m_header.m_authority_RRs = ntohs(authority_RRs);
+    unsigned short additional_RRs;
+    memcpy(&additional_RRs, temp, sizeof(unsigned short));
+    temp += sizeof(unsigned short);
+    m_header.m_additional_RRs = ntohs(additional_RRs);
+
+    for (int i = 0; i < m_header.m_questions; i++)
+    {
+        DnsQuestion q;
+        int len = DnsParseName((unsigned char *)begin, (unsigned char *)temp, q.m_qname);
+        temp += (len);
+        unsigned short qtype;
+        memcpy(&qtype, temp, sizeof(unsigned short));
+        temp += sizeof(unsigned short);
+        q.m_type = ntohs(qtype);
+        unsigned short qclass;
+        memcpy(&qclass, temp, sizeof(unsigned short));
+        temp += sizeof(unsigned short);
+        q.m_class = ntohs(qclass);
+        m_questions.push(q);
+    }
+    return buffer.length();
 }
 
 std::string 
@@ -95,8 +147,53 @@ galay::protocol::dns::DnsRequest::ModifyHostname(std::string hostname)
     return res + static_cast<char>(0);
 }
 
-galay::protocol::ProtoType 
-galay::protocol::dns::DnsResponse::DecodePdu(std::string &buffer)
+int 
+galay::protocol::dns::DnsRequest::DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out)
+{
+
+    int flag = 0, n = 0, alen = 0;
+    char temp[64];
+    while (1)
+    {
+
+        flag = static_cast<int>(ptr[0]);
+        if (flag == 0)
+            break;
+
+        if (IsPointer(flag))
+        {
+            alen += 1;
+            n = (int)ptr[1];
+            ptr = buffer + n;
+            DnsParseName(buffer, ptr, out);
+            break;
+        }
+        else
+        {
+            bzero(temp, 64);
+            ptr++;
+            memcpy(temp, ptr, flag);
+            ptr += flag;
+            alen += (flag + 1);
+            out += std::string(temp, flag);
+            if (static_cast<int>(ptr[0]) != 0)
+            {
+                out += '.';
+            }
+        }
+    }
+    return alen + 1;
+}
+
+bool 
+galay::protocol::dns::DnsRequest::IsPointer(int in)
+{
+    return ((in & 0xC0) == 0xC0);
+}
+
+
+int 
+galay::protocol::dns::DnsResponse::DecodePdu(const std::string &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
@@ -179,8 +276,25 @@ galay::protocol::dns::DnsResponse::DecodePdu(std::string &buffer)
     }
 
     delete[] begin;
-    buffer.clear();
-    return galay::protocol::ProtoType::kProtoFinished;
+    return buffer.length();
+}
+
+std::string 
+galay::protocol::dns::DnsResponse::EncodePdu()
+{
+    return "";
+}
+
+std::string 
+galay::protocol::dns::DnsResponse::ModifyHostname(std::string hostname)
+{
+    std::vector<std::string> temp = util::StringUtil::SpiltWithChar(hostname, '.');
+    std::string res;
+    for (auto &v : temp)
+    {
+        res = res + static_cast<char>(v.length()) + v;
+    }
+    return res + static_cast<char>(0);
 }
 
 bool 
@@ -262,8 +376,3 @@ galay::protocol::dns::DnsResponse::DnsParseName(unsigned char *buffer, unsigned 
 }
 
 
-std::string 
-galay::protocol::dns::DnsResponse::EncodePdu()
-{
-    return "";
-}

@@ -1,7 +1,7 @@
 #ifndef GALAY_SMTP_H
 #define GALAY_SMTP_H
 
-#include "basic_protocol.h"
+#include "protocol.h"
 #include "../security/base64.h"
 #include <queue>
 
@@ -43,7 +43,7 @@ namespace galay
                 using wpt = std::weak_ptr<SmtpRequest>;
                 using uptr = std::unique_ptr<SmtpRequest>;
                 SmtpRequest() = default;
-                virtual ProtoType DecodePdu(std::string &buffer) override;
+                virtual int DecodePdu(const std::string &buffer) override;
                 virtual std::string EncodePdu() override;
                 std::string& GetContent();
             private:
@@ -60,7 +60,7 @@ namespace galay
                 using wptr = std::weak_ptr<SmtpResponse>;
                 using uptr = std::unique_ptr<SmtpResponse>;
                 SmtpResponse() = default;
-                virtual ProtoType DecodePdu(std::string &buffer) override;
+                virtual int DecodePdu(const std::string &buffer) override;
                 virtual std::string EncodePdu() override;
                 std::string& GetContent();
             private:
