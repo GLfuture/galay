@@ -25,7 +25,7 @@ galay::kernel::Timer::Timer(uint64_t timerid, uint64_t during_time , uint32_t ex
 {
     this->m_timerid = timerid;
     this->m_execTimes = exec_times;
-    this->m_userfunc = func;
+    this->m_rightHandle = func;
     SetDuringTime(during_time);
 }
 
@@ -78,7 +78,7 @@ void
 galay::kernel::Timer::Execute()
 {
     this->m_success = false;
-    this->m_userfunc(shared_from_this());
+    this->m_rightHandle(shared_from_this());
     if(this->m_execTimes == 0) this->m_success = true;
 }
 
@@ -282,13 +282,14 @@ galay::kernel::GY_TcpConnector::GetContext()
 galay::protocol::GY_SRequest::ptr 
 galay::kernel::GY_TcpConnector::GetRequest()
 {
+    if(m_requests.empty()) return nullptr;
     return m_requests.front();
 }
 
 void 
 galay::kernel::GY_TcpConnector::PopRequest()
 {
-    m_requests.pop();
+    if(!m_requests.empty()) m_requests.pop();
 }
 
 bool 
@@ -363,7 +364,7 @@ galay::kernel::GY_TcpConnector::RealRecv()
         }
         std::string& buffer = m_recvTask->GetRBuffer();
         if(!m_recvTask->Success()){
-            spdlog::error("[{}:{}] [CoReceiveExec RecvAll Fail, error is {}]", __FILE__, __LINE__, m_recvTask->Error());
+            if(buffer.empty()) return;
         }
         protocol::ProtoType type = m_tempRequest->DecodePdu(buffer);
         if(type == protocol::ProtoType::kProtoFinished)
@@ -377,16 +378,13 @@ galay::kernel::GY_TcpConnector::RealRecv()
         }
         else
         {
-            m_tempRequest = nullptr;
-            std::string resp = this->m_ioManager.lock()->IllegalFunction();
-            this->m_controller->Close();
-            this->m_sendTask->AppendWBuffer(std::move(resp));
-            RealSend(nullptr);
+            m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
+            this->m_ioManager.lock()->WrongHandle(this->m_controller);
             return;
         }
     }
     if(m_requests.empty()) return;
-    this->m_ioManager.lock()->UserFunction(this->m_controller);
+    this->m_ioManager.lock()->RightHandle(this->m_controller);
 }
 
 galay::kernel::GY_TcpConnector::~GY_TcpConnector()

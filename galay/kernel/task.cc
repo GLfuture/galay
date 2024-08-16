@@ -207,7 +207,7 @@ galay::kernel::GY_TcpRecvTask::Execute()
         else if (len == 0)
         {
             if(m_success) m_success = false;
-            m_error = strerror(errno);
+            m_error = "Connection Close";
             spdlog::info("[{}:{}] [Recv warn(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
             this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
@@ -304,7 +304,7 @@ galay::kernel::GY_TcpSendTask::Execute()
         else if (len == 0)
         {
             if(m_success) m_success = false;
-            m_error = strerror(errno);
+            m_error = "Connection Close";
             spdlog::info("[{}:{}] [Send info(fd:{})] [The peer closes the connection]", __FILE__, __LINE__, this->m_fd);
             this->m_scheduler.lock()->DelObjector(this->m_fd);
             this->m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventError | EventType::kEventRead | EventType::kEventWrite);

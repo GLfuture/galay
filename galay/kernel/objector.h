@@ -89,7 +89,7 @@ namespace galay
             uint64_t m_duringTime;
             std::atomic_bool m_cancle;
             std::atomic_bool m_success;
-            std::function<void(Timer::ptr)> m_userfunc;
+            std::function<void(Timer::ptr)> m_rightHandle;
         };
 
         class GY_TimerManager: public GY_Objector

@@ -61,10 +61,6 @@ namespace galay
             virtual int AddEvent(int fd, int event_type) = 0;
             virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) = 0;
             virtual ~GY_IOScheduler() = default;
-
-        protected:
-            std::unordered_map<int, std::shared_ptr<GY_Objector>> m_objectors;
-            std::queue<int> m_eraseQueue;
         };
 
         class GY_SelectScheduler : public GY_IOScheduler
@@ -149,16 +145,16 @@ namespace galay
             virtual void Stop();
             virtual GY_IOScheduler::ptr GetIOScheduler();
             virtual std::weak_ptr<GY_TcpServerBuilderBase> GetTcpServerBuilder();
-            virtual void UserFunction(std::shared_ptr<GY_Controller> controller);
-            virtual std::string IllegalFunction();
+            virtual void RightHandle(std::shared_ptr<GY_Controller> controller);
+            virtual void WrongHandle(std::shared_ptr<GY_Controller> controller);
             virtual ~GY_SIOManager();
         private:
             bool m_stop;
             GY_IOScheduler::ptr m_ioScheduler;
             std::shared_ptr<GY_TcpServerBuilderBase> m_builder;
             //函数相关
-            std::function<void(std::shared_ptr<GY_Controller>)> m_userFunc;
-            std::function<std::string()> m_illegalFunc;
+            std::function<void(std::shared_ptr<GY_Controller>)> m_rightHandle;
+            std::function<void(std::shared_ptr<GY_Controller>)> m_wrongHandle;
         };
     }
 }

@@ -65,24 +65,23 @@ galay::kernel::GY_TcpServerBuilder::GY_TcpServerBuilder()
     m_backlog.store(DEFAULT_BACKLOG);
     m_scheduler_type.store(galay::common::SchedulerType::kEpollScheduler);
     m_port = DEFAULT_LISTEN_PORT;
-    m_userfunc = nullptr;
+    m_rightHandle = nullptr;
     m_is_ssl = false;
     m_ssl_config = nullptr;
     
 }
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetUserFunction(std::pair<uint16_t,std::function<galay::coroutine::GY_NetCoroutine(galay::kernel::GY_Controller::ptr)>> port_func) 
+galay::kernel::GY_TcpServerBuilder::SetRightHandle(std::function<galay::coroutine::GY_NetCoroutine(galay::kernel::GY_Controller::ptr)> handle) 
 {
-    this->m_port.store(port_func.first);
-    this->m_userfunc = port_func.second;
+    this->m_rightHandle = handle;
 }
 
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetIllegalFunction(std::function<std::string()> func)
+galay::kernel::GY_TcpServerBuilder::SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> func)
 {
-    this->m_illegalfunc = func;
+    this->m_wrongHandle = func;
 }
 
 
@@ -180,18 +179,20 @@ galay::kernel::GY_TcpServerBuilder::GetPort()
 
 
 std::function<void(galay::kernel::GY_Controller::ptr)>
-galay::kernel::GY_TcpServerBuilder::GetUserFunction()
+galay::kernel::GY_TcpServerBuilder::GetRightHandle()
 {
     return [this](galay::kernel::GY_Controller::ptr ctrl){
-        m_userfunc(ctrl);
+        m_rightHandle(ctrl);
     };
 }
 
 
-std::function<std::string()> 
-galay::kernel::GY_TcpServerBuilder::GetIllegalFunction()
+std::function<void(galay::kernel::GY_Controller::ptr)> 
+galay::kernel::GY_TcpServerBuilder::GetWrongHandle()
 {
-    return this->m_illegalfunc;
+    return [this](galay::kernel::GY_Controller::ptr ctrl){
+        this->m_wrongHandle(ctrl);
+    };
 }
 
 
@@ -231,10 +232,18 @@ galay::kernel::GY_HttpServerBuilder::GY_HttpServerBuilder()
 }
 
 std::function<void(galay::kernel::GY_Controller::ptr)>
-galay::kernel::GY_HttpServerBuilder::GetUserFunction()
+galay::kernel::GY_HttpServerBuilder::GetRightHandle()
 {
     return [this](galay::kernel::GY_Controller::ptr ctrl){
-        this->m_router->RouteHttp(ctrl);
+        this->m_router->RouteRightHttp(ctrl);
+    };
+}
+
+std::function<void(galay::kernel::GY_Controller::ptr)> 
+galay::kernel::GY_HttpServerBuilder::GetWrongHandle()
+{
+    return [this](galay::kernel::GY_Controller::ptr ctrl){
+        this->m_router->RouteWrongHttp(ctrl);
     };
 }
 
@@ -246,8 +255,14 @@ galay::kernel::GY_HttpServerBuilder::SetRouter(std::shared_ptr<GY_HttpRouter> ro
 
 
 void 
-galay::kernel::GY_HttpServerBuilder::SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func)
+galay::kernel::GY_HttpServerBuilder::SetRightHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle)
 {
-    GY_TcpServerBuilder::SetUserFunction(port_func);
+    GY_TcpServerBuilder::SetRightHandle(handle);
 }
 
+
+void 
+galay::kernel::GY_HttpServerBuilder::SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle)
+{
+    GY_TcpServerBuilder::SetWrongHandle(handle);
+}

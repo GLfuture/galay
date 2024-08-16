@@ -386,8 +386,8 @@ galay::kernel::GY_SIOManager::GY_SIOManager(GY_TcpServerBuilderBase::ptr builder
             break;
         }
     }
-    this->m_userFunc = builder->GetUserFunction();
-    this->m_illegalFunc = builder->GetIllegalFunction();
+    this->m_rightHandle = builder->GetRightHandle();
+    this->m_wrongHandle = builder->GetWrongHandle();
     coroutine::GY_NetCoroutinePool::GetInstance()->Start();
 }
 
@@ -420,17 +420,24 @@ galay::kernel::GY_SIOManager::GetTcpServerBuilder()
 }
 
 void
-galay::kernel::GY_SIOManager::UserFunction(std::shared_ptr<GY_Controller> controller)
+galay::kernel::GY_SIOManager::RightHandle(std::shared_ptr<GY_Controller> controller)
 {
-    return this->m_userFunc(controller);
+    if(!this->m_rightHandle) {
+        spdlog::error("[{}:{}] [RightHandle] [Error: RightHandle is nullptr]", __FILE__, __LINE__);
+        return;
+    }
+    return this->m_rightHandle(controller);
 }
 
 
-std::string 
-galay::kernel::GY_SIOManager::IllegalFunction()
+void 
+galay::kernel::GY_SIOManager::WrongHandle(std::shared_ptr<GY_Controller> controller)
 {
-    if(!this->m_illegalFunc) return "";
-    return this->m_illegalFunc();
+    if(!this->m_wrongHandle) {
+        spdlog::error("[{}:{}] [WrongHandle] [Error: WrongHandle is nullptr]", __FILE__, __LINE__);
+        return;
+    }
+    return this->m_wrongHandle(controller);
 }
 
 galay::kernel::GY_SIOManager::~GY_SIOManager()

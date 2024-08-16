@@ -22,11 +22,16 @@ namespace galay
             using wptr = std::weak_ptr<GY_Controller>;
             using uptr = std::unique_ptr<GY_Controller>;
             GY_Controller(std::weak_ptr<GY_TcpConnector> connector);
+            //关闭连接
             void Close();
+            //获取之前存入的上下文
             std::any &&GetContext();
             void SetContext(std::any &&context);
+            //获取请求队列的第一个请求
             protocol::GY_SRequest::ptr GetRequest();
+            //请求出队
             void PopRequest();
+            //发送数据 返会一个NetResult 需要调用NetResult.Wait()
             std::shared_ptr<NetResult> Send(std::string &&response);
             std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func);
         private:
@@ -45,6 +50,7 @@ namespace galay
             std::any &&GetContext();
             std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func);
             void Close();
+            //获取请求并出队
             protocol::http::HttpRequest::ptr GetRequest();
             std::shared_ptr<NetResult> Send(std::string &&response);
         private:

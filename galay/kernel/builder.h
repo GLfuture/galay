@@ -44,15 +44,15 @@ namespace galay
             using ptr = std::shared_ptr<GY_TcpServerBuilderBase>;
             using uptr = std::unique_ptr<GY_TcpServerBuilderBase>;
             using wptr = std::weak_ptr<GY_TcpServerBuilderBase>;
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func) = 0;
-            virtual void SetIllegalFunction(std::function<std::string()> func) = 0;
+            virtual void SetPort(uint16_t port) = 0;
+            virtual void SetRightHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> port_func) = 0;
+            virtual void SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle) = 0;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) = 0;
             virtual void SetNetThreadNum(uint16_t threadnum) = 0;
             virtual void SetBacklog(uint16_t backlog) = 0;
             virtual void SetMaxEventSize(uint16_t max_event_size) = 0;
             virtual void SetScheWaitTime(uint16_t sche_wait_time) = 0;
-            virtual void SetPort(uint16_t port) = 0;
 
             //SSL env
             virtual void InitSSLServer(bool is_ssl) = 0;
@@ -65,8 +65,8 @@ namespace galay
             virtual uint16_t GetMaxEventSize() = 0;
             virtual uint16_t GetScheWaitTime() = 0;
             virtual uint16_t GetPort() = 0;
-            virtual std::function<void(GY_Controller::ptr)> GetUserFunction() = 0;
-            virtual std::function<std::string()> GetIllegalFunction() = 0;
+            virtual std::function<void(GY_Controller::ptr)> GetRightHandle() = 0;
+            virtual std::function<void(GY_Controller::ptr)> GetWrongHandle() = 0;
             virtual bool GetIsSSL() = 0;
             virtual std::string GetTypeName(galay::common::ClassNameType type) = 0;
             ~GY_TcpServerBuilderBase() = default;
@@ -90,9 +90,8 @@ namespace galay
                 }
                 return true;
             }
-
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func) override;
-            virtual void SetIllegalFunction(std::function<std::string()> func) override;
+            virtual void SetRightHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle) override;
+            virtual void SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle) override;
             //option
             virtual void SetSchedulerType(galay::common::SchedulerType scheduler_type) override;
             virtual void SetNetThreadNum(uint16_t threadnum) override;
@@ -110,8 +109,8 @@ namespace galay
             virtual uint16_t GetMaxEventSize() override;
             virtual uint16_t GetScheWaitTime() override;
             virtual uint16_t GetPort() override;
-            virtual std::function<void(GY_Controller::ptr)> GetUserFunction() override;
-            virtual std::function<std::string()> GetIllegalFunction() override;
+            virtual std::function<void(GY_Controller::ptr)> GetRightHandle() override;
+            virtual std::function<void(GY_Controller::ptr)> GetWrongHandle() override;
             virtual bool GetIsSSL() override;
             virtual std::string GetTypeName(galay::common::ClassNameType type) override;
             ~GY_TcpServerBuilder();
@@ -125,8 +124,8 @@ namespace galay
             std::atomic_int16_t m_sche_wait_time;
             std::atomic<galay::common::SchedulerType> m_scheduler_type;
             std::atomic_bool m_is_ssl;
-            std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> m_userfunc;
-            std::function<std::string()> m_illegalfunc;
+            std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> m_rightHandle;
+            std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> m_wrongHandle;
             GY_SSLConfig::ptr m_ssl_config;
 
             std::unordered_map<int, std::string> m_typeNames;
@@ -141,11 +140,13 @@ namespace galay
             using wptr = std::weak_ptr<GY_HttpServerBuilder>;
             using uptr = std::unique_ptr<GY_HttpServerBuilder>;
             GY_HttpServerBuilder();
-            virtual std::function<void(GY_Controller::ptr)> GetUserFunction() override;
+            virtual std::function<void(GY_Controller::ptr)> GetRightHandle() override;
+            virtual std::function<void(GY_Controller::ptr)> GetWrongHandle() override;
             void SetRouter(std::shared_ptr<GY_HttpRouter> router);
 
         private:
-            virtual void SetUserFunction(std::pair<uint16_t, std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)>> port_func) override;
+            virtual void SetRightHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle) override;
+            virtual void SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle) override;
         private:
             std::shared_ptr<GY_HttpRouter> m_router;
         };
