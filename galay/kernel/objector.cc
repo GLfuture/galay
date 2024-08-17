@@ -266,18 +266,6 @@ galay::kernel::GY_TcpConnector::AddTimer(uint64_t during, uint32_t exec_times,st
     return this->m_ioManager.lock()->GetIOScheduler()->AddTimer(during,exec_times,std::forward<std::function<void(std::shared_ptr<Timer>)>>(func));
 }
 
-void 
-galay::kernel::GY_TcpConnector::SetContext(std::any&& context)
-{
-    this->m_context = std::forward<std::any>(context);
-}
-
-std::any&
-galay::kernel::GY_TcpConnector::GetContext()
-{
-    return this->m_context;
-}
-
 galay::protocol::GY_Request::ptr 
 galay::kernel::GY_TcpConnector::GetRequest()
 {
@@ -366,6 +354,7 @@ galay::kernel::GY_TcpConnector::RealRecv()
         if(!m_recvTask->Success()){
             if(buffer.empty()) return;
         }
+        spdlog::debug("[{}:{}] [CoReceiveExec Recv Buffer: {}]",__FILE__,__LINE__, buffer);
         int eLen = m_tempRequest->DecodePdu(buffer);
         if(m_tempRequest->ParseSuccess())
         {
@@ -379,9 +368,10 @@ galay::kernel::GY_TcpConnector::RealRecv()
         }
         else if(m_tempRequest->ParseIllegal())
         {
+            this->m_controller->SetError(m_tempRequest->Error());
             m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
-            this->m_controller->SetContext(buffer);
             this->m_ioManager.lock()->WrongHandle(this->m_controller);
+            buffer.clear();
             return;
         }
     }

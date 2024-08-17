@@ -162,10 +162,8 @@ namespace galay
             using uptr = std::unique_ptr<GY_TcpConnector>;
             GY_TcpConnector(int fd, SSL* ssl, std::weak_ptr<galay::kernel::GY_SIOManager> ioManager);
             void Close();
-            void SetContext(std::any &&context);
             std::shared_ptr<NetResult> Send(std::string &&response);
             std::shared_ptr<galay::kernel::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func);
-            std::any &GetContext();
             galay::protocol::GY_Request::ptr GetRequest();
             void PopRequest();
             bool HasRequest();
@@ -178,7 +176,6 @@ namespace galay
         private:
             int m_fd;
             SSL *m_ssl;
-            std::any m_context;
             std::atomic_bool m_isClosed;
             protocol::GY_Request::ptr m_tempRequest;
             std::unique_ptr<GY_TcpRecvTask> m_recvTask;

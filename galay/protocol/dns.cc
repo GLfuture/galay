@@ -276,6 +276,7 @@ galay::protocol::dns::DnsResponse::DecodePdu(const std::string &buffer)
     }
 
     delete[] begin;
+    Success();
     return buffer.length();
 }
 

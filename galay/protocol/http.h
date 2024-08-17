@@ -16,6 +16,20 @@ namespace galay
     {
         namespace http
         {
+            namespace error
+            {
+                enum HttpErrorCode
+                {
+                    kHttpError_NoError = 0,
+                    kHttpError_HeaderTooLong,
+                    kHttpError_MethodNotStandard,
+                    kHttpError_UriTooLong,
+                    kHttpError_ChunckHasError,
+                    kHttpError_HttpCodeInvalid,
+                };
+            }
+
+
             #define HTTP_HEADER_MAX_LEN         4096    // 头部最大长度4k
             #define HTTP_URI_MAX_LEN            2048    // uri最大长度2k
             enum HttpProStatus
@@ -116,6 +130,8 @@ namespace galay
 
             extern std::unordered_set<std::string> m_stdMethods;
 
+            
+
             class HttpRequestHeader
             {
             public:
@@ -127,7 +143,7 @@ namespace galay
                 std::map<std::string,std::string>& Args();
                 std::map<std::string,std::string>& Headers();
                 std::string ToString();
-                bool FromString(std::string_view str);
+                error::HttpErrorCode FromString(std::string_view str);
                 void CopyFrom(HttpRequestHeader::ptr header);
             private:
                 void ParseArgs(std::string uri);
@@ -161,6 +177,7 @@ namespace galay
             private:
                 int GetHttpBody(const std::string& buffer, int elength);
                 int GetChunckBody(const std::string& buffer, int elength);
+                void DealProtoError(error::HttpErrorCode code);
             private:
                 HttpProStatus m_status = kHttpHeader;
                 HttpRequestHeader::ptr m_header;
@@ -175,12 +192,12 @@ namespace galay
                 int& Code();
                 std::map<std::string, std::string>& Headers();
                 std::string ToString();
-                bool FromString(std::string_view str);
+                error::HttpErrorCode FromString(std::string_view str);
             private:
                 std::string CodeMsg(int status);
             private:
-                std::string m_version;
                 int m_code;
+                std::string m_version;
                 std::map<std::string, std::string> m_headers;
             };
 
@@ -202,12 +219,26 @@ namespace galay
             private:
                 int GetHttpBody(const std::string& buffer, int eLength);
                 int GetChunckBody(const std::string& buffer, int eLength);
+                void DealProtoError(error::HttpErrorCode code);
             private:
                 HttpProStatus m_status = kHttpHeader;
                 HttpResponseHeader::ptr m_header;
                 std::string m_body;
             };
-
+            
+            namespace error
+            {
+                class HttpError
+                {
+                    friend class galay::protocol::http::HttpRequest;
+                    friend class galay::protocol::http::HttpResponse;
+                public:
+                    HttpErrorCode Code() const;
+                    std::string ToString(HttpErrorCode code) const;
+                private:
+                    HttpErrorCode m_code = kHttpError_NoError;
+                };
+            }
 
             extern HttpRequest::ptr DefaultHttpRequest();
         }

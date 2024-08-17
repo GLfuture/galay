@@ -215,7 +215,6 @@ galay::kernel::GY_TcpRecvTask::Execute()
         }
         else
         {
-            spdlog::debug("[{}:{}] [Recv(fd:{})] [Recv len:{} Bytes]", __FILE__, __LINE__, this->m_fd, len);
             this->m_rbuffer.append(buffer, len);
         }
     }

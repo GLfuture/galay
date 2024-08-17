@@ -1,6 +1,15 @@
 #include "http.h"
 #include <spdlog/spdlog.h>
 
+static const char* g_HttpErrors[] = {
+    "No error",
+    "Header is too long",
+    "Method is not standard",
+    "Uri too long",
+    "Chunck has error",
+    "Http code is invalid",
+};
+
 
 std::unordered_set<std::string> 
 galay::protocol::http::m_stdMethods = {
@@ -39,7 +48,7 @@ galay::protocol::http::HttpRequestHeader::Headers()
     return this->m_headers;
 }
 
-bool 
+galay::protocol::http::error::HttpErrorCode 
 galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
 {
     HttpHeadStatus status = HttpHeadStatus::kHttpHeadMethod;
@@ -62,7 +71,7 @@ galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
                 if (!m_stdMethods.contains(m_method))
                 {
                     spdlog::error("[{}:{}] [[method is not standard] [Method:{}]]", __FILE__, __LINE__, this->m_method);
-                    return false;
+                    return error::kHttpError_MethodNotStandard;
                 }
                 status = HttpHeadStatus::kHttpHeadUri;
             }
@@ -79,7 +88,7 @@ galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
                 if (m_uri.length() > HTTP_URI_MAX_LEN)
                 {
                     spdlog::error("[{}:{}] [[uri is too long] [Uri:{}]]", __FILE__, __LINE__, this->m_uri);
-                    return false;
+                    return error::kHttpError_UriTooLong;
                 }
                 this->m_uri = ConvertFromUri(std::move(this->m_uri), false);
                 ParseArgs(this->m_uri);
@@ -95,8 +104,6 @@ galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
             }
             else
             {
-                if (m_version.substr(0, 5) != "HTTP/")
-                    return false;
                 m_version = m_version.substr(m_version.find('/') + 1);
                 status = HttpHeadStatus::kHttpHeadKey;
                 ++i;
@@ -145,7 +152,7 @@ galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
             break;
         }
     }
-    return true;
+    return error::kHttpError_NoError;
 }
 
 std::string 
@@ -439,7 +446,7 @@ galay::protocol::http::HttpRequest::DecodePdu(const std::string& buffer)
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
             {
                 spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                Illegal();
+                DealProtoError(error::kHttpError_HeaderTooLong);
                 return -1;
             }
             spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
@@ -449,15 +456,16 @@ galay::protocol::http::HttpRequest::DecodePdu(const std::string& buffer)
         else if (pos + 4 > HTTP_HEADER_MAX_LEN)
         {
             spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            Illegal();
+            DealProtoError(error::kHttpError_HeaderTooLong);
             return -1;
         }
         else{
             spdlog::debug("[{}:{}] [[Header complete] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
             if(m_header == nullptr) m_header = std::make_shared<HttpRequestHeader>();
             std::string_view header = buffer;
-            if(!m_header->FromString(header.substr(0,pos))){
-                Illegal();
+            error::HttpErrorCode errCode = m_header->FromString(header.substr(0,pos + 4));
+            if(errCode != error::kHttpError_NoError){
+                DealProtoError(errCode);
                 return -1;
             };
             eLength = pos + 4;
@@ -469,7 +477,7 @@ galay::protocol::http::HttpRequest::DecodePdu(const std::string& buffer)
     if(m_header->Headers().contains("transfer-encoding") && 0 == m_header->Headers()["transfer-encoding"].compare("chunked")){
         this->m_status = kHttpChunck;
         hasBody = true;
-    }else if(m_header->Headers().contains("Content-Length")){
+    }else if(m_header->Headers().contains("content-length")){
         this->m_status = kHttpBody;
         hasBody = true;
     }
@@ -609,7 +617,7 @@ galay::protocol::http::HttpRequest::GetChunckBody(const std::string& buffer, int
         catch (const std::exception &e)
         {
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-            Illegal();
+            DealProtoError(error::kHttpError_ChunckHasError);
             return eLength;
         }
         if(length == 0){
@@ -626,6 +634,15 @@ galay::protocol::http::HttpRequest::GetChunckBody(const std::string& buffer, int
     }
     Success();
     return eLength;
+}
+
+void 
+galay::protocol::http::HttpRequest::DealProtoError(error::HttpErrorCode code)
+{
+    Illegal();
+    error::HttpError error;
+    error.m_code = code;
+    SetErrorContext(error);
 }
 
 std::string& 
@@ -659,7 +676,7 @@ galay::protocol::http::HttpResponseHeader::ToString()
     return res;
 }
 
-bool 
+galay::protocol::http::error::HttpErrorCode 
 galay::protocol::http::HttpResponseHeader::FromString(std::string_view str)
 {
     size_t n = str.length();
@@ -681,10 +698,6 @@ galay::protocol::http::HttpResponseHeader::FromString(std::string_view str)
             }
             else
             {
-                if (m_version.substr(0, 5) != "HTTP/"){
-                    spdlog::error("[{}:{}] [Http version is illegal]",__FILE__,__LINE__);
-                    return false;
-                }
                 m_version = m_version.substr(m_version.find('/') + 1);
                 status = HttpHeadStatus::kHttpHeadStatusCode;
             }
@@ -704,8 +717,8 @@ galay::protocol::http::HttpResponseHeader::FromString(std::string_view str)
                 }
                 catch (std::invalid_argument &e)
                 {
-                    spdlog::error("[{}:{}] [error: 'http status code is illegal',buffer len:{}]",__FILE__,__LINE__,n);
-                    return false;
+                    spdlog::error("[{}:{}] [Http status code is illegal]",__FILE__,__LINE__);
+                    return error::kHttpError_HttpCodeInvalid;
                 }
                 status = HttpHeadStatus::kHttpHeadStatusMsg;
             }
@@ -762,7 +775,7 @@ galay::protocol::http::HttpResponseHeader::FromString(std::string_view str)
             break;
         }
     }
-    return true;
+    return error::kHttpError_NoError;
 }
 
 std::string 
@@ -941,7 +954,7 @@ galay::protocol::http::HttpResponse::DecodePdu(const std::string& buffer)
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
             {
                 spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                Illegal();
+                DealProtoError(error::kHttpError_HeaderTooLong);
                 return -1;
             }
             spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
@@ -951,15 +964,16 @@ galay::protocol::http::HttpResponse::DecodePdu(const std::string& buffer)
         else if (pos + 4 > HTTP_HEADER_MAX_LEN)
         {
             spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            Illegal();
+            DealProtoError(error::kHttpError_HeaderTooLong);
             return -1;
         }
         else{
             spdlog::debug("[{}:{}] [[Header complete] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
             if(m_header == nullptr) m_header = std::make_shared<HttpResponseHeader>();
             std::string_view header = buffer;
-            if(!m_header->FromString(header.substr(0,pos))){
-                Illegal();
+            error::HttpErrorCode errCode = m_header->FromString(header.substr(0, pos + 4));
+            if(errCode != error::kHttpError_NoError){
+                DealProtoError(errCode);
                 return -1;
             };
             eLength = pos + 4;
@@ -1086,7 +1100,7 @@ galay::protocol::http::HttpResponse::GetChunckBody(const std::string& buffer, in
         catch (const std::exception &e)
         {
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-            Illegal();
+            DealProtoError(error::kHttpError_ChunckHasError);
             return -1;
         }
         if(length == 0){
@@ -1104,6 +1118,28 @@ galay::protocol::http::HttpResponse::GetChunckBody(const std::string& buffer, in
     Success();
     return eLength;
 }
+
+void 
+galay::protocol::http::HttpResponse::DealProtoError(error::HttpErrorCode code)
+{
+    Illegal();
+    error::HttpError error;
+    error.m_code = code;
+    SetErrorContext(error);
+}
+
+galay::protocol::http::error::HttpErrorCode 
+galay::protocol::http::error::HttpError::Code() const
+{
+    return this->m_code;
+}
+
+std::string 
+galay::protocol::http::error::HttpError::ToString(HttpErrorCode code) const
+{
+    return g_HttpErrors[code];
+}
+
 
 
 //function 

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include <any>
 #include "../common/reflection.h"
 
 namespace galay
@@ -56,14 +57,17 @@ namespace galay
             using uptr = std::unique_ptr<GY_Request>;
             virtual int DecodePdu(const std::string &buffer) = 0;
             virtual std::string EncodePdu() = 0;
+            virtual std::any Error() final;
             virtual bool ParseIncomplete() final;
             virtual bool ParseIllegal() final;
             virtual bool ParseSuccess() final;
         protected:
+            virtual void SetErrorContext(std::any error) final;
             virtual void Incomplete() final;
             virtual void Illegal() final;
             virtual void Success() final;
         private:
+            std::any m_error;
             ProtoParseType m_parseStatus;
         };
 
@@ -75,14 +79,17 @@ namespace galay
             using uptr = std::unique_ptr<GY_Response>;
             virtual int DecodePdu(const std::string &buffer) = 0;
             virtual std::string EncodePdu() = 0;
+            virtual std::any Error() final;
             virtual bool ParseIncomplete() final;
             virtual bool ParseIllegal() final;
             virtual bool ParseSuccess() final;
         protected:
+            virtual void SetErrorContext(std::any error) final;
             virtual void Incomplete() final;
             virtual void Illegal() final;
             virtual void Success() final;
         private:
+            std::any m_error;
             ProtoParseType m_parseStatus;
         };
         
