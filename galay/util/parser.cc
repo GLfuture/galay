@@ -1,6 +1,6 @@
 #include "parser.h"
-#include "fileiofunction.h"
-#include "stringutil.h"
+#include "io.h"
+#include "stringsplitter.h"
 
 galay::util::ParserManager::ParserManager()
 {
@@ -25,7 +25,7 @@ galay::util::ParserManager::CreateParser(const std::string &filename,bool IsPars
 int 
 galay::util::ConfigParser::Parse(const std::string &filename)
 {
-    std::string buffer = galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(filename);
+    std::string buffer = galay::io::file::ZeroCopyFile::ReadFile(filename);
     int ret = ParseContent(buffer);
     return ret;
 }
@@ -80,7 +80,7 @@ galay::util::ConfigParser::GetValue(const std::string &key)
 int 
 galay::util::JsonParser::Parse(const std::string &filename)
 {
-    std::string buffer = galay::IOFunction::FileIOFunction::ZeroCopyFile::ReadFile(filename);
+    std::string buffer = galay::io::file::ZeroCopyFile::ReadFile(filename);
     if(!nlohmann::json::accept(buffer)){
         return -1;
     }
@@ -91,7 +91,7 @@ galay::util::JsonParser::Parse(const std::string &filename)
 std::any 
 galay::util::JsonParser::GetValue(const std::string &key)
 {
-    std::vector<std::string> path = galay::util::StringUtil::SpiltWithChar(key, '.');
+    std::vector<std::string> path = galay::tools::StringSplitter::SpiltWithChar(key, '.');
     nlohmann::json j;
     for(auto &p : path){
         if(this->m_json.contains(p)){

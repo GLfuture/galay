@@ -1,4 +1,5 @@
 #include "dns.h"
+#include "../util/stringsplitter.h"
 
 
 namespace galay::protocol::dns
@@ -141,7 +142,7 @@ DnsRequest::DecodePdu(const std::string &buffer)
 std::string 
 DnsRequest::ModifyHostname(std::string hostname)
 {
-    std::vector<std::string> temp = util::StringUtil::SpiltWithChar(hostname, '.');
+    std::vector<std::string> temp = tools::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {
@@ -292,7 +293,7 @@ DnsResponse::EncodePdu()
 std::string 
 DnsResponse::ModifyHostname(std::string hostname)
 {
-    std::vector<std::string> temp = util::StringUtil::SpiltWithChar(hostname, '.');
+    std::vector<std::string> temp = tools::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {

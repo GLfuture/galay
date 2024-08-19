@@ -1,11 +1,13 @@
-#include "../util/random.h"
 #include "../common/coroutine.h"
 #include "../common/waitgroup.h"
-#include "client.h"
+#include "../util/random.h"
+#include "../util/io.h"
+#include "../util/stringsplitter.h"
 #include "task.h"
 #include "scheduler.h"
 #include "result.h"
 #include "objector.h"
+#include "client.h"
 #include <regex>
 #include <spdlog/spdlog.h>
 
@@ -160,20 +162,20 @@ result::NetResult::ptr
 GY_TcpClient::Socket()
 {
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    this->m_fd = IOFunction::NetIOFunction::TcpFunction::Sock();
+    this->m_fd = io::net::TcpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
         result->SetErrorMsg(strerror(errno));
         goto end;
     }
     spdlog::debug("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
-    if(IOFunction::NetIOFunction::TcpFunction::IO_Set_No_Block(this->m_fd) == -1){
-        spdlog::error("[{}:{}] [IO_Set_No_Block(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+    if(io::net::TcpFunction::SetNoBlock(this->m_fd) == -1){
+        spdlog::error("[{}:{}] [SetNoBlock(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         result->SetErrorMsg(strerror(errno));
         goto end;
     }
     result->SetSuccess(true);
-    spdlog::debug("[{}:{}] [IO_Set_No_Block(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
+    spdlog::debug("[{}:{}] [SetNoBlock(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
     this->m_isSocket = true;
 end:
     return result;
@@ -183,7 +185,7 @@ result::NetResult::ptr
 GY_TcpClient::Connect(const std::string &ip, uint16_t port)
 {
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, ip , port);
+    int ret = io::net::TcpFunction::Conncet(this->m_fd, ip , port);
     if (ret < 0 )
     {
         if(errno != EINPROGRESS)
@@ -317,25 +319,25 @@ result::NetResult::ptr
 GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
 {
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    this->m_ctx = IOFunction::NetIOFunction::TcpFunction::SSL_Init_Client(minVersion, maxVersion);
+    this->m_ctx = io::net::TcpFunction::InitSSLClient(minVersion, maxVersion);
     if(this->m_ctx == nullptr) {
         unsigned long error = ERR_get_error();
-        spdlog::error("[{}:{}] [SSL_Init_Client failed, Error:{}]", __FILE__, __LINE__, ERR_error_string(error, nullptr));
+        spdlog::error("[{}:{}] [InitSSLClient failed, Error:{}]", __FILE__, __LINE__, ERR_error_string(error, nullptr));
         result->SetErrorMsg(ERR_error_string(error, nullptr));
         goto end;
     }
-    this->m_fd = IOFunction::NetIOFunction::TcpFunction::Sock();
+    this->m_fd = io::net::TcpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
         result->SetErrorMsg(strerror(errno));
         goto end;
     }
     spdlog::debug("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
-    this->m_ssl = IOFunction::NetIOFunction::TcpFunction::SSLCreateObj(this->m_ctx, this->m_fd);
+    this->m_ssl = io::net::TcpFunction::SSLCreateObj(this->m_ctx, this->m_fd);
     if(this->m_ssl == nullptr){
         unsigned long error = ERR_get_error();
         spdlog::error("[{}:{}] [SSLCreateObj failed, Error:{}]", __FILE__, __LINE__, ERR_error_string(error, nullptr));
-        IOFunction::NetIOFunction::TcpFunction::SSLDestory({}, this->m_ctx);
+        io::net::TcpFunction::SSLDestory({}, this->m_ctx);
         this->m_ctx = nullptr;
         result->SetErrorMsg(ERR_error_string(error, nullptr));
         goto end;
@@ -352,7 +354,7 @@ result::NetResult::ptr
 GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
 {
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, ip , port);
+    int ret = io::net::TcpFunction::Conncet(this->m_fd, ip , port);
     if (ret < 0 )
     {
         if(errno != EINPROGRESS)
@@ -497,8 +499,8 @@ GY_TcpClient::SSLClose()
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     if(this->m_isSocket)
     {
-        if(this->m_ssl) IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
-        if(this->m_ctx) IOFunction::NetIOFunction::TcpFunction::SSLDestory({},this->m_ctx);
+        if(this->m_ssl) io::net::TcpFunction::SSLDestory(this->m_ssl);
+        if(this->m_ctx) io::net::TcpFunction::SSLDestory({},this->m_ctx);
         if(close(this->m_fd) == -1) {
             spdlog::error("[{}:{}] [Close(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
             result->SetErrorMsg(strerror(errno));
@@ -828,20 +830,20 @@ std::shared_ptr<result::NetResult>
 GY_UdpClient::Socket()
 {
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    this->m_fd = IOFunction::NetIOFunction::UdpFunction::Sock();
+    this->m_fd = io::net::UdpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
         result->SetErrorMsg(strerror(errno));
         goto end;
     }
     spdlog::debug("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
-    if(IOFunction::NetIOFunction::UdpFunction::IO_Set_No_Block(this->m_fd) == -1){
-        spdlog::error("[{}:{}] [IO_Set_No_Block(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+    if(io::net::UdpFunction::SetNoBlock(this->m_fd) == -1){
+        spdlog::error("[{}:{}] [SetNoBlock(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         result->SetErrorMsg(strerror(errno));
         goto end;
     }
     result->SetSuccess(true);
-    spdlog::debug("[{}:{}] [IO_Set_No_Block(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
+    spdlog::debug("[{}:{}] [SetNoBlock(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
     this->m_isSocketed = true;
 end:
     return result;
@@ -852,10 +854,10 @@ GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
 {
     this->m_request = std::forward<std::string>(buffer);
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    IOFunction::NetIOFunction::Addr addr;
+    io::net::Addr addr;
     addr.ip = host;
     addr.port = port;
-    int len = galay::IOFunction::NetIOFunction::UdpFunction::SendTo(this->m_fd, addr, this->m_request);
+    int len = galay::io::net::UdpFunction::SendTo(this->m_fd, addr, this->m_request);
     if(len == -1){
         spdlog::error("[{}:{}] [SendTo(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, strerror(errno));
         result->SetErrorMsg(strerror(errno));
@@ -871,7 +873,7 @@ GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
         result->AddTaskNum(1);
         objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
         executor->OnWrite() += [this, addr, result](){
-            int len = galay::IOFunction::NetIOFunction::UdpFunction::SendTo(m_fd, addr, m_request);
+            int len = galay::io::net::UdpFunction::SendTo(m_fd, addr, m_request);
             spdlog::debug("[{}:{}] [SendTo(fd:{}, host:{}, port:{}), len:{}]", __FILE__, __LINE__, this->m_fd, addr.ip, addr.port, len);
             m_request.erase(0,len);   
             if(m_request.empty()){
@@ -892,9 +894,9 @@ std::shared_ptr<result::NetResult>
 GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
 {
     result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    IOFunction::NetIOFunction::Addr addr;
+    io::net::Addr addr;
     char buf[MAX_UDP_LENGTH];
-    int len = galay::IOFunction::NetIOFunction::UdpFunction::RecvFrom(this->m_fd, addr, buf,MAX_UDP_LENGTH);
+    int len = galay::io::net::UdpFunction::RecvFrom(this->m_fd, addr, buf,MAX_UDP_LENGTH);
     if(len == -1)
     {
         if(errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR)
@@ -908,9 +910,9 @@ GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
             objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
             executor->OnRead() += [this, result, &host, &port, &buffer](){
                 spdlog::debug("[{}:{}] [Call RecvFrom.OnRead]", __FILE__, __LINE__);
-                IOFunction::NetIOFunction::Addr addr;
+                io::net::Addr addr;
                 char buf[MAX_UDP_LENGTH];
-                int len = galay::IOFunction::NetIOFunction::UdpFunction::RecvFrom(m_fd, addr, buf,MAX_UDP_LENGTH);
+                int len = galay::io::net::UdpFunction::RecvFrom(m_fd, addr, buf,MAX_UDP_LENGTH);
                 if(len == -1)
                 {
                     spdlog::error("[{}:{}] [RecvFrom(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, strerror(errno));
@@ -995,7 +997,7 @@ DnsAsyncClient::QueryA(const std::string& host, const uint16_t& port, const std:
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
-    header.m_id = galay::util::Random::RandomInt(0,MAX_UDP_LENGTH);
+    header.m_id = galay::tools::Randomizer::RandomInt(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
     galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;
@@ -1015,7 +1017,7 @@ DnsAsyncClient::QueryAAAA(const std::string& host, const uint16_t& port, const s
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
-    header.m_id = galay::util::Random::RandomInt(0,MAX_UDP_LENGTH);
+    header.m_id = galay::tools::Randomizer::RandomInt(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
     galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;
@@ -1035,7 +1037,7 @@ DnsAsyncClient::QueryPtr(const std::string& host, const uint16_t& port, const st
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
-    header.m_id = galay::util::Random::RandomInt(0,MAX_UDP_LENGTH);
+    header.m_id = galay::tools::Randomizer::RandomInt(0,MAX_UDP_LENGTH);
     header.m_questions = 1;
     galay::protocol::dns::DnsQuestion question;
     question.m_class = 1;
@@ -1058,7 +1060,7 @@ DnsAsyncClient::CloseSocket()
 std::string 
 DnsAsyncClient::HostToPtr(const std::string& host)
 {
-    auto res = util::StringUtil::SpiltWithChar(host, '.');
+    auto res = tools::StringSplitter::SpiltWithChar(host, '.');
     std::string Ptr;
     for(std::vector<std::string>::reverse_iterator rit = res.rbegin(); rit != res.rend(); ++rit)
     {

@@ -1,7 +1,6 @@
 #ifndef GALAY_DNS_H
 #define GALAY_DNS_H
 #include "protocol.h"
-#include "../util/stringutil.h"
 #include <queue>
 #include <string.h>
 #include <arpa/inet.h>

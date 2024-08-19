@@ -13,7 +13,7 @@ std::mutex mutexCount;
 std::map<unsigned int, unsigned long long> mapTheadIdCount;
 
 // 网络数据发送测试线程函数
-void sendDatatoNet(galay::util::GY_RateLimiter* speedLimiter)
+void sendDatatoNet(galay::tools::RateLimiter* speedLimiter)
 {
     // 每次发送的数据包大小
     const int sizeOnePacket = 2 * 1024;
@@ -80,7 +80,7 @@ void statisticNetwork()
 int main(int argc, char *argv[])
 {
     // 构造限速器：限速50M/s,容量为6M,间隔10ms投递令牌；当前的流量峰值为60M
-    galay::util::GY_RateLimiter speedLimiter(LIMITE_RATE,CAPACITY, 10);
+    galay::tools::RateLimiter speedLimiter(LIMITE_RATE,CAPACITY, 10);
     speedLimiter.Start();
     // 启动模拟网络发送线程
     for (int i = 0; i < 10; ++i)

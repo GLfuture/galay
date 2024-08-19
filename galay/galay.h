@@ -6,6 +6,8 @@
 #include "common/signalhandler.h"
 #include "common/threadpool.h"
 #include "common/coroutine.h"
+#include "common/reflection.h"
+#include "common/waitgroup.h"
 
 //kernel
 #include "kernel/client.h"
@@ -16,14 +18,20 @@
 #include "kernel/controller.h"
 #include "kernel/scheduler.h"
 #include "kernel/result.h"
+#include "kernel/objector.h"
+#include "kernel/task.h"
 
 //protocol
 #include "protocol/http.h"
 #include "protocol/smtp.h"
+#include "protocol/dns.h"
 
 //util
 #include "util/parser.h"
-#include "util/fileiofunction.h"
+#include "util/io.h"
+#include "util/stringsplitter.h"
+#include "util/typename.h"
+#include "util/random.h"
 #include "util/ratelimiter.h"
 
 

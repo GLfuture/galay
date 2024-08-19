@@ -9,9 +9,9 @@
 
 namespace galay
 {
-    namespace util
+    namespace tools
     {
-        class StringUtil
+        class StringSplitter
         {
         public:
             // 字符分割

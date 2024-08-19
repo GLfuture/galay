@@ -3,6 +3,7 @@
 #include "builder.h"
 #include "server.h"
 #include "objector.h"
+#include "../util/io.h"
 #include <spdlog/spdlog.h>
 
 namespace galay::task
@@ -39,7 +40,7 @@ GY_TcpCreateConnTask::Error()
 int 
 GY_TcpCreateConnTask::CreateConn()
 {
-    int connfd = IOFunction::NetIOFunction::TcpFunction::Accept(this->m_fd);
+    int connfd = io::net::TcpFunction::Accept(this->m_fd);
     if (connfd == -1)
     {
         if (errno != EINTR && errno != EWOULDBLOCK && errno != ECONNABORTED && errno != EPROTO)
@@ -57,16 +58,16 @@ GY_TcpCreateConnTask::CreateConn()
         return -1;
     }
     spdlog::debug("[{}:{}] [[Accept success(fd:{})] [Fd:{}]]", __FILE__, __LINE__, this->m_fd, connfd);
-    int ret = IOFunction::BlockFuction::IO_Set_No_Block(connfd);
+    int ret = io::BlockFuction::SetNoBlock(connfd);
     if (ret == -1)
     {
         close(connfd);
-        spdlog::error("[{}:{}] [[IO_Set_No_Block error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
+        spdlog::error("[{}:{}] [[SetNoBlock error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, this->m_fd, strerror(errno));
         if(m_success) m_success = false;
         m_error = strerror(errno);
         return -1;
     }
-    spdlog::debug("[{}:{}] [IO_Set_No_Block Success(fd:{})]", __FILE__, __LINE__, connfd);
+    spdlog::debug("[{}:{}] [SetNoBlock Success(fd:{})]", __FILE__, __LINE__, connfd);
     std::shared_ptr<objector::GY_TcpConnector> connector = std::make_shared<objector::GY_TcpConnector>(connfd, nullptr, this->m_ioManager);
     m_ioManager.lock()->GetIOScheduler()->RegisterObjector(connfd, connector);
     
@@ -86,7 +87,7 @@ GY_TcpCreateConnTask::CreateConn()
 int 
 GY_TcpCreateConnTask::CreateListenFd(std::weak_ptr<server::GY_TcpServerBuilderBase> builder)
 {
-    int fd = IOFunction::NetIOFunction::TcpFunction::Sock();
+    int fd = io::net::TcpFunction::Sock();
     if (fd <= 0)
     {
         if(m_success) m_success = false;
@@ -94,7 +95,7 @@ GY_TcpCreateConnTask::CreateListenFd(std::weak_ptr<server::GY_TcpServerBuilderBa
         spdlog::error("[{}:{}] [[Sock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
         return -1;
     }
-    int ret = IOFunction::NetIOFunction::TcpFunction::ReuseAddr(fd);
+    int ret = io::net::TcpFunction::ReuseAddr(fd);
     if (ret == -1)
     {
         if(m_success) m_success = false;
@@ -103,8 +104,8 @@ GY_TcpCreateConnTask::CreateListenFd(std::weak_ptr<server::GY_TcpServerBuilderBa
         close(fd);
         return -1;
     }
-    ret = IOFunction::NetIOFunction::TcpFunction::ReusePort(fd);
-    ret = IOFunction::NetIOFunction::TcpFunction::Bind(fd, builder.lock()->GetPort());
+    ret = io::net::TcpFunction::ReusePort(fd);
+    ret = io::net::TcpFunction::Bind(fd, builder.lock()->GetPort());
     if (ret == -1)
     {
         if(m_success) m_success = false;
@@ -113,7 +114,7 @@ GY_TcpCreateConnTask::CreateListenFd(std::weak_ptr<server::GY_TcpServerBuilderBa
         close(fd);
         return -1;
     }
-    ret = IOFunction::NetIOFunction::TcpFunction::Listen(fd, builder.lock()->GetBacklog());
+    ret = io::net::TcpFunction::Listen(fd, builder.lock()->GetBacklog());
     if (ret == -1)
     {
         if(m_success) m_success = false;
@@ -122,12 +123,12 @@ GY_TcpCreateConnTask::CreateListenFd(std::weak_ptr<server::GY_TcpServerBuilderBa
         close(fd);
         return -1;
     }
-    ret = IOFunction::NetIOFunction::TcpFunction::IO_Set_No_Block(fd);
+    ret = io::net::TcpFunction::SetNoBlock(fd);
     if (ret == -1)
     {
         if(m_success) m_success = false;
         m_error = strerror(errno);
-        spdlog::error("[{}:{}] [[IO_Set_No_Block(fd: {}) error] [Errmsg:{}]]", __FILE__, __LINE__, fd, strerror(errno));
+        spdlog::error("[{}:{}] [[SetNoBlock(fd: {}) error] [Errmsg:{}]]", __FILE__, __LINE__, fd, strerror(errno));
         close(fd);
         return -1;
     }
@@ -184,9 +185,9 @@ GY_TcpRecvTask::Execute()
         bzero(buffer, DEFAULT_RBUFFER_LENGTH);
         ssize_t len;
         if(!m_ssl){
-            len = IOFunction::NetIOFunction::TcpFunction::Recv(this->m_fd, buffer, DEFAULT_RBUFFER_LENGTH);
+            len = io::net::TcpFunction::Recv(this->m_fd, buffer, DEFAULT_RBUFFER_LENGTH);
         }else{
-            len = IOFunction::NetIOFunction::TcpFunction::SSLRecv(this->m_ssl,buffer,DEFAULT_RBUFFER_LENGTH);
+            len = io::net::TcpFunction::SSLRecv(this->m_ssl,buffer,DEFAULT_RBUFFER_LENGTH);
         }
         if (len == -1)
         {
@@ -281,9 +282,9 @@ GY_TcpSendTask::Execute()
         }
         size_t len;
         if(!m_ssl){
-            len = IOFunction::NetIOFunction::TcpFunction::Send(this->m_fd, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
+            len = io::net::TcpFunction::Send(this->m_fd, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
         }else{
-            len = IOFunction::NetIOFunction::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
+            len = io::net::TcpFunction::SSLSend(this->m_ssl, this->m_wbuffer.data() + offset, this->m_wbuffer.length() - offset);
         }
         if (len == -1)
         {
@@ -326,10 +327,10 @@ GY_TcpCreateSSLConnTask::GY_TcpCreateSSLConnTask(std::weak_ptr<server::GY_SIOMan
     auto sslConfig = ioManager.lock()->GetTcpServerBuilder().lock()->GetSSLConfig();
     long minVersion = sslConfig->GetMinSSLVersion();
     long maxVersion = sslConfig->GetMaxSSLVersion();
-    this->m_sslCtx = IOFunction::NetIOFunction::TcpFunction::SSL_Init_Server(minVersion,maxVersion);
-    if(!m_sslCtx) throw std::runtime_error("SSL_Init_Server failed");
-    if(IOFunction::NetIOFunction::TcpFunction::SSL_Config_Cert_And_Key(m_sslCtx, sslConfig->GetCertPath().c_str(), sslConfig->GetKeyPath().c_str()) == -1){
-        throw std::runtime_error("SSL_Config_Cert_And_Key failed");
+    this->m_sslCtx = io::net::TcpFunction::InitSSLServer(minVersion,maxVersion);
+    if(!m_sslCtx) throw std::runtime_error("InitSSLServer failed");
+    if(io::net::TcpFunction::SetSSLCertAndKey(m_sslCtx, sslConfig->GetCertPath().c_str(), sslConfig->GetKeyPath().c_str()) == -1){
+        throw std::runtime_error("SetSSLCertAndKey failed");
     };
 }
 
@@ -345,7 +346,7 @@ GY_TcpCreateSSLConnTask::Execute()
 int 
 GY_TcpCreateSSLConnTask::CreateConn()
 {
-    int connfd = IOFunction::NetIOFunction::TcpFunction::Accept(this->m_fd);
+    int connfd = io::net::TcpFunction::Accept(this->m_fd);
     if (connfd == -1)
     {
         if (errno != EINTR && errno != EWOULDBLOCK && errno != ECONNABORTED && errno != EPROTO)
@@ -363,29 +364,29 @@ GY_TcpCreateSSLConnTask::CreateConn()
         return -1;
     }
     spdlog::debug("[{}:{}] [[Accept success(fd:{})] [Fd:{}]]", __FILE__, __LINE__, this->m_fd, connfd);
-    int ret = IOFunction::BlockFuction::IO_Set_No_Block(connfd);
+    int ret = io::BlockFuction::SetNoBlock(connfd);
     if (ret == -1)
     {
         close(connfd);
-        spdlog::error("[{}:{}] [[IO_Set_No_Block error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, connfd, strerror(errno));
+        spdlog::error("[{}:{}] [[SetNoBlock error(fd:{})] [Errmsg:{}]]", __FILE__, __LINE__, connfd, strerror(errno));
         if(m_success) m_success = false;
         m_error = strerror(errno);
         return -1;
     }
-    spdlog::debug("[{}:{}] [IO_Set_No_Block Success(fd:{})]", __FILE__, __LINE__, connfd);
-    SSL* ssl = IOFunction::NetIOFunction::TcpFunction::SSLCreateObj(m_sslCtx,connfd);
+    spdlog::debug("[{}:{}] [SetNoBlock Success(fd:{})]", __FILE__, __LINE__, connfd);
+    SSL* ssl = io::net::TcpFunction::SSLCreateObj(m_sslCtx,connfd);
     std::shared_ptr<objector::GY_TcpConnector> connector = std::make_shared<objector::GY_TcpConnector>(connfd, ssl, this->m_ioManager);
     m_ioManager.lock()->GetIOScheduler()->RegisterObjector(connfd, connector);
     int retryTimes = 0;
     do{
-        ret = IOFunction::NetIOFunction::TcpFunction::SSLAccept(ssl);
+        ret = io::net::TcpFunction::SSLAccept(ssl);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if(retryTimes++ > 4000){
             int ssl_err = SSL_get_error(ssl, ret);
             char msg[256];
             ERR_error_string(ssl_err, msg);
             spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}']", __FILE__, __LINE__, connfd, msg);
-            IOFunction::NetIOFunction::TcpFunction::SSLDestory(ssl);
+            io::net::TcpFunction::SSLDestory(ssl);
             ssl = nullptr;
             spdlog::error("[{}:{}] [socket(fd: {}) close]", __FILE__, __LINE__, connfd);
             m_ioManager.lock()->GetIOScheduler()->DelObjector(connfd);
@@ -408,7 +409,7 @@ GY_TcpCreateSSLConnTask::CreateConn()
                 spdlog::error("[{}:{}] [socket(fd: {}) SSL_Accept error: '{}']", __FILE__, __LINE__, connfd, msg);
                 if(m_success) m_success = false;
                 m_error = msg;
-                IOFunction::NetIOFunction::TcpFunction::SSLDestory(ssl);
+                io::net::TcpFunction::SSLDestory(ssl);
                 ssl = nullptr;
                 spdlog::error("[{}:{}] [socket(fd: {}) close]", __FILE__, __LINE__, connfd);
                 m_ioManager.lock()->GetIOScheduler()->DelObjector(connfd);
@@ -434,7 +435,7 @@ GY_TcpCreateSSLConnTask::CreateConn()
 GY_TcpCreateSSLConnTask::~GY_TcpCreateSSLConnTask()
 {
     if(this->m_sslCtx) {
-        IOFunction::NetIOFunction::TcpFunction::SSLDestory({},this->m_sslCtx);
+        io::net::TcpFunction::SSLDestory({},this->m_sslCtx);
         this->m_sslCtx = nullptr;
     }
 }

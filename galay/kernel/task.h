@@ -1,7 +1,8 @@
 #ifndef GALAY_TASK_H
 #define GALAY_TASK_H
-
-#include "../util/netiofunction.h"
+#include <string>
+#include <memory>
+#include <openssl/ssl.h>
 
 namespace galay
 {

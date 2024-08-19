@@ -5,9 +5,9 @@
 
 namespace galay
 {
-    namespace util
+    namespace tools
     {
-        class Random
+        class Randomizer
         {
         public:
             static int RandomInt(int RandomMin, int RandomMax);

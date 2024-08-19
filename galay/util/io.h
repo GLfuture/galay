@@ -2,32 +2,26 @@
 #define GALAY_IOFUNCTION_H
 
 #include <string>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <sys/socket.h>
 #include <string.h>
 #include <memory>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <variant>
 #include <vector>
-#include <fcntl.h>
-#include <netinet/tcp.h>
 
 namespace galay
 {
-    namespace IOFunction
+    namespace io
     {
         class BlockFuction
         {
         public:
-            static int IO_Set_No_Block(int fd);
-            static int IO_Set_Block(int fd);
+            static int SetNoBlock(int fd);
+            static int SetBlock(int fd);
         };
 
-        // network  io
-        namespace NetIOFunction
+        namespace net
         {
+            // network  io
             struct Addr
             {
                 std::string ip;
@@ -54,10 +48,10 @@ namespace galay
                 static ssize_t Recv(int fd, char* buffer, uint32_t len);
                 static ssize_t Send(int fd, const char* buffer, uint32_t len);
                 // for server
-                static SSL_CTX *SSL_Init_Server(long min_version, long max_version);
+                static SSL_CTX *InitSSLServer(long min_version, long max_version);
                 // for client
-                static SSL_CTX *SSL_Init_Client(long min_version, long max_version);
-                static int SSL_Config_Cert_And_Key(SSL_CTX *ctx, const char *cert_filepath, const char *key_filepath);
+                static SSL_CTX *InitSSLClient(long min_version, long max_version);
+                static int SetSSLCertAndKey(SSL_CTX *ctx, const char *cert_filepath, const char *key_filepath);
                 // 修改ssl的绑定
                 static int SSLReset(SSL *ssl, int fd);
                 // 创建一个ssl对象并绑定fd
@@ -70,10 +64,10 @@ namespace galay
                 static void SSLDestory(std::vector<SSL *> ssls, SSL_CTX *ctx);
 
             private:
-                static void SSL_Init_Env();
-                static SSL_CTX *SSL_Init_CTX_Server(long min_version, long max_version);
-                static SSL_CTX *SSL_Init_CTX_Client(long min_version, long max_version);
-                static void SSL_Destory_CTX(SSL_CTX *ctx);
+                static void InitSSLEnv();
+                static SSL_CTX *InitServerSSLCtx(long min_version, long max_version);
+                static SSL_CTX *InitClientSSLCtx(long min_version, long max_version);
+                static void SSLDestoryCtx(SSL_CTX *ctx);
                 static void SSLDestoryEnv();
             };
 
@@ -84,6 +78,25 @@ namespace galay
                 static int Bind(int fd, uint32_t port);
                 static ssize_t RecvFrom(int fd, Addr &addr, char *buffer, int len);
                 static ssize_t SendTo(int fd, const Addr &addr, const std::string &buffer);
+            };
+        }
+
+        namespace file
+        {
+            class SyncFileStream
+            {
+            public:
+                static std::string ReadFile(const std::string &FileName , bool IsBinary = false);
+                static void WriteFile(const std::string &FileName, const std::string &Content , bool IsBinary = false);
+            };
+
+            class ZeroCopyFile
+            {
+            public:
+            #ifdef __linux__
+                static std::string ReadFile(const std::string &FileName);
+                static void WriteFile(const std::string &FileName, const std::string &Content,bool IsBinary = false);
+            #endif
             };
         }
     }

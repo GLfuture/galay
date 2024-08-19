@@ -1,7 +1,9 @@
-#include "stringutil.h"
+#include "stringsplitter.h"
 
+namespace galay::tools
+{
 std::vector<std::string> 
-galay::util::StringUtil::SpiltWithChar(const std::string &str, const char symbol)
+StringSplitter::SpiltWithChar(const std::string &str, const char symbol)
 {
     std::vector<std::string> result;
     for (int i = 0; i < str.size(); i++)
@@ -18,7 +20,7 @@ galay::util::StringUtil::SpiltWithChar(const std::string &str, const char symbol
 
 
 std::vector<std::string>
-galay::util::StringUtil::SpiltWithStr(const std::string &str, const std::string& symbol)
+StringSplitter::SpiltWithStr(const std::string &str, const std::string& symbol)
 {
     std::vector<std::string> result;
     if (symbol.empty())
@@ -39,7 +41,7 @@ galay::util::StringUtil::SpiltWithStr(const std::string &str, const std::string&
 
 
 std::vector<std::string> 
-galay::util::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &str, const char partition, const char connction)
+StringSplitter::Spilt_With_Char_Connect_With_char(const std::string &str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;
@@ -109,7 +111,7 @@ galay::util::StringUtil::Spilt_With_Char_Connect_With_char(const std::string &st
 
 #if __cplusplus >= 201703L
 std::vector<std::string_view> 
-galay::util::StringUtil::SpiltWithChar(std::string_view str, const char symbol)
+StringSplitter::SpiltWithChar(std::string_view str, const char symbol)
 {
     std::vector<std::string_view> result;
     for (int i = 0; i < str.size(); i++)
@@ -125,7 +127,7 @@ galay::util::StringUtil::SpiltWithChar(std::string_view str, const char symbol)
 }
 
 std::vector<std::string_view> 
-galay::util::StringUtil::SpiltWithStr(std::string_view str, std::string_view symbol)
+StringSplitter::SpiltWithStr(std::string_view str, std::string_view symbol)
 {
     std::vector<std::string_view> result;
     if (symbol.empty())
@@ -145,7 +147,7 @@ galay::util::StringUtil::SpiltWithStr(std::string_view str, std::string_view sym
 }
 
 std::vector<std::string_view> 
-galay::util::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view str, const char partition, const char connction)
+StringSplitter::Spilt_With_Char_Connect_With_char(std::string_view str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;
@@ -213,3 +215,4 @@ galay::util::StringUtil::Spilt_With_Char_Connect_With_char(std::string_view str,
 }
 
 #endif
+}

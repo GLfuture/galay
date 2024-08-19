@@ -4,6 +4,7 @@
 #include "../common/waitgroup.h"
 #include "../common/reflection.h"
 #include "../util/random.h"
+#include "../util/io.h"
 #include "result.h"
 #include "server.h"
 #include "scheduler.h"
@@ -383,7 +384,7 @@ GY_TcpConnector::RealRecv()
 GY_TcpConnector::~GY_TcpConnector()
 {
     if(this->m_ssl){
-        IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
+        io::net::TcpFunction::SSLDestory(this->m_ssl);
         this->m_ssl = nullptr;
     }
 }

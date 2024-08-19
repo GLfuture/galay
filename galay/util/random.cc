@@ -1,8 +1,10 @@
 #include "random.h"
 #include <random>
 
+namespace galay::tools
+{
 int 
-galay::util::Random::RandomInt(int RandomMin,int RandomMax)
+Randomizer::RandomInt(int RandomMin,int RandomMax)
 {
     std::random_device rd;
     std::mt19937_64 gen(rd());
@@ -11,7 +13,7 @@ galay::util::Random::RandomInt(int RandomMin,int RandomMax)
 }
 
 uint32_t 
-galay::util::Random::RandomUint32(uint32_t RandomMin, uint32_t RandomMax)
+Randomizer::RandomUint32(uint32_t RandomMin, uint32_t RandomMax)
 {
     std::random_device rd;
     std::mt19937_64 gen(rd());
@@ -20,7 +22,7 @@ galay::util::Random::RandomUint32(uint32_t RandomMin, uint32_t RandomMax)
 }
 
 uint64_t 
-galay::util::Random::RandomUint64(uint64_t RandomMin, uint64_t RandomMax)
+Randomizer::RandomUint64(uint64_t RandomMin, uint64_t RandomMax)
 {
     std::random_device rd;
     std::mt19937_64 gen(rd());
@@ -29,10 +31,11 @@ galay::util::Random::RandomUint64(uint64_t RandomMin, uint64_t RandomMax)
 }
 
 double 
-galay::util::Random::RandomDouble(double RandomMin, double RandomMax)
+Randomizer::RandomDouble(double RandomMin, double RandomMax)
 {
     std::random_device rd;
     std::mt19937_64 gen(rd());
     std::uniform_real_distribution<double> dis(RandomMin,RandomMax);
     return dis(gen);
+}
 }

@@ -1,7 +1,43 @@
 #include "ratelimiter.h"
 #include <functional>
 
-galay::util::GY_RateLimiter::GY_RateLimiter(uint64_t rate, uint64_t capacity,uint64_t deliveryInteralMs)
+#include <assert.h>
+
+namespace galay::tools 
+{
+CountSemaphore::CountSemaphore(uint64_t initcount,uint64_t capacity)
+{
+    assert(initcount <= capacity);
+    m_capacity = capacity;
+    m_nowcount = initcount;
+}
+
+bool 
+CountSemaphore::Get(uint64_t count)
+{
+    std::unique_lock<std::mutex> lock(m_mtx);
+    if(count > m_capacity) return false;
+    m_cond.wait(lock,[this,count](){
+        return m_nowcount >= count;
+    });
+    m_nowcount -= count;
+    return true;
+}
+
+
+void 
+CountSemaphore::Put(uint64_t count)
+{
+    std::unique_lock<std::mutex> lock(m_mtx);
+    //可以m_nowcount += count，因为Get和Put互斥，+=时Get无法进入，不存在m_nowcount > m_capacity时大流量包的误判
+    m_nowcount += count;
+    if(m_nowcount > m_capacity) m_nowcount = m_capacity;
+    lock.unlock();
+    m_cond.notify_all();
+}
+
+
+RateLimiter::RateLimiter(uint64_t rate, uint64_t capacity,uint64_t deliveryInteralMs)
 {
     this->m_rate = rate;
     this->m_semaphore = std::make_unique<CountSemaphore>(capacity,capacity);
@@ -11,15 +47,15 @@ galay::util::GY_RateLimiter::GY_RateLimiter(uint64_t rate, uint64_t capacity,uin
 }
 
 void
-galay::util::GY_RateLimiter::Start()
+RateLimiter::Start()
 {
     if(m_runing) return;
     m_runing = true;
-    m_deliveryThread = std::make_unique<std::thread>(std::bind(&GY_RateLimiter::ProduceToken,this));
+    m_deliveryThread = std::make_unique<std::thread>(std::bind(&RateLimiter::ProduceToken,this));
 }
 
 void 
-galay::util::GY_RateLimiter::Stop()
+RateLimiter::Stop()
 {
     m_runing = false;
     if(m_deliveryThread) {
@@ -28,7 +64,7 @@ galay::util::GY_RateLimiter::Stop()
 }
 
 void 
-galay::util::GY_RateLimiter::ProduceToken()
+RateLimiter::ProduceToken()
 {
     auto lastTime = std::chrono::steady_clock::now();
     while(m_runing)
@@ -43,12 +79,14 @@ galay::util::GY_RateLimiter::ProduceToken()
 }
 
 bool
-galay::util::GY_RateLimiter::Pass(uint64_t flow)
+RateLimiter::Pass(uint64_t flow)
 {
     return m_semaphore->Get(flow);
 }
 
-galay::util::GY_RateLimiter::~GY_RateLimiter()
+RateLimiter::~RateLimiter()
 {
     m_deliveryThread.reset(nullptr);
+}
+
 }
