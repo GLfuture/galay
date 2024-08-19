@@ -27,6 +27,28 @@ namespace galay
                     kHttpError_ChunckHasError,
                     kHttpError_HttpCodeInvalid,
                 };
+
+                class HttpError
+                {
+                public:
+                    using ptr = std::shared_ptr<HttpError>;
+                    using wptr = std::weak_ptr<HttpError>;
+                    using uptr = std::unique_ptr<HttpError>;
+                    bool HasError() const;
+                    HttpErrorCode Code() const;
+                    std::string ToString(HttpErrorCode code) const;
+                protected:
+                    HttpErrorCode m_code = kHttpError_NoError;
+                };
+
+                class HttpErrorInner: public HttpError
+                {
+                public:
+                    using ptr = std::shared_ptr<HttpErrorInner>;
+                    using wptr = std::weak_ptr<HttpErrorInner>;
+                    using uptr = std::unique_ptr<HttpErrorInner>;
+                    void SetCode(HttpErrorCode code);
+                };
             }
 
 
@@ -130,8 +152,6 @@ namespace galay
 
             extern std::unordered_set<std::string> m_stdMethods;
 
-            
-
             class HttpRequestHeader
             {
             public:
@@ -166,6 +186,9 @@ namespace galay
                 using ptr = std::shared_ptr<HttpRequest>;
                 using wptr = std::weak_ptr<HttpRequest>;
                 using uptr = std::unique_ptr<HttpRequest>;
+                
+                HttpRequest();
+                error::HttpError::ptr Error();
                 HttpRequestHeader::ptr Header();
                 std::string& Body();
                 int DecodePdu(const std::string &buffer) override;
@@ -182,6 +205,7 @@ namespace galay
                 HttpProStatus m_status = kHttpHeader;
                 HttpRequestHeader::ptr m_header;
                 std::string m_body;
+                error::HttpErrorInner::ptr m_error;
             };
 
             class HttpResponseHeader
@@ -207,7 +231,8 @@ namespace galay
                 using ptr = std::shared_ptr<HttpResponse>;
                 using wptr = std::weak_ptr<HttpResponse>;
                 using uptr = std::weak_ptr<HttpResponse>;
-                
+                HttpResponse();
+                error::HttpError::ptr Error();
                 HttpResponseHeader::ptr Header();
                 std::string& Body();
                 std::string EncodePdu() override;
@@ -224,22 +249,9 @@ namespace galay
                 HttpProStatus m_status = kHttpHeader;
                 HttpResponseHeader::ptr m_header;
                 std::string m_body;
+                error::HttpErrorInner::ptr m_error;
             };
             
-            namespace error
-            {
-                class HttpError
-                {
-                    friend class galay::protocol::http::HttpRequest;
-                    friend class galay::protocol::http::HttpResponse;
-                public:
-                    HttpErrorCode Code() const;
-                    std::string ToString(HttpErrorCode code) const;
-                private:
-                    HttpErrorCode m_code = kHttpError_NoError;
-                };
-            }
-
             extern HttpRequest::ptr DefaultHttpRequest();
         }
     }

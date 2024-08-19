@@ -558,6 +558,17 @@ HttpRequest::EndChunck()
     return "0\r\n\r\n";
 }
 
+HttpRequest::HttpRequest()
+{
+    this->m_error = std::make_shared<error::HttpErrorInner>();
+}
+
+error::HttpError::ptr 
+HttpRequest::Error()
+{
+    return m_error;
+}
+
 HttpRequestHeader::ptr 
 HttpRequest::Header()
 {
@@ -642,9 +653,7 @@ void
 HttpRequest::DealProtoError(error::HttpErrorCode code)
 {
     Illegal();
-    error::HttpError error;
-    error.m_code = code;
-    SetErrorContext(error);
+    this->m_error->SetCode(code);
 }
 
 std::string& 
@@ -916,6 +925,17 @@ HttpResponseHeader::CodeMsg(int status)
     return "";
 }
 
+HttpResponse::HttpResponse()
+{
+    this->m_error = std::make_shared<error::HttpErrorInner>();
+}
+
+error::HttpError::ptr 
+HttpResponse::Error()
+{
+    return m_error;
+}
+
 HttpResponseHeader::ptr 
 HttpResponse::Header()
 {
@@ -1125,9 +1145,13 @@ void
 HttpResponse::DealProtoError(error::HttpErrorCode code)
 {
     Illegal();
-    error::HttpError error;
-    error.m_code = code;
-    SetErrorContext(error);
+    this->m_error->SetCode(code);
+}
+
+bool 
+error::HttpError::HasError() const
+{
+    return this->m_code != error::kHttpError_NoError;
 }
 
 error::HttpErrorCode 
@@ -1142,7 +1166,11 @@ error::HttpError::ToString(HttpErrorCode code) const
     return g_HttpErrors[code];
 }
 
-
+void 
+error::HttpErrorInner::SetCode(HttpErrorCode code)
+{
+    this->m_code = code;
+}
 
 //function 
 

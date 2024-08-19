@@ -42,15 +42,11 @@ namespace galay
             void PopRequest();
             //获取请求队列的第一个请求
             protocol::GY_Request::ptr GetRequest();
-            std::any &GetError();
             //发送数据 返会一个NetResult 需要调用NetResult.Wait()
             std::shared_ptr<result::NetResult> Send(std::string &&response);
             std::shared_ptr<objector::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<objector::Timer>)> &&func);
         private:
-            void SetError(std::any &&error);
-        private:
             std::any m_context;
-            std::any m_error;
             std::weak_ptr<objector::GY_TcpConnector> m_connector;
         };
 
@@ -62,10 +58,9 @@ namespace galay
             using wptr = std::weak_ptr<GY_HttpController>;
             using uptr = std::unique_ptr<GY_HttpController>;
             GY_HttpController(GY_Controller::ptr ctrl);
+            void Close();
             void SetContext(std::any &&context);
             std::any &GetContext();
-            void Close();
-            protocol::http::error::HttpError GetError();
             //获取请求并出队
             protocol::http::HttpRequest::ptr GetRequest();
             std::shared_ptr<result::NetResult> Send(std::string &&response);

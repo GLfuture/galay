@@ -370,7 +370,7 @@ GY_TcpConnector::RealRecv()
         }
         else if(m_tempRequest->ParseIllegal())
         {
-            this->m_controller->SetError(m_tempRequest->Error());
+            m_requests.push(m_tempRequest);
             m_tempRequest = common::GY_RequestFactory<>::GetInstance()->Create(this->m_ioManager.lock()->GetTcpServerBuilder().lock()->GetTypeName(common::kClassNameRequest));
             this->m_ioManager.lock()->WrongHandle(this->m_controller);
             buffer.clear();

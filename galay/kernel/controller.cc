@@ -22,24 +22,11 @@ GY_Controller::AddTimer(uint64_t during, uint32_t exec_times, std::function<void
     return this->m_connector.lock()->AddTimer(during, exec_times, std::forward<std::function<void(std::shared_ptr<objector::Timer>)>>(func));
 }
 
-void 
-GY_Controller::SetError(std::any &&error)
-{
-    this->m_error = std::forward<std::any>(error);
-}
-
 galay::protocol::GY_Request::ptr
 GY_Controller::GetRequest()
 {
     return this->m_connector.lock()->GetRequest();
 }
-
-std::any&
-GY_Controller::GetError()
-{
-    return m_error;
-}
-
 void 
 GY_Controller::PopRequest()
 {
@@ -73,15 +60,6 @@ void
 GY_HttpController::Close()
 {
     this->m_ctrl->Close();
-}
-
-galay::protocol::http::error::HttpError 
-GY_HttpController::GetError()
-{
-    if(!this->m_ctrl->GetError().has_value()){
-        return galay::protocol::http::error::HttpError{};
-    }
-    return std::any_cast<protocol::http::error::HttpError>(this->m_ctrl->GetError());
 }
 
 void 

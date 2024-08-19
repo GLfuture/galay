@@ -19,7 +19,7 @@ public:
         response->Body() = std::move(body);
         auto res = ctrl->Send(response->EncodePdu());
         co_await res->Wait();
-        std::cout << ctrl->GetError().ToString(ctrl->GetError().Code()) << '\n';
+        std::cout << request->Error()->ToString(request->Error()->Code()) << '\n';
         ctrl->Close();
         co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
     }
@@ -45,6 +45,11 @@ public:
 
 galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::server::GY_HttpController::ptr ctrl)
 {
+    auto request = ctrl->GetRequest();
+    auto err = request->Error();
+    if(err->HasError()) {
+        std::cout << err->ToString(err->Code()) << '\n';
+    }
     galay::protocol::http::HttpResponse response;
     response.Header()->Code() = 400;
     response.Header()->Version() = "1.1";
@@ -54,7 +59,6 @@ galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::server::GY_HttpControll
     auto res = ctrl->Send(response.EncodePdu());
     co_await res->Wait();
     std::cout << "ready to close\n";
-    std::cout << ctrl->GetError().ToString(ctrl->GetError().Code()) << '\n';
     ctrl->Close();
     co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
 }

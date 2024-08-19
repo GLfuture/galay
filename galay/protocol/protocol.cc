@@ -3,12 +3,6 @@
 namespace galay::protocol
 {
 
-std::any 
-GY_Request::Error()
-{
-    return this->m_error;
-}
-
 bool 
 GY_Request::ParseIncomplete()
 {
@@ -26,11 +20,6 @@ GY_Request::ParseSuccess()
     return this->m_parseStatus == kProtoParseSuccess;
 }
 
-void 
-GY_Request::SetErrorContext(std::any error)
-{
-    this->m_error = error;
-}
 
 void 
 GY_Request::Incomplete() 
@@ -50,12 +39,6 @@ GY_Request::Success()
     this->m_parseStatus = kProtoParseSuccess;
 }
 
-std::any 
-GY_Response::Error()
-{
-    return this->m_error;
-}
-
 bool 
 GY_Response::ParseIncomplete()
 {
@@ -71,12 +54,6 @@ bool
 GY_Response::ParseSuccess()
 {
     return this->m_parseStatus == kProtoParseSuccess;
-}
-
-void 
-GY_Response::SetErrorContext(std::any error)
-{
-    this->m_error = error;
 }
 
 void 
