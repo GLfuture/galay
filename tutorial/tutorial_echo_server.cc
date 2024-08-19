@@ -43,7 +43,7 @@ public:
     }
 };
 
-galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::kernel::GY_HttpController::ptr ctrl)
+galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::server::GY_HttpController::ptr ctrl)
 {
     galay::protocol::http::HttpResponse response;
     response.Header()->Code() = 400;
@@ -68,9 +68,9 @@ int main()
     router->Get("/echo",std::bind(&Business::CoreBusiness,&business,std::placeholders::_1));
     router->Get("/chuncked",std::bind(&ChunckBusiness::CoreBusiness,&chunckbusiness,std::placeholders::_1));
     router->RegisterWrongHandle(WrongHttpHandle);
-    galay::kernel::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8899,router);
+    galay::server::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8899,router);
     builder->SetNetThreadNum(4);
-    galay::kernel::GY_TcpServer::ptr server = galay::GY_ServerFactory::CreateHttpServer(builder);
+    galay::server::GY_TcpServer::ptr server = galay::GY_ServerFactory::CreateHttpServer(builder);
     server->Start();
     return 0;
 }  

@@ -8,12 +8,6 @@
 
 namespace galay
 {
-    namespace kernel
-    {
-        class GY_Controller;
-        class GY_HttpController;
-    }
-    
     namespace html
     {
         extern const char* Html404NotFound;

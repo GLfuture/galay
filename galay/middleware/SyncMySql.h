@@ -15,9 +15,9 @@ using namespace abi;
 
 namespace galay
 {
-    namespace MiddleWare
+    namespace middleware
     {
-        namespace MySql
+        namespace mysql
         {
             class MySqlException : public std::exception
             {

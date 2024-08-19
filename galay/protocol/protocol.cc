@@ -1,95 +1,99 @@
 #include "protocol.h"
 
+namespace galay::protocol
+{
+
 std::any 
-galay::protocol::GY_Request::Error()
+GY_Request::Error()
 {
     return this->m_error;
 }
 
 bool 
-galay::protocol::GY_Request::ParseIncomplete()
+GY_Request::ParseIncomplete()
 {
     return this->m_parseStatus == kProtoParseIncomplete;
 }
 bool 
-galay::protocol::GY_Request::ParseIllegal()
+GY_Request::ParseIllegal()
 {
     return this->m_parseStatus == kProtoParseIllegal;
 }
 
 bool 
-galay::protocol::GY_Request::ParseSuccess()
+GY_Request::ParseSuccess()
 {
     return this->m_parseStatus == kProtoParseSuccess;
 }
 
 void 
-galay::protocol::GY_Request::SetErrorContext(std::any error)
+GY_Request::SetErrorContext(std::any error)
 {
     this->m_error = error;
 }
 
 void 
-galay::protocol::GY_Request::Incomplete() 
+GY_Request::Incomplete() 
 {
     this->m_parseStatus = kProtoParseIncomplete;
 }
 
 void 
-galay::protocol::GY_Request::Illegal() 
+GY_Request::Illegal() 
 {
     this->m_parseStatus = kProtoParseIllegal;
 }
 
 void 
-galay::protocol::GY_Request::Success() 
+GY_Request::Success() 
 {
     this->m_parseStatus = kProtoParseSuccess;
 }
 
 std::any 
-galay::protocol::GY_Response::Error()
+GY_Response::Error()
 {
     return this->m_error;
 }
 
 bool 
-galay::protocol::GY_Response::ParseIncomplete()
+GY_Response::ParseIncomplete()
 {
     return this->m_parseStatus == kProtoParseIncomplete;
 }
 bool 
-galay::protocol::GY_Response::ParseIllegal()
+GY_Response::ParseIllegal()
 {
     return this->m_parseStatus == kProtoParseIllegal;
 }
 
 bool 
-galay::protocol::GY_Response::ParseSuccess()
+GY_Response::ParseSuccess()
 {
     return this->m_parseStatus == kProtoParseSuccess;
 }
 
 void 
-galay::protocol::GY_Response::SetErrorContext(std::any error)
+GY_Response::SetErrorContext(std::any error)
 {
     this->m_error = error;
 }
 
 void 
-galay::protocol::GY_Response::Incomplete() 
+GY_Response::Incomplete() 
 {
     this->m_parseStatus = kProtoParseIncomplete;
 }
 
 void 
-galay::protocol::GY_Response::Illegal() 
+GY_Response::Illegal() 
 {
     this->m_parseStatus = kProtoParseIllegal;
 }
 
 void 
-galay::protocol::GY_Response::Success() 
+GY_Response::Success() 
 {
     this->m_parseStatus = kProtoParseSuccess;
+}
 }

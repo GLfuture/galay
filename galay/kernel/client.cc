@@ -9,8 +9,9 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 
-
-galay::kernel::GY_TcpClient::GY_TcpClient(std::weak_ptr<GY_IOScheduler> scheduler)
+namespace galay::client
+{
+GY_TcpClient::GY_TcpClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_recvTask = nullptr;
@@ -21,13 +22,13 @@ galay::kernel::GY_TcpClient::GY_TcpClient(std::weak_ptr<GY_IOScheduler> schedule
 }
 
 void 
-galay::kernel::GY_TcpClient::IsSSL(bool isSSL)
+GY_TcpClient::IsSSL(bool isSSL)
 {
     this->m_isSSL = isSSL;
 }
 
 galay::coroutine::GY_NetCoroutine 
-galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, NetResult::ptr result, bool autoClose)
+GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<result::NetResultInner> result, bool autoClose)
 {
     std::string request = std::forward<std::string>(buffer);
     if(!m_isSSL) {
@@ -40,7 +41,7 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
             auto res = Connect(host, port);
             co_await res->Wait();
             if(!res->Success()) {
-                result->m_errMsg = "Connect:" + res->Error();
+                result->SetErrorMsg("Connect:" + res->Error());
                 spdlog::error("[{}:{}] [Unary.Connect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res->Error());
                 result->Done();
                 co_return coroutine::CoroutineStatus::kCoroutineFinished;
@@ -49,7 +50,7 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
         auto res = Send(std::move(request));
         co_await res->Wait();
         if(!res->Success()) {
-            result->m_errMsg = "Send:" + res->Error();
+            result->SetErrorMsg("Send:" + res->Error());
             spdlog::error("[{}:{}] [Unary.Send(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
@@ -58,15 +59,14 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
         res = Recv(temp);
         co_await res->Wait();
         if(!res->Success()) {
-            result->m_errMsg = "Send:" + res->Error();
+            result->SetErrorMsg("Send:" + res->Error());
             spdlog::error("[{}:{}] [Unary.Recv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, temp, res->Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         spdlog::debug("[{}:{}] [Unary.Recv Buffer: {}]", __FILE__, __LINE__, temp);
-        result->m_result = std::move(temp);
-        result->m_success = true;
-        if(!result->m_errMsg.empty()) result->m_errMsg.clear();
+        result->SetResult(std::move(temp));
+        result->SetSuccess(true);
         if(autoClose){
             Close();
         }
@@ -79,7 +79,7 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
             auto res = SSLConnect(host, port);
             co_await res->Wait();
             if(!res->Success()) {
-                result->m_errMsg = "SSLConnect:" + res->Error();
+                result->SetErrorMsg("SSLConnect:" + res->Error());
                 spdlog::error("[{}:{}] [Unary.SSLConnect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res->Error());
                 result->Done();
                 co_return coroutine::CoroutineStatus::kCoroutineFinished;
@@ -88,7 +88,7 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
         auto res = SSLSend(std::move(request));
         co_await res->Wait();
         if(!res->Success()) {
-            result->m_errMsg = "SSLSend:" + res->Error();
+            result->SetErrorMsg("SSLSend:" + res->Error());
             spdlog::error("[{}:{}] [Unary.SSLSend(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
@@ -97,15 +97,14 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
         res = SSLRecv(temp);
         co_await res->Wait();
         if(!res->Success()) {
-            result->m_errMsg = "SSLRecv:" + res->Error();
+            result->SetErrorMsg("SSLRecv:" + res->Error());
             spdlog::error("[{}:{}] [Unary.SSLRecv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         spdlog::debug("[{}:{}] [Unary.SSLRecv Buffer: {}]", __FILE__, __LINE__, temp);
-        result->m_result = std::move(temp);
-        result->m_success = true;
-        if(!result->m_errMsg.empty()) result->m_errMsg.clear();
+        result->SetResult(std::move(temp));
+        result->SetSuccess(true);
         if(autoClose){
             SSLClose();
         }
@@ -115,38 +114,37 @@ galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::string 
 }
 
 galay::coroutine::GY_NetCoroutine 
-galay::kernel::GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<NetResult> result, bool autoClose)
+GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<result::NetResultInner> result, bool autoClose)
 {
     std::queue<std::string> responses;
     while(!requests.empty())
     {
         std::string request = requests.front();
         requests.pop();
-        std::shared_ptr<NetResult> res = std::make_shared<NetResult>();
+        std::shared_ptr<result::NetResultInner> res = std::make_shared<result::NetResultInner>();
         res->AddTaskNum(1);
         Unary(host, port, std::move(request), res, autoClose);
         co_await res->Wait();
         if(!res->Success()) {
-            result->m_errMsg = res->Error();
-            result->m_result = responses;
+            result->SetErrorMsg(res->Error());
+            result->SetResult(responses);
             spdlog::error("[{}:{}] [UnaryError:{}]", __FILE__, __LINE__, res->Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         } 
         else
         {
-            responses.push(std::any_cast<std::string>(res->m_result));
+            responses.push(std::any_cast<std::string>(res->Result()));
         }
     }
-    result->m_success = true;
-    result->m_result = responses;
-    if(!result->m_errMsg.empty()) result->m_errMsg.clear();
+    result->SetSuccess(true);
+    result->SetResult(responses);
     result->Done();
     co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
-std::shared_ptr<galay::kernel::NetResult>
-galay::kernel::GY_TcpClient::CloseConn()
+std::shared_ptr<result::NetResult>
+GY_TcpClient::CloseConn()
 {
     if(this->m_isSSL) 
     {
@@ -158,33 +156,33 @@ galay::kernel::GY_TcpClient::CloseConn()
     }
 }
 
-galay::kernel::NetResult::ptr 
-galay::kernel::GY_TcpClient::Socket()
+result::NetResult::ptr 
+GY_TcpClient::Socket()
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     this->m_fd = IOFunction::NetIOFunction::TcpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
-        result->m_errMsg = strerror(errno);
+        result->SetErrorMsg(strerror(errno));
         goto end;
     }
     spdlog::debug("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
     if(IOFunction::NetIOFunction::TcpFunction::IO_Set_No_Block(this->m_fd) == -1){
         spdlog::error("[{}:{}] [IO_Set_No_Block(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
-        result->m_errMsg = strerror(errno);
+        result->SetErrorMsg(strerror(errno));
         goto end;
     }
-    result->m_success = true;
+    result->SetSuccess(true);
     spdlog::debug("[{}:{}] [IO_Set_No_Block(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
     this->m_isSocket = true;
 end:
     return result;
 }
 
-galay::kernel::NetResult::ptr  
-galay::kernel::GY_TcpClient::Connect(const std::string &ip, uint16_t port)
+result::NetResult::ptr  
+GY_TcpClient::Connect(const std::string &ip, uint16_t port)
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, ip , port);
     if (ret < 0 )
     {
@@ -192,14 +190,14 @@ galay::kernel::GY_TcpClient::Connect(const std::string &ip, uint16_t port)
         {
             spdlog::error("[{}:{}] [Connect(fd:{}) to {}:{} failed, error is '{}']", __FILE__, __LINE__, this->m_fd, ip, port, strerror(errno));
             m_isConnected = false;
-            result->m_errMsg = strerror(errno);
+            result->SetErrorMsg(strerror(errno));
             Close();
             goto end;
         }
         else
         {
             result->AddTaskNum(1);
-            GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
             executor->OnWrite() += [this,result](){
                 int error = 0;
                 socklen_t len = sizeof(error);
@@ -213,124 +211,123 @@ galay::kernel::GY_TcpClient::Connect(const std::string &ip, uint16_t port)
                     m_isConnected = true;
                     spdlog::debug("[{}:{}] [GY_ClientBase::Connect] connect success", __FILE__, __LINE__);
                 }
-                m_scheduler.lock()->DelEvent(this->m_fd, kEventWrite | kEventEpollET);
+                m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
                 result->Done();
             };
             m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-            m_scheduler.lock()->AddEvent(this->m_fd, kEventWrite | kEventEpollET);
-            result->m_errMsg = "Waiting";
+            m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
+            result->SetErrorMsg("Waiting");
             goto end;
         }
     }
     m_isConnected = true;
-    result->m_success = true;
+    result->SetSuccess(true);
     spdlog::debug("[{}:{}] [GY_ClientBase::Connect] connect success", __FILE__, __LINE__);
 
 end:
     return result;
 }
 
-galay::kernel::NetResult::ptr  
-galay::kernel::GY_TcpClient::Send(std::string &&buffer)
+result::NetResult::ptr  
+GY_TcpClient::Send(std::string &&buffer)
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     if(!m_sendTask)
     {
-        m_sendTask = std::make_shared<galay::kernel::GY_TcpSendTask>(this->m_fd, this->m_ssl, this->m_scheduler);
+        m_sendTask = std::make_shared<task::GY_TcpSendTask>(this->m_fd, this->m_ssl, this->m_scheduler);
     }
     m_sendTask->AppendWBuffer(std::forward<std::string>(buffer));
     m_sendTask->SendAll();
     if(m_sendTask->Empty()){
-        result->m_success = true;
+        result->SetSuccess(true);
         goto end;
     }else{
         result->AddTaskNum(1);
-        GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
         executor->OnWrite() += [this, result](){
             m_sendTask->SendAll();
             SetResult(result, m_sendTask->Success(), m_sendTask->Error());
             if(m_sendTask->Empty()){
-                m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventWrite | kEventEpollET);
+                m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
                 result->Done();
             }
         };
-        result->m_errMsg = "Waiting";
+        result->SetErrorMsg("Waiting");
         m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-        m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventWrite | kEventEpollET);
+        m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
     }
 end:
     return result;
 }
 
-galay::kernel::NetResult::ptr
-galay::kernel::GY_TcpClient::Recv(std::string &buffer)
+result::NetResult::ptr
+GY_TcpClient::Recv(std::string &buffer)
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     if(!m_recvTask){
-        m_recvTask = std::make_shared<galay::kernel::GY_TcpRecvTask>(this->m_fd, this->m_ssl, this->m_scheduler);
+        m_recvTask = std::make_shared<task::GY_TcpRecvTask>(this->m_fd, this->m_ssl, this->m_scheduler);
     }
     m_recvTask->RecvAll();
     if(!m_recvTask->GetRBuffer().empty()){
-        result->m_success = true;
+        result->SetSuccess(true);
         buffer.assign(m_recvTask->GetRBuffer().begin(), m_recvTask->GetRBuffer().end());
         m_recvTask->GetRBuffer().clear();
     }else{
         result->AddTaskNum(1);
-        GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
         executor->OnRead() += [this, result, &buffer](){
             m_recvTask->RecvAll();
             SetResult(result, m_recvTask->Success(), m_recvTask->Error());
             buffer.assign(m_recvTask->GetRBuffer().begin(), m_recvTask->GetRBuffer().end());
             m_recvTask->GetRBuffer().clear();
-            m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead);
+            m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventRead);
             result->Done();
         };
-        result->m_errMsg = "Waiting";
+        result->SetErrorMsg("Waiting");
         m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-        m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventRead | EventType::kEventEpollET);
+        m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventRead | poller::kEventEpollET);
     }
 end:
     return result;
 }
 
-galay::kernel::NetResult::ptr 
-galay::kernel::GY_TcpClient::Close()
+result::NetResult::ptr 
+GY_TcpClient::Close()
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     if(this->m_isSocket)
     {
         if(close(this->m_fd) == -1) {
             spdlog::error("[{}:{}] [Close(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
-            result->m_errMsg = strerror(errno);
+            result->SetErrorMsg(strerror(errno));
         }else{
-            result->m_success = true;
+            result->SetSuccess(true);
             this->m_isSocket = false;
         }
         if(m_isConnected) m_isConnected = false;
     }
     else 
     {
-        result->m_errMsg = "Not Socket";
-        result->m_success = false;
+        result->SetErrorMsg("Not Call Scokect");
     }
     return result;
 }
 
-galay::kernel::NetResult::ptr  
-galay::kernel::GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
+result::NetResult::ptr  
+GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     this->m_ctx = IOFunction::NetIOFunction::TcpFunction::SSL_Init_Client(minVersion, maxVersion);
     if(this->m_ctx == nullptr) {
         unsigned long error = ERR_get_error();
         spdlog::error("[{}:{}] [SSL_Init_Client failed, Error:{}]", __FILE__, __LINE__, ERR_error_string(error, nullptr));
-        result->m_errMsg = ERR_error_string(error, nullptr);
+        result->SetErrorMsg(ERR_error_string(error, nullptr));
         goto end;
     }
     this->m_fd = IOFunction::NetIOFunction::TcpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
-        result->m_errMsg = strerror(errno);
+        result->SetErrorMsg(strerror(errno));
         goto end;
     }
     spdlog::debug("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
@@ -340,10 +337,10 @@ galay::kernel::GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
         spdlog::error("[{}:{}] [SSLCreateObj failed, Error:{}]", __FILE__, __LINE__, ERR_error_string(error, nullptr));
         IOFunction::NetIOFunction::TcpFunction::SSLDestory({}, this->m_ctx);
         this->m_ctx = nullptr;
-        result->m_errMsg = ERR_error_string(error, nullptr);
+        result->SetErrorMsg(ERR_error_string(error, nullptr));
         goto end;
     }
-    result->m_success = true;
+    result->SetSuccess(true);
     this->m_isSocket = true;
     spdlog::debug("[{}:{}] [SSLCreateObj(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
 end:
@@ -351,10 +348,10 @@ end:
 }
 
 
-galay::kernel::NetResult::ptr 
-galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
+result::NetResult::ptr 
+GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     int ret = IOFunction::NetIOFunction::TcpFunction::Conncet(this->m_fd, ip , port);
     if (ret < 0 )
     {
@@ -362,7 +359,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         {
             m_isConnected = false;
             spdlog::error("[{}:{}] [Connect(fd:{}) to {}:{} failed, error is '{}']", __FILE__, __LINE__, this->m_fd, ip, port, strerror(errno));
-            result->m_errMsg = strerror(errno);
+            result->SetErrorMsg(strerror(errno));
             Close();
             return result;
         }
@@ -370,7 +367,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         {
             result->AddTaskNum(1);
             // connect 回调
-            GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
             executor->OnWrite() += [this,result](){
                 int error = 0;
                 socklen_t len = sizeof(error);
@@ -379,7 +376,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                     m_isConnected = false;
                     SetResult(result, false, strerror(error));
                     spdlog::error("[{}:{}] [GY_ClientBase::Connect] connect error: {}", __FILE__, __LINE__, strerror(errno));
-                    m_scheduler.lock()->DelEvent(this->m_fd, kEventWrite | kEventRead | kEventError);
+                    m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                     result->Done();
                 }else{
                     m_isConnected = true;
@@ -390,7 +387,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                         if (r == 1){
                             SetResult(result, true, "");
                             spdlog::debug("[{}:{}] [GY_ClientBase::Connect] SSL_do_handshake success", __FILE__, __LINE__);
-                            m_scheduler.lock()->DelEvent(this->m_fd, kEventWrite | kEventRead | kEventError);
+                            m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                             result->Done();
                             return true;
                         }
@@ -398,15 +395,15 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                         if (err == SSL_ERROR_WANT_WRITE) {
                             SetResult(result, false, "SSL_ERROR_WANT_WRITE");
                             spdlog::debug("[{}:{}] [SSL_do_handshake SSL_ERROR_WANT_WRITE]", __FILE__, __LINE__);
-                            m_scheduler.lock()->ModEvent(this->m_fd, kEventRead, kEventWrite);
+                            m_scheduler.lock()->ModEvent(this->m_fd, poller::kEventRead, poller::kEventWrite);
                         } else if (err == SSL_ERROR_WANT_READ) {
                             SetResult(result, false, "SSL_ERROR_WANT_READ");
                             spdlog::debug("[{}:{}] [SSL_do_handshake SSL_ERROR_WANT_READ]", __FILE__, __LINE__);
-                            m_scheduler.lock()->ModEvent(this->m_fd, kEventWrite, kEventRead);
+                            m_scheduler.lock()->ModEvent(this->m_fd, poller::kEventWrite, poller::kEventRead);
                         } else {
                             SetResult(result, false, strerror(errno));
                             spdlog::error("[{}:{}] [SSL_do_handshake error:{}]", __FILE__, __LINE__, strerror(errno));
-                            m_scheduler.lock()->DelEvent(this->m_fd, kEventWrite | kEventRead | kEventError);
+                            m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                             result->Done();
                             return true;
                         }
@@ -414,7 +411,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                     };
                     bool finish = func();
                     if(!finish){
-                        GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+                        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
                         executor->OnWrite() += [this, result, func](){
                             func();
                         };
@@ -423,8 +420,8 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                 }
             };
             m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-            m_scheduler.lock()->AddEvent(this->m_fd, kEventWrite);
-            result->m_errMsg = "Waiting";
+            m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite);
+            result->SetErrorMsg("Waiting");
             return result;
         }
     } 
@@ -438,7 +435,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
             if (r == 1){
                 SetResult(result, true, "");
                 spdlog::debug("[{}:{}] [GY_ClientBase::SSLConnect] SSL_do_handshake success", __FILE__, __LINE__);
-                m_scheduler.lock()->DelEvent(this->m_fd, kEventWrite | kEventRead | kEventError);
+                m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                 result->Done();
                 return true;
             }
@@ -446,18 +443,18 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
             if (err == SSL_ERROR_WANT_WRITE) {
                 SetResult(result, false, "SSL_ERROR_WANT_WRITE");
                 spdlog::debug("[{}:{}] [SSL_do_handshake SSL_ERROR_WANT_WRITE]", __FILE__, __LINE__);
-                m_scheduler.lock()->ModEvent(this->m_fd, kEventRead, kEventWrite);
+                m_scheduler.lock()->ModEvent(this->m_fd, poller::kEventRead, poller::kEventWrite);
             } else if (err == SSL_ERROR_WANT_READ) {
                 SetResult(result, false, "SSL_ERROR_WANT_READ");
                 spdlog::debug("[{}:{}] [SSL_do_handshake SSL_ERROR_WANT_READ]", __FILE__, __LINE__);
-                m_scheduler.lock()->ModEvent(this->m_fd, kEventWrite, kEventRead);
+                m_scheduler.lock()->ModEvent(this->m_fd, poller::kEventWrite, poller::kEventRead);
             } else {
                 char err_string[256];
                 ERR_error_string_n(err, err_string, sizeof(err_string));
                 std::string errStr = err_string;
                 spdlog::error("[{}:{}] [SSL_do_handshake error:{}]", __FILE__, __LINE__, errStr);
                 SetResult(result, false, std::move(errStr));
-                m_scheduler.lock()->DelEvent(this->m_fd, kEventWrite | kEventRead | kEventError);
+                m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                 result->Done();
                 return true;
             }
@@ -465,7 +462,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         };
         bool finish = func();
         if(!finish){
-            GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
             result->AddTaskNum(1);
             executor->OnWrite() += [this, result, func](){
                 func();
@@ -474,7 +471,7 @@ galay::kernel::GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         }
         else
         {
-            result->m_success = true;
+            result->SetSuccess(true);
             spdlog::debug("[{}:{}] [GY_ClientBase::SSLConnect] SSLConnect success", __FILE__, __LINE__);
         }
     }
@@ -482,77 +479,76 @@ end:
     return result;
 }
 
-galay::kernel::NetResult::ptr 
-galay::kernel::GY_TcpClient::SSLSend(std::string &&buffer)
+result::NetResult::ptr 
+GY_TcpClient::SSLSend(std::string &&buffer)
 {
     return Send(std::forward<std::string>(buffer));
 }
 
-galay::kernel::NetResult::ptr 
-galay::kernel::GY_TcpClient::SSLRecv(std::string &buffer)
+result::NetResult::ptr 
+GY_TcpClient::SSLRecv(std::string &buffer)
 {
     return Recv(buffer);
 }
 
-galay::kernel::NetResult::ptr 
-galay::kernel::GY_TcpClient::SSLClose()
+result::NetResult::ptr 
+GY_TcpClient::SSLClose()
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     if(this->m_isSocket)
     {
         if(this->m_ssl) IOFunction::NetIOFunction::TcpFunction::SSLDestory(this->m_ssl);
         if(this->m_ctx) IOFunction::NetIOFunction::TcpFunction::SSLDestory({},this->m_ctx);
         if(close(this->m_fd) == -1) {
             spdlog::error("[{}:{}] [Close(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
-            result->m_errMsg = strerror(errno);
+            result->SetErrorMsg(strerror(errno));
         }else{
             this->m_isSocket = false;
             if(this->m_isConnected) this->m_isConnected = false;
-            result->m_success = true;
+            result->SetSuccess(true);
         }
     }
     else
     {
-        result->m_errMsg = "Not SSLSocket";
-        result->m_success = false;
+        result->SetErrorMsg("Not Call SSLSocket");
     }
     return result;
 }
 
 bool 
-galay::kernel::GY_TcpClient::Socketed()
+GY_TcpClient::Socketed()
 {
     return this->m_isSocket;
 }
 
 bool 
-galay::kernel::GY_TcpClient::Connected()
+GY_TcpClient::Connected()
 {
     return this->m_isConnected;
 }
 
-galay::kernel::GY_TcpClient::~GY_TcpClient()
+GY_TcpClient::~GY_TcpClient()
 {
     this->m_scheduler.lock()->DelObjector(this->m_fd);
 }
 
 void 
-galay::kernel::GY_TcpClient::SetResult(NetResult::ptr result, bool success, std::string &&errMsg)
+GY_TcpClient::SetResult(result::NetResultInner::ptr result, bool success, std::string &&errMsg)
 {
-    result->m_success = success;
-    result->m_errMsg = std::forward<std::string>(errMsg);
+    result->SetErrorMsg(std::forward<std::string>(errMsg));
+    result->SetSuccess(success);
 }
 
 
-galay::kernel::GY_HttpAsyncClient::GY_HttpAsyncClient(std::weak_ptr<GY_IOScheduler> scheduler)
+GY_HttpAsyncClient::GY_HttpAsyncClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
 {
     this->m_tcpClient = std::make_shared<GY_TcpClient>(scheduler);
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Get(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Get(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -561,10 +557,10 @@ galay::kernel::GY_HttpAsyncClient::Get(const std::string &url, protocol::http::H
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Post(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Post(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -573,10 +569,10 @@ galay::kernel::GY_HttpAsyncClient::Post(const std::string &url, protocol::http::
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Options(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Options(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -585,10 +581,10 @@ galay::kernel::GY_HttpAsyncClient::Options(const std::string &url, protocol::htt
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Put(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Put(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -597,10 +593,10 @@ galay::kernel::GY_HttpAsyncClient::Put(const std::string &url, protocol::http::H
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Delete(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Delete(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -609,10 +605,10 @@ galay::kernel::GY_HttpAsyncClient::Delete(const std::string &url, protocol::http
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Head(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Head(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -621,10 +617,10 @@ galay::kernel::GY_HttpAsyncClient::Head(const std::string &url, protocol::http::
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Trace(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Trace(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -633,10 +629,10 @@ galay::kernel::GY_HttpAsyncClient::Trace(const std::string &url, protocol::http:
     return result;
 }
 
-galay::kernel::HttpResult::ptr 
-galay::kernel::GY_HttpAsyncClient::Patch(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+result::HttpResult::ptr 
+GY_HttpAsyncClient::Patch(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    HttpResult::ptr result = std::make_shared<HttpResult>();
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
@@ -645,14 +641,15 @@ galay::kernel::GY_HttpAsyncClient::Patch(const std::string &url, protocol::http:
     return result;
 }
 
-std::shared_ptr<galay::kernel::NetResult> 
-galay::kernel::GY_HttpAsyncClient::CloseConn()
+std::shared_ptr<result::NetResult> 
+GY_HttpAsyncClient::CloseConn()
 {
+    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     return m_tcpClient->CloseConn();
 }
 
 std::tuple<std::string,uint16_t,std::string> 
-galay::kernel::GY_HttpAsyncClient::ParseUrl(const std::string& url)
+GY_HttpAsyncClient::ParseUrl(const std::string& url)
 {
     std::regex uriRegex(R"((http|https):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?(/.*)?)");
     std::smatch match;
@@ -686,23 +683,23 @@ galay::kernel::GY_HttpAsyncClient::ParseUrl(const std::string& url)
     return res;
 }
 
-galay::kernel::GY_SmtpAsyncClient::GY_SmtpAsyncClient(std::weak_ptr<GY_IOScheduler> scheduler)
+GY_SmtpAsyncClient::GY_SmtpAsyncClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
 {
     this->m_tcpClient = std::make_shared<GY_TcpClient>(scheduler);
 }
 
 void 
-galay::kernel::GY_SmtpAsyncClient::Connect(const std::string& url)
+GY_SmtpAsyncClient::Connect(const std::string& url)
 {
     std::tuple<std::string,uint16_t> res = ParseUrl(url);
     this->m_host = std::get<0>(res);
     this->m_port = std::get<1>(res);
 }
 
-std::shared_ptr<galay::kernel::SmtpResult> 
-galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string password)
+std::shared_ptr<result::SmtpResult> 
+GY_SmtpAsyncClient::Auth(std::string account, std::string password)
 {
-    SmtpResult::ptr result = std::make_shared<SmtpResult>();
+    result::SmtpResultInner::ptr result = std::make_shared<result::SmtpResultInner>();
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
@@ -714,10 +711,10 @@ galay::kernel::GY_SmtpAsyncClient::Auth(std::string account, std::string passwor
     return result;
 }
 
-std::shared_ptr<galay::kernel::SmtpResult> 
-galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg)
+std::shared_ptr<result::SmtpResult> 
+GY_SmtpAsyncClient::SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg)
 {
-    SmtpResult::ptr result = std::make_shared<SmtpResult>();
+    result::SmtpResultInner::ptr result = std::make_shared<result::SmtpResultInner>();
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
@@ -732,10 +729,10 @@ galay::kernel::GY_SmtpAsyncClient::SendEmail(std::string FromEmail, const std::v
     return result;
 }
 
-std::shared_ptr<galay::kernel::SmtpResult> 
-galay::kernel::GY_SmtpAsyncClient::Quit()
+std::shared_ptr<result::SmtpResult> 
+GY_SmtpAsyncClient::Quit()
 {
-    SmtpResult::ptr result = std::make_shared<SmtpResult>();
+    result::SmtpResultInner::ptr result = std::make_shared<result::SmtpResultInner>();
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
@@ -744,14 +741,14 @@ galay::kernel::GY_SmtpAsyncClient::Quit()
     return result;
 }
 
-std::shared_ptr<galay::kernel::NetResult>  
-galay::kernel::GY_SmtpAsyncClient::CloseConn()
+std::shared_ptr<result::NetResult>  
+GY_SmtpAsyncClient::CloseConn()
 {
     return m_tcpClient->CloseConn();
 }
 
 std::tuple<std::string,uint16_t> 
-galay::kernel::GY_SmtpAsyncClient::ParseUrl(const std::string& url)
+GY_SmtpAsyncClient::ParseUrl(const std::string& url)
 {
     std::regex uriRegex(R"((smtp|smtps):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?)");
     std::smatch match;
@@ -787,14 +784,14 @@ galay::kernel::GY_SmtpAsyncClient::ParseUrl(const std::string& url)
 }
 
 
-galay::kernel::GY_UdpClient::GY_UdpClient(std::weak_ptr<GY_IOScheduler> scheduler)
+GY_UdpClient::GY_UdpClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_isSocketed = false;
 }
 
 galay::coroutine::GY_NetCoroutine 
-galay::kernel::GY_UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<NetResult> result)
+GY_UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<result::NetResultInner> result)
 {
     result->AddTaskNum(1);
     if(!this->m_isSocketed)
@@ -806,96 +803,95 @@ galay::kernel::GY_UdpClient::Unary(std::string host, uint16_t port, std::string 
     co_await res->Wait();
     if(!res->Success())
     {
-        result->m_errMsg = res->Error();
+        result->SetErrorMsg(res->Error());
         spdlog::error("[{}:{}] [Unary.SendTo(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res->Error());
         result->Done();
         co_return coroutine::CoroutineStatus::kCoroutineFinished;
     } 
-    UdpResInfo info;
+    result::UdpResInfo info;
     res = RecvFrom(info.m_host, info.m_port, info.m_buffer);
     co_await res->Wait();
     if(!res->Success())
     {
-        result->m_errMsg = res->Error();
+        result->SetErrorMsg(res->Error());
         spdlog::error("[{}:{}] [Unary.RecvFrom(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res->Error());
         result->Done();
         co_return coroutine::CoroutineStatus::kCoroutineFinished;
     }
-    if(!result->m_errMsg.empty()) result->m_errMsg.clear();
-    result->m_result = info;
-    result->m_success = true;
+    result->SetResult(info);
+    result->SetSuccess(true);
     result->Done();
     co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
-std::shared_ptr<galay::kernel::NetResult> 
-galay::kernel::GY_UdpClient::Socket()
+std::shared_ptr<result::NetResult> 
+GY_UdpClient::Socket()
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     this->m_fd = IOFunction::NetIOFunction::UdpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
-        result->m_errMsg = strerror(errno);
+        result->SetErrorMsg(strerror(errno));
         goto end;
     }
     spdlog::debug("[{}:{}] [Socket(fd :{}) success]", __FILE__, __LINE__, this->m_fd);
     if(IOFunction::NetIOFunction::UdpFunction::IO_Set_No_Block(this->m_fd) == -1){
         spdlog::error("[{}:{}] [IO_Set_No_Block(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
-        result->m_errMsg = strerror(errno);
+        result->SetErrorMsg(strerror(errno));
         goto end;
     }
-    result->m_success = true;
+    result->SetSuccess(true);
     spdlog::debug("[{}:{}] [IO_Set_No_Block(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
     this->m_isSocketed = true;
 end:
     return result;
 }
 
-std::shared_ptr<galay::kernel::NetResult> 
-galay::kernel::GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
+std::shared_ptr<result::NetResult> 
+GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
 {
     this->m_request = std::forward<std::string>(buffer);
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     IOFunction::NetIOFunction::Addr addr;
     addr.ip = host;
     addr.port = port;
     int len = galay::IOFunction::NetIOFunction::UdpFunction::SendTo(this->m_fd, addr, this->m_request);
     if(len == -1){
         spdlog::error("[{}:{}] [SendTo(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, strerror(errno));
-        result->m_errMsg = strerror(errno);
+        result->SetErrorMsg(strerror(errno));
         goto end;
     }
     this->m_request.erase(0, len);
     spdlog::debug("[{}:{}] [SendTo(fd:{}, host:{}, port:{}), len:{}]", __FILE__, __LINE__, this->m_fd, host, port, len);
     if(this->m_request.empty()){
         spdlog::debug("[{}:{}] [SendTo All]", __FILE__, __LINE__);
-        result->m_success = true;
+        result->SetSuccess(true);
         goto end;
     }else{
         result->AddTaskNum(1);
-        GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
         executor->OnWrite() += [this, addr, result](){
             int len = galay::IOFunction::NetIOFunction::UdpFunction::SendTo(m_fd, addr, m_request);
             spdlog::debug("[{}:{}] [SendTo(fd:{}, host:{}, port:{}), len:{}]", __FILE__, __LINE__, this->m_fd, addr.ip, addr.port, len);
             m_request.erase(0,len);   
             if(m_request.empty()){
                 SetResult(result, true, "");
-                m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventWrite | kEventEpollET);
+                m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
                 result->Done();
             }
         };
-        result->m_errMsg = "Waiting";
+        result->SetErrorMsg("Waiting");
         m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-        m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventWrite | kEventEpollET);
+        m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
     }
 end:
     return result;
 }
 
-std::shared_ptr<galay::kernel::NetResult> 
-galay::kernel::GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
+std::shared_ptr<result::NetResult> 
+GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     IOFunction::NetIOFunction::Addr addr;
     char buf[MAX_UDP_LENGTH];
     int len = galay::IOFunction::NetIOFunction::UdpFunction::RecvFrom(this->m_fd, addr, buf,MAX_UDP_LENGTH);
@@ -904,12 +900,12 @@ galay::kernel::GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::st
         if(errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR)
         {
             spdlog::error("[{}:{}] [RecvFrom(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, strerror(errno));
-            result->m_errMsg = strerror(errno);
+            result->SetErrorMsg(strerror(errno));
         }
         else
         {
             result->AddTaskNum(1);
-            GY_ClientExcutor::ptr executor = std::make_shared<GY_ClientExcutor>();
+            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
             executor->OnRead() += [this, result, &host, &port, &buffer](){
                 spdlog::debug("[{}:{}] [Call RecvFrom.OnRead]", __FILE__, __LINE__);
                 IOFunction::NetIOFunction::Addr addr;
@@ -928,12 +924,12 @@ galay::kernel::GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::st
                     port = addr.port;
                     SetResult(result, true, "");
                 }
-                m_scheduler.lock()->DelEvent(this->m_fd, EventType::kEventRead | kEventEpollET);
+                m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventRead | poller::kEventEpollET);
                 result->Done();
             };
-            result->m_errMsg = "Waiting";
+            result->SetErrorMsg("Waiting");
             m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-            m_scheduler.lock()->AddEvent(this->m_fd, EventType::kEventRead | kEventEpollET);
+            m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventRead | poller::kEventEpollET);
         }
     }
     else
@@ -942,61 +938,60 @@ galay::kernel::GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::st
         buffer.assign(buf, len);
         host = addr.ip;
         port = addr.port;
-        result->m_success = true;
+        result->SetSuccess(true);
     }
     return result;
 }
 
-std::shared_ptr<galay::kernel::NetResult> 
-galay::kernel::GY_UdpClient::CloseSocket()
+std::shared_ptr<result::NetResult> 
+GY_UdpClient::CloseSocket()
 {
-    galay::kernel::NetResult::ptr result = std::make_shared<NetResult>();
+    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
     if(this->m_isSocketed)
     {
         if(close(this->m_fd) == -1) {
             spdlog::error("[{}:{}] [Close(fd:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
-            result->m_errMsg = strerror(errno);
+            result->SetErrorMsg(strerror(errno));
         }else{
-            result->m_success = true;
+            result->SetSuccess(true);
         }
     }
     else
     {
-        result->m_errMsg = "Not Socket";
-        result->m_success = false;
+        result->SetErrorMsg("Not Call Socket");
     }
     return result;
 }
 
 bool 
-galay::kernel::GY_UdpClient::Socketed()
+GY_UdpClient::Socketed()
 {
     return this->m_isSocketed;
 }
 
-galay::kernel::GY_UdpClient::~GY_UdpClient()
+GY_UdpClient::~GY_UdpClient()
 {
     this->m_scheduler.lock()->DelObjector(this->m_fd);
 }
 
 void 
-galay::kernel::GY_UdpClient::SetResult(NetResult::ptr result, bool success, std::string &&errMsg)
+GY_UdpClient::SetResult(std::shared_ptr<result::NetResultInner> result, bool success, std::string &&errMsg)
 {
-    result->m_success = success;
-    result->m_errMsg = std::forward<std::string>(errMsg);
+    result->SetErrorMsg(std::forward<std::string>(errMsg));
+    result->SetSuccess(success);
 }
 
 
-galay::kernel::DnsAsyncClient::DnsAsyncClient(std::weak_ptr<GY_IOScheduler> scheduler)
+DnsAsyncClient::DnsAsyncClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
 {
     this->m_udpClient = std::make_shared<GY_UdpClient>(scheduler);
 }
 
 
-std::shared_ptr<galay::kernel::DnsResult> 
-galay::kernel::DnsAsyncClient::QueryA(const std::string& host, const uint16_t& port, const std::string& domain)
+std::shared_ptr<result::DnsResult> 
+DnsAsyncClient::QueryA(const std::string& host, const uint16_t& port, const std::string& domain)
 {
-    galay::kernel::DnsResult::ptr result = std::make_shared<DnsResult>();
+    result::DnsResultInner::ptr result = std::make_shared<result::DnsResultInner>();
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
@@ -1013,10 +1008,10 @@ galay::kernel::DnsAsyncClient::QueryA(const std::string& host, const uint16_t& p
     return result;
 }
 
-std::shared_ptr<galay::kernel::DnsResult> 
-galay::kernel::DnsAsyncClient::QueryAAAA(const std::string& host, const uint16_t& port, const std::string& domain)
+std::shared_ptr<result::DnsResult> 
+DnsAsyncClient::QueryAAAA(const std::string& host, const uint16_t& port, const std::string& domain)
 {
-    galay::kernel::DnsResult::ptr result = std::make_shared<DnsResult>();
+    result::DnsResultInner::ptr result = std::make_shared<result::DnsResultInner>();
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
@@ -1033,10 +1028,10 @@ galay::kernel::DnsAsyncClient::QueryAAAA(const std::string& host, const uint16_t
     return result;
 }
 
-std::shared_ptr<galay::kernel::DnsResult> 
-galay::kernel::DnsAsyncClient::QueryPtr(const std::string& host, const uint16_t& port, const std::string& want)
+std::shared_ptr<result::DnsResult> 
+DnsAsyncClient::QueryPtr(const std::string& host, const uint16_t& port, const std::string& want)
 {
-    galay::kernel::DnsResult::ptr result = std::make_shared<DnsResult>();
+    result::DnsResultInner::ptr result = std::make_shared<result::DnsResultInner>();
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
@@ -1053,15 +1048,15 @@ galay::kernel::DnsAsyncClient::QueryPtr(const std::string& host, const uint16_t&
     return result;
 }
 
-std::shared_ptr<galay::kernel::NetResult> 
-galay::kernel::DnsAsyncClient::CloseSocket()
+std::shared_ptr<result::NetResult> 
+DnsAsyncClient::CloseSocket()
 {
     return this->m_udpClient->CloseSocket();
 }
 
 
 std::string 
-galay::kernel::DnsAsyncClient::HostToPtr(const std::string& host)
+DnsAsyncClient::HostToPtr(const std::string& host)
 {
     auto res = util::StringUtil::SpiltWithChar(host, '.');
     std::string Ptr;
@@ -1070,4 +1065,6 @@ galay::kernel::DnsAsyncClient::HostToPtr(const std::string& host)
         Ptr = Ptr + *rit + '.';
     }
     return Ptr + "in-addr.arpa.";
+}
+
 }

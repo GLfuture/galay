@@ -7,7 +7,7 @@
 
 int main()
 {
-    galay::MiddleWare::MySql::SyncMySql mysqlclient;
+    galay::middleware::mysql::SyncMySql mysqlclient;
     mysqlclient.Connect("127.0.0.1","gong","123456","test",3306);
     mysqlclient.CreateTable("user",{{"name","varchar(10)","NOT NULL PRIMARY KEY"},{"age","int",""}});
     //mysqlclient.Insert("user",{{"name","'gong'"},{"age","10"}});

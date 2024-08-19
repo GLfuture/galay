@@ -1,6 +1,8 @@
 #include "http.h"
 #include <spdlog/spdlog.h>
 
+namespace galay::protocol::http
+{
 static const char* g_HttpErrors[] = {
     "No error",
     "Header is too long",
@@ -12,44 +14,44 @@ static const char* g_HttpErrors[] = {
 
 
 std::unordered_set<std::string> 
-galay::protocol::http::m_stdMethods = {
+m_stdMethods = {
     "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" , "PATCH"
 };
 
 
 std::string& 
-galay::protocol::http::HttpRequestHeader::Method()
+HttpRequestHeader::Method()
 {
     return this->m_method;
 }
 
 std::string& 
-galay::protocol::http::HttpRequestHeader::Uri()
+HttpRequestHeader::Uri()
 {
     return this->m_uri;
 }
 
 std::string& 
-galay::protocol::http::HttpRequestHeader::Version()
+HttpRequestHeader::Version()
 {
     return this->m_version;
 }
 
 std::map<std::string,std::string>& 
-galay::protocol::http::HttpRequestHeader::Args()
+HttpRequestHeader::Args()
 {
     return this->m_argList;
 }
 
 
 std::map<std::string,std::string>& 
-galay::protocol::http::HttpRequestHeader::Headers()
+HttpRequestHeader::Headers()
 {
     return this->m_headers;
 }
 
-galay::protocol::http::error::HttpErrorCode 
-galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
+error::HttpErrorCode 
+HttpRequestHeader::FromString(std::string_view str)
 {
     HttpHeadStatus status = HttpHeadStatus::kHttpHeadMethod;
     std::string key, value;
@@ -156,7 +158,7 @@ galay::protocol::http::HttpRequestHeader::FromString(std::string_view str)
 }
 
 std::string 
-galay::protocol::http::HttpRequestHeader::ToString()
+HttpRequestHeader::ToString()
 {
     std::string res = this->m_method + " ";
     std::string url = this->m_uri;
@@ -180,7 +182,7 @@ galay::protocol::http::HttpRequestHeader::ToString()
 }
 
 void 
-galay::protocol::http::HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
+HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
 {
     this->m_method = header->m_method;
     this->m_uri = header->m_uri;
@@ -190,7 +192,7 @@ galay::protocol::http::HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header
 }
 
 void 
-galay::protocol::http::HttpRequestHeader::ParseArgs(std::string uri)
+HttpRequestHeader::ParseArgs(std::string uri)
 {
     int argindx = uri.find('?');
     if (argindx != std::string::npos)
@@ -235,7 +237,7 @@ galay::protocol::http::HttpRequestHeader::ParseArgs(std::string uri)
 }
 
 std::string 
-galay::protocol::http::HttpRequestHeader::ConvertFromUri(std::string&& url, bool convert_plus_to_space)
+HttpRequestHeader::ConvertFromUri(std::string&& url, bool convert_plus_to_space)
 {
     std::string result;
     for (size_t i = 0; i < url.size(); i++)
@@ -288,7 +290,7 @@ galay::protocol::http::HttpRequestHeader::ConvertFromUri(std::string&& url, bool
 }
 
 std::string 
-galay::protocol::http::HttpRequestHeader::ConvertToUri(std::string&& url)
+HttpRequestHeader::ConvertToUri(std::string&& url)
 {
     std::string result;
     size_t n = url.size();
@@ -341,7 +343,7 @@ galay::protocol::http::HttpRequestHeader::ConvertToUri(std::string&& url)
 }
 
 bool 
-galay::protocol::http::HttpRequestHeader::IsHex(char c, int& v)
+HttpRequestHeader::IsHex(char c, int& v)
 {
     if (0x20 <= c && isdigit(c))
     {
@@ -362,7 +364,7 @@ galay::protocol::http::HttpRequestHeader::IsHex(char c, int& v)
 }
 
 size_t 
-galay::protocol::http::HttpRequestHeader::ToUtf8(int code, char* buff)
+HttpRequestHeader::ToUtf8(int code, char* buff)
 {
     if (code < 0x0080)
     {
@@ -405,7 +407,7 @@ galay::protocol::http::HttpRequestHeader::ToUtf8(int code, char* buff)
 }
 
 bool 
-galay::protocol::http::HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& val)
+HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& val)
 {
     if (i >= s.size())
     {
@@ -434,7 +436,7 @@ galay::protocol::http::HttpRequestHeader::FromHexToI(const std::string& s, size_
 
 
 int 
-galay::protocol::http::HttpRequest::DecodePdu(const std::string& buffer)
+HttpRequest::DecodePdu(const std::string& buffer)
 {
     Success();
     size_t n = buffer.length();
@@ -510,7 +512,7 @@ galay::protocol::http::HttpRequest::DecodePdu(const std::string& buffer)
 }
 
 std::string 
-galay::protocol::http::HttpRequest::EncodePdu()
+HttpRequest::EncodePdu()
 {
     if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
         (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
@@ -523,7 +525,7 @@ galay::protocol::http::HttpRequest::EncodePdu()
 }
 
 bool 
-galay::protocol::http::HttpRequest::StartChunck()
+HttpRequest::StartChunck()
 {
     if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
         (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
@@ -540,7 +542,7 @@ galay::protocol::http::HttpRequest::StartChunck()
 }
 
 std::string 
-galay::protocol::http::HttpRequest::ChunckStream(std::string&& buffer)
+HttpRequest::ChunckStream(std::string&& buffer)
 {
     size_t length = buffer.length();
     std::string res = std::to_string(length);
@@ -551,26 +553,26 @@ galay::protocol::http::HttpRequest::ChunckStream(std::string&& buffer)
 }
 
 std::string 
-galay::protocol::http::HttpRequest::EndChunck()
+HttpRequest::EndChunck()
 {
     return "0\r\n\r\n";
 }
 
-galay::protocol::http::HttpRequestHeader::ptr 
-galay::protocol::http::HttpRequest::Header()
+HttpRequestHeader::ptr 
+HttpRequest::Header()
 {
     if(!m_header) m_header = std::make_shared<HttpRequestHeader>();
     return m_header;
 }
 
 std::string&
-galay::protocol::http::HttpRequest::Body()
+HttpRequest::Body()
 {
     return this->m_body;
 }
 
 int 
-galay::protocol::http::HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
+HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
 {
     size_t n = buffer.length();
     if(m_header->Headers().contains("content-length")){
@@ -603,7 +605,7 @@ galay::protocol::http::HttpRequest::GetHttpBody(const std::string &buffer, int e
 }
 
 int 
-galay::protocol::http::HttpRequest::GetChunckBody(const std::string& buffer, int eLength)
+HttpRequest::GetChunckBody(const std::string& buffer, int eLength)
 {
     while (!buffer.empty())
     {
@@ -637,7 +639,7 @@ galay::protocol::http::HttpRequest::GetChunckBody(const std::string& buffer, int
 }
 
 void 
-galay::protocol::http::HttpRequest::DealProtoError(error::HttpErrorCode code)
+HttpRequest::DealProtoError(error::HttpErrorCode code)
 {
     Illegal();
     error::HttpError error;
@@ -646,25 +648,25 @@ galay::protocol::http::HttpRequest::DealProtoError(error::HttpErrorCode code)
 }
 
 std::string& 
-galay::protocol::http::HttpResponseHeader::Version()
+HttpResponseHeader::Version()
 {
     return this->m_version;
 }
 
 int& 
-galay::protocol::http::HttpResponseHeader::Code()
+HttpResponseHeader::Code()
 {
     return this->m_code;
 }
 
 std::map<std::string, std::string>& 
-galay::protocol::http::HttpResponseHeader::Headers()
+HttpResponseHeader::Headers()
 {
     return this->m_headers;
 }
 
 std::string 
-galay::protocol::http::HttpResponseHeader::ToString()
+HttpResponseHeader::ToString()
 {
     std::string res = "HTTP/";
     res = res + this->m_version + ' ' + std::to_string(this->m_code) + ' ' + CodeMsg(this->m_code) + "\r\n";
@@ -676,8 +678,8 @@ galay::protocol::http::HttpResponseHeader::ToString()
     return res;
 }
 
-galay::protocol::http::error::HttpErrorCode 
-galay::protocol::http::HttpResponseHeader::FromString(std::string_view str)
+error::HttpErrorCode 
+HttpResponseHeader::FromString(std::string_view str)
 {
     size_t n = str.length();
     HttpHeadStatus status = HttpHeadStatus::kHttpHeadVersion;
@@ -779,7 +781,7 @@ galay::protocol::http::HttpResponseHeader::FromString(std::string_view str)
 }
 
 std::string 
-galay::protocol::http::HttpResponseHeader::CodeMsg(int status)
+HttpResponseHeader::CodeMsg(int status)
 {
     switch (status)
     {
@@ -914,21 +916,21 @@ galay::protocol::http::HttpResponseHeader::CodeMsg(int status)
     return "";
 }
 
-galay::protocol::http::HttpResponseHeader::ptr 
-galay::protocol::http::HttpResponse::Header()
+HttpResponseHeader::ptr 
+HttpResponse::Header()
 {
     if(!m_header) m_header = std::make_shared<HttpResponseHeader>();
     return m_header;
 }
 
 std::string& 
-galay::protocol::http::HttpResponse::Body()
+HttpResponse::Body()
 {
     return m_body;
 }
 
 std::string 
-galay::protocol::http::HttpResponse::EncodePdu()
+HttpResponse::EncodePdu()
 {
     if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
         (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
@@ -942,7 +944,7 @@ galay::protocol::http::HttpResponse::EncodePdu()
 
 
 int 
-galay::protocol::http::HttpResponse::DecodePdu(const std::string& buffer)
+HttpResponse::DecodePdu(const std::string& buffer)
 {
     Success();
     size_t n = buffer.length();
@@ -1015,7 +1017,7 @@ galay::protocol::http::HttpResponse::DecodePdu(const std::string& buffer)
 }
 
 bool 
-galay::protocol::http::HttpResponse::StartChunck()
+HttpResponse::StartChunck()
 {
     if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
         (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
@@ -1032,7 +1034,7 @@ galay::protocol::http::HttpResponse::StartChunck()
 }
 
 std::string 
-galay::protocol::http::HttpResponse::ChunckStream(std::string&& buffer)
+HttpResponse::ChunckStream(std::string&& buffer)
 {
     size_t length = buffer.length();
     std::string res = std::to_string(length);
@@ -1043,14 +1045,14 @@ galay::protocol::http::HttpResponse::ChunckStream(std::string&& buffer)
 }
 
 std::string 
-galay::protocol::http::HttpResponse::EndChunck()
+HttpResponse::EndChunck()
 {
     return "0\r\n\r\n";
 }
 
 
 int 
-galay::protocol::http::HttpResponse::GetHttpBody(const std::string& buffer, int eLength)
+HttpResponse::GetHttpBody(const std::string& buffer, int eLength)
 {
     size_t n = buffer.length();
     if(m_header->Headers().contains("content-length")){
@@ -1086,7 +1088,7 @@ galay::protocol::http::HttpResponse::GetHttpBody(const std::string& buffer, int 
 
 
 int 
-galay::protocol::http::HttpResponse::GetChunckBody(const std::string& buffer, int eLength)
+HttpResponse::GetChunckBody(const std::string& buffer, int eLength)
 {
     while (!buffer.empty())
     {
@@ -1120,7 +1122,7 @@ galay::protocol::http::HttpResponse::GetChunckBody(const std::string& buffer, in
 }
 
 void 
-galay::protocol::http::HttpResponse::DealProtoError(error::HttpErrorCode code)
+HttpResponse::DealProtoError(error::HttpErrorCode code)
 {
     Illegal();
     error::HttpError error;
@@ -1128,14 +1130,14 @@ galay::protocol::http::HttpResponse::DealProtoError(error::HttpErrorCode code)
     SetErrorContext(error);
 }
 
-galay::protocol::http::error::HttpErrorCode 
-galay::protocol::http::error::HttpError::Code() const
+error::HttpErrorCode 
+error::HttpError::Code() const
 {
     return this->m_code;
 }
 
 std::string 
-galay::protocol::http::error::HttpError::ToString(HttpErrorCode code) const
+error::HttpError::ToString(HttpErrorCode code) const
 {
     return g_HttpErrors[code];
 }
@@ -1144,8 +1146,8 @@ galay::protocol::http::error::HttpError::ToString(HttpErrorCode code) const
 
 //function 
 
-galay::protocol::http::HttpRequest::ptr 
-galay::protocol::http::DefaultHttpRequest()
+HttpRequest::ptr 
+DefaultHttpRequest()
 {
     HttpRequest::ptr request = std::make_shared<HttpRequest>();
     HttpRequestHeader::ptr header = request->Header();
@@ -1154,4 +1156,5 @@ galay::protocol::http::DefaultHttpRequest()
     header->Headers()["Server"] = "Galay-Server";
     header->Headers()["Connection"] = "keep-alive"; 
     return request;
+}
 }

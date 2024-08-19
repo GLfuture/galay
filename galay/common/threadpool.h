@@ -12,7 +12,7 @@
 
 namespace galay
 {
-    namespace common
+    namespace thread
     {
         class GY_ThreadTask
         {

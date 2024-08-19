@@ -1,7 +1,7 @@
 #include "../galay/galay.h"
 #include <iostream>
 
-galay::common::GY_ThreadPool::ptr tp;
+galay::thread::GY_ThreadPool::ptr tp;
 std::atomic_int count = 4;
 
 void print(int i)
@@ -23,7 +23,7 @@ void test()
 
 int main()
 {
-    tp = std::make_shared<galay::common::GY_ThreadPool>();
+    tp = std::make_shared<galay::thread::GY_ThreadPool>();
     tp->Start(4);
     for(int i = 0 ; i < 4 ; i ++){
         tp->AddTask(test);

@@ -1,23 +1,25 @@
 #include "threadpool.h"
 #include <spdlog/spdlog.h>
 
-galay::common::GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
+namespace galay::thread
+{
+GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
 {
     this->m_func = func;
 }
 
 void 
-galay::common::GY_ThreadTask::Execute()
+GY_ThreadTask::Execute()
 {
     this->m_func();
 }
 
-galay::common::GY_ThreadTask::~GY_ThreadTask()
+GY_ThreadTask::~GY_ThreadTask()
 {
 
 }
 
-galay::common::GY_ThreadPool::GY_ThreadPool()
+GY_ThreadPool::GY_ThreadPool()
 {
     m_terminate.store(false, std::memory_order_relaxed);
     m_nums.store(0);
@@ -25,7 +27,7 @@ galay::common::GY_ThreadPool::GY_ThreadPool()
 }
 
 void 
-galay::common::GY_ThreadPool::Run()
+GY_ThreadPool::Run()
 {
     while (!m_terminate.load())
     {
@@ -42,7 +44,7 @@ galay::common::GY_ThreadPool::Run()
 }
 
 void 
-galay::common::GY_ThreadPool::Start(int num)
+GY_ThreadPool::Start(int num)
 {
     this->m_nums.store(num);
     for (int i = 0; i < num; i++)
@@ -58,7 +60,7 @@ galay::common::GY_ThreadPool::Start(int num)
 }
 
 bool 
-galay::common::GY_ThreadPool::WaitForAllDone(uint32_t timeout)
+GY_ThreadPool::WaitForAllDone(uint32_t timeout)
 {
     std::mutex mtx;
     std::unique_lock<std::mutex> lock(mtx);
@@ -77,13 +79,13 @@ galay::common::GY_ThreadPool::WaitForAllDone(uint32_t timeout)
 }
 
 bool 
-galay::common::GY_ThreadPool::IsDone()
+GY_ThreadPool::IsDone()
 {
     return this->m_isDone.load();
 }
 
 void 
-galay::common::GY_ThreadPool::Done()
+GY_ThreadPool::Done()
 {
     this->m_nums.fetch_sub(1);
     if(this->m_nums.load() == 0){
@@ -93,7 +95,7 @@ galay::common::GY_ThreadPool::Done()
 }
 
 void 
-galay::common::GY_ThreadPool::Stop()
+GY_ThreadPool::Stop()
 {
     if (!m_terminate.load())
     {
@@ -102,10 +104,11 @@ galay::common::GY_ThreadPool::Stop()
     }
 }
 
-galay::common::GY_ThreadPool::~GY_ThreadPool()
+GY_ThreadPool::~GY_ThreadPool()
 {
     if (!m_terminate.load())
     {
         Stop();
     }
+}
 }

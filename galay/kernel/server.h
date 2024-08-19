@@ -6,12 +6,44 @@
 
 namespace galay
 {
-    namespace kernel
-    {   
-        class GY_TcpServerBuilderBase;
-        class GY_SIOManager;
+    namespace poller
+    {
+        class GY_IOScheduler;
+    }
+    namespace objector
+    {
         class GY_TimerManager;
         class GY_TcpAcceptor;
+    }
+
+    namespace server
+    {   
+        class GY_Controller;
+        class GY_TcpServerBuilderBase;
+        
+        class GY_SIOManager
+        {
+        public:
+            using ptr = std::shared_ptr<GY_SIOManager>;
+            using wptr = std::weak_ptr<GY_SIOManager>;
+            using uptr = std::unique_ptr<GY_SIOManager>;
+
+            GY_SIOManager(std::shared_ptr<server::GY_TcpServerBuilderBase> builder);
+            virtual void Start();
+            virtual void Stop();
+            virtual std::shared_ptr<poller::GY_IOScheduler> GetIOScheduler();
+            virtual std::weak_ptr<GY_TcpServerBuilderBase> GetTcpServerBuilder();
+            virtual void RightHandle(std::shared_ptr<GY_Controller> controller);
+            virtual void WrongHandle(std::shared_ptr<GY_Controller> controller);
+            virtual ~GY_SIOManager();
+        private:
+            bool m_stop;
+            std::shared_ptr<poller::GY_IOScheduler> m_ioScheduler;
+            std::shared_ptr<GY_TcpServerBuilderBase> m_builder;
+            //函数相关
+            std::function<void(std::shared_ptr<GY_Controller>)> m_rightHandle;
+            std::function<void(std::shared_ptr<GY_Controller>)> m_wrongHandle;
+        };
 
         class GY_Server
         {
@@ -42,11 +74,11 @@ namespace galay
 
             virtual ~GY_TcpServer();
         private:
-            std::shared_ptr<GY_TimerManager> CreateTimerManager();
-            std::shared_ptr<GY_TcpAcceptor> CreateAcceptor(std::shared_ptr<GY_SIOManager> ioManager);
+            std::shared_ptr<objector::GY_TimerManager> CreateTimerManager();
+            std::shared_ptr<objector::GY_TcpAcceptor> CreateAcceptor(std::shared_ptr<GY_SIOManager> ioManager);
         private:
             std::shared_ptr<GY_TcpServerBuilderBase> m_builder;
-            common::GY_ThreadPool::ptr m_threadPool;
+            thread::GY_ThreadPool::ptr m_threadPool;
             std::vector<std::shared_ptr<GY_SIOManager>> m_ioManagers;
             std::atomic_bool m_isStopped;
         };

@@ -2,7 +2,9 @@
 #include "../common/coroutine.h"
 #include "../common/waitgroup.h"
 
-galay::kernel::NetResult::NetResult()
+namespace galay::result
+{
+NetResult::NetResult()
 {
     m_success = false;
     m_errMsg = "";
@@ -10,42 +12,70 @@ galay::kernel::NetResult::NetResult()
 }
 
 bool 
-galay::kernel::NetResult::Success()
+NetResult::Success()
 {
     return m_success;
 }
 
+std::any 
+NetResult::Result()
+{
+    return m_result;
+}
+
 std::string
-galay::kernel::NetResult::Error()
+NetResult::Error()
 {
     return m_errMsg;
 }
 
 void 
-galay::kernel::NetResult::AddTaskNum(uint16_t taskNum)
+NetResult::AddTaskNum(uint16_t taskNum)
 {
     m_waitGroup->Add(taskNum);
 }
 
 galay::coroutine::GroupAwaiter&
-galay::kernel::NetResult::Wait()
+NetResult::Wait()
 {
     return m_waitGroup->Wait();
 }
 
 void 
-galay::kernel::NetResult::Done()
+NetResultInner::SetResult(std::any result)
+{
+    m_result = result;
+}
+
+void 
+NetResultInner::SetErrorMsg(std::string errMsg)
+{
+    m_errMsg = errMsg;
+}
+
+void 
+NetResultInner::SetSuccess(bool success)
+{
+    m_success = success;
+    if(success)
+    {
+        if(!m_errMsg.empty()) m_errMsg.clear();
+    }
+}
+
+void 
+NetResult::Done()
 {
     m_waitGroup->Done();
 }
 
 
-galay::kernel::HttpResult::HttpResult()
+HttpResult::HttpResult()
 {
 }
 
 galay::protocol::http::HttpResponse 
-galay::kernel::HttpResult::GetResponse()
+HttpResult::GetResponse()
 {
     std::string respStr = std::any_cast<std::string>(this->m_result);
     protocol::http::HttpResponse response;
@@ -53,12 +83,12 @@ galay::kernel::HttpResult::GetResponse()
     return response;
 }
 
-galay::kernel::SmtpResult::SmtpResult()
+SmtpResult::SmtpResult()
 {
 }
 
 std::queue<galay::protocol::smtp::SmtpResponse> 
-galay::kernel::SmtpResult::GetResponse()
+SmtpResult::GetResponse()
 {
     std::queue<galay::protocol::smtp::SmtpResponse> smtpResponses;
     std::queue<std::string> responses = std::any_cast<std::queue<std::string>>(this->m_result);
@@ -74,13 +104,13 @@ galay::kernel::SmtpResult::GetResponse()
 }
 
 
-galay::kernel::DnsResult::DnsResult()
+DnsResult::DnsResult()
 {
     m_isParsed = false;
 }
 
 bool 
-galay::kernel::DnsResult::HasCName()
+DnsResult::HasCName()
 {
     if(!m_isParsed) {
         Parse();
@@ -90,7 +120,7 @@ galay::kernel::DnsResult::HasCName()
 }
 
 std::string 
-galay::kernel::DnsResult::GetCName()
+DnsResult::GetCName()
 {
     if(!m_isParsed) {
         Parse();
@@ -102,7 +132,7 @@ galay::kernel::DnsResult::GetCName()
 }
 
 bool 
-galay::kernel::DnsResult::HasA()
+DnsResult::HasA()
 {
     if(!m_isParsed) {
         Parse();
@@ -112,7 +142,7 @@ galay::kernel::DnsResult::HasA()
 }
 
 std::string 
-galay::kernel::DnsResult::GetA()
+DnsResult::GetA()
 {
     if(!m_isParsed) {
         Parse();
@@ -124,7 +154,7 @@ galay::kernel::DnsResult::GetA()
 }
 
 bool 
-galay::kernel::DnsResult::HasAAAA()
+DnsResult::HasAAAA()
 {
     if(!m_isParsed) {
         Parse();
@@ -134,7 +164,7 @@ galay::kernel::DnsResult::HasAAAA()
 }
 
 std::string 
-galay::kernel::DnsResult::GetAAAA()
+DnsResult::GetAAAA()
 {
     if(!m_isParsed) {
         Parse();
@@ -146,7 +176,7 @@ galay::kernel::DnsResult::GetAAAA()
 }
 
 bool 
-galay::kernel::DnsResult::HasPtr()
+DnsResult::HasPtr()
 {
     if(!m_isParsed) {
         Parse();
@@ -156,7 +186,7 @@ galay::kernel::DnsResult::HasPtr()
 }
 
 std::string 
-galay::kernel::DnsResult::GetPtr()
+DnsResult::GetPtr()
 {
     if(!m_isParsed) {
         Parse();
@@ -168,7 +198,7 @@ galay::kernel::DnsResult::GetPtr()
 }
 
 void
-galay::kernel::DnsResult::Parse()
+DnsResult::Parse()
 {
     UdpResInfo info = std::any_cast<UdpResInfo>(this->m_result);
     protocol::dns::DnsResponse response;
@@ -199,3 +229,8 @@ galay::kernel::DnsResult::Parse()
     }
     
 }
+
+}
+
+
+

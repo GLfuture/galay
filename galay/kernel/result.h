@@ -14,25 +14,17 @@ namespace galay{
         class WaitGroup;
     }
 
-    namespace kernel{
-        class GY_HttpAsyncClient; 
-        class GY_SmtpAsyncClient;
-        class GY_TcpClient;
-        class GY_UdpClient;
-        class GY_TcpConnector;
-
+    namespace result
+    {
         class NetResult
         {
-            friend class kernel::GY_TcpClient;
-            friend class kernel::GY_HttpAsyncClient;
-            friend class kernel::GY_TcpConnector;
-            friend class kernel::GY_UdpClient;
         public:
             using ptr = std::shared_ptr<NetResult>;
             using wptr = std::weak_ptr<NetResult>;
             NetResult();
             void Done();
             bool Success();
+            std::any Result();
             std::string Error();
             void AddTaskNum(uint16_t taskNum);
             coroutine::GroupAwaiter& Wait();
@@ -45,9 +37,18 @@ namespace galay{
             std::shared_ptr<coroutine::WaitGroup> m_waitGroup;
         };
 
-        class HttpResult: public NetResult
+        class NetResultInner:virtual public NetResult
         {
-            friend class kernel::GY_HttpAsyncClient;
+        public:
+            using ptr = std::shared_ptr<NetResultInner>;
+            using wptr = std::weak_ptr<NetResultInner>;
+            void SetResult(std::any result);
+            void SetErrorMsg(std::string errMsg);
+            void SetSuccess(bool success);
+        };
+
+        class HttpResult:virtual public NetResult
+        {
         public:
             using ptr = std::shared_ptr<HttpResult>;
             using wptr = std::weak_ptr<HttpResult>;
@@ -56,9 +57,15 @@ namespace galay{
             protocol::http::HttpResponse GetResponse();
         };
 
-        class SmtpResult: public NetResult
+        class HttpResultInner: public HttpResult, public NetResultInner
         {
-            friend class kernel::GY_SmtpAsyncClient;
+        public:
+            using ptr = std::shared_ptr<HttpResultInner>;
+            using wptr = std::weak_ptr<HttpResultInner>;
+        };
+
+        class SmtpResult:virtual public NetResult
+        {
         public:
             using ptr = std::shared_ptr<SmtpResult>;
             using wptr = std::weak_ptr<SmtpResult>;
@@ -66,6 +73,12 @@ namespace galay{
             std::queue<protocol::smtp::SmtpResponse> GetResponse();
         };
 
+        class SmtpResultInner: public SmtpResult, public NetResultInner
+        {
+        public:
+            using ptr = std::shared_ptr<SmtpResultInner>;
+            using wptr = std::weak_ptr<SmtpResultInner>;
+        };
 
         //udp
         struct UdpResInfo
@@ -75,9 +88,8 @@ namespace galay{
             uint16_t m_port;
         };
 
-        class DnsResult: public NetResult
+        class DnsResult:virtual public NetResult
         {
-            friend class kernel::GY_SmtpAsyncClient;
         public:
             using ptr = std::shared_ptr<DnsResult>;
             using wptr = std::weak_ptr<DnsResult>;
@@ -100,6 +112,12 @@ namespace galay{
             std::queue<std::string> m_ptr;
         };
 
+        class DnsResultInner: public DnsResult, public NetResultInner
+        {
+        public:
+            using ptr = std::shared_ptr<DnsResultInner>;
+            using wptr = std::weak_ptr<DnsResultInner>;
+        };
     }
 }
 

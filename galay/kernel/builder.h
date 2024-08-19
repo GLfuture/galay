@@ -13,7 +13,8 @@ namespace galay
     {
         class GY_NetCoroutine;
     }
-    namespace kernel
+    
+    namespace server
     {
         class GY_SSLConfig
         {

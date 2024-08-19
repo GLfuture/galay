@@ -2,11 +2,11 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
-galay::common::GY_ThreadPool::ptr threadPool = std::make_shared<galay::common::GY_ThreadPool>();
+galay::thread::GY_ThreadPool::ptr threadPool = std::make_shared<galay::thread::GY_ThreadPool>();
 
-galay::coroutine::GY_Coroutine func(galay::kernel::GY_SelectScheduler::wptr scheduler)
+galay::coroutine::GY_Coroutine func(galay::poller::GY_SelectScheduler::wptr scheduler)
 {
-    galay::kernel::DnsAsyncClient client(scheduler);
+    galay::client::DnsAsyncClient client(scheduler);
     auto res = client.QueryA("114.114.114.114", 53, "www.baidu.com");
     co_await res->Wait();
     while(res->HasCName()) {
@@ -37,7 +37,7 @@ galay::coroutine::GY_Coroutine func(galay::kernel::GY_SelectScheduler::wptr sche
 int main()
 {
     spdlog::set_level(spdlog::level::debug);
-    galay::kernel::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::kernel::GY_SelectScheduler>(50);
+    galay::poller::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::poller::GY_SelectScheduler>(50);
     threadPool->Start(1);
     galay::coroutine::GY_NetCoroutinePool::GetInstance()->Start();
     threadPool->AddTask([&](){ scheduler->Start(); });

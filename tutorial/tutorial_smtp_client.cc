@@ -5,11 +5,11 @@
 #include <spdlog/async_logger.h>
 #include <spdlog/async.h>
 
-galay::common::GY_ThreadPool::ptr threadPool = std::make_shared<galay::common::GY_ThreadPool>();
+galay::thread::GY_ThreadPool::ptr threadPool = std::make_shared<galay::thread::GY_ThreadPool>();
 
-galay::coroutine::GY_NetCoroutine func(galay::kernel::GY_SelectScheduler::wptr scheduler)
+galay::coroutine::GY_NetCoroutine func(galay::poller::GY_SelectScheduler::wptr scheduler)
 {
-    galay::kernel::GY_SmtpAsyncClient::ptr client = std::make_shared<galay::kernel::GY_SmtpAsyncClient>(scheduler);
+    galay::client::GY_SmtpAsyncClient::ptr client = std::make_shared<galay::client::GY_SmtpAsyncClient>(scheduler);
     client->Connect("smtp://117.135.207.210");
     auto res = client->Auth("bigdata_C1004@163.com", "EPOXVZMINXCXHXUO");
     co_await res->Wait();
@@ -34,7 +34,7 @@ galay::coroutine::GY_NetCoroutine func(galay::kernel::GY_SelectScheduler::wptr s
 int main()
 {
     spdlog::set_level(spdlog::level::trace);
-    galay::kernel::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::kernel::GY_SelectScheduler>(50);
+    galay::poller::GY_SelectScheduler::ptr scheduler = std::make_shared<galay::poller::GY_SelectScheduler>(50);
     threadPool->Start(1);
     galay::coroutine::GY_NetCoroutinePool::GetInstance()->Start();
     threadPool->AddTask([&](){ scheduler->Start(); });

@@ -10,7 +10,7 @@ namespace galay
     {
         class GY_NetCoroutine;
     }
-    namespace kernel
+    namespace server
     {
         class GY_Controller;
         class GY_HttpController;

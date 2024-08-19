@@ -1,35 +1,37 @@
 #include "smtp.h"
 
+namespace galay::protocol::smtp
+{
 std::string 
-galay::protocol::smtp::SmtpHelper::Hello(SmtpRequest& request)
+SmtpHelper::Hello(SmtpRequest& request)
 {
     request.m_content = "HELO MSG";
     return request.EncodePdu();
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::Auth(SmtpRequest& request)
+SmtpHelper::Auth(SmtpRequest& request)
 {
     request.m_content = "AUTH LOGIN";
     return request.EncodePdu();
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::Account(SmtpRequest& request, std::string account)
+SmtpHelper::Account(SmtpRequest& request, std::string account)
 {
     request.m_content = security::Base64Util::base64_encode(account);
     return request.EncodePdu();
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::Password(SmtpRequest& request, std::string password)
+SmtpHelper::Password(SmtpRequest& request, std::string password)
 {
     request.m_content = security::Base64Util::base64_encode(password);
     return request.EncodePdu();
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::MailFrom(SmtpRequest& request, std::string from_mail)
+SmtpHelper::MailFrom(SmtpRequest& request, std::string from_mail)
 {
     request.m_frommail = from_mail;
     std::string res = "MAIL FROM: <";
@@ -38,7 +40,7 @@ galay::protocol::smtp::SmtpHelper::MailFrom(SmtpRequest& request, std::string fr
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::RcptTo(SmtpRequest& request, std::string to_mail)
+SmtpHelper::RcptTo(SmtpRequest& request, std::string to_mail)
 {
     request.m_tomails.push(to_mail);
     std::string res = "RCPT TO: <";
@@ -47,14 +49,14 @@ galay::protocol::smtp::SmtpHelper::RcptTo(SmtpRequest& request, std::string to_m
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::Data(SmtpRequest& request)
+SmtpHelper::Data(SmtpRequest& request)
 {
     request.m_content = "DATA";
     return request.EncodePdu();
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::Msg(SmtpRequest& request, const SmtpMsgInfo& msg)
+SmtpHelper::Msg(SmtpRequest& request, const SmtpMsgInfo& msg)
 {
     std::string res = "From: <";
     res += request.m_frommail + ">\r\nTo: ";
@@ -79,14 +81,14 @@ galay::protocol::smtp::SmtpHelper::Msg(SmtpRequest& request, const SmtpMsgInfo& 
 }
 
 std::string
-galay::protocol::smtp::SmtpHelper::Quit(SmtpRequest& request)
+SmtpHelper::Quit(SmtpRequest& request)
 {
     request.m_content = "QUIT\r\n";
     return request.EncodePdu();
 }
 
 int 
-galay::protocol::smtp::SmtpRequest::DecodePdu(const std::string& buffer)
+SmtpRequest::DecodePdu(const std::string& buffer)
 {
     int pos = buffer.find("\r\n");
     if(pos == std::string::npos) {
@@ -99,20 +101,20 @@ galay::protocol::smtp::SmtpRequest::DecodePdu(const std::string& buffer)
 }
 
 std::string 
-galay::protocol::smtp::SmtpRequest::EncodePdu()
+SmtpRequest::EncodePdu()
 {
     return this->m_content + "\r\n";
 }
 
 std::string& 
-galay::protocol::smtp::SmtpRequest::GetContent()
+SmtpRequest::GetContent()
 {
     return this->m_content;
 }
 
 
 int 
-galay::protocol::smtp::SmtpResponse::DecodePdu(const std::string &buffer)
+SmtpResponse::DecodePdu(const std::string &buffer)
 {
     int pos = buffer.find("\r\n");
     if(pos == std::string::npos) {
@@ -126,14 +128,15 @@ galay::protocol::smtp::SmtpResponse::DecodePdu(const std::string &buffer)
 
 
 std::string 
-galay::protocol::smtp::SmtpResponse::EncodePdu()
+SmtpResponse::EncodePdu()
 {
     return this->m_content + "\r\n";
 }
 
 
 std::string& 
-galay::protocol::smtp::SmtpResponse::GetContent()
+SmtpResponse::GetContent()
 {
     return this->m_content;
+}
 }

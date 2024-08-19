@@ -23,11 +23,22 @@ namespace galay
         class GY_NetCoroutinePool;
     }
 
-    namespace kernel
+    namespace server
     {
-#define MAX_TIMERID 40, 000, 000, 000
         class GY_TcpServerBuilderBase;
         class GY_Controller;
+    }
+
+    namespace objector
+    {
+        class GY_Objector;
+        class Timer;
+        class GY_TimerManager;
+    }
+
+    namespace poller
+    {
+#define MAX_TIMERID 40, 000, 000, 000
 
         enum EventType
         {
@@ -38,9 +49,7 @@ namespace galay
             kEventEpollOneShot = 0x16, // epoll oneshot模式
         };
 
-        class GY_Objector;
-        class Timer;
-        class GY_TimerManager;
+        
 
         class GY_IOScheduler
         {
@@ -52,14 +61,14 @@ namespace galay
             virtual void Start() = 0;
             virtual void Stop() = 0;
             
-            virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) = 0;
-            virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) = 0;
+            virtual void RegisterObjector(int fd, std::shared_ptr<objector::GY_Objector> objector) = 0;
+            virtual void RegiserTimerManager(int fd, std::shared_ptr<objector::GY_TimerManager> timerManager) = 0;
             virtual void DelObjector(int fd) = 0;
 
             virtual int DelEvent(int fd, int event_type) = 0;
             virtual int ModEvent(int fd, int from, int to) = 0;
             virtual int AddEvent(int fd, int event_type) = 0;
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) = 0;
+            virtual std::shared_ptr<objector::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<objector::Timer>)> &&func) = 0;
             virtual ~GY_IOScheduler() = default;
         };
 
@@ -72,8 +81,8 @@ namespace galay
             
             GY_SelectScheduler(uint64_t timeout);
 
-            virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
-            virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
+            virtual void RegisterObjector(int fd, std::shared_ptr<objector::GY_Objector> objector) override;
+            virtual void RegiserTimerManager(int fd, std::shared_ptr<objector::GY_TimerManager> timerManager) override;
             virtual void DelObjector(int fd) override;
 
             virtual int DelEvent(int fd, int event_type) override;
@@ -83,7 +92,7 @@ namespace galay
             virtual void Start() override;
             virtual void Stop() override;
 
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) override;
+            virtual std::shared_ptr<objector::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<objector::Timer>)> &&func) override;
             virtual ~GY_SelectScheduler();
         private:
             bool RealDelObjector(int fd);
@@ -96,7 +105,7 @@ namespace galay
             int m_maxfd = INT32_MIN;
             int m_minfd = INT32_MAX;
             std::atomic_bool m_stop;
-            std::unordered_map<int, std::shared_ptr<GY_Objector>> m_objectors;
+            std::unordered_map<int, std::shared_ptr<objector::GY_Objector>> m_objectors;
             std::queue<int> m_eraseQueue;
         };
 
@@ -108,13 +117,13 @@ namespace galay
             using wptr = std::weak_ptr<GY_EpollScheduler>;
 
             GY_EpollScheduler(uint32_t eventSize, uint64_t timeout);
-            virtual void RegisterObjector(int fd, std::shared_ptr<GY_Objector> objector) override;
-            virtual void RegiserTimerManager(int fd, std::shared_ptr<GY_TimerManager> timerManager) override;
+            virtual void RegisterObjector(int fd, std::shared_ptr<objector::GY_Objector> objector) override;
+            virtual void RegiserTimerManager(int fd, std::shared_ptr<objector::GY_TimerManager> timerManager) override;
             virtual void DelObjector(int fd) override;
             virtual int DelEvent(int fd, int event_type) override;
             virtual int ModEvent(int fd, int from, int to) override;
             virtual int AddEvent(int fd, int event_type) override;
-            virtual std::shared_ptr<Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<Timer>)> &&func) override;
+            virtual std::shared_ptr<objector::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<objector::Timer>)> &&func) override;
             virtual void Start() override;
             virtual void Stop() override;
 
@@ -128,33 +137,9 @@ namespace galay
             uint64_t m_timeout;
             epoll_event *m_events;
             uint32_t m_eventSize;
-            std::unordered_map<int, std::shared_ptr<GY_Objector>> m_objectors;
+            std::unordered_map<int, std::shared_ptr<objector::GY_Objector>> m_objectors;
             std::queue<int> m_eraseQueue;
 
-        };
-
-        class GY_SIOManager
-        {
-        public:
-            using ptr = std::shared_ptr<GY_SIOManager>;
-            using wptr = std::weak_ptr<GY_SIOManager>;
-            using uptr = std::unique_ptr<GY_SIOManager>;
-
-            GY_SIOManager(std::shared_ptr<GY_TcpServerBuilderBase> builder);
-            virtual void Start();
-            virtual void Stop();
-            virtual GY_IOScheduler::ptr GetIOScheduler();
-            virtual std::weak_ptr<GY_TcpServerBuilderBase> GetTcpServerBuilder();
-            virtual void RightHandle(std::shared_ptr<GY_Controller> controller);
-            virtual void WrongHandle(std::shared_ptr<GY_Controller> controller);
-            virtual ~GY_SIOManager();
-        private:
-            bool m_stop;
-            GY_IOScheduler::ptr m_ioScheduler;
-            std::shared_ptr<GY_TcpServerBuilderBase> m_builder;
-            //函数相关
-            std::function<void(std::shared_ptr<GY_Controller>)> m_rightHandle;
-            std::function<void(std::shared_ptr<GY_Controller>)> m_wrongHandle;
         };
     }
 }

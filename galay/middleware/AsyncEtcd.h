@@ -12,8 +12,8 @@
 
 namespace galay
 {
-    namespace MiddleWare{
-        namespace AsyncEtcd{
+    namespace middleware{
+        namespace etcd{
 
             class EtcdAwaiter{
             private:
@@ -30,8 +30,8 @@ namespace galay
             //服务注册 (async)
             class ServiceRegister{
             private:
-                std::unique_ptr<etcd::Client> m_client;
-                std::shared_ptr<etcd::KeepAlive> m_keepalive;
+                std::unique_ptr<::etcd::Client> m_client;
+                std::shared_ptr<::etcd::KeepAlive> m_keepalive;
             public:
                 ServiceRegister(const std::string& EtcdAddrs);
                 using ptr = std::shared_ptr<ServiceRegister>;
@@ -47,7 +47,7 @@ namespace galay
             //服务发现
             class ServiceDiscovery{
             private:
-                std::shared_ptr<etcd::Client> m_client;
+                std::shared_ptr<::etcd::Client> m_client;
             public:
                 using ptr = std::shared_ptr<ServiceDiscovery>;
                 using uptr = std::shared_ptr<ServiceDiscovery>;
@@ -60,7 +60,7 @@ namespace galay
             //分布式锁
             class DistributedLock{
             private:
-                std::unique_ptr<etcd::Client> m_client;
+                std::unique_ptr<::etcd::Client> m_client;
                 std::string m_lock_key;
             public:
                 using ptr = std::shared_ptr<DistributedLock>;

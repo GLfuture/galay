@@ -3,7 +3,9 @@
 #include "../common/coroutine.h"
 #include "controller.h"
 
-galay::kernel::GY_SSLConfig::GY_SSLConfig()
+namespace galay::server
+{
+GY_SSLConfig::GY_SSLConfig()
 {
     m_min_ssl_version.store(DEFAULT_SSL_MIN_VERSION);
     m_max_ssl_version.store(DEFAULT_SSL_MAX_VERSION);
@@ -11,52 +13,51 @@ galay::kernel::GY_SSLConfig::GY_SSLConfig()
     m_ssl_key_path = DEFAULT_SSL_KEY_PATH;
 }
 
-
 void 
-galay::kernel::GY_SSLConfig::SetSSLVersion(int32_t min_ssl_version, int32_t max_ssl_version)
+GY_SSLConfig::SetSSLVersion(int32_t min_ssl_version, int32_t max_ssl_version)
 {
     m_min_ssl_version.store(min_ssl_version);
     m_max_ssl_version.store(max_ssl_version);
 }
 
 void 
-galay::kernel::GY_SSLConfig::SetCertPath(const std::string& cert_path)
+GY_SSLConfig::SetCertPath(const std::string& cert_path)
 {
     m_ssl_cert_path = cert_path;
 }
 
 void 
-galay::kernel::GY_SSLConfig::SetKeyPath(const std::string& key_path)
+GY_SSLConfig::SetKeyPath(const std::string& key_path)
 {
     m_ssl_key_path = key_path;
 }
 
 int32_t 
-galay::kernel::GY_SSLConfig::GetMinSSLVersion() const
+GY_SSLConfig::GetMinSSLVersion() const
 {
     return m_min_ssl_version.load();
 }
 
 int32_t 
-galay::kernel::GY_SSLConfig::GetMaxSSLVersion() const
+GY_SSLConfig::GetMaxSSLVersion() const
 {
     return m_max_ssl_version.load();
 }
 
 
 std::string 
-galay::kernel::GY_SSLConfig::GetCertPath() const
+GY_SSLConfig::GetCertPath() const
 {
     return m_ssl_cert_path;
 }
 
 std::string 
-galay::kernel::GY_SSLConfig::GetKeyPath() const 
+GY_SSLConfig::GetKeyPath() const 
 {
     return m_ssl_key_path;
 }
 
-galay::kernel::GY_TcpServerBuilder::GY_TcpServerBuilder()
+GY_TcpServerBuilder::GY_TcpServerBuilder()
 {
     m_threadnum.store(1);
     m_max_event_size.store(DEFAULT_EVENT_SIZE);
@@ -72,56 +73,56 @@ galay::kernel::GY_TcpServerBuilder::GY_TcpServerBuilder()
 }
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetRightHandle(std::function<galay::coroutine::GY_NetCoroutine(galay::kernel::GY_Controller::ptr)> handle) 
+GY_TcpServerBuilder::SetRightHandle(std::function<galay::coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle) 
 {
     this->m_rightHandle = handle;
 }
 
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> func)
+GY_TcpServerBuilder::SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> func)
 {
     this->m_wrongHandle = func;
 }
 
 
 void
-galay::kernel::GY_TcpServerBuilder::SetSchedulerType(galay::common::SchedulerType scheduler_type)
+GY_TcpServerBuilder::SetSchedulerType(galay::common::SchedulerType scheduler_type)
 {
     this->m_scheduler_type.store(scheduler_type);
 }
 
 
 void
-galay::kernel::GY_TcpServerBuilder::SetNetThreadNum(uint16_t threadnum)
+GY_TcpServerBuilder::SetNetThreadNum(uint16_t threadnum)
 {
     m_threadnum.store(threadnum);
 }
 
 
 void
-galay::kernel::GY_TcpServerBuilder::SetBacklog(uint16_t backlog)
+GY_TcpServerBuilder::SetBacklog(uint16_t backlog)
 {
     m_backlog.store(backlog);
 }
 
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetPort(uint16_t port)
+GY_TcpServerBuilder::SetPort(uint16_t port)
 {
     this->m_port = port;
 }
 
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetMaxEventSize(uint16_t max_event_size)
+GY_TcpServerBuilder::SetMaxEventSize(uint16_t max_event_size)
 {
     m_max_event_size.store(max_event_size);
 }
 
 
 void 
-galay::kernel::GY_TcpServerBuilder::SetScheWaitTime(uint16_t sche_wait_time)
+GY_TcpServerBuilder::SetScheWaitTime(uint16_t sche_wait_time)
 {
     m_sche_wait_time.store(sche_wait_time);
 }
@@ -129,100 +130,100 @@ galay::kernel::GY_TcpServerBuilder::SetScheWaitTime(uint16_t sche_wait_time)
 
 
 void 
-galay::kernel::GY_TcpServerBuilder::InitSSLServer(bool is_ssl)
+GY_TcpServerBuilder::InitSSLServer(bool is_ssl)
 {
     this->m_is_ssl.store(is_ssl);
-    m_ssl_config = std::make_shared<galay::kernel::GY_SSLConfig>();
+    m_ssl_config = std::make_shared<GY_SSLConfig>();
 }
 
 
 uint16_t
-galay::kernel::GY_TcpServerBuilder::GetMaxEventSize()
+GY_TcpServerBuilder::GetMaxEventSize()
 {
     return m_max_event_size.load();
 }  
 
 
 uint16_t
-galay::kernel::GY_TcpServerBuilder::GetScheWaitTime()
+GY_TcpServerBuilder::GetScheWaitTime()
 {
     return m_sche_wait_time.load();
 }
 
 
 uint16_t
-galay::kernel::GY_TcpServerBuilder::GetNetThreadNum()
+GY_TcpServerBuilder::GetNetThreadNum()
 {
     return m_threadnum.load();
 }
 
 
 uint16_t 
-galay::kernel::GY_TcpServerBuilder::GetBacklog()
+GY_TcpServerBuilder::GetBacklog()
 {
     return m_backlog.load();
 }
 
 
 galay::common::SchedulerType 
-galay::kernel::GY_TcpServerBuilder::GetSchedulerType()
+GY_TcpServerBuilder::GetSchedulerType()
 {
     return m_scheduler_type.load();
 }
 
 
 uint16_t 
-galay::kernel::GY_TcpServerBuilder::GetPort()
+GY_TcpServerBuilder::GetPort()
 {
     return m_port.load();
 }
 
 
-std::function<void(galay::kernel::GY_Controller::ptr)>
-galay::kernel::GY_TcpServerBuilder::GetRightHandle()
+std::function<void(GY_Controller::ptr)>
+GY_TcpServerBuilder::GetRightHandle()
 {
-    return [this](galay::kernel::GY_Controller::ptr ctrl){
+    return [this](GY_Controller::ptr ctrl){
         m_rightHandle(ctrl);
     };
 }
 
 
-std::function<void(galay::kernel::GY_Controller::ptr)> 
-galay::kernel::GY_TcpServerBuilder::GetWrongHandle()
+std::function<void(GY_Controller::ptr)> 
+GY_TcpServerBuilder::GetWrongHandle()
 {
-    return [this](galay::kernel::GY_Controller::ptr ctrl){
+    return [this](GY_Controller::ptr ctrl){
         this->m_wrongHandle(ctrl);
     };
 }
 
 
 bool 
-galay::kernel::GY_TcpServerBuilder::GetIsSSL()
+GY_TcpServerBuilder::GetIsSSL()
 {
     return m_is_ssl.load();
 }
 
 
-const galay::kernel::GY_SSLConfig::ptr 
-galay::kernel::GY_TcpServerBuilder::GetSSLConfig()
+const GY_SSLConfig::ptr 
+GY_TcpServerBuilder::GetSSLConfig()
 {
     return m_ssl_config;
 }
 
 
 std::string 
-galay::kernel::GY_TcpServerBuilder::GetTypeName(galay::common::ClassNameType type)
+GY_TcpServerBuilder::GetTypeName(galay::common::ClassNameType type)
 {
     return m_typeNames[type];
 }
 
 
-galay::kernel::GY_TcpServerBuilder::~GY_TcpServerBuilder()
+GY_TcpServerBuilder::~GY_TcpServerBuilder()
 {
     m_ssl_config = nullptr;
 }
 
-galay::kernel::GY_HttpServerBuilder::GY_HttpServerBuilder()
+GY_HttpServerBuilder::GY_HttpServerBuilder()
 {
     m_typeNames[common::kClassNameRequest] = util::GetTypeName<protocol::http::HttpRequest>() ;
     m_typeNames[common::kClassNameResponse] = util::GetTypeName<protocol::http::HttpResponse>() ;
@@ -231,38 +232,41 @@ galay::kernel::GY_HttpServerBuilder::GY_HttpServerBuilder()
     }
 }
 
-std::function<void(galay::kernel::GY_Controller::ptr)>
-galay::kernel::GY_HttpServerBuilder::GetRightHandle()
+std::function<void(GY_Controller::ptr)>
+GY_HttpServerBuilder::GetRightHandle()
 {
-    return [this](galay::kernel::GY_Controller::ptr ctrl){
+    return [this](GY_Controller::ptr ctrl){
         this->m_router->RouteRightHttp(ctrl);
     };
 }
 
-std::function<void(galay::kernel::GY_Controller::ptr)> 
-galay::kernel::GY_HttpServerBuilder::GetWrongHandle()
+std::function<void(GY_Controller::ptr)> 
+GY_HttpServerBuilder::GetWrongHandle()
 {
-    return [this](galay::kernel::GY_Controller::ptr ctrl){
+    return [this](GY_Controller::ptr ctrl){
         this->m_router->RouteWrongHttp(ctrl);
     };
 }
 
 void 
-galay::kernel::GY_HttpServerBuilder::SetRouter(std::shared_ptr<GY_HttpRouter> router)
+GY_HttpServerBuilder::SetRouter(std::shared_ptr<GY_HttpRouter> router)
 {
     this->m_router = router;
 }
 
 
 void 
-galay::kernel::GY_HttpServerBuilder::SetRightHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle)
+GY_HttpServerBuilder::SetRightHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle)
 {
     GY_TcpServerBuilder::SetRightHandle(handle);
 }
 
 
 void 
-galay::kernel::GY_HttpServerBuilder::SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle)
+GY_HttpServerBuilder::SetWrongHandle(std::function<coroutine::GY_NetCoroutine(GY_Controller::ptr)> handle)
 {
     GY_TcpServerBuilder::SetWrongHandle(handle);
+}
+
+
 }

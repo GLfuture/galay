@@ -3,19 +3,20 @@
 #include "router.h"
 #include "server.h"
 
-
-std::shared_ptr<galay::kernel::GY_HttpRouter> 
+namespace galay
+{
+std::shared_ptr<server::GY_HttpRouter> 
 galay::GY_RouterFactory::CreateHttpRouter()
 {
-    return std::make_shared<kernel::GY_HttpRouter>();
+    return std::make_shared<server::GY_HttpRouter>();
 }
 
 
-std::shared_ptr<galay::kernel::GY_HttpServerBuilder> 
+std::shared_ptr<server::GY_HttpServerBuilder> 
 galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(
-    int port,std::shared_ptr<kernel::GY_HttpRouter> router,common::SchedulerType type,uint16_t thread_num)
+    int port,std::shared_ptr<server::GY_HttpRouter> router,common::SchedulerType type,uint16_t thread_num)
 {
-    auto builder = std::make_shared<kernel::GY_HttpServerBuilder>();
+    auto builder = std::make_shared<server::GY_HttpServerBuilder>();
     builder->SetPort(port);
     builder->SetRouter(router);
     builder->SetSchedulerType(type);
@@ -23,12 +24,12 @@ galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(
     return builder;
 }
 
-std::shared_ptr<galay::kernel::GY_HttpServerBuilder> 
+std::shared_ptr<server::GY_HttpServerBuilder> 
 galay::GY_ServerBuilderFactory::CreateHttpsServerBuilder(
     const std::string& key_file,const std::string& cert_file, int port,
-    std::shared_ptr<kernel::GY_HttpRouter> router,common::SchedulerType type,uint16_t thread_num)
+    std::shared_ptr<server::GY_HttpRouter> router,common::SchedulerType type,uint16_t thread_num)
 {
-    auto builder = std::make_shared<kernel::GY_HttpServerBuilder>();
+    auto builder = std::make_shared<server::GY_HttpServerBuilder>();
     builder->SetPort(port);
     builder->SetRouter(router);
     builder->SetSchedulerType(type);
@@ -39,19 +40,20 @@ galay::GY_ServerBuilderFactory::CreateHttpsServerBuilder(
     return builder;
 }
 
-std::shared_ptr<galay::kernel::GY_TcpServer>
-galay::GY_ServerFactory::CreateHttpServer(std::shared_ptr<kernel::GY_HttpServerBuilder> builder)
+std::shared_ptr<server::GY_TcpServer>
+galay::GY_ServerFactory::CreateHttpServer(std::shared_ptr<server::GY_HttpServerBuilder> builder)
 {
-    auto server = std::make_shared<kernel::GY_TcpServer>();
+    auto server = std::make_shared<server::GY_TcpServer>();
     server->SetServerBuilder(builder);
     return server;
 }
 
 
-std::shared_ptr<galay::kernel::GY_TcpServer> 
-galay::GY_ServerFactory::CreateHttpsServer(std::shared_ptr<kernel::GY_HttpServerBuilder> builder)
+std::shared_ptr<server::GY_TcpServer> 
+galay::GY_ServerFactory::CreateHttpsServer(std::shared_ptr<server::GY_HttpServerBuilder> builder)
 {
-    auto server = std::make_shared<kernel::GY_TcpServer>();
+    auto server = std::make_shared<server::GY_TcpServer>();
     server->SetServerBuilder(builder);
     return server;
+}
 }
