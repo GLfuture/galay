@@ -3,8 +3,10 @@
 #include <string.h>
 #include <openssl/rand.h>
 
+namespace galay::security
+{
 std::string 
-galay::security::Salt::create(int SaltLenMin,int SaltLenMax)
+Salt::Create(int SaltLenMin,int SaltLenMax)
 {
     int saltlen = tools::Randomizer::RandomInt(SaltLenMin,SaltLenMax);
     unsigned char* salt = new unsigned char[saltlen];
@@ -14,3 +16,5 @@ galay::security::Salt::create(int SaltLenMin,int SaltLenMax)
     delete[] salt;
     return res;
 }
+}
+

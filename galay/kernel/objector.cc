@@ -258,6 +258,7 @@ GY_TcpConnector::Close()
         spdlog::info("[{}:{}] [Close Connection(fd: {})]", __FILE__, __LINE__, this->m_fd);
         this->m_ioManager.lock()->GetIOScheduler()->DelEvent(this->m_fd, poller::kEventRead | poller::kEventWrite | poller::kEventError);
         this->m_ioManager.lock()->GetIOScheduler()->DelObjector(this->m_fd);
+        io::BlockFuction::SetBlock(this->m_fd);
         close(this->m_fd);
         this->m_isClosed = true;
     }
@@ -366,6 +367,8 @@ GY_TcpConnector::RealRecv()
         }
         else if(m_tempRequest->ParseIncomplete())
         {
+            buffer.erase(0, eLen);
+            this->m_ioManager.lock()->GetIOScheduler()->ModEvent(this->m_fd, poller::kEventRead, poller::kEventRead);
             break;
         }
         else if(m_tempRequest->ParseIllegal())

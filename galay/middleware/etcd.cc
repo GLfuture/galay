@@ -1,38 +1,38 @@
-#include "AsyncEtcd.h"
+#include "etcd.h"
 #include <spdlog/spdlog.h>
 
 namespace galay::middleware::etcd
 {
-    galay::middleware::etcd::EtcdAwaiter::EtcdAwaiter(std::function<void(std::coroutine_handle<>,std::any&)>&& func)
+EtcdAwaiter::EtcdAwaiter(std::function<void(std::coroutine_handle<>,std::any&)>&& func)
 {
     this->m_Func = func;
 }
 
 bool 
-galay::middleware::etcd::EtcdAwaiter::await_ready()
+EtcdAwaiter::await_ready()
 {
     return false;
 }
 
 void 
-galay::middleware::etcd::EtcdAwaiter::await_suspend(std::coroutine_handle<> handle)
+EtcdAwaiter::await_suspend(std::coroutine_handle<> handle)
 {
     m_Func(handle,this->m_Result);
 }
 
 std::any 
-galay::middleware::etcd::EtcdAwaiter::await_resume()
+EtcdAwaiter::await_resume()
 {
     return m_Result;
 }
 
-galay::middleware::etcd::ServiceRegister::ServiceRegister(const std::string& EtcdAddrs)
+ServiceRegister::ServiceRegister(const std::string& EtcdAddrs)
 {
     m_client = std::make_unique<::etcd::Client>(EtcdAddrs);
 }
 
 int
-galay::middleware::etcd::ServiceRegister::Register(const std::string& ServicePathAndNode, const std::string& ServiceAddr,int TTL)
+ServiceRegister::Register(const std::string& ServicePathAndNode, const std::string& ServiceAddr,int TTL)
 {
     if(!CheckNotExist(ServicePathAndNode)) {
         spdlog::error("[{}:{}] [CheckNotExist error: Service is already exist]",__FILE__,__LINE__);
@@ -46,20 +46,20 @@ galay::middleware::etcd::ServiceRegister::Register(const std::string& ServicePat
 }
 
 bool 
-galay::middleware::etcd::ServiceRegister::CheckNotExist(const std::string &key)
+ServiceRegister::CheckNotExist(const std::string &key)
 {
     if (!m_client->get(key).get().value().as_string().empty())
         return false;
     return true;
 }
 
-galay::middleware::etcd::ServiceDiscovery::ServiceDiscovery(const std::string& EtcdAddrs)
+ServiceDiscovery::ServiceDiscovery(const std::string& EtcdAddrs)
 {
     m_client = std::make_shared<::etcd::Client>(EtcdAddrs);
 }
 
-galay::middleware::etcd::EtcdAwaiter 
-galay::middleware::etcd::ServiceDiscovery::Discovery(const std::string& ServicePath)
+EtcdAwaiter 
+ServiceDiscovery::Discovery(const std::string& ServicePath)
 {
     std::weak_ptr client = m_client;
     return EtcdAwaiter([client,ServicePath](std::coroutine_handle<> handle,std::any& res){
@@ -76,20 +76,20 @@ galay::middleware::etcd::ServiceDiscovery::Discovery(const std::string& ServiceP
     });
 }
 
-galay::middleware::etcd::DistributedLock::DistributedLock(const std::string& EtcdAddrs)
+DistributedLock::DistributedLock(const std::string& EtcdAddrs)
 {
     m_client = std::make_unique<::etcd::Client>(EtcdAddrs);
 }
 
 void
-galay::middleware::etcd::DistributedLock::Lock(const std::string& key , int TTL)
+DistributedLock::Lock(const std::string& key , int TTL)
 {
     auto resp = m_client->lock(key,TTL).get();
     m_lock_key = resp.lock_key();
 }
 
 void 
-galay::middleware::etcd::DistributedLock::UnLock()
+DistributedLock::UnLock()
 {
     m_client->unlock(m_lock_key).wait();
 }

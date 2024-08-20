@@ -189,6 +189,7 @@ GY_TcpRecvTask::Execute()
         }else{
             len = io::net::TcpFunction::SSLRecv(this->m_ssl,buffer,DEFAULT_RBUFFER_LENGTH);
         }
+        spdlog::error("len:{}", len);
         if (len == -1)
         {
             if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN)
@@ -204,6 +205,7 @@ GY_TcpRecvTask::Execute()
             {
                 m_success = true;
                 if(!m_error.empty()) m_error.clear();
+                spdlog::debug("[{}:{}] [Recv warn(fd:{})] [Errmsg:{}]", __FILE__, __LINE__, this->m_fd, strerror(errno));
                 m_error = strerror(errno);
             }
             return;

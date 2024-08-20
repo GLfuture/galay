@@ -12,19 +12,18 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
-namespace galay
+namespace galay::security
 {
-    namespace security
+    
+    class Sha256Util
     {
-        class Sha256Util
-        {
-        public:
-            static std::string encode(const std::string &str);
+    public:
+        static std::string Encode(const std::string &str);
 #if __cplusplus >= 201703L
-            static std::string encode(std::string_view str);
+        static std::string Encode(std::string_view str);
 #endif
-        };
-    }
+    };
+
 }
 
 #endif

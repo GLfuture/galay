@@ -19,14 +19,14 @@ SmtpHelper::Auth(SmtpRequest& request)
 std::string
 SmtpHelper::Account(SmtpRequest& request, std::string account)
 {
-    request.m_content = security::Base64Util::base64_encode(account);
+    request.m_content = security::Base64Util::Base64Encode(account);
     return request.EncodePdu();
 }
 
 std::string
 SmtpHelper::Password(SmtpRequest& request, std::string password)
 {
-    request.m_content = security::Base64Util::base64_encode(password);
+    request.m_content = security::Base64Util::Base64Encode(password);
     return request.EncodePdu();
 }
 

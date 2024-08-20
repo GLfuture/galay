@@ -10,20 +10,16 @@
 #include <string_view>
 #endif
 
-namespace galay
+namespace galay::security
 {
-    namespace security
+    class Md5Util
     {
-        class Md5Util
-        {
-        public:
-            static std::string encode(std::string const &str);
+    public:
+        static std::string Encode(std::string const &str);
 #if __cplusplus >= 201703L
-            static std::string encode(std::string_view str);
+        static std::string Encode(std::string_view str);
 #endif
-        };
-
-    }
+    };
 }
 
 #endif

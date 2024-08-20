@@ -3,16 +3,15 @@
 
 #include <string>
 
-namespace galay
+namespace galay::security
 {
-    namespace security{
-        class Salt{
-        public:
-            //创建SaltLenMin - SaltLenMax长度的盐值
-            static std::string create(int SaltLenMin,int SaltLenMax);
+    class Salt{
+    public:
+        //创建SaltLenMin - SaltLenMax长度的盐值
+        static std::string Create(int SaltLenMin,int SaltLenMax);
 
-        };
-    }
+    };
+    
 }
 
 

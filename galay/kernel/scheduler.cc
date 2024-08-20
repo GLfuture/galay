@@ -255,28 +255,17 @@ GY_EpollScheduler::Start()
             RealDelObjector(fd);
         }
         while(--nready >= 0){
-            int eventType = 0;
-            if(m_events[nready].events & EPOLLIN){
-                eventType |= EventType::kEventRead;
-            }
-            if(m_events[nready].events & EPOLLOUT){
-                eventType |= EventType::kEventWrite;
-            }
-            if(m_events[nready].events & EPOLLERR){
-                eventType |= EventType::kEventError;
-            }
-            if(eventType != 0){
-                int fd = m_events[nready].data.fd;
-                auto objector = m_objectors[fd];
-                if(objector){
-                    if(m_events[nready].events & EPOLLIN)
-                    {
-                        objector->OnRead()();
-                    }
-                    else if(m_events[nready].events & EPOLLOUT)
-                    {
-                        objector->OnWrite()();
-                    }
+            spdlog::error("epoll_wait");
+            int fd = m_events[nready].data.fd;
+            auto objector = m_objectors[fd];
+            if(objector){
+                if(m_events[nready].events & EPOLLIN)
+                {
+                    objector->OnRead()();
+                }
+                else if(m_events[nready].events & EPOLLOUT)
+                {
+                    objector->OnWrite()();
                 }
             }
         }

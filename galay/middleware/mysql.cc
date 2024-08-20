@@ -1,4 +1,4 @@
-#include "SyncMySql.h"
+#include "mysql.h"
 
 namespace galay::middleware::mysql
 {
@@ -12,7 +12,7 @@ MySqlException::what() const noexcept
     return m_message.c_str();
 }
 
-SyncMySql::SyncMySql(std::string charset)
+MysqlClient::MysqlClient(std::string charset)
 {
     this->m_handle=mysql_init(NULL);
     if(this->m_handle==NULL) {
@@ -26,7 +26,7 @@ SyncMySql::SyncMySql(std::string charset)
 }
 
 int 
-SyncMySql::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port)
+MysqlClient::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port)
 {
     if (!mysql_real_connect(this->m_handle, Remote.c_str(), UserName.c_str(), Password.c_str(), DBName.c_str(), Port, NULL, 0))
     {
@@ -38,7 +38,7 @@ SyncMySql::Connect(const std::string& Remote,const std::string& UserName,const s
 }
 
 void 
-SyncMySql::DisConnect()
+MysqlClient::DisConnect()
 {
     if(this->m_connected) {
         mysql_close(this->m_handle);
@@ -47,7 +47,7 @@ SyncMySql::DisConnect()
 }
 
 int 
-SyncMySql::CreateTable(std::string TableName, const std::vector<std::tuple<std::string,std::string,std::string>>& Field_Type_Key)
+MysqlClient::CreateTable(std::string TableName, const std::vector<std::tuple<std::string,std::string,std::string>>& Field_Type_Key)
 {
     if(TableName.empty() || Field_Type_Key.empty())
     {
@@ -77,7 +77,7 @@ SyncMySql::CreateTable(std::string TableName, const std::vector<std::tuple<std::
 }
 
 int 
-SyncMySql::DropTable(std::string TableName)
+MysqlClient::DropTable(std::string TableName)
 {
     if(TableName.empty()){
         spdlog::error("[{}:{}] [Arg: [TableName] empty]", __FILE__,__LINE__);
@@ -99,7 +99,7 @@ SyncMySql::DropTable(std::string TableName)
 }
 
 std::vector<std::vector<std::string>> 
-SyncMySql::Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond)
+MysqlClient::Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond)
 {
     if (Fields.empty() || TableName.empty())
     {
@@ -167,7 +167,7 @@ SyncMySql::Select(const std::string& TableName,const std::vector<std::string> &F
 }
 
 int 
-SyncMySql::Insert(const std::string& TableName , const std::vector<std::pair<std::string,std::string>>& Field_Value)
+MysqlClient::Insert(const std::string& TableName , const std::vector<std::pair<std::string,std::string>>& Field_Value)
 {
     if (TableName.empty() || Field_Value.empty())
     {
@@ -203,7 +203,7 @@ SyncMySql::Insert(const std::string& TableName , const std::vector<std::pair<std
 }
 
 int
-SyncMySql::Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond)
+MysqlClient::Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond)
 {
     if(TableName.empty() || Field_Value.empty()){
         spdlog::error("[{}:{}] [Arg: [TableName] or [Field_Value] empty]",__FILE__,__LINE__);
@@ -232,7 +232,7 @@ SyncMySql::Update(const std::string& TableName,const std::vector<std::pair<std::
 }
 
 int 
-SyncMySql::Delete(const std::string& TableName, const std::string& Cond)
+MysqlClient::Delete(const std::string& TableName, const std::string& Cond)
 {
     if(TableName.empty() || Cond.empty())
     {
@@ -256,7 +256,7 @@ SyncMySql::Delete(const std::string& TableName, const std::string& Cond)
 
 
 int 
-SyncMySql::AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
+MysqlClient::AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
 {
     if (TableName.empty())
     {
@@ -280,7 +280,7 @@ SyncMySql::AddField(const std::string& TableName, const std::pair<std::string,st
 }
 
 int 
-SyncMySql::ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
+MysqlClient::ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
 {
     if (TableName.empty())
     {
@@ -304,7 +304,7 @@ SyncMySql::ModFieldType(const std::string& TableName, const std::pair<std::strin
 }
 
 int 
-SyncMySql::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
+MysqlClient::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
 {
     if(TableName.empty() || OldFieldName.empty() ){
         spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __TIME__, __FILE__, __LINE__);
@@ -328,7 +328,7 @@ SyncMySql::ModFieldName(const std::string& TableName,const std::string& OldField
 
 
 int 
-SyncMySql::DelField(const std::string& TableName,const std::string& FieldName)
+MysqlClient::DelField(const std::string& TableName,const std::string& FieldName)
 {
     if(TableName.empty() || FieldName.empty()){
         spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __TIME__, __FILE__, __LINE__);
@@ -352,7 +352,7 @@ SyncMySql::DelField(const std::string& TableName,const std::string& FieldName)
 
 // 发送二进制数据
 int 
-SyncMySql::ParamSendBinaryData(const std::string &ParamQuery, const std::string& Data)
+MysqlClient::ParamSendBinaryData(const std::string &ParamQuery, const std::string& Data)
 {
     if (Data.empty() || ParamQuery.empty())
     {
@@ -409,7 +409,7 @@ SyncMySql::ParamSendBinaryData(const std::string &ParamQuery, const std::string&
 }
 // 接收二进制数据
 int
-SyncMySql::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
+MysqlClient::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
 {
     if (ParamQuery.empty())
     {
@@ -487,7 +487,7 @@ SyncMySql::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
 
 
 bool 
-SyncMySql::StartTransaction()
+MysqlClient::StartTransaction()
 {
     if (mysql_ping(this->m_handle))
     {
@@ -503,7 +503,7 @@ SyncMySql::StartTransaction()
 }
 
 bool 
-SyncMySql::Commit()
+MysqlClient::Commit()
 {
     if (mysql_ping(this->m_handle))
     {
@@ -519,7 +519,7 @@ SyncMySql::Commit()
 }
 
 bool 
-SyncMySql::Rollback()
+MysqlClient::Rollback()
 {
     if (mysql_ping(this->m_handle))
     {
@@ -534,7 +534,7 @@ SyncMySql::Rollback()
     return true;
 }
 
-SyncMySql::~SyncMySql()
+MysqlClient::~MysqlClient()
 {
     if(this->m_connected) {
         mysql_close(this->m_handle); // 关闭数据库连接

@@ -4,28 +4,25 @@
 #include <string>
 #include <cxxabi.h>
 
-namespace galay
+namespace galay::util
 {
-    namespace util
+    template <typename T>
+    std::string GetTypeName()
     {
-        template <typename T>
-        std::string GetTypeName()
-        {
-            std::string typeName;
-            char *szDemangleName = nullptr;
+        std::string typeName;
+        char *szDemangleName = nullptr;
 #ifdef __GNUC__
-            szDemangleName = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
+        szDemangleName = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
 #else
-            szDemangleName = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
+        szDemangleName = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
 #endif
-            if (nullptr != szDemangleName)
-            {
-                typeName = szDemangleName;
-                free(szDemangleName);
-                return typeName;
-            }
-            return "";
+        if (nullptr != szDemangleName)
+        {
+            typeName = szDemangleName;
+            free(szDemangleName);
+            return typeName;
         }
+        return "";
     }
 }
 

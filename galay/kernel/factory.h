@@ -3,6 +3,12 @@
 #include "../common/base.h"
 #include <memory>
 
+namespace galay::server
+{
+    class GY_HttpServerBuilder;
+    class GY_HttpRouter;
+    class GY_TcpServer;
+}
 
 namespace galay{
 
@@ -11,16 +17,8 @@ namespace galay{
         using ptr = std::shared_ptr<GY_Factory>;
         using uptr = std::unique_ptr<GY_Factory>;
         using wptr = std::weak_ptr<GY_Factory>;
-
         virtual ~GY_Factory() = default;
     };
-
-    namespace server
-    {
-        class GY_HttpServerBuilder;
-        class GY_HttpRouter;
-        class GY_TcpServer;
-    }
     
     class GY_RouterFactory{
     public:

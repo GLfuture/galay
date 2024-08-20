@@ -1,7 +1,8 @@
 #include "base64.h"
 
-
- //
+namespace galay::security 
+{
+   //
  // Depending on the url parameter in base64_chars, one of
  // two sets of base64 characters needs to be chosen.
  // They differ in their last two characters.
@@ -10,7 +11,7 @@
 
 
 std::string 
-galay::security::Base64Util::base64_encode(unsigned char const* bytes_to_encode, size_t in_len, bool url) {
+Base64Util::Base64Encode(unsigned char const* bytes_to_encode, size_t in_len, bool url) {
 
     size_t len_encoded = (in_len +2) / 3 * 4;
 
@@ -63,22 +64,22 @@ galay::security::Base64Util::base64_encode(unsigned char const* bytes_to_encode,
 
 
 std::string 
-galay::security::Base64Util::base64_decode(std::string const& s, bool remove_linebreaks) {
-   return decode(s, remove_linebreaks);
+Base64Util::Base64Decode(std::string const& s, bool remove_linebreaks) {
+   return Decode(s, remove_linebreaks);
 }
 
 std::string 
-galay::security::Base64Util::base64_encode(std::string const& s, bool url) {
-   return encode(s, url);
+Base64Util::Base64Encode(std::string const& s, bool url) {
+   return Encode(s, url);
 }
 
 std::string 
-galay::security::Base64Util::base64_encode_pem (std::string const& s) {
+Base64Util::Base64EncodePem (std::string const& s) {
    return encode_pem(s);
 }
 
 std::string 
-galay::security::Base64Util::base64_encode_mime(std::string const& s) {
+Base64Util::Base64EncodeMime(std::string const& s) {
    return encode_mime(s);
 }
 
@@ -90,23 +91,25 @@ galay::security::Base64Util::base64_encode_mime(std::string const& s) {
 //
 
 std::string 
-galay::security::Base64Util::base64_encode(std::string_view s, bool url) {
-   return encode(s, url);
+Base64Util::Base64Encode(std::string_view s, bool url) {
+   return Encode(s, url);
 }
 
 std::string 
-galay::security::Base64Util::base64_encode_pem(std::string_view s) {
+Base64Util::Base64EncodePem(std::string_view s) {
    return encode_pem(s);
 }
 
 std::string 
-galay::security::Base64Util::base64_encode_mime(std::string_view s) {
+Base64Util::Base64EncodeMime(std::string_view s) {
    return encode_mime(s);
 }
 
 std::string 
-galay::security::Base64Util::base64_decode(std::string_view s, bool remove_linebreaks) {
-   return decode(s, remove_linebreaks);
+Base64Util::Base64Decode(std::string_view s, bool remove_linebreaks) {
+   return Decode(s, remove_linebreaks);
 }
 
 #endif  // __cplusplus >= 201703L
+
+}

@@ -2,15 +2,17 @@
 #include "io.h"
 #include "stringsplitter.h"
 
-galay::util::ParserManager::ParserManager()
+namespace galay::util
+{
+ParserManager::ParserManager()
 {
     RegisterExtension<ConfigParser>(".conf");
     RegisterExtension<JsonParser>(".json");
 }
 
 
-galay::util::ParserBase::ptr 
-galay::util::ParserManager::CreateParser(const std::string &filename,bool IsParse)
+ParserBase::ptr 
+ParserManager::CreateParser(const std::string &filename,bool IsParse)
 {
     if(filename.empty()) return nullptr;
     int pos = filename.find_last_of(".");
@@ -23,7 +25,7 @@ galay::util::ParserManager::CreateParser(const std::string &filename,bool IsPars
 }
 
 int 
-galay::util::ConfigParser::Parse(const std::string &filename)
+ConfigParser::Parse(const std::string &filename)
 {
     std::string buffer = galay::io::file::ZeroCopyFile::ReadFile(filename);
     int ret = ParseContent(buffer);
@@ -31,7 +33,7 @@ galay::util::ConfigParser::Parse(const std::string &filename)
 }
 
 int 
-galay::util::ConfigParser::ParseContent(const std::string& content)
+ConfigParser::ParseContent(const std::string& content)
 {
     std::stringstream stream(content);
     std::string line;
@@ -68,7 +70,7 @@ galay::util::ConfigParser::ParseContent(const std::string& content)
 }
 
 std::any 
-galay::util::ConfigParser::GetValue(const std::string &key)
+ConfigParser::GetValue(const std::string &key)
 {
     auto it = m_fields.find(key);
     if (it == m_fields.end())
@@ -78,7 +80,7 @@ galay::util::ConfigParser::GetValue(const std::string &key)
 
 
 int 
-galay::util::JsonParser::Parse(const std::string &filename)
+JsonParser::Parse(const std::string &filename)
 {
     std::string buffer = galay::io::file::ZeroCopyFile::ReadFile(filename);
     if(!nlohmann::json::accept(buffer)){
@@ -89,7 +91,7 @@ galay::util::JsonParser::Parse(const std::string &filename)
 }
 
 std::any 
-galay::util::JsonParser::GetValue(const std::string &key)
+JsonParser::GetValue(const std::string &key)
 {
     std::vector<std::string> path = galay::tools::StringSplitter::SpiltWithChar(key, '.');
     nlohmann::json j;
@@ -110,4 +112,5 @@ galay::util::JsonParser::GetValue(const std::string &key)
         return j;
     }
     return {};
+}
 }

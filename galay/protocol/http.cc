@@ -598,6 +598,7 @@ HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
             Incomplete();
+            return eLength;
         }
     }else{
         size_t pos = buffer.find("\r\n\r\n", eLength);
@@ -605,6 +606,7 @@ HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
                 Incomplete();
+                return eLength;
             }
         }else{
             m_body = buffer.substr(eLength, pos - eLength);
@@ -640,7 +642,7 @@ HttpRequest::GetChunckBody(const std::string& buffer, int eLength)
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
             Incomplete();
-            return 0;
+            return eLength;
         }
         this->m_body += buffer.substr(pos+2,length);
         eLength = pos + 4 + length;

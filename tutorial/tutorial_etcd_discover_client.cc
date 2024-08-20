@@ -1,4 +1,4 @@
-#include "../galay/middleware/AsyncEtcd.h"
+#include "../galay/middleware/etcd.h"
 #include "../galay/galay.h"
 
 galay::coroutine::GY_NetCoroutine func()

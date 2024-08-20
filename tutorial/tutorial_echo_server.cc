@@ -25,6 +25,26 @@ public:
     }
 };
 
+class FormsBusiness : public galay::GY_HttpCoreBase
+{
+public:
+    GY_NetCoroutine CoreBusiness(GY_HttpController::ptr ctrl) override
+    {
+        auto request = ctrl->GetRequest();
+        auto response = std::make_shared<galay::protocol::http::HttpResponse>();
+        response->Header()->Code() = 200;
+        response->Header()->Version() = "1.1";
+        response->Header()->Headers()["Content-Type"] = "text/html";
+        std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>success</body></html>";
+        response->Body() = std::move(body);
+        auto res = ctrl->Send(response->EncodePdu());
+        co_await res->Wait();
+        std::cout << request->Error()->ToString(request->Error()->Code()) << '\n';
+        ctrl->Close();
+        co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
+    }
+};
+
 class ChunckBusiness : public galay::GY_HttpCoreBase
 {
 public:
@@ -59,7 +79,6 @@ galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::server::GY_HttpControll
     auto res = ctrl->Send(response.EncodePdu());
     co_await res->Wait();
     std::cout << "ready to close\n";
-    ctrl->Close();
     co_return galay::coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
@@ -68,9 +87,11 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     Business business;
     ChunckBusiness chunckbusiness;
+    FormsBusiness formsbusiness;
     auto router = galay::GY_RouterFactory::CreateHttpRouter();
     router->Get("/echo",std::bind(&Business::CoreBusiness,&business,std::placeholders::_1));
     router->Get("/chuncked",std::bind(&ChunckBusiness::CoreBusiness,&chunckbusiness,std::placeholders::_1));
+    router->Post("/forms",std::bind(&FormsBusiness::CoreBusiness,&formsbusiness,std::placeholders::_1));
     router->RegisterWrongHandle(WrongHttpHandle);
     galay::server::GY_HttpServerBuilder::ptr builder = galay::GY_ServerBuilderFactory::CreateHttpServerBuilder(8899,router);
     builder->SetNetThreadNum(4);
