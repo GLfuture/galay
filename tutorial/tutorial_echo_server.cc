@@ -14,7 +14,7 @@ public:
         auto response = std::make_shared<galay::protocol::http::HttpResponse>();
         response->Header()->Code() = 200;
         response->Header()->Version() = "1.1";
-        response->Header()->Headers()["Content-Type"] = "text/html";
+        response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>hello world!</body></html>";
         response->Body() = std::move(body);
         auto res = ctrl->Send(response->EncodePdu());
@@ -34,7 +34,7 @@ public:
         auto response = std::make_shared<galay::protocol::http::HttpResponse>();
         response->Header()->Code() = 200;
         response->Header()->Version() = "1.1";
-        response->Header()->Headers()["Content-Type"] = "text/html";
+        response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
         std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>success</body></html>";
         response->Body() = std::move(body);
         auto res = ctrl->Send(response->EncodePdu());
@@ -73,7 +73,7 @@ galay::coroutine::GY_NetCoroutine WrongHttpHandle(galay::server::GY_HttpControll
     galay::protocol::http::HttpResponse response;
     response.Header()->Code() = 400;
     response.Header()->Version() = "1.1";
-    response.Header()->Headers()["Content-Type"] = "text/html";
+    response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
     std::string body = "<html><head><meta charset=\"utf-8\"><title>title</title></head><body>400 Bad Request</body></html>";
     response.Body() = std::move(body);
     auto res = ctrl->Send(response.EncodePdu());

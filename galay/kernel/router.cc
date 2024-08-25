@@ -108,9 +108,9 @@ GY_HttpRouter::RouteSuccess(galay::protocol::http::HttpRequest::ptr request)
             auto response = std::make_shared<protocol::http::HttpResponse>();
             response->Header()->Code() = protocol::http::NotFound_404;
             response->Header()->Version() = "1.1";
-            response->Header()->Headers()["Connection"] = "close";
-            response->Header()->Headers()["Content-Type"] = "text/html";
-            response->Header()->Headers()["Server"] = "galay server";
+            response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+            response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
+            response->Header()->HeaderPairs().AddHeaderPair("Server-Framwork", "galay");
             response->Body() = html::Html404NotFound;
             m_httpCtrl->Send(response->EncodePdu());
             return false;
@@ -121,9 +121,9 @@ GY_HttpRouter::RouteSuccess(galay::protocol::http::HttpRequest::ptr request)
         auto response = std::make_shared<protocol::http::HttpResponse>();
         response->Header()->Code() = protocol::http::MethodNotAllowed_405;
         response->Header()->Version() = "1.1";
-        response->Header()->Headers()["Connection"] = "close";
-        response->Header()->Headers()["Content-Type"] = "text/html";
-        response->Header()->Headers()["Server"] = "galay server";
+        response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+        response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
+        response->Header()->HeaderPairs().AddHeaderPair("Server-Framwork", "galay");
         response->Body() = html::Html405MethodNotAllowed;
         m_httpCtrl->Send(response->EncodePdu());
         return false;

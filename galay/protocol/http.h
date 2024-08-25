@@ -19,6 +19,8 @@ namespace galay::protocol::http::error
         kHttpError_UriTooLong,
         kHttpError_ChunckHasError,
         kHttpError_HttpCodeInvalid,
+        kHttpError_HeaderPairExist,
+        kHttpError_HeaderPairNotExist,
     };
 
     class HttpError
@@ -43,8 +45,6 @@ namespace galay::protocol::http::error
         void SetCode(HttpErrorCode code);
     };
 }
-
-
 
 namespace galay::protocol::http
 {
@@ -146,7 +146,23 @@ namespace galay::protocol::http
         NetworkAuthenticationRequired_511 = 511,
     };
 
-    extern std::unordered_set<std::string> m_stdMethods;
+    extern std::unordered_set<std::string> g_stdMethods;
+
+    class HeaderPair
+    {
+    public:
+        HeaderPair();
+        bool HasKey(const std::string& key);
+        std::string GetValue(const std::string& key);
+        error::HttpError::ptr RemoveHeaderPair(const std::string& key);
+        error::HttpError::ptr AddHeaderPair(const std::string& key, const std::string& value);
+        error::HttpError::ptr SetHeaderPair(const std::string& key, const std::string& value);
+        std::string ToString();
+        void operator=(const HeaderPair& headerPair);
+    private:
+        error::HttpErrorInner::ptr m_error;
+        std::map<std::string, std::string> m_headerPairs;
+    };
 
     class HttpRequestHeader
     {
@@ -157,7 +173,7 @@ namespace galay::protocol::http
         std::string& Uri();
         std::string& Version();
         std::map<std::string,std::string>& Args();
-        std::map<std::string,std::string>& Headers();
+        HeaderPair& HeaderPairs();
         std::string ToString();
         error::HttpErrorCode FromString(std::string_view str);
         void CopyFrom(HttpRequestHeader::ptr header);
@@ -172,8 +188,8 @@ namespace galay::protocol::http
         std::string m_method;
         std::string m_uri;                                          // uri
         std::string m_version;                                      // 版本号
-        std::map<std::string, std::string> m_argList;     // 参数
-        std::map<std::string, std::string> m_headers;     // 字段
+        std::map<std::string, std::string> m_argList;               // 参数
+        HeaderPair m_headerPairs;                                   // 字段
     };
 
     class HttpRequest : public GY_Request, public galay::common::GY_DynamicCreator<GY_Request,HttpRequest>
@@ -210,7 +226,7 @@ namespace galay::protocol::http
         using ptr = std::shared_ptr<HttpResponseHeader>;
         std::string& Version();
         int& Code();
-        std::map<std::string, std::string>& Headers();
+        HeaderPair& HeaderPairs();
         std::string ToString();
         error::HttpErrorCode FromString(std::string_view str);
     private:
@@ -218,7 +234,7 @@ namespace galay::protocol::http
     private:
         int m_code;
         std::string m_version;
-        std::map<std::string, std::string> m_headers;
+        HeaderPair m_headerPairs;
     };
 
     class HttpResponse : public GY_Response, public galay::common::GY_DynamicCreator<GY_Response,HttpResponse>

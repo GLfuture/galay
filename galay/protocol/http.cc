@@ -10,14 +10,98 @@ static const char* g_HttpErrors[] = {
     "Uri too long",
     "Chunck has error",
     "Http code is invalid",
+    "Header pair exists",
 };
 
 
 std::unordered_set<std::string> 
-m_stdMethods = {
+g_stdMethods = {
     "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" , "PATCH"
 };
 
+
+HeaderPair::HeaderPair()
+{
+    this->m_error = std::make_shared<error::HttpErrorInner>();
+}
+
+bool
+HeaderPair::HasKey(const std::string& key)
+{
+    return m_headerPairs.contains(key);
+}
+
+std::string 
+HeaderPair::GetValue(const std::string& key)
+{
+    if (m_headerPairs.contains(key))
+        return m_headerPairs[key];
+    else
+        return "";
+}
+
+error::HttpError::ptr 
+HeaderPair::RemoveHeaderPair(const std::string& key)
+{
+    this->m_error->SetCode(error::kHttpError_NoError);
+    if (m_headerPairs.contains(key))
+    {
+        m_headerPairs.erase(key);
+    }
+    else
+    {
+        this->m_error->SetCode(error::kHttpError_HeaderPairNotExist);
+    }
+    return this->m_error;
+}
+
+error::HttpError::ptr 
+HeaderPair::AddHeaderPair(const std::string& key, const std::string& value)
+{
+    this->m_error->SetCode(error::kHttpError_NoError);
+    if (m_headerPairs.contains(key))
+    {
+        this->m_error->SetCode(error::kHttpError_HeaderPairExist);
+    }
+    else
+    {
+        this->m_headerPairs.emplace(key, value);
+    }
+    return this->m_error;
+}
+
+error::HttpError::ptr 
+HeaderPair::SetHeaderPair(const std::string& key, const std::string& value)
+{
+    this->m_error->SetCode(error::kHttpError_NoError);
+    if (m_headerPairs.contains(key))
+    {
+        this->m_headerPairs[key] = value;
+    }
+    else
+    {
+        this->m_error->SetCode(error::kHttpError_HeaderPairNotExist);
+    }
+    return this->m_error;
+}
+
+std::string 
+HeaderPair::ToString()
+{
+    std::string res;
+    for (auto& [k, v] : m_headerPairs)
+    {
+        res = res + k + ": " + v + "\r\n";
+    }
+    return std::move(res);
+}
+
+void 
+HeaderPair::operator=(const HeaderPair& headerPair)
+{
+    this->m_error = headerPair.m_error;
+    this->m_headerPairs = headerPair.m_headerPairs;
+}
 
 std::string& 
 HttpRequestHeader::Method()
@@ -44,10 +128,10 @@ HttpRequestHeader::Args()
 }
 
 
-std::map<std::string,std::string>& 
-HttpRequestHeader::Headers()
+HeaderPair& 
+HttpRequestHeader::HeaderPairs()
 {
-    return this->m_headers;
+    return this->m_headerPairs;
 }
 
 error::HttpErrorCode 
@@ -70,7 +154,7 @@ HttpRequestHeader::FromString(std::string_view str)
             }
             else
             {
-                if (!m_stdMethods.contains(m_method))
+                if (!g_stdMethods.contains(m_method))
                 {
                     spdlog::error("[{}:{}] [[method is not standard] [Method:{}]]", __FILE__, __LINE__, this->m_method);
                     return error::kHttpError_MethodNotStandard;
@@ -123,7 +207,7 @@ HttpRequestHeader::FromString(std::string_view str)
             {
                 if (str[i] != ':')
                 {
-                    key += std::tolower(str[i]);
+                    key += str[i];
                 }
                 else
                 {
@@ -142,7 +226,7 @@ HttpRequestHeader::FromString(std::string_view str)
             }
             else
             {
-                m_headers[key] = value;
+                m_headerPairs.AddHeaderPair(key, value);
                 key.clear();
                 value.clear();
                 ++i;
@@ -173,10 +257,7 @@ HttpRequestHeader::ToString()
     }
     res += ConvertToUri(std::move(url));
     res = res + " HTTP/" + this->m_version + "\r\n";
-    for (auto& [k, v] : m_headers)
-    {
-        res = res + k + ": " + v + "\r\n";
-    }
+    res += m_headerPairs.ToString();
     res += "\r\n";
     return std::move(res);
 }
@@ -188,7 +269,7 @@ HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
     this->m_uri = header->m_uri;
     this->m_version = header->m_version;
     this->m_argList = header->m_argList;
-    this->m_headers = header->m_headers;
+    this->m_headerPairs = header->m_headerPairs;
 }
 
 void 
@@ -476,10 +557,12 @@ HttpRequest::DecodePdu(const std::string& buffer)
     
     bool hasBody = false;
     //改变状态
-    if(m_header->Headers().contains("transfer-encoding") && 0 == m_header->Headers()["transfer-encoding"].compare("chunked")){
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
+        || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
+    {
         this->m_status = kHttpChunck;
         hasBody = true;
-    }else if(m_header->Headers().contains("content-length")){
+    }else if(m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length")){
         this->m_status = kHttpBody;
         hasBody = true;
     }
@@ -514,30 +597,30 @@ HttpRequest::DecodePdu(const std::string& buffer)
 std::string 
 HttpRequest::EncodePdu()
 {
-    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
-        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") &&  0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") )||
+        (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
         return m_header->ToString();
     }
-    if(!m_header->Headers().contains("Content-Length") && !m_header->Headers().contains("content-length")){
-        m_header->Headers()["Content-Length"] = std::to_string(m_body.length());
+    if(!m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
+        m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
-    return m_header->ToString() + m_body + "\r\n\r\n";
+    return m_header->ToString() + m_body;
 }
 
 bool 
 HttpRequest::StartChunck()
 {
-    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
-        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+    if((m_header->HeaderPairs().HasKey("transfer-encoding") || m_header->HeaderPairs().HasKey("Transfer-Encoding")) && 
+        (0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))){
         return true;
     }
-    if(m_header->Headers().contains("content-length")){
-        m_header->Headers().erase("content-length");
+    if(m_header->HeaderPairs().HasKey("content-length")){
+        m_header->HeaderPairs().RemoveHeaderPair("content-length");
     }
-    if(m_header->Headers().contains("Content-Length")){
-        m_header->Headers().erase("Content-Length");
+    if(m_header->HeaderPairs().HasKey("Content-Length")){
+        m_header->HeaderPairs().RemoveHeaderPair("Content-Length");
     }
-    m_header->Headers()["Transfer-Encoding"] = "chunked";
+    m_header->HeaderPairs().AddHeaderPair("Transfer-Encoding", "chunked");
     return true;
 }
 
@@ -586,8 +669,10 @@ int
 HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
 {
     size_t n = buffer.length();
-    if(m_header->Headers().contains("content-length")){
-        size_t length = std::stoul(m_header->Headers()["content-length"]);
+    if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
+        std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+        if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+        size_t length = std::stoul(contentLength);
         if(length <= n) {
             m_body = buffer.substr(eLength, length);
             eLength += length;
@@ -670,10 +755,10 @@ HttpResponseHeader::Code()
     return this->m_code;
 }
 
-std::map<std::string, std::string>& 
-HttpResponseHeader::Headers()
+HeaderPair& 
+HttpResponseHeader::HeaderPairs()
 {
-    return this->m_headers;
+    return this->m_headerPairs;
 }
 
 std::string 
@@ -681,10 +766,7 @@ HttpResponseHeader::ToString()
 {
     std::string res = "HTTP/";
     res = res + this->m_version + ' ' + std::to_string(this->m_code) + ' ' + CodeMsg(this->m_code) + "\r\n";
-    for (auto& [k, v] : this->m_headers)
-    {
-        res = res + k + ": " + v + "\r\n";
-    }
+    res += m_headerPairs.ToString();
     res += "\r\n";
     return res;
 }
@@ -757,7 +839,7 @@ HttpResponseHeader::FromString(std::string_view str)
             {
                 if (str[i] != ':')
                 {
-                    key += std::tolower(str[i]);
+                    key += str[i];
                 }
                 else
                 {
@@ -776,7 +858,7 @@ HttpResponseHeader::FromString(std::string_view str)
             }
             else
             {
-                m_headers[key] = value;
+                m_headerPairs.AddHeaderPair(key, value);
                 key.clear();
                 value.clear();
                 ++i;
@@ -954,14 +1036,14 @@ HttpResponse::Body()
 std::string 
 HttpResponse::EncodePdu()
 {
-    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
-        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
+        ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked") )){
         return m_header->ToString();
     }
-    if(!m_header->Headers().contains("Content-Length") && !m_header->Headers().contains("content-length")){
-        m_header->Headers()["Content-Length"] = std::to_string(m_body.length());
+    if(!m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
+        m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
-    return m_header->ToString() + m_body + "\r\n\r\n";
+    return m_header->ToString() + m_body;
 }
 
 
@@ -1005,10 +1087,11 @@ HttpResponse::DecodePdu(const std::string& buffer)
     }
     bool hasBody = false;
     //改变状态
-    if(m_header->Headers().contains("transfer-encoding") && 0 == m_header->Headers()["transfer-encoding"].compare("chunked")){
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
+        ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
         this->m_status = kHttpChunck;
         hasBody = true;
-    }else if(m_header->Headers().contains("content-length")){
+    }else if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
         this->m_status = kHttpBody;
         hasBody = true;
     }
@@ -1041,17 +1124,17 @@ HttpResponse::DecodePdu(const std::string& buffer)
 bool 
 HttpResponse::StartChunck()
 {
-    if((m_header->Headers().contains("transfer-encoding") || m_header->Headers().contains("Transfer-Encoding")) && 
-        (0 == m_header->Headers()["transfer-encoding"].compare("chunked") || 0 == m_header->Headers()["Transfer-Encoding"].compare("chunked"))){
+    if(( m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
+        ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
         return true;
     }
-    if(m_header->Headers().contains("content-length")){
-        m_header->Headers().erase("content-length");
+    if(m_header->HeaderPairs().HasKey("content-length")){
+        m_header->HeaderPairs().RemoveHeaderPair("content-length");
     }
-    if(m_header->Headers().contains("Content-Length")){
-        m_header->Headers().erase("Content-Length");
+    if(m_header->HeaderPairs().HasKey("Content-Length")){
+        m_header->HeaderPairs().RemoveHeaderPair("Content-Length");
     }
-    m_header->Headers()["Transfer-Encoding"] = "chunked";
+    m_header->HeaderPairs().AddHeaderPair("Transfer-Encoding", "chunked");
     return true;
 }
 
@@ -1077,8 +1160,10 @@ int
 HttpResponse::GetHttpBody(const std::string& buffer, int eLength)
 {
     size_t n = buffer.length();
-    if(m_header->Headers().contains("content-length")){
-        size_t length = std::stoul(m_header->Headers()["content-length"]);
+    if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
+        std::string contentLength = m_header->HeaderPairs().GetValue("content-length");
+        if(contentLength.empty()) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+        size_t length = std::stoul(contentLength);
         if(length <= n) {
             m_body = buffer.substr(eLength, length);
             eLength += length;
@@ -1183,8 +1268,8 @@ DefaultHttpRequest()
     HttpRequestHeader::ptr header = request->Header();
     header->Version() = "1.1";
     header->Uri() = "/";
-    header->Headers()["Server"] = "Galay-Server";
-    header->Headers()["Connection"] = "keep-alive"; 
+    header->HeaderPairs().AddHeaderPair("Server-Framwork", "galay");
+    header->HeaderPairs().AddHeaderPair("Connection", "keep-alive"); 
     return request;
 }
 }

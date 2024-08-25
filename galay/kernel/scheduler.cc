@@ -255,7 +255,6 @@ GY_EpollScheduler::Start()
             RealDelObjector(fd);
         }
         while(--nready >= 0){
-            spdlog::error("epoll_wait");
             int fd = m_events[nready].data.fd;
             auto objector = m_objectors[fd];
             if(objector){

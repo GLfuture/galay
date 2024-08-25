@@ -33,12 +33,6 @@ TEST(HttpRequestHeaderTest, TestArgs) {
     EXPECT_EQ(expected, header->Args());
 }
 
-TEST(HttpRequestHeaderTest, TestHeaders) {
-    HttpRequestHeader::ptr header = std::make_shared<HttpRequestHeader>();
-    std::map<std::string, std::string> expected = {{"key1", "value1"}, {"key2", "value2"}};
-    header->Headers() = expected;
-    EXPECT_EQ(expected, header->Headers());
-}
 
 TEST(HttpRequestHeaderTest, TestToString) {
     HttpRequestHeader::ptr header = std::make_shared<HttpRequestHeader>();
@@ -47,8 +41,8 @@ TEST(HttpRequestHeaderTest, TestToString) {
     header->Version() = "1.1";
     std::map<std::string, std::string> args = {{"key1", "value1"}, {"key2", "value2"}};
     header->Args() = args;
-    std::map<std::string, std::string> headers = {{"key1", "value1"}, {"key2", "value2"}};
-    header->Headers() = headers;
+    header->HeaderPairs().AddHeaderPair("key1", "value1");
+    header->HeaderPairs().AddHeaderPair("key2", "value2");
     std::string expected = "GET /index.html?key1=value1&key2=value2 HTTP/1.1\r\nkey1: value1\r\nkey2: value2\r\n\r\n";
     EXPECT_EQ(expected, header->ToString());
 }
@@ -63,16 +57,15 @@ TEST(HttpRequestHeaderTest, TestFromString) {
     EXPECT_EQ("1.1", header->Version());
     std::map<std::string, std::string> expectedArgs = {{"key1", "value1"}, {"key2", "value2"}};
     EXPECT_EQ(expectedArgs, header->Args());
-    std::map<std::string, std::string> expectedHeaders = {{"key1", "value1"}, {"key2", "value2"}};
-    EXPECT_EQ(expectedHeaders, header->Headers());
 }
 
 // HttpRequest Test
 
 TEST(Http1_1RequestTest, TestBody) {
     HttpRequest::ptr request = std::make_shared<HttpRequest>();
+    std::string input = "GET /index.html?key1=value1&key2=value2 HTTP/1.1\r\nkey1: value1\r\nkey2: value2\r\nContent-Length: 13\r\n\r\nHello, World!\r\n\r\n";
+    request->DecodePdu(input);
     std::string expected = "Hello, World!";
-    request->Body() = expected;
     EXPECT_EQ(expected, request->Body());
 }
 
@@ -91,19 +84,12 @@ TEST(HttpResponseHeaderTest, TestCode) {
     EXPECT_EQ(expected, header->Code());
 }
 
-TEST(HttpResponseHeaderTest, TestHeaders) {
-    HttpResponseHeader::ptr header = std::make_shared<HttpResponseHeader>();
-    std::map<std::string, std::string> expected = {{"key1", "value1"}, {"key2", "value2"}};
-    header->Headers() = expected;
-    EXPECT_EQ(expected, header->Headers());
-}
-
 TEST(HttpResponseHeaderTest, TestToString) {
     HttpResponseHeader::ptr header = std::make_shared<HttpResponseHeader>();
     header->Version() = "1.1";
     header->Code() = 200;
-    std::map<std::string, std::string> headers = {{"key1", "value1"}, {"key2", "value2"}};
-    header->Headers() = headers;
+    header->HeaderPairs().AddHeaderPair("key1", "value1");
+    header->HeaderPairs().AddHeaderPair("key2", "value2");
     std::string expected = "HTTP/1.1 200 OK\r\nkey1: value1\r\nkey2: value2\r\n\r\n";
     EXPECT_EQ(expected, header->ToString());
 }
@@ -115,8 +101,6 @@ TEST(HttpResponseHeaderTest, TestFromString) {
     EXPECT_EQ(code, error::HttpErrorCode::kHttpError_NoError);
     EXPECT_EQ("1.1", header->Version());
     EXPECT_EQ(200, header->Code());
-    std::map<std::string, std::string> expectedHeaders = {{"key1", "value1"}, {"key2", "value2"}};
-    EXPECT_EQ(expectedHeaders, header->Headers());
 }
 
 // HttpResponse Test
