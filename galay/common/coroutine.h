@@ -13,7 +13,6 @@
 #include <any>
 #include <set>
 #include "base.h"
-#include <spdlog/spdlog.h>
 
 namespace galay
 {
@@ -27,16 +26,16 @@ namespace galay
             kCoroutineFinished,       // 协程结束
             kCoroutineWaitingForData, // 正在等待数据
         };
-        class GY_NetCoroutinePool;
-        class GY_Coroutine;
-        class GY_NetCoroutine;
+        class NetCoroutinePool;
+        class Coroutine;
+        class NetCoroutine;
 
-        class GY_TcpPromise
+        class TcpPromise
         {
         public:
-            using promise_type = GY_TcpPromise;
+            using promise_type = TcpPromise;
             static int get_return_object_on_alloaction_failure() noexcept;
-            GY_NetCoroutine get_return_object();
+            NetCoroutine get_return_object();
             std::suspend_never initial_suspend() noexcept;
             std::suspend_always yield_value(std::any value);
             std::suspend_never final_suspend() noexcept;
@@ -62,11 +61,11 @@ namespace galay
         };
 
         // template <>
-        // class GY_TcpPromise<void>
+        // class TcpPromise<void>
         // {
         // public:
         //     static int get_return_object_on_alloaction_failure();
-        //     std::coroutine_handle<GY_TcpPromise> get_return_object();
+        //     std::coroutine_handle<TcpPromise> get_return_object();
         //     std::suspend_never initial_suspend() noexcept;
         //     template <typename T>
         //     std::suspend_always yield_value(const T &value);
@@ -87,77 +86,77 @@ namespace galay
         // };
 
         
-        class GY_Coroutine
+        class Coroutine
         {
         public:
-            using promise_type = GY_TcpPromise;
-            GY_Coroutine() = default;
-            GY_Coroutine &operator=(GY_Coroutine &other) = delete;
-            GY_Coroutine &operator=(const GY_Coroutine &other) = delete;
-            GY_Coroutine(const GY_Coroutine &other) = delete;
-            GY_Coroutine &operator=(GY_Coroutine &&other);
-            GY_Coroutine(GY_Coroutine &&other) noexcept;
-            GY_Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
+            using promise_type = TcpPromise;
+            Coroutine() = default;
+            Coroutine &operator=(Coroutine &other) = delete;
+            Coroutine &operator=(const Coroutine &other) = delete;
+            Coroutine(const Coroutine &other) = delete;
+            Coroutine &operator=(Coroutine &&other);
+            Coroutine(Coroutine &&other) noexcept;
+            Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
             void Resume() noexcept;
             bool Done() noexcept;
             uint64_t GetCoId() const noexcept;
 
-            ~GY_Coroutine();
+            ~Coroutine();
 
         protected:
             // 协程句柄
             std::coroutine_handle<promise_type> m_handle = nullptr;
         };
 
-        class GY_NetCoroutine: public GY_Coroutine, std::enable_shared_from_this<GY_NetCoroutine>
+        class NetCoroutine: public Coroutine, std::enable_shared_from_this<NetCoroutine>
         {
         public:
-            using promise_type = GY_TcpPromise;
-            using ptr = std::shared_ptr<GY_NetCoroutine>;
-            using uptr = std::unique_ptr<GY_NetCoroutine>;
-            using wptr = std::weak_ptr<GY_NetCoroutine>;
+            using promise_type = TcpPromise;
+            using ptr = std::shared_ptr<NetCoroutine>;
+            using uptr = std::unique_ptr<NetCoroutine>;
+            using wptr = std::weak_ptr<NetCoroutine>;
 
-            GY_NetCoroutine() = default;
-            GY_NetCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
-            GY_NetCoroutine(GY_NetCoroutine &&other) noexcept;
-            GY_NetCoroutine &operator=(GY_NetCoroutine &&other) noexcept;
-            GY_NetCoroutine &operator=(const GY_NetCoroutine &other) = delete;
-            GY_NetCoroutine(const GY_NetCoroutine &other) = delete;
+            NetCoroutine() = default;
+            NetCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept;
+            NetCoroutine(NetCoroutine &&other) noexcept;
+            NetCoroutine &operator=(NetCoroutine &&other) noexcept;
+            NetCoroutine &operator=(const NetCoroutine &other) = delete;
+            NetCoroutine(const NetCoroutine &other) = delete;
             // 是否是协程
             bool IsCoroutine();
             // 获取结果
             std::any GetResult();
             // 获取状态
             CoroutineStatus GetStatus();
-            ~GY_NetCoroutine();
+            ~NetCoroutine();
         };
         
 
-        class GY_NetCoroutinePool
+        class NetCoroutinePool
         {
         public:
-            using ptr = std::shared_ptr<GY_NetCoroutinePool>;
-            using wptr = std::weak_ptr<GY_NetCoroutinePool>;
-            using uptr = std::unique_ptr<GY_NetCoroutinePool>;
+            using ptr = std::shared_ptr<NetCoroutinePool>;
+            using wptr = std::weak_ptr<NetCoroutinePool>;
+            using uptr = std::unique_ptr<NetCoroutinePool>;
             static void SetThreadNum(uint16_t threadNum);
-            static GY_NetCoroutinePool* GetInstance();
-            GY_NetCoroutinePool();
-            void Start();
+            static NetCoroutinePool* GetInstance();
+            NetCoroutinePool();
             void Stop();
             bool IsDone();
             bool WaitForAllDone(uint32_t timeout = 0); //ms
             bool Contains(uint64_t coId);
             bool Resume(uint64_t coId);
-            bool AddCoroutine(GY_NetCoroutine::ptr coroutine);
+            bool AddCoroutine(NetCoroutine::ptr coroutine);
             bool EraseCoroutine(uint64_t coId);
-            GY_NetCoroutine::ptr GetCoroutine(uint64_t id);
-            virtual ~GY_NetCoroutinePool();
+            NetCoroutine::ptr GetCoroutine(uint64_t id);
+            virtual ~NetCoroutinePool();
         private:
+            void Start();
             void RealEraseCoroutine(uint64_t coId);
             void Run();
         private:
-            static uint16_t m_threadNum;
-            static std::unique_ptr<GY_NetCoroutinePool> m_instance;
+            static std::atomic_char16_t m_threadNum;
+            static std::unique_ptr<NetCoroutinePool> m_instance;
             static std::atomic_bool m_isStarted;
             std::atomic_bool m_isDone;
             std::atomic_bool m_stop;
@@ -170,7 +169,7 @@ namespace galay
             std::queue<uint64_t> m_waitCoQueue;
             std::set<uint64_t> m_eraseCoroutines;
             std::vector<std::unique_ptr<std::thread>> m_threads;
-            std::map<uint64_t,GY_NetCoroutine::ptr> m_coroutines;
+            std::map<uint64_t,NetCoroutine::ptr> m_coroutines;
             
         };
     }

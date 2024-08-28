@@ -5,71 +5,68 @@
 #include <string>
 #include <etcd/Client.hpp>
 #include <etcd/KeepAlive.hpp>
+#include <etcd/Watcher.hpp>
 #include <coroutine>
 #include <unordered_map>
 #include <functional>
+#include <shared_mutex>
 #include <any>
+#include "../common/result.h"
 
 namespace galay::middleware::etcd
 {
-    class EtcdAwaiter
+    class ServiceCenter
     {
-    private:
-        std::function<void(std::coroutine_handle<>,std::any&)> m_Func;
-        std::any m_Result;
     public:
-        EtcdAwaiter(std::function<void(std::coroutine_handle<>,std::any&)>&& func);
-        bool await_ready();
-        void await_suspend(std::coroutine_handle<> handle);
-        std::any await_resume();
+        static ServiceCenter* GetInstance();
+
+        std::string GetServiceAddr(const std::string& ServiceName);
+        void SetServiceAddr(const std::string& ServiceName, const std::string& ServiceAddr);
+    public:
+        static std::unique_ptr<ServiceCenter> m_instance;
+        std::shared_mutex m_mutex;
+        std::unordered_map<std::string, std::string> m_serviceAddr;
     };
 
-    //服务注册example /XXX/XXX/ServiceName/nodeX   ip:port
-    //服务注册 (async)
-    class ServiceRegister
+    class EtcdResult
     {
-    private:
-        std::unique_ptr<::etcd::Client> m_client;
-        std::shared_ptr<::etcd::KeepAlive> m_keepalive;
     public:
-        ServiceRegister(const std::string& EtcdAddrs);
-        using ptr = std::shared_ptr<ServiceRegister>;
-        using uptr = std::unique_ptr<ServiceRegister>;
-
-        int Register(const std::string& ServicePath, const std::string& ServiceAddr,int TTL);
+        EtcdResult(result::ResultInterface::ptr result);
+        //DiscoverService
+        std::string ServiceAddr();
+        //DiscoverServicePrefix
+        std::vector<std::pair<std::string, std::string>> ServiceAddrs();
+        bool Success();
+        std::string Error();
+        coroutine::GroupAwaiter& Wait();
     private:
-        bool CheckNotExist(const std::string& key);
+        result::ResultInterface::ptr m_result;
     };
 
-    //服务发现 example /XXX/XXX/ServiceName
-
-    //服务发现
-    class ServiceDiscovery
+    class EtcdClient
     {
+    public:
+        EtcdClient(const std::string& EtcdAddrs);
+        EtcdResult RegisterService(const std::string& ServiceName, const std::string& ServiceAddr);
+        EtcdResult RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL);
+        EtcdResult DiscoverService(const std::string& ServiceName);
+        EtcdResult DiscoverServicePrefix(const std::string& Prefix);
+
+        //监视一个key
+        void Watch(const std::string& key, std::function<void(::etcd::Response)> handle);
+        void CancleWatch();
+        //分布式锁
+        void Lock(const std::string& key);
+        void Lock(const std::string& key , int TTL);
+        void UnLock();
+    private:
+    
+        bool CheckExist(const std::string& key);
     private:
         std::shared_ptr<::etcd::Client> m_client;
-    public:
-        using ptr = std::shared_ptr<ServiceDiscovery>;
-        using uptr = std::shared_ptr<ServiceDiscovery>;
-        ServiceDiscovery(const std::string& EtcdAddrs);
-        //发现该前缀下所有节点
-        EtcdAwaiter Discovery(const std::string& ServicePath);
-    };
-
-
-    //分布式锁
-    class DistributedLock{
-    private:
-        std::unique_ptr<::etcd::Client> m_client;
-        std::string m_lock_key;
-    public:
-        using ptr = std::shared_ptr<DistributedLock>;
-        using uptr = std::unique_ptr<DistributedLock>;
-        DistributedLock(const std::string& EtcdAddrs);
-
-        void Lock(const std::string& key , int TTL);
-
-        void UnLock();
+        std::shared_ptr<::etcd::KeepAlive> m_keepalive;
+        std::shared_ptr<::etcd::Watcher> m_watcher;
+        std::string m_lockKey;
     };
 }
 

@@ -29,12 +29,6 @@ namespace galay
 #define DEFAULT_RBUFFER_LENGTH 1024
 #define DEFAULT_EVENT_SIZE 1024
 
-#define DEFAULT_SSL_MIN_VERSION TLS1_2_VERSION
-#define DEFAULT_SSL_MAX_VERSION TLS1_2_VERSION
-
-#define DEFAULT_SSL_CERT_PATH "ssl/server.crt"
-#define DEFAULT_SSL_KEY_PATH "ssl/server.key"
-
 #define DNS_QUERY_ID_MAX 1000
 
 #define DEFAULT_COROUTINE_POOL_THREADNUM 4
@@ -67,19 +61,6 @@ namespace galay
             {
                 a.EncodePdu()
             } -> std::same_as<std::string>;
-        };
-        
-        enum SchedulerType
-        {
-            kSelectScheduler, // select
-            kEpollScheduler,  // epoll
-        };
-
-        enum ClassNameType
-        {
-            kClassNameRequest,          // protocol request 
-            kClassNameResponse,         // protocol response 
-            kClassNameCoreBusinuess,    //核心业务类
         };
 
     }

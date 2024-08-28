@@ -4,6 +4,7 @@
 #include <string>
 #include <string.h>
 #include <memory>
+#include <atomic>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <vector>
@@ -20,11 +21,40 @@ namespace galay::io
 
 namespace galay::io::net
 {
+
+#define DEFAULT_SSL_MIN_VERSION TLS1_2_VERSION
+#define DEFAULT_SSL_MAX_VERSION TLS1_2_VERSION
+
+#define DEFAULT_SSL_CERT_PATH "ssl/server.crt"
+#define DEFAULT_SSL_KEY_PATH "ssl/server.key"
     // network  io
     struct Addr
     {
         std::string ip;
         int port;
+    };
+
+    class SSLConfig
+    {
+    public:
+        using ptr = std::shared_ptr<SSLConfig>;
+        using wptr = std::weak_ptr<SSLConfig>;
+        using uptr = std::unique_ptr<SSLConfig>;
+        SSLConfig();
+        // int Init();
+        void SetSSLVersion(int32_t min_ssl_version, int32_t max_ssl_version);
+        void SetCertPath(const std::string &cert_path);
+        void SetKeyPath(const std::string &key_path);
+        int32_t GetMinSSLVersion() const;
+        int32_t GetMaxSSLVersion() const;
+        std::string GetCertPath() const;
+        std::string GetKeyPath() const;
+    private:
+        std::atomic_int32_t m_min_ssl_version;
+        std::atomic_int32_t m_max_ssl_version;
+        std::string m_ssl_cert_path;
+        std::string m_ssl_key_path;
+        // std::atomic<SSL_CTX*> m_ssl_ctx;
     };
 
     class TcpFunction : public BlockFuction

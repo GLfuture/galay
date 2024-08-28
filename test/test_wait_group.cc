@@ -2,7 +2,7 @@
 #include <thread>
 #include <iostream>
 
-galay::coroutine::GY_NetCoroutine func()
+galay::coroutine::NetCoroutine func()
 {
     std::cout << "func start\n";
     galay::coroutine::WaitGroup group;
@@ -18,7 +18,7 @@ galay::coroutine::GY_NetCoroutine func()
     std::cout << "func waiting ....\n";
     co_await group.Wait();
     std::cout << "func end\n";
-    galay::coroutine::GY_NetCoroutinePool::GetInstance()->Stop();
+    galay::coroutine::NetCoroutinePool::GetInstance()->Stop();
     co_return galay::coroutine::kCoroutineFinished;
 }
 
@@ -26,9 +26,9 @@ int main()
 {
     spdlog::set_level(spdlog::level::debug);
     auto f = func();
-    galay::coroutine::GY_NetCoroutinePool::GetInstance()->Resume(f.GetCoId());
+    galay::coroutine::NetCoroutinePool::GetInstance()->Resume(f.GetCoId());
     std::cout << "main waiting...\n";
-    galay::coroutine::GY_NetCoroutinePool::GetInstance()->WaitForAllDone();
+    galay::coroutine::NetCoroutinePool::GetInstance()->WaitForAllDone();
     std::cout << "main end...\n";
     return 0;
 }

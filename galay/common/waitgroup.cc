@@ -1,17 +1,21 @@
 #include "waitgroup.h"
-galay::coroutine::WaitGroup::WaitGroup()
+
+namespace galay::coroutine
+{
+
+WaitGroup::WaitGroup()
 {
     this->m_coNum.store(0);
 }
 
 void 
-galay::coroutine::WaitGroup::Add(int num)
+WaitGroup::Add(int num)
 {
     this->m_coNum.fetch_add(num);
 }
 
-galay::coroutine::GroupAwaiter& 
-galay::coroutine::WaitGroup::Wait()
+GroupAwaiter& 
+WaitGroup::Wait()
 {
     if(this->m_coNum.load() == 0) {
         this->m_awaiter = coroutine::GroupAwaiter(false);
@@ -23,10 +27,12 @@ galay::coroutine::WaitGroup::Wait()
 
 
 void 
-galay::coroutine::WaitGroup::Done()
+WaitGroup::Done()
 {
     if(this->m_coNum.load() > 0) this->m_coNum.fetch_sub(1);
     if(this->m_coNum.load() == 0){
         this->m_awaiter.Resume();
     }
+}
+
 }

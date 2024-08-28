@@ -1,7 +1,6 @@
 #include "server.h"
 #include "builder.h"
-#include "objector.h"
-#include "scheduler.h"
+#include "poller.h"
 #include "../common/coroutine.h"
 #include "../common/signalhandler.h"
 #include <csignal>
@@ -9,36 +8,32 @@
 
 namespace galay::server
 {
-GY_SIOManager::GY_SIOManager(GY_TcpServerBuilderBase::ptr builder)
+SIOManager::SIOManager(TcpServerBuilderBase::ptr builder)
 {
     this->m_stop = false;
-    this->m_builder = builder;
     switch(builder->GetSchedulerType())
     {
-        case common::SchedulerType::kEpollScheduler:
+        case server::PollerType::kEpollPoller:
         {
-            this->m_ioScheduler = std::make_shared<poller::GY_EpollScheduler>(builder->GetMaxEventSize(), builder->GetScheWaitTime());
+            this->m_ioScheduler = std::make_shared<poller::EpollScheduler>(builder->GetMaxEventSize(), builder->GetScheWaitTime());
             break;
         }
-        case common::SchedulerType::kSelectScheduler:
+        case server::PollerType::kSelectPoller:
         {
-            this->m_ioScheduler = std::make_shared<poller::GY_SelectScheduler>(builder->GetScheWaitTime());
+            this->m_ioScheduler = std::make_shared<poller::SelectScheduler>(builder->GetScheWaitTime());
             break;
         }
     }
-    this->m_rightHandle = builder->GetRightHandle();
-    this->m_wrongHandle = builder->GetWrongHandle();
-    coroutine::GY_NetCoroutinePool::GetInstance()->Start();
 }
 
 void 
-GY_SIOManager::Start()
+SIOManager::Start()
 {
     m_ioScheduler->Start();
 }
 
 void 
-GY_SIOManager::Stop()
+SIOManager::Stop()
 {
     if(!m_stop)
     {
@@ -47,40 +42,13 @@ GY_SIOManager::Stop()
     }
 }
 
-std::shared_ptr<poller::GY_IOScheduler> 
-GY_SIOManager::GetIOScheduler()
+std::shared_ptr<poller::IOScheduler> 
+SIOManager::GetIOScheduler()
 {
     return m_ioScheduler;
 }
 
-GY_TcpServerBuilderBase::wptr 
-GY_SIOManager::GetTcpServerBuilder()
-{
-    return this->m_builder;
-}
-
-void
-GY_SIOManager::RightHandle(std::shared_ptr<GY_Controller> controller)
-{
-    if(!this->m_rightHandle) {
-        spdlog::error("[{}:{}] [RightHandle] [Error: RightHandle is nullptr]", __FILE__, __LINE__);
-        return;
-    }
-    return this->m_rightHandle(controller);
-}
-
-
-void 
-GY_SIOManager::WrongHandle(std::shared_ptr<GY_Controller> controller)
-{
-    if(!this->m_wrongHandle) {
-        spdlog::error("[{}:{}] [WrongHandle] [Error: WrongHandle is nullptr]", __FILE__, __LINE__);
-        return;
-    }
-    return this->m_wrongHandle(controller);
-}
-
-GY_SIOManager::~GY_SIOManager()
+SIOManager::~SIOManager()
 {
     if(!m_stop)
     {
@@ -89,48 +57,47 @@ GY_SIOManager::~GY_SIOManager()
     }
 }
 
-GY_TcpServer::GY_TcpServer()
+TcpServer::TcpServer()
 {
     this->m_isStopped.store(false);
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGINT,[this](int signo){
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGINT,[this](int signo){
         Stop();
     });
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGABRT,[this](int signo){
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGABRT,[this](int signo){
         Stop();
     });
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGPIPE,[this](int signo){
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGPIPE,[this](int signo){
         Stop();
     });
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGALRM,[this](int signo){
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGALRM,[this](int signo){
         Stop();
     });
 }
 
 void 
-GY_TcpServer::SetServerBuilder(GY_TcpServerBuilderBase::ptr builder)
+TcpServer::SetServerBuilder(TcpServerBuilderBase::ptr builder)
 {
     this->m_builder = builder;
-    this->m_threadPool = std::make_shared<thread::GY_ThreadPool>();
+    this->m_threadPool = std::make_shared<thread::ThreadPool>();
 }
 
-GY_TcpServerBuilderBase::ptr 
-GY_TcpServer::GetServerBuilder()
+TcpServerBuilderBase::ptr 
+TcpServer::GetServerBuilder()
 {
     return this->m_builder;
 }
 
 void 
-GY_TcpServer::Start()
+TcpServer::Start()
 {
-    coroutine::GY_NetCoroutinePool::GetInstance()->Start();
     this->m_threadPool->Start(this->m_builder->GetNetThreadNum());
     for (int i = 0; i < m_builder->GetNetThreadNum(); ++i)
     {
-        GY_SIOManager::ptr ioManager = std::make_shared<GY_SIOManager>(this->m_builder);
-        objector::GY_TimerManager::ptr timerManager = CreateTimerManager();
+        SIOManager::ptr ioManager = std::make_shared<SIOManager>(this->m_builder);
+        poller::TimerManager::ptr timerManager = std::make_shared<poller::TimerManager>();
         int timerfd = timerManager->GetTimerfd();
         ioManager->GetIOScheduler()->RegiserTimerManager(timerfd, timerManager);
-        typename objector::GY_TcpAcceptor::ptr acceptor = CreateAcceptor(ioManager);
+        typename poller::TcpAcceptor::ptr acceptor = std::make_shared<poller::TcpAcceptor>(ioManager->GetIOScheduler(), this->m_builder->GetPort(), this->m_builder->GetBacklog(), this->m_builder->GetTypeName(kClassNameRequest), this->m_builder->GetSSLConfig());
         ioManager->GetIOScheduler()->RegisterObjector(acceptor->GetListenFd(), acceptor);
         ioManager->GetIOScheduler()->AddEvent(acceptor->GetListenFd(), poller::kEventEpollET | poller::kEventRead);
         m_ioManagers.push_back(ioManager);
@@ -143,7 +110,7 @@ GY_TcpServer::Start()
     }else{
         spdlog::error("[{}:{}] [ThreadPool Exit Abnormally]",__FILE__,__LINE__);
     }
-    if(coroutine::GY_NetCoroutinePool::GetInstance()->IsDone() || coroutine::GY_NetCoroutinePool::GetInstance()->WaitForAllDone()){
+    if(coroutine::NetCoroutinePool::GetInstance()->IsDone() || coroutine::NetCoroutinePool::GetInstance()->WaitForAllDone()){
         spdlog::info("[{}:{}] [CoroutinePool Exit Normally]",__FILE__,__LINE__);
     }else{
         spdlog::error("[{}:{}] [CoroutinePool Exit Abnormally(timeout)]",__FILE__,__LINE__);
@@ -152,42 +119,30 @@ GY_TcpServer::Start()
 }
 
 void 
-GY_TcpServer::Stop()
+TcpServer::Stop()
 {
     if (!m_isStopped.load())
     {
         m_isStopped.store(true);
-        spdlog::info("[{}:{}] [GY_TcpServer.Stop]",__FILE__,__LINE__);
+        spdlog::info("[{}:{}] [TcpServer.Stop]",__FILE__,__LINE__);
         for (auto &ioManager : m_ioManagers)
         {
             ioManager->Stop();
         }
         m_threadPool->Stop();
-        coroutine::GY_NetCoroutinePool::GetInstance()->Stop();
+        coroutine::NetCoroutinePool::GetInstance()->Stop();
     }
 }
 
 
-std::shared_ptr<objector::GY_TimerManager>
-GY_TcpServer::CreateTimerManager()
-{
-    return std::make_shared<objector::GY_TimerManager>();
-}
-
-std::shared_ptr<objector::GY_TcpAcceptor>
-GY_TcpServer::CreateAcceptor( GY_SIOManager::ptr ioManager)
-{
-    return std::make_shared<objector::GY_TcpAcceptor>(ioManager);
-}
-
-GY_SIOManager::wptr
-GY_TcpServer::GetManager(int indx)
+SIOManager::wptr
+TcpServer::GetManager(int indx)
 {
     return this->m_ioManagers[indx];
 }
 
 
-GY_TcpServer::~GY_TcpServer()
+TcpServer::~TcpServer()
 {
     Stop();
 }

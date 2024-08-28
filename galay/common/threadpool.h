@@ -14,39 +14,39 @@ namespace galay
 {
     namespace thread
     {
-        class GY_ThreadTask
+        class ThreadTask
         {
         public:
-            using ptr = std::shared_ptr<GY_ThreadTask>;
-            GY_ThreadTask(std::function<void()> &&func);
+            using ptr = std::shared_ptr<ThreadTask>;
+            ThreadTask(std::function<void()> &&func);
             void Execute();
-            ~GY_ThreadTask();
+            ~ThreadTask();
 
         private:
             std::function<void()> m_func;
         };
 
-        class GY_ThreadPool
+        class ThreadPool
         {
         private:
             void Run();
             void Done();
         public:
-            using ptr = std::shared_ptr<GY_ThreadPool>;
-            using wptr = std::weak_ptr<GY_ThreadPool>;
-            using uptr = std::unique_ptr<GY_ThreadPool>;
+            using ptr = std::shared_ptr<ThreadPool>;
+            using wptr = std::weak_ptr<ThreadPool>;
+            using uptr = std::unique_ptr<ThreadPool>;
             
-            GY_ThreadPool();
+            ThreadPool();
             template <typename F, typename... Args>
             inline auto AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>;
             void Start(int num);
             bool WaitForAllDone(uint32_t timeout = 0);
             bool IsDone();
             void Stop();
-            ~GY_ThreadPool();
+            ~ThreadPool();
 
         protected:
-            std::queue<std::shared_ptr<GY_ThreadTask>> m_tasks;  // 任务队列
+            std::queue<std::shared_ptr<ThreadTask>> m_tasks;  // 任务队列
             std::vector<std::unique_ptr<std::thread>> m_threads; // 工作线程
             std::mutex m_mtx;
             std::condition_variable m_workCond; // worker
@@ -57,7 +57,7 @@ namespace galay
         };
 
         template <typename F, typename... Args>
-        inline auto GY_ThreadPool::AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
+        inline auto ThreadPool::AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
         {
             using RetType = decltype(f(args...));
             std::shared_ptr<std::packaged_task<RetType()>> func = std::make_shared<std::packaged_task<RetType()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
@@ -65,7 +65,7 @@ namespace galay
             {
                 (*func)();
             };
-            GY_ThreadTask::ptr task = std::make_shared<GY_ThreadTask>(t_func);
+            ThreadTask::ptr task = std::make_shared<ThreadTask>(t_func);
             std::unique_lock<std::mutex> lock(m_mtx);
             m_tasks.push(task);
             lock.unlock();

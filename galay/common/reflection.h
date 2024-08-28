@@ -10,78 +10,78 @@
 namespace galay
 {
 
-    class GY_Base
+    class Base
     {
     public:
-        virtual ~GY_Base() = default;
+        virtual ~Base() = default;
     };
 
     namespace protocol{
-        class GY_Request;
-        class GY_Response;
+        class Request;
+        class Response;
     }
 
     namespace common
     {
         
-        class GY_FactoryManager
+        class FactoryManager
         {
         public:
-            using uptr = std::unique_ptr<GY_FactoryManager>;
+            using uptr = std::unique_ptr<FactoryManager>;
             static void AddReleaseFunc(std::function<void()> func);
-            virtual ~GY_FactoryManager();
+            virtual ~FactoryManager();
         private:
-            static GY_FactoryManager::uptr m_FactoryManager;
+            static FactoryManager::uptr m_FactoryManager;
             std::list<std::function<void()>> m_ReleaseFunc;
         };
 
         //必须满足构造函数参数相同且都继承自同一基类
         template <typename... Targs>
-        class GY_RequestFactory
+        class RequestFactory
         {
         public:
-            using ptr = std::shared_ptr<GY_RequestFactory>;
-            using uptr = std::unique_ptr<GY_RequestFactory>;
-            using wptr = std::weak_ptr<GY_RequestFactory>;
-            static GY_RequestFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::GY_Request> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_RequestFactory() = default;
+            using ptr = std::shared_ptr<RequestFactory>;
+            using uptr = std::unique_ptr<RequestFactory>;
+            using wptr = std::weak_ptr<RequestFactory>;
+            static RequestFactory<Targs...> *GetInstance();
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Request>(Targs &&...args)> func);
+            std::shared_ptr<galay::protocol::Request> Create(const std::string &typeName, Targs &&...args);
+            virtual ~RequestFactory() = default;
         private:
-            static GY_RequestFactory* m_ReqFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...)>> m_mapCreateFunction;
+            static RequestFactory* m_ReqFactory;
+            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::Request>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename... Targs>
-        class GY_ResponseFactory
+        class ResponseFactory
         {
         public:
-            using ptr = std::shared_ptr<GY_ResponseFactory>;
-            using uptr = std::unique_ptr<GY_ResponseFactory>;
-            using wptr = std::weak_ptr<GY_ResponseFactory>;
-            static GY_ResponseFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::GY_Response> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_ResponseFactory() = default;
+            using ptr = std::shared_ptr<ResponseFactory>;
+            using uptr = std::unique_ptr<ResponseFactory>;
+            using wptr = std::weak_ptr<ResponseFactory>;
+            static ResponseFactory<Targs...> *GetInstance();
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Response>(Targs &&...args)> func);
+            std::shared_ptr<galay::protocol::Response> Create(const std::string &typeName, Targs &&...args);
+            virtual ~ResponseFactory() = default;
         private:
-            static GY_ResponseFactory* m_RespFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...)>> m_mapCreateFunction;
+            static ResponseFactory* m_RespFactory;
+            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::Response>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename... Targs>
-        class GY_UserFactory
+        class UserFactory
         {
         public:
-            using ptr = std::shared_ptr<GY_UserFactory>;
-            using uptr = std::unique_ptr<GY_UserFactory>;
-            using wptr = std::weak_ptr<GY_UserFactory>;
-            static GY_UserFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<GY_Base>(Targs &&...args)> func);
-            std::shared_ptr<GY_Base> Create(const std::string &typeName, Targs &&...args);
-            virtual ~GY_UserFactory() = default;
+            using ptr = std::shared_ptr<UserFactory>;
+            using uptr = std::unique_ptr<UserFactory>;
+            using wptr = std::weak_ptr<UserFactory>;
+            static UserFactory<Targs...> *GetInstance();
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<Base>(Targs &&...args)> func);
+            std::shared_ptr<Base> Create(const std::string &typeName, Targs &&...args);
+            virtual ~UserFactory() = default;
         private:
-            static GY_UserFactory *m_userFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<GY_Base>(Targs &&...)>> m_mapCreateFunction;
+            static UserFactory *m_userFactory;
+            std::unordered_map<std::string, std::function<std::shared_ptr<Base>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename BaseClass, typename T, typename... Targs>
@@ -89,13 +89,13 @@ namespace galay
         
 
         template <typename BaseClass, typename T, typename... Targs>
-        class GY_DynamicCreator
+        class DynamicCreator
         {
         public:
-            GY_DynamicCreator();
+            DynamicCreator();
             static std::shared_ptr<T> CreateObject(Targs &&...args);
             static const std::string GetTypeName();
-            virtual ~GY_DynamicCreator();
+            virtual ~DynamicCreator();
 
         private:
             static Register<BaseClass, T, Targs...> m_register;
@@ -113,7 +113,7 @@ namespace galay
 
         //偏特化
         template <typename T, typename... Targs>
-        class Register<protocol::GY_Request,T,Targs...>
+        class Register<protocol::Request,T,Targs...>
         {
         public:
             explicit Register();
@@ -121,7 +121,7 @@ namespace galay
         };
 
         template <typename T, typename... Targs>
-        class Register<protocol::GY_Response,T,Targs...>
+        class Register<protocol::Response,T,Targs...>
         {
         public:
             explicit Register();
@@ -130,7 +130,7 @@ namespace galay
         
         
         template <typename T, typename... Targs>
-        class Register<GY_Base,T,Targs...>
+        class Register<Base,T,Targs...>
         {
         public:
             explicit Register();

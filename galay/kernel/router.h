@@ -6,40 +6,37 @@
 
 namespace galay::coroutine
 {
-    class GY_NetCoroutine;
+    class NetCoroutine;
 }
 
 namespace galay::server
 {
-    class GY_Controller;
-    class GY_HttpController;
+    class Controller;
+    class HttpController;
 
-    class GY_HttpRouter
+    class HttpRouter
     {
-        friend class GY_HttpServerBuilder;
-
     public:
-        void Get(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Post(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Options(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Put(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Delete(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Patch(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Head(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Trace(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void Connect(const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
+        HttpRouter();
+        void Get(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Post(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Options(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Put(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Delete(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Patch(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Head(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Trace(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void Connect(const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
         //Parse Error
-        void RegisterWrongHandle(std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
+        void RegisterWrongHandle(std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> handle);
     protected:
-        void RegisterRouteHandle(const std::string &method, const std::string &path, std::function<coroutine::GY_NetCoroutine(std::shared_ptr<GY_HttpController>)> func);
-        void RouteRightHttp(std::shared_ptr<GY_Controller> ctrl);
-        void RouteWrongHttp(std::shared_ptr<GY_Controller> ctrl);
+        void RegisterRouteHandle(const std::string &method, const std::string &path, std::function<coroutine::NetCoroutine(std::shared_ptr<HttpController>)> func);
+        void RouteRightHttp(std::shared_ptr<Controller> ctrl);
         bool RouteSuccess(protocol::http::HttpRequest::ptr request);
     private:
         uint64_t m_coId;
-        std::shared_ptr<GY_HttpController> m_httpCtrl;
-        std::function<void(std::shared_ptr<GY_HttpController>)> m_wrongHandle;
-        std::unordered_map<std::string, std::unordered_map<std::string, std::function<void(std::shared_ptr<GY_HttpController>)>>> m_routes;
+        std::shared_ptr<HttpController> m_httpCtrl;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::function<void(std::shared_ptr<HttpController>)>>> m_routes;
     };
 }
 

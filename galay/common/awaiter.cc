@@ -85,7 +85,7 @@ void
 galay::coroutine::GroupAwaiter::Resume()
 {
     if(this->m_IsSuspend) {
-        coroutine::GY_NetCoroutinePool::GetInstance()->Resume(this->m_coId);
+        coroutine::NetCoroutinePool::GetInstance()->Resume(this->m_coId);
         this->m_IsSuspend = false;
     }
 }

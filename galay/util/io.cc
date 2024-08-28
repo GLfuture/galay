@@ -35,6 +35,59 @@ BlockFuction::SetBlock(int fd)
 
 namespace galay::io::net
 {
+
+SSLConfig::SSLConfig()
+{
+    m_min_ssl_version.store(DEFAULT_SSL_MIN_VERSION);
+    m_max_ssl_version.store(DEFAULT_SSL_MAX_VERSION);
+    m_ssl_cert_path = DEFAULT_SSL_CERT_PATH;
+    m_ssl_key_path = DEFAULT_SSL_KEY_PATH;
+}
+
+void 
+SSLConfig::SetSSLVersion(int32_t min_ssl_version, int32_t max_ssl_version)
+{
+    m_min_ssl_version.store(min_ssl_version);
+    m_max_ssl_version.store(max_ssl_version);
+}
+
+void 
+SSLConfig::SetCertPath(const std::string& cert_path)
+{
+    m_ssl_cert_path = cert_path;
+}
+
+void 
+SSLConfig::SetKeyPath(const std::string& key_path)
+{
+    m_ssl_key_path = key_path;
+}
+
+int32_t 
+SSLConfig::GetMinSSLVersion() const
+{
+    return m_min_ssl_version.load();
+}
+
+int32_t 
+SSLConfig::GetMaxSSLVersion() const
+{
+    return m_max_ssl_version.load();
+}
+
+
+std::string 
+SSLConfig::GetCertPath() const
+{
+    return m_ssl_cert_path;
+}
+
+std::string 
+SSLConfig::GetKeyPath() const 
+{
+    return m_ssl_key_path;
+}
+
 //tcp
 int 
 TcpFunction::Sock()

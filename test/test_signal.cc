@@ -4,15 +4,15 @@
 
 int main()
 {
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGINT, [](int sig) {
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGINT, [](int sig) {
         std::cout << "SIGINT1" << std::endl;
     });
 
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGINT, [](int sig) {
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGINT, [](int sig) {
         std::cout << "SIGINT2" << std::endl;
     });
 
-    galay::common::GY_SignalFactory::GetInstance()->SetSignalHandler(SIGABRT, [](int sig) {
+    galay::common::SignalFactory::GetInstance()->SetSignalHandler(SIGABRT, [](int sig) {
         std::cout << "SIGABRT" << std::endl;
     });
     getchar();

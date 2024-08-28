@@ -3,23 +3,23 @@
 
 namespace galay::thread
 {
-GY_ThreadTask::GY_ThreadTask(std::function<void()>&& func)
+ThreadTask::ThreadTask(std::function<void()>&& func)
 {
     this->m_func = func;
 }
 
 void 
-GY_ThreadTask::Execute()
+ThreadTask::Execute()
 {
     this->m_func();
 }
 
-GY_ThreadTask::~GY_ThreadTask()
+ThreadTask::~ThreadTask()
 {
 
 }
 
-GY_ThreadPool::GY_ThreadPool()
+ThreadPool::ThreadPool()
 {
     m_terminate.store(false, std::memory_order_relaxed);
     m_nums.store(0);
@@ -27,7 +27,7 @@ GY_ThreadPool::GY_ThreadPool()
 }
 
 void 
-GY_ThreadPool::Run()
+ThreadPool::Run()
 {
     while (!m_terminate.load())
     {
@@ -36,7 +36,7 @@ GY_ThreadPool::Run()
                     { return !m_tasks.empty() || m_terminate.load() == true; });
         if (m_terminate.load())
             break;
-        std::shared_ptr<GY_ThreadTask> task = m_tasks.front();
+        std::shared_ptr<ThreadTask> task = m_tasks.front();
         m_tasks.pop();
         lock.unlock();
         task->Execute();
@@ -44,7 +44,7 @@ GY_ThreadPool::Run()
 }
 
 void 
-GY_ThreadPool::Start(int num)
+ThreadPool::Start(int num)
 {
     this->m_nums.store(num);
     for (int i = 0; i < num; i++)
@@ -60,7 +60,7 @@ GY_ThreadPool::Start(int num)
 }
 
 bool 
-GY_ThreadPool::WaitForAllDone(uint32_t timeout)
+ThreadPool::WaitForAllDone(uint32_t timeout)
 {
     std::mutex mtx;
     std::unique_lock<std::mutex> lock(mtx);
@@ -79,13 +79,13 @@ GY_ThreadPool::WaitForAllDone(uint32_t timeout)
 }
 
 bool 
-GY_ThreadPool::IsDone()
+ThreadPool::IsDone()
 {
     return this->m_isDone.load();
 }
 
 void 
-GY_ThreadPool::Done()
+ThreadPool::Done()
 {
     this->m_nums.fetch_sub(1);
     if(this->m_nums.load() == 0){
@@ -95,7 +95,7 @@ GY_ThreadPool::Done()
 }
 
 void 
-GY_ThreadPool::Stop()
+ThreadPool::Stop()
 {
     if (!m_terminate.load())
     {
@@ -104,7 +104,7 @@ GY_ThreadPool::Stop()
     }
 }
 
-GY_ThreadPool::~GY_ThreadPool()
+ThreadPool::~ThreadPool()
 {
     if (!m_terminate.load())
     {

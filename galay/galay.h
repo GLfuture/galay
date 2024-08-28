@@ -8,6 +8,7 @@
 #include "common/coroutine.h"
 #include "common/reflection.h"
 #include "common/waitgroup.h"
+#include "common/result.h"
 
 //kernel
 #include "kernel/client.h"
@@ -16,10 +17,7 @@
 #include "kernel/router.h"
 #include "kernel/builder.h"
 #include "kernel/controller.h"
-#include "kernel/scheduler.h"
-#include "kernel/result.h"
-#include "kernel/objector.h"
-#include "kernel/task.h"
+#include "kernel/poller.h"
 
 //protocol
 #include "protocol/http.h"
@@ -33,33 +31,34 @@
 #include "util/typename.h"
 #include "util/random.h"
 #include "util/ratelimiter.h"
+#include "util/tree.h"
 
 
 
 namespace galay
 {
-    class GY_TcpCoreBase
+    class TcpCoreBase
     {
     public:
-        using ptr = std::shared_ptr<GY_TcpCoreBase>;
-        using wptr = std::weak_ptr<GY_TcpCoreBase>;
-        using uptr = std::unique_ptr<GY_TcpCoreBase>;
-        using GY_NetCoroutine = coroutine::GY_NetCoroutine;
-        using GY_Controller = server::GY_Controller;
+        using ptr = std::shared_ptr<TcpCoreBase>;
+        using wptr = std::weak_ptr<TcpCoreBase>;
+        using uptr = std::unique_ptr<TcpCoreBase>;
+        using NetCoroutine = coroutine::NetCoroutine;
+        using Controller = server::Controller;
         
-        virtual GY_NetCoroutine CoreBusiness(GY_Controller::ptr ctrl) = 0;
+        virtual NetCoroutine CoreBusiness(Controller::ptr ctrl) = 0;
     };
 
-    class GY_HttpCoreBase
+    class HttpCoreBase
     {
     public:
-        using ptr = std::shared_ptr<GY_HttpCoreBase>;
-        using wptr = std::weak_ptr<GY_HttpCoreBase>;
-        using uptr = std::unique_ptr<GY_HttpCoreBase>;
-        using GY_NetCoroutine = coroutine::GY_NetCoroutine;
-        using GY_HttpController = server::GY_HttpController;
+        using ptr = std::shared_ptr<HttpCoreBase>;
+        using wptr = std::weak_ptr<HttpCoreBase>;
+        using uptr = std::unique_ptr<HttpCoreBase>;
+        using NetCoroutine = coroutine::NetCoroutine;
+        using HttpController = server::HttpController;
 
-        virtual GY_NetCoroutine CoreBusiness(GY_HttpController::ptr ctrl) = 0;
+        virtual NetCoroutine CoreBusiness(HttpController::ptr ctrl) = 0;
     };
 }
 

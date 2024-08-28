@@ -31,7 +31,7 @@ namespace galay::protocol::smtp
         static std::string Quit(SmtpRequest& request);
     };
 
-    class SmtpRequest: public GY_Request, public common::GY_DynamicCreator<GY_Request,SmtpRequest>
+    class SmtpRequest: public Request, public common::DynamicCreator<Request,SmtpRequest>
     {
         friend class SmtpHelper;
     public:
@@ -49,7 +49,7 @@ namespace galay::protocol::smtp
         std::queue<std::string> m_tomails;
     };
 
-    class SmtpResponse: public GY_Response, public common::GY_DynamicCreator<GY_Response,SmtpResponse>
+    class SmtpResponse: public Response, public common::DynamicCreator<Response,SmtpResponse>
     {
     public:
         using ptr = std::shared_ptr<SmtpResponse>;

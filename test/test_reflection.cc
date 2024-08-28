@@ -1,7 +1,7 @@
 #include "../galay/galay.h"
 #include <gtest/gtest.h>
 
-class Base: public galay::GY_Base, public galay::common::GY_DynamicCreator<galay::GY_Base,Base>
+class Base: public galay::Base, public galay::common::DynamicCreator<galay::Base,Base>
 {
 public:
     virtual void print()
@@ -12,7 +12,7 @@ public:
     virtual ~Base() {}
 };
 
-class Child:public Base,galay::common::GY_DynamicCreator<galay::GY_Base,Child>
+class Child:public Base,galay::common::DynamicCreator<galay::Base,Child>
 {
 public:
     virtual void print() override
@@ -26,5 +26,5 @@ public:
 
 TEST(ReflectionTest,CreateTest)
 {
-    EXPECT_NE(galay::common::GY_UserFactory<>::GetInstance()->Create(galay::util::GetTypeName<Child>()).get(),nullptr);
+    EXPECT_NE(galay::common::UserFactory<>::GetInstance()->Create(galay::util::GetTypeName<Child>()).get(),nullptr);
 }

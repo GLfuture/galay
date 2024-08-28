@@ -4,72 +4,72 @@ namespace galay::protocol
 {
 
 bool 
-GY_Request::ParseIncomplete()
+Request::ParseIncomplete()
 {
     return this->m_parseStatus == kProtoParseIncomplete;
 }
 bool 
-GY_Request::ParseIllegal()
+Request::ParseIllegal()
 {
     return this->m_parseStatus == kProtoParseIllegal;
 }
 
 bool 
-GY_Request::ParseSuccess()
+Request::ParseSuccess()
 {
     return this->m_parseStatus == kProtoParseSuccess;
 }
 
 
 void 
-GY_Request::Incomplete() 
+Request::Incomplete() 
 {
     this->m_parseStatus = kProtoParseIncomplete;
 }
 
 void 
-GY_Request::Illegal() 
+Request::Illegal() 
 {
     this->m_parseStatus = kProtoParseIllegal;
 }
 
 void 
-GY_Request::Success() 
+Request::Success() 
 {
     this->m_parseStatus = kProtoParseSuccess;
 }
 
 bool 
-GY_Response::ParseIncomplete()
+Response::ParseIncomplete()
 {
     return this->m_parseStatus == kProtoParseIncomplete;
 }
 bool 
-GY_Response::ParseIllegal()
+Response::ParseIllegal()
 {
     return this->m_parseStatus == kProtoParseIllegal;
 }
 
 bool 
-GY_Response::ParseSuccess()
+Response::ParseSuccess()
 {
     return this->m_parseStatus == kProtoParseSuccess;
 }
 
 void 
-GY_Response::Incomplete() 
+Response::Incomplete() 
 {
     this->m_parseStatus = kProtoParseIncomplete;
 }
 
 void 
-GY_Response::Illegal() 
+Response::Illegal() 
 {
     this->m_parseStatus = kProtoParseIllegal;
 }
 
 void 
-GY_Response::Success() 
+Response::Success() 
 {
     this->m_parseStatus = kProtoParseSuccess;
 }

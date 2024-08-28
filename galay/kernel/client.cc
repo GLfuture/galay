@@ -3,34 +3,53 @@
 #include "../util/random.h"
 #include "../util/io.h"
 #include "../util/stringsplitter.h"
-#include "task.h"
-#include "scheduler.h"
-#include "result.h"
-#include "objector.h"
+#include "poller.h"
 #include "client.h"
 #include <regex>
 #include <spdlog/spdlog.h>
 
 namespace galay::client
 {
-GY_TcpClient::GY_TcpClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
+
+NetResult::NetResult(result::ResultInterface::ptr result)
+{
+    this->m_result = result;
+}
+
+bool 
+NetResult::Success()
+{
+    return this->m_result->Success();
+}
+
+std::string 
+NetResult::Error()
+{
+    return this->m_result->Error();
+}
+
+coroutine::GroupAwaiter& 
+NetResult::Wait()
+{
+    return this->m_result->Wait();
+}
+
+TcpClient::TcpClient(std::weak_ptr<poller::IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
-    this->m_recvTask = nullptr;
-    this->m_sendTask = nullptr;
     this->m_isConnected = false;
     this->m_isSocket = false;
     this->m_isSSL = false;
 }
 
 void 
-GY_TcpClient::IsSSL(bool isSSL)
+TcpClient::IsSSL(bool isSSL)
 {
     this->m_isSSL = isSSL;
 }
 
-galay::coroutine::GY_NetCoroutine 
-GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<result::NetResultInner> result, bool autoClose)
+galay::coroutine::NetCoroutine 
+TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<result::ResultInterface> result, bool autoClose)
 {
     std::string request = std::forward<std::string>(buffer);
     if(!m_isSSL) {
@@ -41,28 +60,28 @@ GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::
     if(!m_isSSL) {
         if(!Connected()){
             auto res = Connect(host, port);
-            co_await res->Wait();
-            if(!res->Success()) {
-                result->SetErrorMsg("Connect:" + res->Error());
-                spdlog::error("[{}:{}] [Unary.Connect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res->Error());
+            co_await res.Wait();
+            if(!res.Success()) {
+                result->SetErrorMsg("Connect:" + res.Error());
+                spdlog::error("[{}:{}] [Unary.Connect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res.Error());
                 result->Done();
                 co_return coroutine::CoroutineStatus::kCoroutineFinished;
             }
         }
         auto res = Send(std::move(request));
-        co_await res->Wait();
-        if(!res->Success()) {
-            result->SetErrorMsg("Send:" + res->Error());
-            spdlog::error("[{}:{}] [Unary.Send(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
+        co_await res.Wait();
+        if(!res.Success()) {
+            result->SetErrorMsg("Send:" + res.Error());
+            spdlog::error("[{}:{}] [Unary.Send(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res.Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         std::string temp;
         res = Recv(temp);
-        co_await res->Wait();
-        if(!res->Success()) {
-            result->SetErrorMsg("Send:" + res->Error());
-            spdlog::error("[{}:{}] [Unary.Recv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, temp, res->Error());
+        co_await res.Wait();
+        if(!res.Success() && errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR) {
+            result->SetErrorMsg("Send:" + res.Error());
+            spdlog::error("[{}:{}] [Unary.Recv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, temp, res.Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
@@ -79,28 +98,28 @@ GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::
         if(!Connected()) 
         {
             auto res = SSLConnect(host, port);
-            co_await res->Wait();
-            if(!res->Success()) {
-                result->SetErrorMsg("SSLConnect:" + res->Error());
-                spdlog::error("[{}:{}] [Unary.SSLConnect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res->Error());
+            co_await res.Wait();
+            if(!res.Success()) {
+                result->SetErrorMsg("SSLConnect:" + res.Error());
+                spdlog::error("[{}:{}] [Unary.SSLConnect(host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, host, port, res.Error());
                 result->Done();
                 co_return coroutine::CoroutineStatus::kCoroutineFinished;
             }
         }
         auto res = SSLSend(std::move(request));
-        co_await res->Wait();
-        if(!res->Success()) {
-            result->SetErrorMsg("SSLSend:" + res->Error());
-            spdlog::error("[{}:{}] [Unary.SSLSend(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
+        co_await res.Wait();
+        if(!res.Success()) {
+            result->SetErrorMsg("SSLSend:" + res.Error());
+            spdlog::error("[{}:{}] [Unary.SSLSend(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res.Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
         std::string temp;
         res = SSLRecv(temp);
-        co_await res->Wait();
-        if(!res->Success()) {
-            result->SetErrorMsg("SSLRecv:" + res->Error());
-            spdlog::error("[{}:{}] [Unary.SSLRecv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res->Error());
+        co_await res.Wait();
+        if(!res.Success()) {
+            result->SetErrorMsg("SSLRecv:" + res.Error());
+            spdlog::error("[{}:{}] [Unary.SSLRecv(buffer:{}) failed, Error:{}]", __FILE__, __LINE__, request, res.Error());
             result->Done();
             co_return coroutine::CoroutineStatus::kCoroutineFinished;
         }
@@ -115,15 +134,15 @@ GY_TcpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::
     co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
-galay::coroutine::GY_NetCoroutine 
-GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<result::NetResultInner> result, bool autoClose)
+galay::coroutine::NetCoroutine 
+TcpClient::Unary(std::string host, uint16_t port, std::queue<std::string> requests, std::shared_ptr<result::ResultInterface> result, bool autoClose)
 {
     std::queue<std::string> responses;
     while(!requests.empty())
     {
         std::string request = requests.front();
         requests.pop();
-        std::shared_ptr<result::NetResultInner> res = std::make_shared<result::NetResultInner>();
+        std::shared_ptr<result::ResultInterface> res = std::make_shared<result::ResultInterface>();
         res->AddTaskNum(1);
         Unary(host, port, std::move(request), res, autoClose);
         co_await res->Wait();
@@ -145,8 +164,8 @@ GY_TcpClient::Unary(std::string host, uint16_t port, std::queue<std::string> req
     co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
-std::shared_ptr<result::NetResult>
-GY_TcpClient::CloseConn()
+NetResult
+TcpClient::CloseConn()
 {
     if(this->m_isSSL) 
     {
@@ -158,10 +177,10 @@ GY_TcpClient::CloseConn()
     }
 }
 
-result::NetResult::ptr 
-GY_TcpClient::Socket()
+NetResult 
+TcpClient::Socket()
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     this->m_fd = io::net::TcpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
@@ -178,13 +197,13 @@ GY_TcpClient::Socket()
     spdlog::debug("[{}:{}] [SetNoBlock(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
     this->m_isSocket = true;
 end:
-    return result;
+    return NetResult(result);
 }
 
-result::NetResult::ptr  
-GY_TcpClient::Connect(const std::string &ip, uint16_t port)
+NetResult  
+TcpClient::Connect(const std::string &ip, uint16_t port)
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     int ret = io::net::TcpFunction::Conncet(this->m_fd, ip , port);
     if (ret < 0 )
     {
@@ -199,7 +218,7 @@ GY_TcpClient::Connect(const std::string &ip, uint16_t port)
         else
         {
             result->AddTaskNum(1);
-            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+            poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
             executor->OnWrite() += [this,result](){
                 int error = 0;
                 socklen_t len = sizeof(error);
@@ -207,11 +226,11 @@ GY_TcpClient::Connect(const std::string &ip, uint16_t port)
                 if(error){
                     SetResult(result, false, strerror(error));
                     m_isConnected = false;
-                    spdlog::error("[{}:{}] [GY_ClientBase::Connect] connect error: {}", __FILE__, __LINE__, strerror(errno));
+                    spdlog::error("[{}:{}] [ClientBase::Connect] connect error: {}", __FILE__, __LINE__, strerror(errno));
                 }else{
                     SetResult(result, true, "");
                     m_isConnected = true;
-                    spdlog::debug("[{}:{}] [GY_ClientBase::Connect] connect success", __FILE__, __LINE__);
+                    spdlog::debug("[{}:{}] [ClientBase::Connect] connect success", __FILE__, __LINE__);
                 }
                 m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
                 result->Done();
@@ -224,32 +243,29 @@ GY_TcpClient::Connect(const std::string &ip, uint16_t port)
     }
     m_isConnected = true;
     result->SetSuccess(true);
-    spdlog::debug("[{}:{}] [GY_ClientBase::Connect] connect success", __FILE__, __LINE__);
+    spdlog::debug("[{}:{}] [ClientBase::Connect] connect success", __FILE__, __LINE__);
 
 end:
-    return result;
+    return NetResult(result);
 }
 
-result::NetResult::ptr  
-GY_TcpClient::Send(std::string &&buffer)
+NetResult  
+TcpClient::Send(std::string &&buffer)
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    if(!m_sendTask)
-    {
-        m_sendTask = std::make_shared<task::GY_TcpSendTask>(this->m_fd, this->m_ssl, this->m_scheduler);
-    }
-    m_sendTask->AppendWBuffer(std::forward<std::string>(buffer));
-    m_sendTask->SendAll();
-    if(m_sendTask->Empty()){
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
+    this->m_wbuffer = std::forward<std::string>(buffer);
+    int ret = poller::SendAll(this->m_scheduler.lock(), this->m_fd, this->m_ssl, this->m_wbuffer);
+    if(m_wbuffer.empty()){
         result->SetSuccess(true);
         goto end;
     }else{
         result->AddTaskNum(1);
-        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+        poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
         executor->OnWrite() += [this, result](){
-            m_sendTask->SendAll();
-            SetResult(result, m_sendTask->Success(), m_sendTask->Error());
-            if(m_sendTask->Empty()){
+            int ret = SendAll(this->m_scheduler.lock(), this->m_fd, this->m_ssl, this->m_wbuffer);
+            bool success = ret == 0 ? true:false;
+            SetResult(result, success, strerror(errno));
+            if(m_wbuffer.empty()){
                 m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
                 result->Done();
             }
@@ -259,29 +275,28 @@ GY_TcpClient::Send(std::string &&buffer)
         m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
     }
 end:
-    return result;
+    return NetResult(result);
 }
 
-result::NetResult::ptr
-GY_TcpClient::Recv(std::string &buffer)
+NetResult
+TcpClient::Recv(std::string &buffer)
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
-    if(!m_recvTask){
-        m_recvTask = std::make_shared<task::GY_TcpRecvTask>(this->m_fd, this->m_ssl, this->m_scheduler);
-    }
-    m_recvTask->RecvAll();
-    if(!m_recvTask->GetRBuffer().empty()){
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
+    int ret = poller::RecvAll(this->m_scheduler.lock(), this->m_fd, this->m_ssl, this->m_rbuffer);
+    if(!this->m_rbuffer.empty()){
         result->SetSuccess(true);
-        buffer.assign(m_recvTask->GetRBuffer().begin(), m_recvTask->GetRBuffer().end());
-        m_recvTask->GetRBuffer().clear();
+        buffer = this->m_rbuffer;
+        m_rbuffer.clear();
     }else{
         result->AddTaskNum(1);
-        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+        poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
         executor->OnRead() += [this, result, &buffer](){
-            m_recvTask->RecvAll();
-            SetResult(result, m_recvTask->Success(), m_recvTask->Error());
-            buffer.assign(m_recvTask->GetRBuffer().begin(), m_recvTask->GetRBuffer().end());
-            m_recvTask->GetRBuffer().clear();
+            int ret = poller::RecvAll(this->m_scheduler.lock(), this->m_fd, this->m_ssl, this->m_rbuffer);
+            bool success = (ret == 0 ? true:false);
+            if(success) SetResult(result, success, "");
+            else SetResult(result, success, strerror(errno));
+            buffer.assign(this->m_rbuffer.begin(), this->m_rbuffer.end());
+            this->m_rbuffer.clear();
             m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventRead);
             result->Done();
         };
@@ -290,13 +305,13 @@ GY_TcpClient::Recv(std::string &buffer)
         m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventRead | poller::kEventEpollET);
     }
 end:
-    return result;
+    return NetResult(result);
 }
 
-result::NetResult::ptr 
-GY_TcpClient::Close()
+NetResult 
+TcpClient::Close()
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     if(this->m_isSocket)
     {
         if(close(this->m_fd) == -1) {
@@ -312,13 +327,13 @@ GY_TcpClient::Close()
     {
         result->SetErrorMsg("Not Call Scokect");
     }
-    return result;
+    return NetResult(result);
 }
 
-result::NetResult::ptr  
-GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
+NetResult  
+TcpClient::SSLSocket(long minVersion, long maxVersion)
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     this->m_ctx = io::net::TcpFunction::InitSSLClient(minVersion, maxVersion);
     if(this->m_ctx == nullptr) {
         unsigned long error = ERR_get_error();
@@ -326,7 +341,7 @@ GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
         result->SetErrorMsg(ERR_error_string(error, nullptr));
         goto end;
     }
-    this->m_fd = io::net::TcpFunction::Sock();
+    Socket();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
         result->SetErrorMsg(strerror(errno));
@@ -346,14 +361,14 @@ GY_TcpClient::SSLSocket(long minVersion, long maxVersion)
     this->m_isSocket = true;
     spdlog::debug("[{}:{}] [SSLCreateObj(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
 end:
-    return result;
+    return NetResult(result);
 }
 
 
-result::NetResult::ptr 
-GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
+NetResult 
+TcpClient::SSLConnect(const std::string &ip, uint16_t port)
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     int ret = io::net::TcpFunction::Conncet(this->m_fd, ip , port);
     if (ret < 0 )
     {
@@ -369,7 +384,7 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         {
             result->AddTaskNum(1);
             // connect 回调
-            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+            poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
             executor->OnWrite() += [this,result](){
                 int error = 0;
                 socklen_t len = sizeof(error);
@@ -377,8 +392,9 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                 if(error){
                     m_isConnected = false;
                     SetResult(result, false, strerror(error));
-                    spdlog::error("[{}:{}] [GY_ClientBase::Connect] connect error: {}", __FILE__, __LINE__, strerror(errno));
+                    spdlog::error("[{}:{}] [ClientBase::Connect] connect error: {}", __FILE__, __LINE__, strerror(errno));
                     m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
+                    m_scheduler.lock()->DelObjector(this->m_fd);
                     result->Done();
                 }else{
                     m_isConnected = true;
@@ -388,7 +404,7 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                         int r = SSL_do_handshake(m_ssl);
                         if (r == 1){
                             SetResult(result, true, "");
-                            spdlog::debug("[{}:{}] [GY_ClientBase::Connect] SSL_do_handshake success", __FILE__, __LINE__);
+                            spdlog::debug("[{}:{}] [ClientBase::Connect] SSL_do_handshake success", __FILE__, __LINE__);
                             m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                             result->Done();
                             return true;
@@ -413,8 +429,11 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                     };
                     bool finish = func();
                     if(!finish){
-                        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+                        poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
                         executor->OnWrite() += [this, result, func](){
+                            func();
+                        };
+                        executor->OnRead() += [this, result, func](){
                             func();
                         };
                         m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
@@ -422,7 +441,7 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
                 }
             };
             m_scheduler.lock()->RegisterObjector(this->m_fd, executor);
-            m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite);
+            m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET );
             result->SetErrorMsg("Waiting");
             return result;
         }
@@ -436,7 +455,7 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
             int r = SSL_do_handshake(m_ssl);
             if (r == 1){
                 SetResult(result, true, "");
-                spdlog::debug("[{}:{}] [GY_ClientBase::SSLConnect] SSL_do_handshake success", __FILE__, __LINE__);
+                spdlog::debug("[{}:{}] [ClientBase::SSLConnect] SSL_do_handshake success", __FILE__, __LINE__);
                 m_scheduler.lock()->DelEvent(this->m_fd, poller::kEventWrite | poller::kEventRead | poller::kEventError);
                 result->Done();
                 return true;
@@ -464,7 +483,7 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         };
         bool finish = func();
         if(!finish){
-            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+            poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
             result->AddTaskNum(1);
             executor->OnWrite() += [this, result, func](){
                 func();
@@ -474,29 +493,29 @@ GY_TcpClient::SSLConnect(const std::string &ip, uint16_t port)
         else
         {
             result->SetSuccess(true);
-            spdlog::debug("[{}:{}] [GY_ClientBase::SSLConnect] SSLConnect success", __FILE__, __LINE__);
+            spdlog::debug("[{}:{}] [ClientBase::SSLConnect] SSLConnect success", __FILE__, __LINE__);
         }
     }
 end:
-    return result;
+    return NetResult(result);
 }
 
-result::NetResult::ptr 
-GY_TcpClient::SSLSend(std::string &&buffer)
+NetResult 
+TcpClient::SSLSend(std::string &&buffer)
 {
     return Send(std::forward<std::string>(buffer));
 }
 
-result::NetResult::ptr 
-GY_TcpClient::SSLRecv(std::string &buffer)
+NetResult 
+TcpClient::SSLRecv(std::string &buffer)
 {
     return Recv(buffer);
 }
 
-result::NetResult::ptr 
-GY_TcpClient::SSLClose()
+NetResult 
+TcpClient::SSLClose()
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     if(this->m_isSocket)
     {
         if(this->m_ssl) io::net::TcpFunction::SSLDestory(this->m_ssl);
@@ -514,144 +533,176 @@ GY_TcpClient::SSLClose()
     {
         result->SetErrorMsg("Not Call SSLSocket");
     }
-    return result;
+    return NetResult(result);
 }
 
 bool 
-GY_TcpClient::Socketed()
+TcpClient::Socketed()
 {
     return this->m_isSocket;
 }
 
 bool 
-GY_TcpClient::Connected()
+TcpClient::Connected()
 {
     return this->m_isConnected;
 }
 
-GY_TcpClient::~GY_TcpClient()
+TcpClient::~TcpClient()
 {
     this->m_scheduler.lock()->DelObjector(this->m_fd);
 }
 
 void 
-GY_TcpClient::SetResult(result::NetResultInner::ptr result, bool success, std::string &&errMsg)
+TcpClient::SetResult(result::ResultInterface::ptr result, bool success, std::string &&errMsg)
 {
     result->SetErrorMsg(std::forward<std::string>(errMsg));
     result->SetSuccess(success);
 }
 
 
-GY_HttpAsyncClient::GY_HttpAsyncClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
+HttpResult::HttpResult(result::ResultInterface::ptr result)
 {
-    this->m_tcpClient = std::make_shared<GY_TcpClient>(scheduler);
+    this->m_result = result;
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Get(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+bool 
+HttpResult::Success()
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    return this->m_result->Success();
+}
+
+std::string 
+HttpResult::Error()
+{
+    return this->m_result->Error();
+}
+
+coroutine::GroupAwaiter& 
+HttpResult::Wait()
+{
+    return this->m_result->Wait();
+}
+
+protocol::http::HttpResponse 
+HttpResult::GetResponse()
+{
+    std::string res = std::any_cast<std::string>(this->m_result->Result());
+    protocol::http::HttpResponse resp;
+    resp.DecodePdu(res);
+    return resp;
+}
+
+
+HttpAsyncClient::HttpAsyncClient(std::weak_ptr<poller::IOScheduler> scheduler)
+{
+    this->m_tcpClient = std::make_shared<TcpClient>(scheduler);
+}
+
+HttpResult 
+HttpAsyncClient::Get(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+{
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "GET";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Post(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Post(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "POST";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Options(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Options(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "OPTIONS";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Put(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Put(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "PUT";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Delete(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Delete(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "DELETE";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Head(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Head(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "HEAD";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Trace(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Trace(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "TRACE";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-result::HttpResult::ptr 
-GY_HttpAsyncClient::Patch(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
+HttpResult 
+HttpAsyncClient::Patch(const std::string &url, protocol::http::HttpRequest::ptr request, bool autoClose)
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::tuple<std::string,uint16_t,std::string> res = ParseUrl(url);
     request->Header()->Uri() = std::get<2>(res);
     request->Header()->Method() = "PATCH";
     this->m_tcpClient->Unary(std::get<0>(res), std::get<1>(res), request->EncodePdu(), result, autoClose);
-    return result;
+    return HttpResult(result);
 }
 
-std::shared_ptr<result::NetResult> 
-GY_HttpAsyncClient::CloseConn()
+NetResult 
+HttpAsyncClient::CloseConn()
 {
-    result::HttpResultInner::ptr result = std::make_shared<result::HttpResultInner>();
     return m_tcpClient->CloseConn();
 }
 
 std::tuple<std::string,uint16_t,std::string> 
-GY_HttpAsyncClient::ParseUrl(const std::string& url)
+HttpAsyncClient::ParseUrl(const std::string& url)
 {
     std::regex uriRegex(R"((http|https):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?(/.*)?)");
     std::smatch match;
@@ -685,23 +736,61 @@ GY_HttpAsyncClient::ParseUrl(const std::string& url)
     return res;
 }
 
-GY_SmtpAsyncClient::GY_SmtpAsyncClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
+SmtpAsyncClient::SmtpAsyncClient(std::weak_ptr<poller::IOScheduler> scheduler)
 {
-    this->m_tcpClient = std::make_shared<GY_TcpClient>(scheduler);
+    this->m_tcpClient = std::make_shared<TcpClient>(scheduler);
+}
+
+SmtpResult::SmtpResult(result::ResultInterface::ptr result)
+{
+    this->m_result = result;
+}
+
+bool 
+SmtpResult::Success()
+{
+    return this->m_result->Success();
+}
+
+std::string 
+SmtpResult::Error()
+{
+    return this->m_result->Error();
+}
+
+coroutine::GroupAwaiter& 
+SmtpResult::Wait()
+{
+    return this->m_result->Wait();
+}
+
+std::queue<protocol::smtp::SmtpResponse> 
+SmtpResult::GetResponse()
+{
+    auto res = std::any_cast<std::queue<std::string>>(this->m_result->Result());
+    std::queue<protocol::smtp::SmtpResponse> responses;
+    while (!res.empty())
+    {
+        protocol::smtp::SmtpResponse response;
+        response.DecodePdu(res.front());
+        res.pop();
+        responses.push(response);
+    }
+    return responses;
 }
 
 void 
-GY_SmtpAsyncClient::Connect(const std::string& url)
+SmtpAsyncClient::Connect(const std::string& url)
 {
     std::tuple<std::string,uint16_t> res = ParseUrl(url);
     this->m_host = std::get<0>(res);
     this->m_port = std::get<1>(res);
 }
 
-std::shared_ptr<result::SmtpResult> 
-GY_SmtpAsyncClient::Auth(std::string account, std::string password)
+SmtpResult 
+SmtpAsyncClient::Auth(std::string account, std::string password)
 {
-    result::SmtpResultInner::ptr result = std::make_shared<result::SmtpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
@@ -710,13 +799,13 @@ GY_SmtpAsyncClient::Auth(std::string account, std::string password)
     requests.push(protocol::smtp::SmtpHelper::Account(request, account));
     requests.push(protocol::smtp::SmtpHelper::Password(request, password));
     this->m_tcpClient->Unary(this->m_host, this->m_port, requests, result, false);
-    return result;
+    return SmtpResult(result);
 }
 
-std::shared_ptr<result::SmtpResult> 
-GY_SmtpAsyncClient::SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg)
+SmtpResult 
+SmtpAsyncClient::SendEmail(std::string FromEmail, const std::vector<std::string> &ToEmails, galay::protocol::smtp::SmtpMsgInfo msg)
 {
-    result::SmtpResultInner::ptr result = std::make_shared<result::SmtpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
@@ -728,29 +817,29 @@ GY_SmtpAsyncClient::SendEmail(std::string FromEmail, const std::vector<std::stri
     requests.push(protocol::smtp::SmtpHelper::Data(request));
     requests.push(protocol::smtp::SmtpHelper::Msg(request, msg));
     this->m_tcpClient->Unary(this->m_host, this->m_port, requests, result, false);
-    return result;
+    return SmtpResult(result);
 }
 
-std::shared_ptr<result::SmtpResult> 
-GY_SmtpAsyncClient::Quit()
+SmtpResult 
+SmtpAsyncClient::Quit()
 {
-    result::SmtpResultInner::ptr result = std::make_shared<result::SmtpResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     result->AddTaskNum(1);
     std::queue<std::string> requests;
     protocol::smtp::SmtpRequest request;
     requests.push(protocol::smtp::SmtpHelper::Quit(request));
     this->m_tcpClient->Unary(this->m_host, this->m_port, requests, result, false);
-    return result;
+    return SmtpResult(result);
 }
 
-std::shared_ptr<result::NetResult>  
-GY_SmtpAsyncClient::CloseConn()
+NetResult  
+SmtpAsyncClient::CloseConn()
 {
     return m_tcpClient->CloseConn();
 }
 
 std::tuple<std::string,uint16_t> 
-GY_SmtpAsyncClient::ParseUrl(const std::string& url)
+SmtpAsyncClient::ParseUrl(const std::string& url)
 {
     std::regex uriRegex(R"((smtp|smtps):\/\/(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:\d+)?)");
     std::smatch match;
@@ -786,14 +875,14 @@ GY_SmtpAsyncClient::ParseUrl(const std::string& url)
 }
 
 
-GY_UdpClient::GY_UdpClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
+UdpClient::UdpClient(std::weak_ptr<poller::IOScheduler> scheduler)
 {
     this->m_scheduler = scheduler;
     this->m_isSocketed = false;
 }
 
-galay::coroutine::GY_NetCoroutine 
-GY_UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<result::NetResultInner> result)
+galay::coroutine::NetCoroutine 
+UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::shared_ptr<result::ResultInterface> result)
 {
     result->AddTaskNum(1);
     if(!this->m_isSocketed)
@@ -802,21 +891,21 @@ GY_UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::
         this->m_isSocketed = true;
     }
     auto res = SendTo(host, port, std::forward<std::string>(buffer));
-    co_await res->Wait();
-    if(!res->Success())
+    co_await res.Wait();
+    if(!res.Success())
     {
-        result->SetErrorMsg(res->Error());
-        spdlog::error("[{}:{}] [Unary.SendTo(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res->Error());
+        result->SetErrorMsg(res.Error());
+        spdlog::error("[{}:{}] [Unary.SendTo(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res.Error());
         result->Done();
         co_return coroutine::CoroutineStatus::kCoroutineFinished;
     } 
-    result::UdpResInfo info;
+    UdpRespAddrInfo info;
     res = RecvFrom(info.m_host, info.m_port, info.m_buffer);
-    co_await res->Wait();
-    if(!res->Success())
+    co_await res.Wait();
+    if(!res.Success())
     {
-        result->SetErrorMsg(res->Error());
-        spdlog::error("[{}:{}] [Unary.RecvFrom(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res->Error());
+        result->SetErrorMsg(res.Error());
+        spdlog::error("[{}:{}] [Unary.RecvFrom(fd:{}, host:{}, port:{}) failed, Error:{}]", __FILE__, __LINE__, this->m_fd, host, port, res.Error());
         result->Done();
         co_return coroutine::CoroutineStatus::kCoroutineFinished;
     }
@@ -826,10 +915,10 @@ GY_UdpClient::Unary(std::string host, uint16_t port, std::string &&buffer, std::
     co_return coroutine::CoroutineStatus::kCoroutineFinished;
 }
 
-std::shared_ptr<result::NetResult> 
-GY_UdpClient::Socket()
+NetResult
+UdpClient::Socket()
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     this->m_fd = io::net::UdpFunction::Sock();
     if(this->m_fd <= 0) {
         spdlog::error("[{}:{}] [Socket(fd :{}) failed]", __FILE__, __LINE__, this->m_fd);
@@ -846,14 +935,14 @@ GY_UdpClient::Socket()
     spdlog::debug("[{}:{}] [SetNoBlock(fd:{}) success]", __FILE__, __LINE__, this->m_fd);
     this->m_isSocketed = true;
 end:
-    return result;
+    return NetResult(result);
 }
 
-std::shared_ptr<result::NetResult> 
-GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
+NetResult 
+UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
 {
     this->m_request = std::forward<std::string>(buffer);
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     io::net::Addr addr;
     addr.ip = host;
     addr.port = port;
@@ -871,7 +960,7 @@ GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
         goto end;
     }else{
         result->AddTaskNum(1);
-        objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+        poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
         executor->OnWrite() += [this, addr, result](){
             int len = galay::io::net::UdpFunction::SendTo(m_fd, addr, m_request);
             spdlog::debug("[{}:{}] [SendTo(fd:{}, host:{}, port:{}), len:{}]", __FILE__, __LINE__, this->m_fd, addr.ip, addr.port, len);
@@ -887,13 +976,13 @@ GY_UdpClient::SendTo(std::string host, uint16_t port, std::string&& buffer)
         m_scheduler.lock()->AddEvent(this->m_fd, poller::kEventWrite | poller::kEventEpollET);
     }
 end:
-    return result;
+    return NetResult(result);
 }
 
-std::shared_ptr<result::NetResult> 
-GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
+NetResult
+UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     io::net::Addr addr;
     char buf[MAX_UDP_LENGTH];
     int len = galay::io::net::UdpFunction::RecvFrom(this->m_fd, addr, buf,MAX_UDP_LENGTH);
@@ -907,7 +996,7 @@ GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
         else
         {
             result->AddTaskNum(1);
-            objector::GY_ClientExcutor::ptr executor = std::make_shared<objector::GY_ClientExcutor>();
+            poller::ClientExcutor::ptr executor = std::make_shared<poller::ClientExcutor>();
             executor->OnRead() += [this, result, &host, &port, &buffer](){
                 spdlog::debug("[{}:{}] [Call RecvFrom.OnRead]", __FILE__, __LINE__);
                 io::net::Addr addr;
@@ -942,13 +1031,13 @@ GY_UdpClient::RecvFrom(std::string& host, uint16_t& port, std::string& buffer)
         port = addr.port;
         result->SetSuccess(true);
     }
-    return result;
+    return NetResult(result);
 }
 
-std::shared_ptr<result::NetResult> 
-GY_UdpClient::CloseSocket()
+NetResult
+UdpClient::CloseSocket()
 {
-    result::NetResultInner::ptr result = std::make_shared<result::NetResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     if(this->m_isSocketed)
     {
         if(close(this->m_fd) == -1) {
@@ -962,38 +1051,183 @@ GY_UdpClient::CloseSocket()
     {
         result->SetErrorMsg("Not Call Socket");
     }
-    return result;
+    return NetResult(result);
 }
 
 bool 
-GY_UdpClient::Socketed()
+UdpClient::Socketed()
 {
     return this->m_isSocketed;
 }
 
-GY_UdpClient::~GY_UdpClient()
+UdpClient::~UdpClient()
 {
     this->m_scheduler.lock()->DelObjector(this->m_fd);
 }
 
 void 
-GY_UdpClient::SetResult(std::shared_ptr<result::NetResultInner> result, bool success, std::string &&errMsg)
+UdpClient::SetResult(std::shared_ptr<result::ResultInterface> result, bool success, std::string &&errMsg)
 {
     result->SetErrorMsg(std::forward<std::string>(errMsg));
     result->SetSuccess(success);
 }
 
-
-DnsAsyncClient::DnsAsyncClient(std::weak_ptr<poller::GY_IOScheduler> scheduler)
+DnsResult::DnsResult(result::ResultInterface::ptr result)
 {
-    this->m_udpClient = std::make_shared<GY_UdpClient>(scheduler);
+    this->m_result = result;
+    this->m_isParsed = false;
+}
+
+bool 
+DnsResult::Success()
+{
+    return m_result->Success();
+}
+
+std::string 
+DnsResult::Error()
+{
+    return m_result->Error();
+}
+
+coroutine::GroupAwaiter& 
+DnsResult::Wait()
+{
+    return m_result->Wait();
+}
+
+bool 
+DnsResult::HasCName()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    return !m_cNames.empty();
+}
+
+std::string 
+DnsResult::GetCName()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    std::string cname = m_cNames.front();
+    m_cNames.pop();
+    return std::move(cname);
+}
+
+bool 
+DnsResult::HasA()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    return !m_a.empty();
+}
+
+std::string 
+DnsResult::GetA()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    std::string a = m_a.front();
+    m_a.pop();
+    return std::move(a);
+}
+
+bool 
+DnsResult::HasAAAA()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    return !m_aaaa.empty();
+}
+
+std::string 
+DnsResult::GetAAAA()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    std::string aaaa = m_aaaa.front();
+    m_aaaa.pop();
+    return std::move(aaaa);
+}
+
+bool 
+DnsResult::HasPtr()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    return !m_ptr.empty();
+}
+
+std::string 
+DnsResult::GetPtr()
+{
+    if(!m_isParsed) {
+        Parse();
+        m_isParsed = true;
+    }
+    std::string ptr = m_ptr.front();
+    m_ptr.pop();
+    return std::move(ptr);
+}
+
+void
+DnsResult::Parse()
+{
+    UdpRespAddrInfo info = std::any_cast<UdpRespAddrInfo>(this->m_result);
+    protocol::dns::DnsResponse response;
+    response.DecodePdu(info.m_buffer);
+    auto answers = response.GetAnswerQueue();
+    while (!answers.empty())
+    {
+        auto answer = answers.front();
+        answers.pop();
+        spdlog::debug("[{}:{}] DnsResult::Parse: type:{}, data:{}",__FILE__, __LINE__, answer.m_type, answer.m_data);
+        switch (answer.m_type)
+        {
+        case protocol::dns::kDnsQueryCname:
+            m_cNames.push(answer.m_data);
+            break;
+        case protocol::dns::kDnsQueryA:
+            m_a.push(answer.m_data);
+            break;
+        case protocol::dns::kDnsQueryAAAA:
+            m_aaaa.push(answer.m_data);
+            break;
+        case protocol::dns::kDnsQueryPtr:
+            m_ptr.push(answer.m_data);
+            break;
+        default:
+            break;
+        }
+    }
+    
 }
 
 
-std::shared_ptr<result::DnsResult> 
+DnsAsyncClient::DnsAsyncClient(std::weak_ptr<poller::IOScheduler> scheduler)
+{
+    this->m_udpClient = std::make_shared<UdpClient>(scheduler);
+}
+
+
+DnsResult 
 DnsAsyncClient::QueryA(const std::string& host, const uint16_t& port, const std::string& domain)
 {
-    result::DnsResultInner::ptr result = std::make_shared<result::DnsResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
@@ -1007,13 +1241,13 @@ DnsAsyncClient::QueryA(const std::string& host, const uint16_t& port, const std:
     questions.push(question);
     request.SetQuestionQueue(std::move(questions));
     this->m_udpClient->Unary(host, port, request.EncodePdu(), result);
-    return result;
+    return DnsResult(result);
 }
 
-std::shared_ptr<result::DnsResult> 
+DnsResult 
 DnsAsyncClient::QueryAAAA(const std::string& host, const uint16_t& port, const std::string& domain)
 {
-    result::DnsResultInner::ptr result = std::make_shared<result::DnsResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
@@ -1027,13 +1261,13 @@ DnsAsyncClient::QueryAAAA(const std::string& host, const uint16_t& port, const s
     questions.push(question);
     request.SetQuestionQueue(std::move(questions));
     this->m_udpClient->Unary(host, port, request.EncodePdu(), result);
-    return result;
+    return DnsResult(result);
 }
 
-std::shared_ptr<result::DnsResult> 
+DnsResult 
 DnsAsyncClient::QueryPtr(const std::string& host, const uint16_t& port, const std::string& want)
 {
-    result::DnsResultInner::ptr result = std::make_shared<result::DnsResultInner>();
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
     protocol::dns::DnsRequest request;
     protocol::dns::DnsHeader header;
     header.m_flags.m_rd = 1;
@@ -1047,10 +1281,10 @@ DnsAsyncClient::QueryPtr(const std::string& host, const uint16_t& port, const st
     questions.push(question);
     request.SetQuestionQueue(std::move(questions));
     this->m_udpClient->Unary(host, port, request.EncodePdu(), result);
-    return result;
+    return DnsResult(result);
 }
 
-std::shared_ptr<result::NetResult> 
+NetResult 
 DnsAsyncClient::CloseSocket()
 {
     return this->m_udpClient->CloseSocket();

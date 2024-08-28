@@ -79,7 +79,7 @@ namespace galay::protocol::dns
         std::queue<DnsAnswer> m_answers;
     };
 
-    class DnsRequest : public DnsProtocol, public GY_Request, public galay::common::GY_DynamicCreator<GY_Request,DnsRequest>
+    class DnsRequest : public DnsProtocol, public Request, public galay::common::DynamicCreator<Request,DnsRequest>
     {
     public:
         using ptr = std::shared_ptr<DnsRequest>;
@@ -92,7 +92,7 @@ namespace galay::protocol::dns
         bool IsPointer(int in);
     };
 
-    class DnsResponse : public DnsProtocol, public GY_Response, public galay::common::GY_DynamicCreator<GY_Response,DnsResponse>
+    class DnsResponse : public DnsProtocol, public Response, public galay::common::DynamicCreator<Response,DnsResponse>
     {
     public:
         using ptr = std::shared_ptr<DnsResponse>;

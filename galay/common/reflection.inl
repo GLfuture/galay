@@ -3,16 +3,16 @@
 
 
 template <typename... Targs>
-galay::common::GY_RequestFactory<Targs...>* galay::common::GY_RequestFactory<Targs...>::m_ReqFactory = nullptr;
+galay::common::RequestFactory<Targs...>* galay::common::RequestFactory<Targs...>::m_ReqFactory = nullptr;
 
 template <typename... Targs>
-galay::common::GY_RequestFactory<Targs...>* 
-galay::common::GY_RequestFactory<Targs...>::GetInstance()
+galay::common::RequestFactory<Targs...>* 
+galay::common::RequestFactory<Targs...>::GetInstance()
 {
     if (m_ReqFactory == nullptr)
     {
-        m_ReqFactory =  new GY_RequestFactory;
-        GY_FactoryManager::AddReleaseFunc([](){
+        m_ReqFactory =  new RequestFactory;
+        FactoryManager::AddReleaseFunc([](){
             if(m_ReqFactory){
                 delete m_ReqFactory;
                 m_ReqFactory = nullptr;
@@ -24,7 +24,7 @@ galay::common::GY_RequestFactory<Targs...>::GetInstance()
 
 template <typename... Targs>
 bool 
-galay::common::GY_RequestFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Request>(Targs &&...args)> func)
+galay::common::RequestFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Request>(Targs &&...args)> func)
 {
     if (nullptr == func)
         return false;
@@ -33,8 +33,8 @@ galay::common::GY_RequestFactory<Targs...>::Regist(const std::string &typeName, 
 }
 
 template <typename... Targs>
-std::shared_ptr<galay::protocol::GY_Request>
-galay::common::GY_RequestFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
+std::shared_ptr<galay::protocol::Request>
+galay::common::RequestFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
 {
     if (m_mapCreateFunction.contains(typeName))
     {
@@ -46,17 +46,17 @@ galay::common::GY_RequestFactory<Targs...>::Create(const std::string &typeName, 
 
 //response factory
 template <typename... Targs>
-galay::common::GY_ResponseFactory<Targs...> *galay::common::GY_ResponseFactory<Targs...>::m_RespFactory = nullptr;
+galay::common::ResponseFactory<Targs...> *galay::common::ResponseFactory<Targs...>::m_RespFactory = nullptr;
 
 
 template <typename... Targs>
-galay::common::GY_ResponseFactory<Targs...>*
-galay::common::GY_ResponseFactory<Targs...>::GetInstance()
+galay::common::ResponseFactory<Targs...>*
+galay::common::ResponseFactory<Targs...>::GetInstance()
 {
     if (m_RespFactory == nullptr)
     {
-        m_RespFactory = new GY_ResponseFactory ;
-        GY_FactoryManager::AddReleaseFunc([](){
+        m_RespFactory = new ResponseFactory ;
+        FactoryManager::AddReleaseFunc([](){
             if(m_RespFactory){
                 delete m_RespFactory;
                 m_RespFactory = nullptr;
@@ -68,7 +68,7 @@ galay::common::GY_ResponseFactory<Targs...>::GetInstance()
 
 template <typename... Targs>
 bool 
-galay::common::GY_ResponseFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::GY_Response>(Targs &&...args)> func)
+galay::common::ResponseFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Response>(Targs &&...args)> func)
 {
     if (nullptr == func)
         return false;
@@ -77,8 +77,8 @@ galay::common::GY_ResponseFactory<Targs...>::Regist(const std::string &typeName,
 }
 
 template <typename... Targs>
-std::shared_ptr<galay::protocol::GY_Response>
-galay::common::GY_ResponseFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
+std::shared_ptr<galay::protocol::Response>
+galay::common::ResponseFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
 {
     if (m_mapCreateFunction.contains(typeName))
     {
@@ -90,17 +90,17 @@ galay::common::GY_ResponseFactory<Targs...>::Create(const std::string &typeName,
 
 //user factory
 template <typename... Targs>
-galay::common::GY_UserFactory<Targs...> *galay::common::GY_UserFactory<Targs...>::m_userFactory = nullptr;
+galay::common::UserFactory<Targs...> *galay::common::UserFactory<Targs...>::m_userFactory = nullptr;
 
 
 template <typename... Targs>
-galay::common::GY_UserFactory<Targs...>*
-galay::common::GY_UserFactory<Targs...>::GetInstance()
+galay::common::UserFactory<Targs...>*
+galay::common::UserFactory<Targs...>::GetInstance()
 {
     if (m_userFactory == nullptr)
     {
-        m_userFactory = new GY_UserFactory;
-        GY_FactoryManager::AddReleaseFunc([](){
+        m_userFactory = new UserFactory;
+        FactoryManager::AddReleaseFunc([](){
             if(m_userFactory){
                 delete m_userFactory;
                 m_userFactory = nullptr;
@@ -113,7 +113,7 @@ galay::common::GY_UserFactory<Targs...>::GetInstance()
 
 template <typename... Targs>
 bool 
-galay::common::GY_UserFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::GY_Base>(Targs &&...args)> func)
+galay::common::UserFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::Base>(Targs &&...args)> func)
 {
     if (nullptr == func)
         return false;
@@ -122,8 +122,8 @@ galay::common::GY_UserFactory<Targs...>::Regist(const std::string &typeName, std
 }
 
 template <typename... Targs>
-std::shared_ptr<galay::GY_Base>
-galay::common::GY_UserFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
+std::shared_ptr<galay::Base>
+galay::common::UserFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
 {
     if (m_mapCreateFunction.contains(typeName))
     {
@@ -135,33 +135,33 @@ galay::common::GY_UserFactory<Targs...>::Create(const std::string &typeName, Tar
 //DynamicCreator
 
 template <typename BaseClass, typename T, typename... Targs>
-typename galay::common::Register<BaseClass,T, Targs...> galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::m_register;
+typename galay::common::Register<BaseClass,T, Targs...> galay::common::DynamicCreator<BaseClass, T, Targs...>::m_register;
 
 template <typename BaseClass, typename T, typename... Targs>
-typename std::string galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::m_typeName;
+typename std::string galay::common::DynamicCreator<BaseClass, T, Targs...>::m_typeName;
 
 template <typename BaseClass, typename T, typename... Targs>
-galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::GY_DynamicCreator()
+galay::common::DynamicCreator<BaseClass, T, Targs...>::DynamicCreator()
 {
     m_register.do_nothing();
 }
 
 template <typename BaseClass, typename T, typename... Targs>
 std::shared_ptr<T> 
-galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::CreateObject(Targs &&...args)
+galay::common::DynamicCreator<BaseClass, T, Targs...>::CreateObject(Targs &&...args)
 {
     return std::make_shared<T>(std::forward<Targs>(args)...);
 }
 
 template <typename BaseClass, typename T, typename... Targs>
 const std::string 
-galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::GetTypeName()
+galay::common::DynamicCreator<BaseClass, T, Targs...>::GetTypeName()
 {
     return m_typeName;
 }
 
 template <typename BaseClass, typename T, typename... Targs>
-galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::~GY_DynamicCreator()
+galay::common::DynamicCreator<BaseClass, T, Targs...>::~DynamicCreator()
 {
     m_register.do_nothing();
 }
@@ -176,24 +176,24 @@ galay::common::GY_DynamicCreator<BaseClass, T, Targs...>::~GY_DynamicCreator()
 }
 
 template <typename T, typename... Targs>
-galay::common::Register<galay::protocol::GY_Request,T,Targs...>::Register()
+galay::common::Register<galay::protocol::Request,T,Targs...>::Register()
 {
     std::string typeName = util::GetTypeName<T>();
-    galay::common::GY_RequestFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::GY_DynamicCreator<galay::protocol::GY_Request, T, Targs...>::CreateObject);
+    galay::common::RequestFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::protocol::Request, T, Targs...>::CreateObject);
 }
 
 template <typename T, typename... Targs>
-galay::common::Register<galay::protocol::GY_Response,T,Targs...>::Register()
+galay::common::Register<galay::protocol::Response,T,Targs...>::Register()
 {
     std::string typeName = util::GetTypeName<T>();
-    galay::common::GY_ResponseFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::GY_DynamicCreator<galay::protocol::GY_Response, T, Targs...>::CreateObject);
+    galay::common::ResponseFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::protocol::Response, T, Targs...>::CreateObject);
 }
 
 template <typename T, typename... Targs>
-galay::common::Register<galay::GY_Base,T,Targs...>::Register()
+galay::common::Register<galay::Base,T,Targs...>::Register()
 {
     std::string typeName = util::GetTypeName<T>();
-    galay::common::GY_UserFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::GY_DynamicCreator<galay::GY_Base, T, Targs...>::CreateObject);
+    galay::common::UserFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::Base, T, Targs...>::CreateObject);
 }
 
 #endif

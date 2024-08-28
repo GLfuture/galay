@@ -16,44 +16,44 @@ namespace galay::protocol
         kProtoParseIllegal,
     };
 
-    class GY_SRequest{
+    class SRequest{
     public:
-        using ptr = std::shared_ptr<GY_SRequest>;
-        using wptr = std::weak_ptr<GY_SRequest>;
-        using uptr = std::unique_ptr<GY_SRequest>;
+        using ptr = std::shared_ptr<SRequest>;
+        using wptr = std::weak_ptr<SRequest>;
+        using uptr = std::unique_ptr<SRequest>;
         virtual int DecodePdu(const std::string &buffer) = 0;
     };
 
-    class GY_CResponse{
+    class CResponse{
     public:
-        using ptr = std::shared_ptr<GY_CResponse>;
-        using wptr = std::weak_ptr<GY_CResponse>;
-        using uptr = std::unique_ptr<GY_CResponse>;
+        using ptr = std::shared_ptr<CResponse>;
+        using wptr = std::weak_ptr<CResponse>;
+        using uptr = std::unique_ptr<CResponse>;
         virtual int DecodePdu(const std::string &buffer) = 0;
     };
 
-    class GY_SResponse{
+    class SResponse{
     public:
-        using ptr = std::shared_ptr<GY_SResponse>;
-        using wptr = std::weak_ptr<GY_SResponse>;
-        using uptr = std::unique_ptr<GY_SResponse>;
+        using ptr = std::shared_ptr<SResponse>;
+        using wptr = std::weak_ptr<SResponse>;
+        using uptr = std::unique_ptr<SResponse>;
         virtual std::string EncodePdu() = 0;
     };
     
-    class GY_CRequest{
+    class CRequest{
     public:
-        using ptr = std::shared_ptr<GY_CRequest>;
-        using wptr = std::weak_ptr<GY_CRequest>;
-        using uptr = std::unique_ptr<GY_CRequest>;
+        using ptr = std::shared_ptr<CRequest>;
+        using wptr = std::weak_ptr<CRequest>;
+        using uptr = std::unique_ptr<CRequest>;
         virtual std::string EncodePdu() = 0;
     };
 
-    class GY_Request: public GY_SRequest, public GY_CRequest
+    class Request: public SRequest, public CRequest
     {
     public:
-        using ptr = std::shared_ptr<GY_Request>;
-        using wptr = std::weak_ptr<GY_Request>;
-        using uptr = std::unique_ptr<GY_Request>;
+        using ptr = std::shared_ptr<Request>;
+        using wptr = std::weak_ptr<Request>;
+        using uptr = std::unique_ptr<Request>;
         virtual int DecodePdu(const std::string &buffer) = 0;
         virtual std::string EncodePdu() = 0;
         virtual bool ParseIncomplete() final;
@@ -67,12 +67,12 @@ namespace galay::protocol
         ProtoParseType m_parseStatus;
     };
 
-    class GY_Response: public GY_SResponse, public GY_CResponse
+    class Response: public SResponse, public CResponse
     {
     public:
-        using ptr = std::shared_ptr<GY_Response>;
-        using wptr = std::weak_ptr<GY_Response>;
-        using uptr = std::unique_ptr<GY_Response>;
+        using ptr = std::shared_ptr<Response>;
+        using wptr = std::weak_ptr<Response>;
+        using uptr = std::unique_ptr<Response>;
         virtual int DecodePdu(const std::string &buffer) = 0;
         virtual std::string EncodePdu() = 0;
         virtual bool ParseIncomplete() final;

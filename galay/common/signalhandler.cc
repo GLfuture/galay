@@ -1,19 +1,19 @@
 #include "signalhandler.h"
 #include <signal.h>
 
-std::unique_ptr<galay::common::GY_SignalFactory> galay::common::GY_SignalFactory::m_signalHandler;
+std::unique_ptr<galay::common::SignalFactory> galay::common::SignalFactory::m_signalHandler;
 
-galay::common::GY_SignalFactory* 
-galay::common::GY_SignalFactory::GetInstance()
+galay::common::SignalFactory* 
+galay::common::SignalFactory::GetInstance()
 {
     if(!m_signalHandler){
-        m_signalHandler = std::make_unique<GY_SignalFactory>();
+        m_signalHandler = std::make_unique<SignalFactory>();
     }
     return m_signalHandler.get();
 }
 
 void 
-galay::common::GY_SignalFactory::SetSignalHandler(int signo, std::function<void(int)> func)
+galay::common::SignalFactory::SetSignalHandler(int signo, std::function<void(int)> func)
 {
     if(!m_signalMap.contains(signo)){
         signal(signo,[](int signo){

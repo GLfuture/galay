@@ -192,7 +192,7 @@ namespace galay::protocol::http
         HeaderPair m_headerPairs;                                   // 字段
     };
 
-    class HttpRequest : public GY_Request, public galay::common::GY_DynamicCreator<GY_Request,HttpRequest>
+    class HttpRequest : public Request, public galay::common::DynamicCreator<Request,HttpRequest>
     {
     public:
         using ptr = std::shared_ptr<HttpRequest>;
@@ -237,7 +237,7 @@ namespace galay::protocol::http
         HeaderPair m_headerPairs;
     };
 
-    class HttpResponse : public GY_Response, public galay::common::GY_DynamicCreator<GY_Response,HttpResponse>
+    class HttpResponse : public Response, public galay::common::DynamicCreator<Response,HttpResponse>
     {
     public:
         using ptr = std::shared_ptr<HttpResponse>;

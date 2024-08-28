@@ -3,68 +3,74 @@
 #include <functional>
 #include <any>
 #include "../common/base.h"
+#include "../common/result.h"
 #include "../common/waitgroup.h"
 
 namespace galay::poller
 {
-    class GY_IOScheduler;
-}
-
-namespace galay::objector  
-{   
+    class IOScheduler;
+    class TcpConnector;
     class Timer;
-    class GY_TcpConnector;      
 }
 
 namespace galay::result 
 {   
-    class NetResult;    
+    class ResultInterface;    
 }
 
 namespace galay::server
 {
-    class GY_Controller: public std::enable_shared_from_this<GY_Controller>
+    class NetResult
     {
-        friend class galay::objector::GY_TcpConnector;
     public:
-        using ptr = std::shared_ptr<GY_Controller>;
-        using wptr = std::weak_ptr<GY_Controller>;
-        using uptr = std::unique_ptr<GY_Controller>;
-        GY_Controller(std::weak_ptr<objector::GY_TcpConnector> connector);
+        using ptr = std::shared_ptr<NetResult>;
+        NetResult(result::ResultInterface::ptr result);
+        bool Success();
+        std::string Error();
+        coroutine::GroupAwaiter& Wait();
+    private:
+        result::ResultInterface::ptr m_result;
+    };
+
+    class Controller: public std::enable_shared_from_this<Controller>
+    {
+    public:
+        using ptr = std::shared_ptr<Controller>;
+        using wptr = std::weak_ptr<Controller>;
+        using uptr = std::unique_ptr<Controller>;
+        Controller(std::weak_ptr<poller::TcpConnector> connector);
         //关闭连接
         void Close();
+        void PopRequest();
+        //获取请求队列的第一个请求
+        protocol::Request::ptr GetRequest();
         //获取之前存入的上下文
         std::any &GetContext();
         void SetContext(std::any &&context);
-        //请求出队
-        void PopRequest();
-        //获取请求队列的第一个请求
-        protocol::GY_Request::ptr GetRequest();
         //发送数据 返会一个NetResult 需要调用NetResult.Wait()
-        std::shared_ptr<result::NetResult> Send(std::string &&response);
-        std::shared_ptr<objector::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<objector::Timer>)> &&func);
+        NetResult Send(std::string &&response);
+        std::shared_ptr<poller::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<poller::Timer>)> &&func);
     private:
         std::any m_context;
-        std::weak_ptr<objector::GY_TcpConnector> m_connector;
+        std::weak_ptr<poller::TcpConnector> m_connector;
     };
 
-    class GY_HttpController
+    class HttpController
     {
-        friend class GY_HttpRouter;
     public:
-        using ptr = std::shared_ptr<GY_HttpController>;
-        using wptr = std::weak_ptr<GY_HttpController>;
-        using uptr = std::unique_ptr<GY_HttpController>;
-        GY_HttpController(GY_Controller::ptr ctrl);
+        using ptr = std::shared_ptr<HttpController>;
+        using wptr = std::weak_ptr<HttpController>;
+        using uptr = std::unique_ptr<HttpController>;
+        HttpController(Controller::ptr ctrl);
         void Close();
         void SetContext(std::any &&context);
         std::any &GetContext();
         //获取请求并出队
         protocol::http::HttpRequest::ptr GetRequest();
-        std::shared_ptr<result::NetResult> Send(std::string &&response);
-        std::shared_ptr<objector::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<objector::Timer>)> &&func);
+        NetResult Send(std::string &&response);
+        std::shared_ptr<poller::Timer> AddTimer(uint64_t during, uint32_t exec_times, std::function<void(std::shared_ptr<poller::Timer>)> &&func);
     private:
-        GY_Controller::ptr m_ctrl;
+        Controller::ptr m_ctrl;
     };
 }
 

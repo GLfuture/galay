@@ -1,52 +1,39 @@
 
 #include "coroutine.h"
+#include <spdlog/spdlog.h>
 
-uint16_t galay::coroutine::GY_NetCoroutinePool::m_threadNum = DEFAULT_COROUTINE_POOL_THREADNUM;
-std::unique_ptr<galay::coroutine::GY_NetCoroutinePool> galay::coroutine::GY_NetCoroutinePool::m_instance;
-std::atomic_bool galay::coroutine::GY_NetCoroutinePool::m_isStarted = false;
+std::atomic_char16_t galay::coroutine::NetCoroutinePool::m_threadNum = DEFAULT_COROUTINE_POOL_THREADNUM;
+std::unique_ptr<galay::coroutine::NetCoroutinePool> galay::coroutine::NetCoroutinePool::m_instance;
+std::atomic_bool galay::coroutine::NetCoroutinePool::m_isStarted = false;
 
-galay::coroutine::GY_NetCoroutinePool::GY_NetCoroutinePool()
+galay::coroutine::NetCoroutinePool::NetCoroutinePool()
 {
-    this->m_stop.store(false);
+    this->m_stop.store(true);
     this->m_isStopped.store(false);
     this->m_isDone.store(false);
 }
 
 void 
-galay::coroutine::GY_NetCoroutinePool::SetThreadNum(uint16_t threadNum)
+galay::coroutine::NetCoroutinePool::SetThreadNum(uint16_t threadNum)
 {
     m_threadNum = threadNum;
 }
 
-galay::coroutine::GY_NetCoroutinePool*
-galay::coroutine::GY_NetCoroutinePool::GetInstance()
+galay::coroutine::NetCoroutinePool*
+galay::coroutine::NetCoroutinePool::GetInstance()
 {
     if(!m_instance)
     {
-        m_instance = std::make_unique<GY_NetCoroutinePool>();
+        m_instance = std::make_unique<NetCoroutinePool>();
+        m_instance->Start();
     }
     return m_instance.get();
 }
 
 void 
-galay::coroutine::GY_NetCoroutinePool::Start()
+galay::coroutine::NetCoroutinePool::Run()
 {
-    if(!m_isStarted.load()){
-        for(int i = 0 ; i < m_threadNum; i++)
-        {
-            auto th = std::make_unique<std::thread>([this](){
-                Run();
-            });
-            th->detach();
-            this->m_threads.push_back(std::move(th));
-        }
-        m_isStarted.store(true);
-    }
-}
-
-void 
-galay::coroutine::GY_NetCoroutinePool::Run()
-{
+    this->m_stop.store(false);
     while (!this->m_stop.load())
     {
         std::unique_lock lock(this->m_queueMtx);
@@ -67,18 +54,21 @@ galay::coroutine::GY_NetCoroutinePool::Run()
         for(auto id: ids)
         {
             auto co = GetCoroutine(id);
-            spdlog::debug("[{}:{}] [GY_NetCoroutinePool.Run Resume CoId = {}]",__FILE__,__LINE__,id);
+            spdlog::debug("[{}:{}] [NetCoroutinePool.Run Resume CoId = {}]",__FILE__,__LINE__,id);
             co->Resume();
         }
         if(this->m_stop.load()) break;
     }
-    spdlog::info("[{}:{}] [GY_NetCoroutinePool Exit Normally]",__FILE__,__LINE__);
-    if(--m_threadNum == 0) m_exitCond.notify_one();
-    this->m_isStopped.store(true);
+    spdlog::info("[{}:{}] [NetCoroutinePool Exit Normally]",__FILE__,__LINE__);
+    if(--m_threadNum == 0) {
+        m_exitCond.notify_one();
+        this->m_isStopped.store(true);
+    }
+    
 }
 
 bool 
-galay::coroutine::GY_NetCoroutinePool::WaitForAllDone(uint32_t timeout)
+galay::coroutine::NetCoroutinePool::WaitForAllDone(uint32_t timeout)
 {
     std::mutex mtx;
     std::unique_lock lock(mtx);
@@ -97,31 +87,31 @@ galay::coroutine::GY_NetCoroutinePool::WaitForAllDone(uint32_t timeout)
 }
 
 void 
-galay::coroutine::GY_NetCoroutinePool::Stop()
+galay::coroutine::NetCoroutinePool::Stop()
 {
     if(!this->m_stop.load()){
         this->m_stop.store(true);
-        spdlog::info("[{}:{}] [GY_NetCoroutinePool.Stop]",__FILE__,__LINE__);
+        spdlog::info("[{}:{}] [NetCoroutinePool.Stop]",__FILE__,__LINE__);
         this->m_cond.notify_all();
         this->m_isDone.store(true);
     }
 }
 
 bool 
-galay::coroutine::GY_NetCoroutinePool::IsDone()
+galay::coroutine::NetCoroutinePool::IsDone()
 {
     return m_isDone.load();
 }
 
 bool 
-galay::coroutine::GY_NetCoroutinePool::Contains(uint64_t coId)
+galay::coroutine::NetCoroutinePool::Contains(uint64_t coId)
 {
     std::shared_lock lock(this->m_mapMtx);
     return this->m_coroutines.contains(coId);
 }
 
 bool 
-galay::coroutine::GY_NetCoroutinePool::Resume(uint64_t coId)
+galay::coroutine::NetCoroutinePool::Resume(uint64_t coId)
 {
     if(!m_coroutines.contains(coId)) return false;
     this->m_waitCoQueue.push(coId);
@@ -130,7 +120,7 @@ galay::coroutine::GY_NetCoroutinePool::Resume(uint64_t coId)
 }
 
 bool 
-galay::coroutine::GY_NetCoroutinePool::AddCoroutine(GY_NetCoroutine::ptr coroutine)
+galay::coroutine::NetCoroutinePool::AddCoroutine(NetCoroutine::ptr coroutine)
 {
     uint64_t coId = coroutine->GetCoId();
     std::unique_lock lock(this->m_mapMtx);
@@ -145,15 +135,31 @@ galay::coroutine::GY_NetCoroutinePool::AddCoroutine(GY_NetCoroutine::ptr corouti
     return false;
 }
 
-galay::coroutine::GY_NetCoroutine::ptr 
-galay::coroutine::GY_NetCoroutinePool::GetCoroutine(uint64_t id)
+galay::coroutine::NetCoroutine::ptr 
+galay::coroutine::NetCoroutinePool::GetCoroutine(uint64_t id)
 {
     std::shared_lock lock(this->m_mapMtx);
     return m_coroutines[id];
 }
 
+void 
+galay::coroutine::NetCoroutinePool::Start()
+{
+    if(!m_isStarted.load()){
+        for(int i = 0 ; i < m_threadNum; i++)
+        {
+            auto th = std::make_unique<std::thread>([this](){
+                Run();
+            });
+            th->detach();
+            this->m_threads.push_back(std::move(th));
+        }
+        m_isStarted.store(true);
+    }
+}
+
 bool 
-galay::coroutine::GY_NetCoroutinePool::EraseCoroutine(uint64_t coId)
+galay::coroutine::NetCoroutinePool::EraseCoroutine(uint64_t coId)
 {
     std::unique_lock lock(this->m_eraseMtx);
     if(!m_coroutines.contains(coId)) return false;
@@ -163,14 +169,14 @@ galay::coroutine::GY_NetCoroutinePool::EraseCoroutine(uint64_t coId)
 }
 
 void 
-galay::coroutine::GY_NetCoroutinePool::RealEraseCoroutine(uint64_t coId)
+galay::coroutine::NetCoroutinePool::RealEraseCoroutine(uint64_t coId)
 {
     std::unique_lock lock(this->m_mapMtx);
     m_coroutines.erase(coId);
     spdlog::debug("[{}:{}] [RealEraseCoroutine CoId={}]",__FILE__,__LINE__,coId);
 }
 
-galay::coroutine::GY_NetCoroutinePool::~GY_NetCoroutinePool()
+galay::coroutine::NetCoroutinePool::~NetCoroutinePool()
 {
     if(!this->m_stop.load()){
         Stop();
@@ -180,32 +186,32 @@ galay::coroutine::GY_NetCoroutinePool::~GY_NetCoroutinePool()
 
 
 int 
-galay::coroutine::GY_TcpPromise::get_return_object_on_alloaction_failure() noexcept
+galay::coroutine::TcpPromise::get_return_object_on_alloaction_failure() noexcept
 {
     return -1;
 }
 
 
-galay::coroutine::GY_NetCoroutine
-galay::coroutine::GY_TcpPromise::get_return_object() 
+galay::coroutine::NetCoroutine
+galay::coroutine::TcpPromise::get_return_object() 
 { 
     SetStatus(CoroutineStatus::kCoroutineRunning);
-    auto co = std::make_shared<galay::coroutine::GY_NetCoroutine>(std::coroutine_handle<GY_TcpPromise>::from_promise(*this));
+    auto co = std::make_shared<galay::coroutine::NetCoroutine>(std::coroutine_handle<TcpPromise>::from_promise(*this));
     this->m_coId = co->GetCoId();
-    GY_NetCoroutinePool::GetInstance()->AddCoroutine(co);
+    NetCoroutinePool::GetInstance()->AddCoroutine(co);
     return std::move(*co); 
 }
 
 
 std::suspend_never
-galay::coroutine::GY_TcpPromise::initial_suspend() noexcept
+galay::coroutine::TcpPromise::initial_suspend() noexcept
 {
     return {};
 }
 
 
 std::suspend_always
-galay::coroutine::GY_TcpPromise::yield_value(std::any value)
+galay::coroutine::TcpPromise::yield_value(std::any value)
 {
     SetResult(value);
     SetStatus(CoroutineStatus::kCoroutineSuspend);
@@ -214,22 +220,22 @@ galay::coroutine::GY_TcpPromise::yield_value(std::any value)
 
 
 std::suspend_never
-galay::coroutine::GY_TcpPromise::final_suspend() noexcept
+galay::coroutine::TcpPromise::final_suspend() noexcept
 {
     SetStatus(CoroutineStatus::kCoroutineFinished);
     if(m_finishFunc != nullptr) m_finishFunc();
-    GY_NetCoroutinePool::GetInstance()->EraseCoroutine(m_coId);
+    NetCoroutinePool::GetInstance()->EraseCoroutine(m_coId);
     return {};
 }
 
 
-void galay::coroutine::GY_TcpPromise::unhandled_exception() noexcept
+void galay::coroutine::TcpPromise::unhandled_exception() noexcept
 {
     m_exception = std::current_exception();
 }
 
 
-void galay::coroutine::GY_TcpPromise::return_value(std::any val) noexcept
+void galay::coroutine::TcpPromise::return_value(std::any val) noexcept
 {
     SetStatus(CoroutineStatus::kCoroutineFinished);
     SetResult(val);
@@ -237,7 +243,7 @@ void galay::coroutine::GY_TcpPromise::return_value(std::any val) noexcept
 
 
 std::any
-galay::coroutine::GY_TcpPromise::GetResult()
+galay::coroutine::TcpPromise::GetResult()
 {
     rethrow_if_exception();
     return this->m_result;
@@ -245,14 +251,14 @@ galay::coroutine::GY_TcpPromise::GetResult()
 
 
 void 
-galay::coroutine::GY_TcpPromise::SetResult(std::any result)
+galay::coroutine::TcpPromise::SetResult(std::any result)
 {
     this->m_result = result;
 }
 
 
 void 
-galay::coroutine::GY_TcpPromise::SetFinishFunc(std::function<void()> finshfunc)
+galay::coroutine::TcpPromise::SetFinishFunc(std::function<void()> finshfunc)
 {
     this->m_finishFunc = finshfunc;
 }
@@ -260,7 +266,7 @@ galay::coroutine::GY_TcpPromise::SetFinishFunc(std::function<void()> finshfunc)
 
 
 galay::coroutine::CoroutineStatus 
-galay::coroutine::GY_TcpPromise::GetStatus()
+galay::coroutine::TcpPromise::GetStatus()
 {
     return this->m_status;
 }
@@ -268,13 +274,13 @@ galay::coroutine::GY_TcpPromise::GetStatus()
 
 
 void 
-galay::coroutine::GY_TcpPromise::SetStatus(CoroutineStatus status)
+galay::coroutine::TcpPromise::SetStatus(CoroutineStatus status)
 {
     this->m_status = status;
 }
 
 
-void galay::coroutine::GY_TcpPromise::rethrow_if_exception()
+void galay::coroutine::TcpPromise::rethrow_if_exception()
 {
     if (m_exception)
     {
@@ -283,66 +289,66 @@ void galay::coroutine::GY_TcpPromise::rethrow_if_exception()
 }
 
 // int 
-// galay::common::GY_TcpPromise<void>::get_return_object_on_alloaction_failure()
+// galay::common::TcpPromise<void>::get_return_object_on_alloaction_failure()
 // {
 //     return -1;
 // }
 
-// std::coroutine_handle<galay::common::GY_TcpPromise<void>>
-// galay::common::GY_TcpPromise<void>::get_return_object()
+// std::coroutine_handle<galay::common::TcpPromise<void>>
+// galay::common::TcpPromise<void>::get_return_object()
 // {
 //     SetStatus(CoroutineStatus::kCoroutineRunning);
-//     return std::coroutine_handle<GY_TcpPromise>::from_promise(*this);
+//     return std::coroutine_handle<TcpPromise>::from_promise(*this);
 // }
 
 // std::suspend_never
-// galay::common::GY_TcpPromise<void>::initial_suspend() noexcept
+// galay::common::TcpPromise<void>::initial_suspend() noexcept
 // {
 //     return {};
 // }
 
 // template <typename T>
 // std::suspend_always 
-// galay::common::GY_TcpPromise<void>::yield_value(const T &value)
+// galay::common::TcpPromise<void>::yield_value(const T &value)
 // {
 //     SetStatus(CoroutineStatus::kCoroutineSuspend);
 //     return {};
 // }
 
 // std::suspend_never
-// galay::common::GY_TcpPromise<void>::final_suspend() noexcept
+// galay::common::TcpPromise<void>::final_suspend() noexcept
 // {
 //     SetStatus(CoroutineStatus::kCoroutineFinished);
-//     auto co = std::make_shared<GY_NetCoroutine<void>>(std::coroutine_handle<GY_TcpPromise>::from_promise(*this));
-//     GY_NetCoroutinePool::GetInstance()->AddCoroutine(co);
+//     auto co = std::make_shared<NetCoroutine<void>>(std::coroutine_handle<TcpPromise>::from_promise(*this));
+//     NetCoroutinePool::GetInstance()->AddCoroutine(co);
 //     return {};
 // }
 
 // void 
-// galay::common::GY_TcpPromise<void>::unhandled_exception() noexcept
+// galay::common::TcpPromise<void>::unhandled_exception() noexcept
 // {
 //     m_exception = std::current_exception();
 // }
 
 // galay::coroutine::CoroutineStatus 
-// galay::common::GY_TcpPromise<void>::GetStatus()
+// galay::common::TcpPromise<void>::GetStatus()
 // {
 //     return this->m_status;
 // }
 
 // void 
-// galay::common::GY_TcpPromise<void>::SetStatus(CoroutineStatus status)
+// galay::common::TcpPromise<void>::SetStatus(CoroutineStatus status)
 // {
 //     this->m_status = status;
 // }
 
 // void 
-// galay::common::GY_TcpPromise<void>::SetFinishFunc(std::function<void()> finshfunc)
+// galay::common::TcpPromise<void>::SetFinishFunc(std::function<void()> finshfunc)
 // {
 //     this->m_finishFunc = finshfunc;
 // }
 
-// void galay::common::GY_TcpPromise<void>::rethrow_if_exception()
+// void galay::common::TcpPromise<void>::rethrow_if_exception()
 // {
 //     if (m_exception)
 //     {
@@ -353,8 +359,8 @@ void galay::coroutine::GY_TcpPromise::rethrow_if_exception()
 
 //不能使用std::move 本质上m_handle是协程的引用，无法移交所有权，需要手动移动
 
-galay::coroutine::GY_Coroutine& 
-galay::coroutine::GY_Coroutine::operator=(GY_Coroutine &&other)
+galay::coroutine::Coroutine& 
+galay::coroutine::Coroutine::operator=(Coroutine &&other)
 {
     if(this != &other){
         this->m_handle = other.m_handle;
@@ -363,13 +369,13 @@ galay::coroutine::GY_Coroutine::operator=(GY_Coroutine &&other)
 }
 
 
-galay::coroutine::GY_Coroutine::GY_Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept
+galay::coroutine::Coroutine::Coroutine(std::coroutine_handle<promise_type> co_handle) noexcept
 {
     this->m_handle = co_handle;
 }
 
 
-galay::coroutine::GY_Coroutine::GY_Coroutine(GY_Coroutine &&other) noexcept
+galay::coroutine::Coroutine::Coroutine(Coroutine &&other) noexcept
 {
     if(this != &other) {
         this->m_handle = other.m_handle;
@@ -378,54 +384,54 @@ galay::coroutine::GY_Coroutine::GY_Coroutine(GY_Coroutine &&other) noexcept
 
 
 void 
-galay::coroutine::GY_Coroutine::Resume() noexcept
+galay::coroutine::Coroutine::Resume() noexcept
 {
     m_handle.resume();
 }
 
 
 bool 
-galay::coroutine::GY_Coroutine::Done() noexcept
+galay::coroutine::Coroutine::Done() noexcept
 {
     return m_handle.done();
 }
 
 uint64_t 
-galay::coroutine::GY_Coroutine::GetCoId() const noexcept
+galay::coroutine::Coroutine::GetCoId() const noexcept
 {
     if(m_handle == nullptr) return 0;
     return reinterpret_cast<uint64_t>(m_handle.address());
 }
 
 
-galay::coroutine::GY_Coroutine::~GY_Coroutine()
+galay::coroutine::Coroutine::~Coroutine()
 {
 }
 
 
 
-galay::coroutine::GY_NetCoroutine::GY_NetCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept
-    : GY_Coroutine(co_handle)
+galay::coroutine::NetCoroutine::NetCoroutine(std::coroutine_handle<promise_type> co_handle) noexcept
+    : Coroutine(co_handle)
 {
 }
 
 
-galay::coroutine::GY_NetCoroutine::GY_NetCoroutine(GY_NetCoroutine &&other) noexcept
-    : GY_Coroutine(std::forward<GY_NetCoroutine &&>(other))
+galay::coroutine::NetCoroutine::NetCoroutine(NetCoroutine &&other) noexcept
+    : Coroutine(std::forward<NetCoroutine &&>(other))
 {
     
 }
 
 
-galay::coroutine::GY_NetCoroutine& 
-galay::coroutine::GY_NetCoroutine::operator=(GY_NetCoroutine &&other) noexcept
+galay::coroutine::NetCoroutine& 
+galay::coroutine::NetCoroutine::operator=(NetCoroutine &&other) noexcept
 {
-    GY_Coroutine::operator=(std::forward<GY_NetCoroutine &&>(other));
+    Coroutine::operator=(std::forward<NetCoroutine &&>(other));
     return *this;
 }
 
 bool 
-galay::coroutine::GY_NetCoroutine::IsCoroutine()
+galay::coroutine::NetCoroutine::IsCoroutine()
 {
     return this->m_handle != nullptr;
 }
@@ -433,7 +439,7 @@ galay::coroutine::GY_NetCoroutine::IsCoroutine()
 
 
 std::any
-galay::coroutine::GY_NetCoroutine::GetResult()
+galay::coroutine::NetCoroutine::GetResult()
 {
     if (!this->m_handle)
         return {};
@@ -443,7 +449,7 @@ galay::coroutine::GY_NetCoroutine::GetResult()
 
 
 galay::coroutine::CoroutineStatus 
-galay::coroutine::GY_NetCoroutine::GetStatus()
+galay::coroutine::NetCoroutine::GetStatus()
 {
     if (!this->m_handle) return CoroutineStatus::kCoroutineNotExist;
     return this->m_handle.promise().GetStatus();
@@ -451,7 +457,7 @@ galay::coroutine::GY_NetCoroutine::GetStatus()
 
 
 
-galay::coroutine::GY_NetCoroutine::~GY_NetCoroutine()
+galay::coroutine::NetCoroutine::~NetCoroutine()
 {
     
 }

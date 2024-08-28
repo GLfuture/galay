@@ -1,45 +1,45 @@
 #ifndef GALAY_FACTORY_H
 #define GALAY_FACTORY_H
-#include "../common/base.h"
+#include "builder.h"
 #include <memory>
 
 namespace galay::server
 {
-    class GY_HttpServerBuilder;
-    class GY_HttpRouter;
-    class GY_TcpServer;
+    class HttpServerBuilder;
+    class HttpRouter;
+    class TcpServer;
 }
 
 namespace galay{
 
-    class GY_Factory{
+    class Factory{
     public:
-        using ptr = std::shared_ptr<GY_Factory>;
-        using uptr = std::unique_ptr<GY_Factory>;
-        using wptr = std::weak_ptr<GY_Factory>;
-        virtual ~GY_Factory() = default;
+        using ptr = std::shared_ptr<Factory>;
+        using uptr = std::unique_ptr<Factory>;
+        using wptr = std::weak_ptr<Factory>;
+        virtual ~Factory() = default;
     };
     
-    class GY_RouterFactory{
+    class RouterFactory{
     public:
-        static std::shared_ptr<server::GY_HttpRouter> CreateHttpRouter(); 
+        static std::shared_ptr<server::HttpRouter> CreateHttpRouter(); 
     };
 
-    class GY_ServerBuilderFactory{
+    class ServerBuilderFactory{
     public:
-        static std::shared_ptr<server::GY_HttpServerBuilder> CreateHttpServerBuilder(\
-            int port,std::shared_ptr<server::GY_HttpRouter> router,\
-            common::SchedulerType type = common::SchedulerType::kEpollScheduler,uint16_t thread_num = DEFAULT_THREAD_NUM);
-        static std::shared_ptr<server::GY_HttpServerBuilder> CreateHttpsServerBuilder(\
+        static std::shared_ptr<server::HttpServerBuilder> CreateHttpServerBuilder(\
+            int port,std::shared_ptr<server::HttpRouter> router,\
+            server::PollerType type = server::PollerType::kEpollPoller ,uint16_t thread_num = DEFAULT_THREAD_NUM);
+        static std::shared_ptr<server::HttpServerBuilder> CreateHttpsServerBuilder(\
             const std::string& key_file,const std::string& cert_file, int port,\
-            std::shared_ptr<server::GY_HttpRouter> router,common::SchedulerType type = common::SchedulerType::kEpollScheduler\
+            std::shared_ptr<server::HttpRouter> router,server::PollerType type = server::PollerType::kEpollPoller\
             ,uint16_t thread_num = DEFAULT_THREAD_NUM);
     };
 
-    class GY_ServerFactory{
+    class ServerFactory{
     public:
-        static std::shared_ptr<server::GY_TcpServer> CreateHttpServer(std::shared_ptr<server::GY_HttpServerBuilder> builder);
-        static std::shared_ptr<server::GY_TcpServer> CreateHttpsServer(std::shared_ptr<server::GY_HttpServerBuilder> builder);
+        static std::shared_ptr<server::TcpServer> CreateHttpServer(std::shared_ptr<server::HttpServerBuilder> builder);
+        static std::shared_ptr<server::TcpServer> CreateHttpsServer(std::shared_ptr<server::HttpServerBuilder> builder);
     };
 }
 

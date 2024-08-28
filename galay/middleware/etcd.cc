@@ -3,94 +3,209 @@
 
 namespace galay::middleware::etcd
 {
-EtcdAwaiter::EtcdAwaiter(std::function<void(std::coroutine_handle<>,std::any&)>&& func)
+
+std::unique_ptr<ServiceCenter> ServiceCenter::m_instance;
+
+ServiceCenter* 
+ServiceCenter::GetInstance()
 {
-    this->m_Func = func;
+    if(!m_instance)
+    {
+        m_instance = std::make_unique<ServiceCenter>();
+    }
+    return m_instance.get();
 }
 
-bool 
-EtcdAwaiter::await_ready()
+std::string 
+ServiceCenter::GetServiceAddr(const std::string &ServiceName)
 {
-    return false;
+    std::shared_lock lock(m_mutex);
+    auto it = m_serviceAddr.find(ServiceName);
+    if(it != m_serviceAddr.end()){
+        return it->second;
+    }
+    return "";
 }
 
 void 
-EtcdAwaiter::await_suspend(std::coroutine_handle<> handle)
+ServiceCenter::SetServiceAddr(const std::string &ServiceName, const std::string &ServiceAddr)
 {
-    m_Func(handle,this->m_Result);
+    std::unique_lock lock(m_mutex);
+    m_serviceAddr[ServiceName] = ServiceAddr;
 }
 
-std::any 
-EtcdAwaiter::await_resume()
+
+
+std::shared_mutex m_mutex;
+std::unordered_map<std::string, std::string> m_serviceAddr;
+
+EtcdResult::EtcdResult(result::ResultInterface::ptr result)
 {
-    return m_Result;
+    this->m_result = result;
 }
 
-ServiceRegister::ServiceRegister(const std::string& EtcdAddrs)
+//DiscoverService
+std::string 
+EtcdResult::ServiceAddr()
+{
+    return std::any_cast<std::string>(m_result->Result());
+}
+
+//DiscoverServicePrefix
+std::vector<std::pair<std::string, std::string>> 
+EtcdResult::ServiceAddrs()
+{
+    return std::any_cast<std::vector<std::pair<std::string, std::string>>>(m_result->Result());
+}
+
+bool 
+EtcdResult::Success()
+{
+    return m_result->Success();
+}
+
+std::string 
+EtcdResult::Error()
+{
+    return m_result->Error();
+}
+
+coroutine::GroupAwaiter& 
+EtcdResult::Wait()
+{
+    return m_result->Wait();
+}
+
+EtcdClient::EtcdClient(const std::string& EtcdAddrs)
 {
     m_client = std::make_unique<::etcd::Client>(EtcdAddrs);
 }
 
-int
-ServiceRegister::Register(const std::string& ServicePathAndNode, const std::string& ServiceAddr,int TTL)
+EtcdResult 
+EtcdClient::RegisterService(const std::string& ServiceName, const std::string& ServiceAddr)
 {
-    if(!CheckNotExist(ServicePathAndNode)) {
-        spdlog::error("[{}:{}] [CheckNotExist error: Service is already exist]",__FILE__,__LINE__);
-        return -1;
-    }
-    m_keepalive = m_client->leasekeepalive(TTL).get();
-    int64_t leaseid = m_keepalive->Lease();
-    spdlog::info("[{}:{}] [lease(leaseid: {}) Success]",__FILE__,__LINE__,leaseid);
-    m_client->put(ServicePathAndNode,ServiceAddr,leaseid);
-    return 0;
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
+    result->AddTaskNum(1);
+    this->m_client->put(ServiceName, ServiceAddr).then([result](::etcd::Response resp){
+        if(resp.is_ok())
+        {
+            result->SetSuccess(true);
+        }
+        else
+        {
+            result->SetErrorMsg(resp.error_message());
+        }
+        result->Done();
+    });
+
+    return EtcdResult(result);
+}
+
+EtcdResult 
+EtcdClient::RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL)
+{
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
+    result->AddTaskNum(1);
+    this->m_client->leasekeepalive(TTL).then([result,this,ServiceName,ServiceAddr](std::shared_ptr<::etcd::KeepAlive> keepalive){
+        this->m_keepalive = keepalive;
+        int64_t leaseid = keepalive->Lease();
+        m_client->put(ServiceName,ServiceAddr,leaseid).then([result](::etcd::Response resp){
+            if(resp.is_ok())
+            {
+                result->SetSuccess(true);
+            }
+            else
+            {
+                result->SetErrorMsg(resp.error_message());
+            }
+            result->Done();
+        });
+    });
+
+    return EtcdResult(result);
+}
+
+EtcdResult 
+EtcdClient::DiscoverService(const std::string& ServiceName)
+{
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
+    result->AddTaskNum(1);
+    m_client->get(ServiceName).then([result](::etcd::Response resp){
+        if(!resp.is_ok())
+        {
+            result->SetErrorMsg(resp.error_message());
+            result->Done();
+        }
+        else{
+            result->SetResult(resp.value().as_string());
+            result->SetSuccess(true);
+            result->Done();
+        }
+    });
+    return EtcdResult(result);
+}
+
+EtcdResult 
+EtcdClient::DiscoverServicePrefix(const std::string& Prefix)
+{
+    result::ResultInterface::ptr result = std::make_shared<result::ResultInterface>();
+    result->AddTaskNum(1);
+    m_client->ls(Prefix).then([result,this,Prefix](::etcd::Response resp){
+        if(!resp.is_ok()){
+            result->SetErrorMsg(resp.error_message());
+            result->Done();
+        }
+        else{
+            auto keys = resp.keys();
+            std::vector<std::pair<std::string, std::string>> temp(keys.size());
+            for(int i = 0 ; i < keys.size() ; i ++){
+                temp[i] = { keys[i], resp.values().at(i).as_string()};
+            }
+            result->SetResult(temp);
+            result->SetSuccess(true);
+            result->Done();
+        }
+    });
+    return EtcdResult(result);
+}
+
+void 
+EtcdClient::Watch(const std::string& key, std::function<void(::etcd::Response)> handle)
+{
+    this->m_watcher = std::make_shared<::etcd::Watcher>(*(this->m_client), key, handle);
+}
+
+void 
+EtcdClient::CancleWatch()
+{
+    if(!this->m_watcher->Cancelled()) this->m_watcher->Cancel();
+}
+
+void 
+EtcdClient::Lock(const std::string& key)
+{
+    this->m_lockKey = key;
+    m_client->lock(key,true).get();
+}
+
+void 
+EtcdClient::Lock(const std::string& key , int TTL)
+{
+    this->m_lockKey = key;
+    m_client->lock(key,TTL,true).get();
+}
+
+void 
+EtcdClient::UnLock()
+{
+    m_client->unlock(this->m_lockKey).get();
 }
 
 bool 
-ServiceRegister::CheckNotExist(const std::string &key)
+EtcdClient::CheckExist(const std::string& key)
 {
     if (!m_client->get(key).get().value().as_string().empty())
         return false;
     return true;
-}
-
-ServiceDiscovery::ServiceDiscovery(const std::string& EtcdAddrs)
-{
-    m_client = std::make_shared<::etcd::Client>(EtcdAddrs);
-}
-
-EtcdAwaiter 
-ServiceDiscovery::Discovery(const std::string& ServicePath)
-{
-    std::weak_ptr client = m_client;
-    return EtcdAwaiter([client,ServicePath](std::coroutine_handle<> handle,std::any& res){
-        client.lock()->ls(ServicePath).then([handle,&res](::etcd::Response resp){
-            auto keys = resp.keys();
-            std::unordered_map<std::string,std::string> m;
-            for(int i = 0 ; i < keys.size() ; i ++){
-                auto node = keys[i].substr(keys[i].find_last_of('/')+1);
-                m[node] = resp.values().at(i).as_string();
-            }
-            res = m;
-            handle.resume();
-        });
-    });
-}
-
-DistributedLock::DistributedLock(const std::string& EtcdAddrs)
-{
-    m_client = std::make_unique<::etcd::Client>(EtcdAddrs);
-}
-
-void
-DistributedLock::Lock(const std::string& key , int TTL)
-{
-    auto resp = m_client->lock(key,TTL).get();
-    m_lock_key = resp.lock_key();
-}
-
-void 
-DistributedLock::UnLock()
-{
-    m_client->unlock(m_lock_key).wait();
 }
 }
