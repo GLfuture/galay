@@ -1,5 +1,5 @@
 #include "dns.h"
-#include "../util/stringsplitter.h"
+#include "../util/stringtools.h"
 
 
 namespace galay::protocol::dns

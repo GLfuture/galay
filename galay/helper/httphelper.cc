@@ -1,5 +1,5 @@
 #include "httphelper.h"
-#include "../util/stringsplitter.h"
+#include "../util/stringtools.h"
 #include <regex>
 
 namespace galay::helper::http
@@ -60,11 +60,8 @@ FormDataHeader::ToString()
 }
 
 void 
-FormDataValue::SetFile(const std::string& fileName, const std::string& body)
+FormDataValue::SetValue(const FormFile& file)
 {
-    FormFile file;
-    file.m_fileName = fileName;
-    file.m_body = body;
     this->m_body = file;
     this->m_type = kFormDataType_File;
 }
@@ -78,11 +75,11 @@ FormDataValue::IsFile() const
 FormFile 
 FormDataValue::ToFile() const
 {
-    return std::any_cast<FormFile>(this->m_body);
+    return std::get<FormFile>(this->m_body);
 }
 
 void 
-FormDataValue::SetString(const std::string& body)
+FormDataValue::SetValue(const std::string& body)
 {
     this->m_body = body;
     this->m_type = kFormDataType_String;
@@ -97,11 +94,11 @@ FormDataValue::IsString() const
 std::string 
 FormDataValue::ToString() const
 {
-    return std::any_cast<std::string>(this->m_body);
+    return std::get<std::string>(this->m_body);
 }
 
 void 
-FormDataValue::SetNumber(int number)
+FormDataValue::SetValue(int number)
 {
     this->m_body = number;
     this->m_type = kFormDataType_Number;
@@ -114,7 +111,7 @@ FormDataValue::IsNumber() const
 }
 
 void 
-FormDataValue::SetDouble(double number)
+FormDataValue::SetValue(double number)
 {
     this->m_body = number;
     this->m_type = kFormDataType_Double;
@@ -123,7 +120,7 @@ FormDataValue::SetDouble(double number)
 int 
 FormDataValue::ToNumber() const
 {
-    return std::any_cast<int>(this->m_body);
+    return std::get<int>(this->m_body);
 }
 
 bool 
@@ -135,7 +132,7 @@ FormDataValue::IsDouble() const
 double 
 FormDataValue::ToDouble() const
 {
-    return std::any_cast<double>(m_body);
+    return std::get<double>(m_body);
 }
 
 FormDataHeader& 
@@ -210,7 +207,10 @@ HttpFormDataHelper::ParseFormData(protocol::http::HttpRequest::ptr request, std:
                     std::string_view filename = disposition.substr(pos + 10, disposition.length() - pos - 11);
                     std::string_view body = part.substr(eLength, part.length() - eLength - 2);
                     std::string tfile = std::string(filename.data(), filename.length());
-                    temp.SetFile(std::move(tfile), std::string(body.data(), body.length()));
+                    FormFile file;
+                    file.m_fileName = std::move(tfile);
+                    file.m_body = std::move(body);
+                    temp.SetValue(file);
                 }
                 else
                 {
@@ -219,18 +219,18 @@ HttpFormDataHelper::ParseFormData(protocol::http::HttpRequest::ptr request, std:
                     std::regex numpattern("^[-+]?\\d+$");
                     if(std::regex_match(body, numpattern))
                     {
-                        temp.SetNumber(std::stoi(body));
+                        temp.SetValue(std::stoi(body));
                     }
                     else
                     {
                         std::regex doublepattern("^[-+]?\\d+\\.\\d+$");
                         if(std::regex_match(body, doublepattern))
                         {
-                            temp.SetDouble(std::stod(body));
+                            temp.SetValue(std::stod(body));
                         }
                         else
                         {
-                            temp.SetString(body);
+                            temp.SetValue(body);
                         }
                     }
                 }

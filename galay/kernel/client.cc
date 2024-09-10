@@ -2,7 +2,7 @@
 #include "../common/waitgroup.h"
 #include "../util/random.h"
 #include "../util/io.h"
-#include "../util/stringsplitter.h"
+#include "../util/stringtools.h"
 #include "poller.h"
 #include "client.h"
 #include <regex>

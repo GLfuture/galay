@@ -368,7 +368,7 @@ SyncFileStream::ReadFile(const std::string& FileName, bool IsBinary)
         in.open(FileName);
     }
     if(in.fail()) {
-        spdlog::error("[{}:{}] [open file error]",__FILE__,__LINE__);
+        spdlog::error("[{}:{}] [open file error, filename:{}]",__FILE__,__LINE__, FileName);
         return "";
     }
     uintmax_t size = std::filesystem::file_size(FileName);

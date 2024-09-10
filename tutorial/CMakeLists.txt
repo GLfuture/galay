@@ -8,6 +8,7 @@ set(SRC_LIST
     tutorial_smtp_client.cc
     tutorial_dns_client.cc
     #tutorial_https_server.cc
+    demo.cc
     )
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})

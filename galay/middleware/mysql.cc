@@ -12,14 +12,184 @@ MySqlException::what() const noexcept
     return m_message.c_str();
 }
 
+MysqlStmtExecutor::MysqlStmtExecutor(MYSQL_STMT* stmt)
+{
+    this->m_stmt = stmt;
+    this->m_storeResult = false;
+}
+
+bool 
+MysqlStmtExecutor::Prepare(const std::string& ParamQuery)
+{
+    int ret = mysql_stmt_prepare(this->m_stmt, ParamQuery.c_str(), ParamQuery.length());
+    if (ret)
+    {
+        spdlog::error("[{}:{}] [mysql_stmt_prepare error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+        return false;
+    }
+    return true;
+}
+
+bool  
+MysqlStmtExecutor::BindParam(MYSQL_BIND* params)
+{
+    int ret = mysql_stmt_bind_param(this->m_stmt, params);
+    if (ret)
+    {
+        spdlog::error("[{}:{}] [mysql_stmt_bind_param {}]", __FILE__, __LINE__, m_stmt->last_error);
+        return false;
+    }
+    return 0;
+}
+
+
+bool  
+MysqlStmtExecutor::StringToParam(const std::string& data, unsigned int index)
+{
+    unsigned long offset = 0;
+    const unsigned long chunkSize = 1024;
+    while (offset < data.length()) {
+        unsigned long remaining = data.size() - offset;
+        unsigned long bytesToSend = remaining < chunkSize? remaining : chunkSize;
+        if (mysql_stmt_send_long_data(m_stmt, index, data.c_str() + offset, bytesToSend)!= 0) {
+            spdlog::error("[{}:{}] [mysql_stmt_send_long_data error: '{}']", __FILE__, __LINE__, m_stmt->last_error);
+            return false;
+        }
+        offset += bytesToSend;
+    }
+    return true;
+}
+
+bool 
+MysqlStmtExecutor::BindResult(MYSQL_BIND* result)
+{
+    int ret = mysql_stmt_bind_result(this->m_stmt, result);
+    if (ret)
+    {
+        spdlog::error("[{}:{}] [mysql_stmt_bind_result error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+        return false;
+    }
+    return true;
+}
+
+bool 
+MysqlStmtExecutor::Execute()
+{
+    int ret = mysql_stmt_execute(this->m_stmt);
+    if (ret)
+    {
+        spdlog::error("[{}:{}] [mysql_stmt_execute error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+        return false;
+    }
+    return true;
+}
+
+bool 
+MysqlStmtExecutor::StoreResult()
+{
+    int ret = mysql_stmt_store_result(this->m_stmt);
+    if (ret)
+    {
+        spdlog::error("[{}:{}] [mysql_stmt_store_result error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+        return false;
+    }
+    return true;
+}
+
+bool 
+MysqlStmtExecutor::GetARow(MYSQL_BIND* result)
+{
+    if(!this->m_storeResult)
+    {
+        if(!StoreResult())
+        {
+            spdlog::error("[{}:{}] [StoreResult error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+            return false;
+        }
+        m_storeResult = true;
+    }
+    int ret = mysql_stmt_fetch(this->m_stmt);
+    if (ret == MYSQL_DATA_TRUNCATED || ret == MYSQL_NO_DATA)
+    {
+        m_storeResult = false;
+        return false;
+    }
+    if(ret != 0)
+    {
+        m_storeResult = false;
+        spdlog::error("[{}:{}] [mysql_stmt_fetch error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+        return false;
+    }
+    for(int i = 0 ; i < mysql_stmt_param_count(this->m_stmt); ++i)
+    {
+        if(result[i].buffer_type == MYSQL_TYPE_BLOB || result[i].buffer_type == MYSQL_TYPE_STRING
+            || result[i].buffer_type == MYSQL_TYPE_VAR_STRING || result[i].buffer_type == MYSQL_TYPE_TINY_BLOB || result[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB || result[i].buffer_type == MYSQL_TYPE_LONG_BLOB)
+        {
+            char* str = new char[*result[i].length];
+            bzero(str,*result[i].length);
+            result[i].buffer = str;
+            result[i].buffer_length = *result[i].length;
+            if(mysql_stmt_fetch_column(this->m_stmt, &result[i], i, 0))
+            {
+                spdlog::error("[{}:{}] [mysql_stmt_fetch_column error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+                return false;
+            }
+        }
+        else
+        {
+            mysql_stmt_fetch_column(this->m_stmt, &result[i], i, 0);
+        }
+
+    }
+    return true;
+}
+
+bool 
+MysqlStmtExecutor::Close()
+{
+    int ret = mysql_stmt_close(this->m_stmt);
+    this->m_stmt = nullptr;
+    if (ret)
+    {
+        spdlog::error("[{}:{}] [mysql_stmt_close error: '{}']", __FILE__, __LINE__, this->m_stmt->last_error);
+        return false;
+    }
+    return true;
+}
+
+std::string 
+MysqlStmtExecutor::GetLastError()
+{
+    return mysql_stmt_error(this->m_stmt);
+}
+
+MysqlStmtExecutor::~MysqlStmtExecutor()
+{
+
+}
+
 MysqlClient::MysqlClient(std::string charset)
 {
+    mysql_library_init(0,NULL,NULL);
     this->m_handle=mysql_init(NULL);
     if(this->m_handle==NULL) {
         spdlog::error("[{}:{}] [mysql_init error: '{}']",__FILE__, __LINE__, mysql_error(this->m_handle));
         throw MySqlException(mysql_error(this->m_handle));
     }
     if(mysql_options(this->m_handle,MYSQL_SET_CHARSET_NAME,charset.c_str()) == -1){
+        spdlog::error("[{}:{}] [mysql_options error: '{}']", __FILE__, __LINE__ , mysql_error(this->m_handle));
+        throw MySqlException( mysql_error(this->m_handle));
+    }
+    uint32_t timeout = MYSQL_TIMEOUT;
+    if(mysql_options(this->m_handle,MYSQL_OPT_CONNECT_TIMEOUT,&timeout) == -1){
+        spdlog::error("[{}:{}] [mysql_options error: '{}']", __FILE__, __LINE__ , mysql_error(this->m_handle));
+        throw MySqlException( mysql_error(this->m_handle));
+    }
+    if(mysql_options(this->m_handle,MYSQL_OPT_READ_TIMEOUT,&timeout) == -1){
+        spdlog::error("[{}:{}] [mysql_options error: '{}']", __FILE__, __LINE__ , mysql_error(this->m_handle));
+        throw MySqlException( mysql_error(this->m_handle));
+    }
+    if(mysql_options(this->m_handle,MYSQL_OPT_WRITE_TIMEOUT,&timeout) == -1){
         spdlog::error("[{}:{}] [mysql_options error: '{}']", __FILE__, __LINE__ , mysql_error(this->m_handle));
         throw MySqlException( mysql_error(this->m_handle));
     }
@@ -33,17 +203,23 @@ MysqlClient::Connect(const std::string& Remote,const std::string& UserName,const
         spdlog::error("[{}:{}] [mysql_connect error: '{}']",__FILE__,__LINE__,mysql_error(this->m_handle));
         return mysql_errno(this->m_handle);
     }
-    this->m_connected = true;
     return 0;
 }
 
 void 
 MysqlClient::DisConnect()
 {
-    if(this->m_connected) {
+    if(this->m_handle) 
+    {
         mysql_close(this->m_handle);
-        this->m_connected = false;
+        this->m_handle = nullptr;
     }
+}
+
+int 
+MysqlClient::GetSocket()
+{
+    return m_handle->net.fd;
 }
 
 int 
@@ -260,20 +436,20 @@ MysqlClient::AddField(const std::string& TableName, const std::pair<std::string,
 {
     if (TableName.empty())
     {
-        spdlog::error("[{}:{}] Arg: [TableName] empty", __TIME__, __FILE__, __LINE__);
+        spdlog::error("[{}:{}] Arg: [TableName] empty", __FILE__, __LINE__);
         return -1;
     }
     std::string query = "ALTER TABLE " + TableName + " ADD COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
     if (mysql_ping(this->m_handle))
     {
-        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
-    spdlog::info("[{}:{}] [mysql query is '{}']", __TIME__, __FILE__, __LINE__, query);
+    spdlog::info("[{}:{}] [mysql query is '{}']", __FILE__, __LINE__, query);
     int ret = mysql_real_query(this->m_handle, query.c_str(), query.size());
     if (ret)
     {
-        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
     return 0;
@@ -284,20 +460,20 @@ MysqlClient::ModFieldType(const std::string& TableName, const std::pair<std::str
 {
     if (TableName.empty())
     {
-        spdlog::error("[{}:{}] [Arg: [TableName] empty]", __TIME__, __FILE__, __LINE__);
+        spdlog::error("[{}:{}] [Arg: [TableName] empty]", __FILE__, __LINE__);
         return -1;
     }
     std::string query = "ALTER TABLE " + TableName + " MODIFY COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
     if (mysql_ping(this->m_handle))
     {
-        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
-    spdlog::info("[{}:{}] [mysql query is '{}']", __TIME__, __FILE__, __LINE__, query);
+    spdlog::info("[{}:{}] [mysql query is '{}']", __FILE__, __LINE__, query);
     int ret = mysql_real_query(this->m_handle, query.c_str(), query.size());
     if (ret)
     {
-        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
     return 0;
@@ -307,20 +483,20 @@ int
 MysqlClient::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
 {
     if(TableName.empty() || OldFieldName.empty() ){
-        spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __TIME__, __FILE__, __LINE__);
+        spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __FILE__, __LINE__);
         return -1;
     }
     std::string query = "ALTER TABLE " + TableName + " CHANGE COLUMN " + OldFieldName + " " + Field_Type.first + " " + Field_Type.second + ';';
     if (mysql_ping(this->m_handle))
     {
-        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
-    spdlog::info("[{}:{}] [mysql query is '{}']", __TIME__, __FILE__, __LINE__, query);
+    spdlog::info("[{}:{}] [mysql query is '{}']", __FILE__, __LINE__, query);
     int ret = mysql_real_query(this->m_handle, query.c_str(), query.size());
     if (ret)
     {
-        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
     return 0;
@@ -331,160 +507,41 @@ int
 MysqlClient::DelField(const std::string& TableName,const std::string& FieldName)
 {
     if(TableName.empty() || FieldName.empty()){
-        spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __TIME__, __FILE__, __LINE__);
+        spdlog::error("[{}:{}] [Arg: [TableName] of [OldFieldName] empty]", __FILE__, __LINE__);
         return -1;
     }
     std::string query = "ALTER TABLE " + TableName + "DROP COLUMN " + FieldName + ";";
     if (mysql_ping(this->m_handle))
     {
-        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
-    spdlog::info("[{}:{}] [mysql query is '{}']", __TIME__, __FILE__, __LINE__, query);
+    spdlog::info("[{}:{}] [mysql query is '{}']", __FILE__, __LINE__, query);
     int ret = mysql_real_query(this->m_handle, query.c_str(), query.size());
     if (ret)
     {
-        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
+        spdlog::error("[{}:{}] [msyql_real_query error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
         return -1;
     }
     return 0;
 }
 
-// 发送二进制数据
-int 
-MysqlClient::ParamSendBinaryData(const std::string &ParamQuery, const std::string& Data)
+MysqlStmtExecutor::ptr 
+MysqlClient::GetMysqlParams()
 {
-    if (Data.empty() || ParamQuery.empty())
-    {
-        spdlog::error("[{}:{}] [Arg: [ParamQuery] or [buffer] empty]", __TIME__, __FILE__, __LINE__);
-        return -1;
-    }
     if (mysql_ping(this->m_handle))
     {
-        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
+        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
+        return nullptr;
     }
     MYSQL_STMT *stmt = mysql_stmt_init(this->m_handle);
     if(stmt == nullptr) {
         spdlog::error("[{}:{}] [mysql_stmt_init error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
+        return nullptr;
     }
-    spdlog::info("[{}:{}] [mysql query is '{}']", __TIME__, __FILE__, __LINE__,ParamQuery);
-    int ret = mysql_stmt_prepare(stmt, ParamQuery.c_str(), ParamQuery.length());
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_prepare error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    MYSQL_BIND param = {0};
-    param.buffer_type = MYSQL_TYPE_LONG_BLOB;
-    param.buffer = NULL;
-    param.is_null = 0;
-    param.length = NULL;
-    ret = mysql_stmt_bind_param(stmt, &param);
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_bind_param error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    ret = mysql_stmt_send_long_data(stmt, 0, Data.c_str(), Data.length());
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_send_long_data error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    ret = mysql_stmt_execute(stmt);
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_execute error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    ret = mysql_stmt_close(stmt);
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_close error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    return 0;
+    MysqlStmtExecutor::ptr params = std::make_shared<MysqlStmtExecutor>(stmt);
+    return params;
 }
-// 接收二进制数据
-int
-MysqlClient::ParamRecvBinaryData(const std::string &ParamQuery, std::string& Data)
-{
-    if (ParamQuery.empty())
-    {
-        spdlog::error("[{}:{}] [Arg: [ParamQuery] is empty]", __TIME__, __FILE__, __LINE__);
-        return -1;
-    }
-    if(!Data.empty()){
-        spdlog::warn("[{}:{}] [Arg: [Data] is not empty , auto clear it]", __TIME__, __FILE__, __LINE__);
-        Data.clear();
-    }
-    if (mysql_ping(this->m_handle))
-    {
-        spdlog::error("[{}:{}] [mysql_ping error: '{}']", __TIME__, __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    MYSQL_STMT *stmt = mysql_stmt_init(this->m_handle);
-    if(stmt == nullptr) {
-        spdlog::error("[{}:{}] [mysql_stmt_init error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    spdlog::info("[{}:{}] [mysql query is '{}']", __TIME__, __FILE__, __LINE__,ParamQuery);
-    int ret = mysql_stmt_prepare(stmt, ParamQuery.c_str(), ParamQuery.length());
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_prepare error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    MYSQL_BIND result = {0};
-    result.buffer_type = MYSQL_TYPE_LONG_BLOB;
-    uint64_t total_length = 0;
-    result.length = &total_length;
-
-    ret = mysql_stmt_bind_result(stmt, &result);
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_bind_result error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-
-    ret = mysql_stmt_execute(stmt);
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_execute error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-
-    ret = mysql_stmt_store_result(stmt);
-    if (ret)
-    {
-        spdlog::error("[{}:{}] [mysql_stmt_store_result error: '{}']", __FILE__, __LINE__, mysql_error(this->m_handle));
-        return -1;
-    }
-    char buffer[1024] = {0};
-    while (1)
-    {
-        ret = mysql_stmt_fetch(stmt);
-        if (ret != 0 && ret != MYSQL_DATA_TRUNCATED){
-            spdlog::info("[{}:{}] [mysql_stmt_store_result success]", __FILE__, __LINE__);
-            break; // 异常
-        }
-        long long save = 0;
-        while (save < total_length)
-        {
-            bzero(buffer,1024);
-            result.buffer = buffer;
-            result.buffer_length = total_length - save >= 1024 ? 1024 : total_length - save;
-            mysql_stmt_fetch_column(stmt, &result, 0, save);
-            save += result.buffer_length;
-            Data += std::string(reinterpret_cast<char*>(result.buffer),result.buffer_length);
-        }
-    }
-    mysql_stmt_close(stmt);
-    return 0;
-}
-
 
 bool 
 MysqlClient::StartTransaction()
@@ -534,14 +591,20 @@ MysqlClient::Rollback()
     return true;
 }
 
+std::string 
+MysqlClient::GetLastError()
+{
+    return mysql_error(this->m_handle);
+}
+
 MysqlClient::~MysqlClient()
 {
-    if(this->m_connected) {
-        mysql_close(this->m_handle); // 关闭数据库连接
-        spdlog::info("[{}:{}] [mysql connection close]",__FILE__,__LINE__);
-        this->m_connected = false;
-    }else{
-        spdlog::warn("[{}:{}] [mysql connection is reaptedly close]",__FILE__,__LINE__);
+    if(this->m_handle)
+    {
+        mysql_close(this->m_handle);
+        this->m_handle = nullptr;
     }
+    mysql_library_end();
 }
+
 }

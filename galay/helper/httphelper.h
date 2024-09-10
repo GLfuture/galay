@@ -2,6 +2,7 @@
 #define GALAY_HTTP_HELPER_H
 
 #include "../protocol/http.h"
+#include <variant>
 
 namespace galay::helper::http
 {
@@ -53,22 +54,24 @@ namespace galay::helper::http
         std::string Name() const;
         void SetName(const std::string& name);
         bool IsFile() const;
-        void SetFile(const std::string& fileName, const std::string& body);
-        FormFile ToFile() const;
-        void SetString(const std::string& body);
         bool IsString() const;
-        std::string ToString() const;
-        void SetNumber(int number);
         bool IsNumber() const;
-        int ToNumber() const;
-        void SetDouble(double number);
         bool IsDouble() const;
+
+        FormFile ToFile() const;
+        std::string ToString() const;
+        int ToNumber() const;
         double ToDouble() const;
+        
+        void SetValue(const FormFile& file);
+        void SetValue(const std::string& body);
+        void SetValue(int number);
+        void SetValue(double number);
     private:
         FormDataType m_type;
         FormDataHeader m_header;
         std::string m_name;
-        std::any m_body;
+        std::variant<int, double, std::string, FormFile> m_body;
     };
 
     class HttpFormDataHelper
