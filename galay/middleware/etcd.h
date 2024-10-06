@@ -1,17 +1,10 @@
 #ifndef GALAY_ETCD_H
 #define GALAY_ETCD_H
 
-#include <memory>
-#include <string>
 #include <etcd/Client.hpp>
 #include <etcd/KeepAlive.hpp>
-#include <etcd/Watcher.hpp>
-#include <coroutine>
-#include <unordered_map>
-#include <functional>
-#include <shared_mutex>
-#include <any>
-#include "../common/result.h"
+#include <etcd/Watcher.hpp> 
+#include "../util/ThreadSecurity.hpp"
 
 namespace galay::middleware::etcd
 {
@@ -24,23 +17,7 @@ namespace galay::middleware::etcd
         void SetServiceAddr(const std::string& ServiceName, const std::string& ServiceAddr);
     public:
         static std::unique_ptr<ServiceCenter> m_instance;
-        std::shared_mutex m_mutex;
-        std::unordered_map<std::string, std::string> m_serviceAddr;
-    };
-
-    class EtcdResult
-    {
-    public:
-        EtcdResult(result::ResultInterface::ptr result);
-        //DiscoverService
-        std::string ServiceAddr();
-        //DiscoverServicePrefix
-        std::vector<std::pair<std::string, std::string>> ServiceAddrs();
-        bool Success();
-        std::string Error();
-        coroutine::GroupAwaiter& Wait();
-    private:
-        result::ResultInterface::ptr m_result;
+        thread::security::SecurityHashMap<std::string,std::string> m_serviceAddr;
     };
 
     class EtcdClient
@@ -51,7 +28,7 @@ namespace galay::middleware::etcd
         EtcdResult RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL);
         EtcdResult DiscoverService(const std::string& ServiceName);
         EtcdResult DiscoverServicePrefix(const std::string& Prefix);
-
+        std::string GetLastError();
         //监视一个key
         void Watch(const std::string& key, std::function<void(::etcd::Response)> handle);
         void CancleWatch();

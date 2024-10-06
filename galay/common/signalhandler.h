@@ -6,20 +6,18 @@
 #include <unordered_map>
 #include <list>
 
-namespace galay
+namespace galay::common
 {
-    namespace common
+    class SignalFactory
     {
-        class SignalFactory
-        {
-        public:
-            static SignalFactory* GetInstance();
-            void SetSignalHandler(int signo, std::function<void(int)> func);
-        private:
-            static std::unique_ptr<SignalFactory> m_signalHandler;
-            std::unordered_map<int,std::list<std::function<void(int)>> > m_signalMap;
-        };
-    }
+    public:
+        static SignalFactory* GetInstance();
+        void SetSignalHandler(int signo, std::function<void(int)> func);
+    private:
+        static std::unique_ptr<SignalFactory> m_signalHandler;
+        std::unordered_map<int,std::list<std::function<void(int)>> > m_signalMap;
+    };
+    
 }
 
 

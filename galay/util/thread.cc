@@ -1,4 +1,4 @@
-#include "threadpool.h"
+#include "thread.h"
 #include <spdlog/spdlog.h>
 
 namespace galay::thread
@@ -14,9 +14,41 @@ ThreadTask::Execute()
     this->m_func();
 }
 
-ThreadTask::~ThreadTask()
+ThreadWaiters::ThreadWaiters(int num)
 {
+    this->m_num.store(num);
+}
 
+bool ThreadWaiters::Wait(int timeout)
+{
+    std::unique_lock lock(this->m_mutex);
+    if(m_num.load() <= 0) return true;
+    if(timeout == -1)
+    {
+        m_cond.wait(lock, [this]() {
+            return m_num.load() <= 0;
+        });
+    }
+    else
+    {
+        m_cond.wait_for(lock, std::chrono::milliseconds(timeout), [this]() {
+            return m_num.load() == 0;
+        });
+        if(m_num.load() != 0) return false;
+    }
+    return true;
+}
+
+bool ThreadWaiters::Decrease()
+{
+    std::unique_lock lock(this->m_mutex);
+    if( m_num.load() == 0) return false;
+    m_num.fetch_sub(1);
+    if(m_num.load() == 0)
+    {
+        m_cond.notify_one();
+    }
+    return true;
 }
 
 ThreadPool::ThreadPool()

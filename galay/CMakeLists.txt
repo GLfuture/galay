@@ -1,9 +1,9 @@
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(MIDDLEWARE)
-if(ENABLE_MIDDLEWARE)
-    list(APPEND MIDDLEWARE middleware)
-endif()
+# if(ENABLE_MIDDLEWARE)
+#     list(APPEND MIDDLEWARE middleware)
+# endif()
 
 set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security common helper)
 set(STATIC_LIB ${PROJECT_NAME}-static)

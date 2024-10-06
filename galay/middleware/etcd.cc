@@ -20,8 +20,8 @@ std::string
 ServiceCenter::GetServiceAddr(const std::string &ServiceName)
 {
     std::shared_lock lock(m_mutex);
-    auto it = m_serviceAddr.find(ServiceName);
-    if(it != m_serviceAddr.end()){
+    auto it = m_serviceAddr.Find(ServiceName);
+    if(it != m_serviceAddr.End()){
         return it->second;
     }
     return "";
