@@ -5,12 +5,36 @@
 
 namespace galay::coroutine
 {
-#include "Coroutine.h"
+
+void CoroutineStore::AddCoroutine(Coroutine *co)
+{
+    auto node = m_coroutines.PushBack(co);
+    co->GetListNode() = node;
+}
+
+void CoroutineStore::RemoveCoroutine(Coroutine *co)
+{
+    m_coroutines.Remove(co->GetListNode());
+    co->GetListNode() = nullptr;
+}
+
+CoroutineStore g_coroutine_store;
+
+CoroutineStore::~CoroutineStore()
+{
+    while(!m_coroutines.Empty())
+    {
+        auto node = m_coroutines.PopFront();
+        node->m_data->Destroy();
+        delete node;
+    }
+}
 
 Coroutine::Coroutine(std::coroutine_handle<promise_type> handle) noexcept
 {
     this->m_handle = handle;
     this->m_context = std::make_shared<std::any>();
+    this->m_node = nullptr;
 }
 
 Coroutine::Coroutine(Coroutine&& other) noexcept
@@ -19,12 +43,15 @@ Coroutine::Coroutine(Coroutine&& other) noexcept
     other.m_context.reset();
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
+    this->m_node = other.m_node;
+    other.m_node = nullptr;
 }
 
 Coroutine::Coroutine(const Coroutine& other) noexcept
 {
     this->m_context = other.m_context;
     this->m_handle = other.m_handle;
+    this->m_node = other.m_node;
 }
 
 Coroutine&
@@ -34,7 +61,15 @@ Coroutine::operator=(Coroutine&& other) noexcept
     other.m_context.reset();
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
+    this->m_node = other.m_node;
+    other.m_node = nullptr;
     return *this;
+}
+
+void Coroutine::Destroy()
+{
+    g_coroutine_store.RemoveCoroutine(m_handle.promise().GetCoroutine());
+    m_handle.destroy();
 }
 
 CoroutineWaiters::CoroutineWaiters(int num, scheduler::CoroutineScheduler* scheduler)
@@ -61,7 +96,7 @@ bool CoroutineWaiters::Decrease()
     if( m_num.load() == 0 )
     {
         m_action->GetCoroutine()->SetContext(true);
-        m_scheduler->AddCoroutine(m_action->GetCoroutine());
+        m_scheduler->ResumeCoroutine(m_action->GetCoroutine());
     }
     return true;
 }
@@ -85,5 +120,13 @@ bool CoroutineWaitContext::Done()
 {
     return m_waiters.Decrease();
 }
+
+Awaiter_void GetThisCoroutine(Coroutine*& coroutine)
+{
+    action::GetCoroutineHandleAction* action = new action::GetCoroutineHandleAction(&coroutine);
+    return Awaiter_void(action);
+}
+
+
 
 }

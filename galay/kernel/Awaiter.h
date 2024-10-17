@@ -2,6 +2,7 @@
 #define GALAY_AWAIT_H
 
 #include "Coroutine.h"
+#include <string>
 
 namespace galay::event
 {
@@ -10,27 +11,32 @@ namespace galay::event
 
 namespace galay::action
 {
-enum ActionType
-{
-    kActionToAddEvent,
-    kActionToModEvent,
-    kActionToDelEvent,
-};
 
 class WaitAction
 {
 public:
     virtual bool HasEventToDo() = 0;
     virtual bool DoAction(coroutine::Coroutine* co) = 0;
-    virtual void ResetEvent(event::WaitEvent* event, bool is_heap) = 0;
-    virtual void ResetActionType(ActionType type) = 0;
-    virtual event::WaitEvent* GetBindEvent() = 0;
-    virtual ~WaitAction() = default;
 };
 }
 
 namespace galay::coroutine
 {
+
+class Awaiter_void
+{
+public:
+    Awaiter_void(action::WaitAction* action);
+    Awaiter_void();
+    bool await_ready() const noexcept;
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
+    inline void await_resume() const noexcept {};
+    Coroutine* GetCoroutine();
+private:
+    action::WaitAction* m_action;
+    std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
+};
 
 class Awaiter_int
 {
@@ -64,8 +70,38 @@ private:
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
+class Awaiter_ptr
+{
+public:
+    Awaiter_ptr(action::WaitAction* action);
+    Awaiter_ptr(void* ptr);
+    bool await_ready() const noexcept;
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
+    void* await_resume() const noexcept;
+    Coroutine* GetCoroutine();
+private:
+    void* m_ptr;
+    action::WaitAction* m_action;
+    std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
+};
 
 
+class Awaiter_string
+{
+public:
+    Awaiter_string(action::WaitAction* action);
+    Awaiter_string(std::string result);
+    bool await_ready() const noexcept;
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
+    std::string await_resume() const noexcept;
+    Coroutine* GetCoroutine();
+private:
+    std::string m_result;
+    action::WaitAction* m_action;
+    std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
+};
 
 }
 

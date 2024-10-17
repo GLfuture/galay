@@ -58,7 +58,7 @@ bool EpollEventEngine::Stop()
     {
         this->m_stop.store(true);
         GHandle handle = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC);
-        CallbackEvent* event = new CallbackEvent(handle, EventType::kEventTypeRead, true, [this](Event *event, EventEngine *engine) {
+        CallbackEvent* event = new CallbackEvent(handle, EventType::kEventTypeRead, [this](Event *event, EventEngine *engine) {
             eventfd_t val;
             int ret = eventfd_read(event->GetHandle(), &val);
             event->Free(engine);
@@ -91,12 +91,6 @@ EpollEventEngine::AddEvent(Event *event)
         if (!m_error.empty()){
             m_error.clear();
         }
-    }
-    if ( event->IsOnHeap() )
-    {
-        auto pos = m_event_list.PushBack(event);
-        EventPosition position(pos);
-        event->SetPos(position);
     }
     return ret;
 }
@@ -138,12 +132,6 @@ EpollEventEngine::DelEvent(Event* event)
             m_error.clear();
         }
     }
-    if( event->IsOnHeap() )
-    {
-        auto pos = event->GetPos();
-        event->SetPos(EventPosition::npos);
-        m_event_list.Erase(pos.GetListPos());
-    }
     return ret;
 }
 
@@ -151,11 +139,6 @@ EpollEventEngine::~EpollEventEngine()
 {
     if(m_handle > 0) close(m_handle);
     delete[] m_ready_events;
-    for( auto it = m_event_list.Begin() ; it != m_event_list.End() ; ) {
-        Event* event = *it;
-        ++it;
-        event->Free(this);
-    }
 }
 
 void 

@@ -8,6 +8,7 @@
 
 namespace galay::event {
     class Event;
+    class TimeEvent;
     class EventEngine;
     class CoroutineEvent;   
 };
@@ -33,9 +34,11 @@ public:
     int AddEvent(event::Event *event);
     int ModEvent(event::Event *event);
     int DelEvent(event::Event *event);
-    int AddTimer(std::function<void()>&& callback);
+    event::TimeEvent* GetTimeEvent();
+    inline event::EventEngine* GetEngine() { return m_engine.get(); }
     virtual ~EventScheduler();
 private:
+    event::TimeEvent* m_time_event;
     std::unique_ptr<std::thread> m_thread;
     std::shared_ptr<event::EventEngine> m_engine;
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
@@ -46,9 +49,10 @@ class CoroutineScheduler
 public:
     using ptr = std::shared_ptr<CoroutineScheduler>;
     CoroutineScheduler();
-    void AddCoroutine(coroutine::Coroutine* coroutine);
+    void ResumeCoroutine(coroutine::Coroutine* coroutine);
     bool Loop(int timeout = -1);
     bool Stop();
+    inline event::EventEngine* GetEngine() { return m_engine.get(); }
     virtual ~CoroutineScheduler();
 private:
     std::unique_ptr<std::thread> m_thread;

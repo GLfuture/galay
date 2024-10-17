@@ -1,7 +1,6 @@
 #ifndef __GALAY_EVENT_H__
 #define __GALAY_EVENT_H__
 
-#include "../util/ThreadSecurity.hpp"
 #include "Base.h"
 #include <any>
 #include <queue>
@@ -27,6 +26,11 @@ namespace galay::scheduler
     class CoroutineScheduler;
 }
 
+namespace galay
+{
+    class CallbackStore;
+}
+
 namespace galay::event
 {
 #define DEFAULT_READ_BUFFER_SIZE    1024
@@ -38,21 +42,7 @@ enum EventType
 };
 
 class EventEngine;
-class Strategy;
 class Event;
-
-class EventPosition
-{
-public:
-    static EventPosition npos;
-    EventPosition();
-    EventPosition(thread::security::SecurityList<Event*>::ListNodePos pos);
-    inline thread::security::SecurityList<Event*>::ListNodePos GetListPos() { return m_pos; };
-    bool operator==(const EventPosition& other);
-private:
-    bool m_valid;
-    thread::security::SecurityList<Event*>::ListNodePos m_pos;
-};
 
 //must be alloc at heap
 class Event
@@ -66,29 +56,21 @@ public:
     virtual void HandleEvent(EventEngine* engine) = 0;
     virtual void SetEventType(EventType type) = 0;
     virtual EventType GetEventType() = 0;
-    virtual void SetPos(EventPosition pos) = 0;
-    virtual EventPosition GetPos() = 0;
     virtual GHandle GetHandle() = 0;
-    virtual bool IsOnHeap() = 0;
     virtual void Free(EventEngine* engine) = 0;
 };
 
 class CallbackEvent: public Event
 {
 public:
-    CallbackEvent(GHandle handle, EventType type, bool is_heap, std::function<void(Event*, EventEngine*)> callback);
+    CallbackEvent(GHandle handle, EventType type, std::function<void(Event*, EventEngine*)> callback);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "CallbackEvent"; }
     inline virtual void SetEventType(EventType type) override { m_type = type; }
     inline virtual EventType GetEventType() override { return m_type; }
-    inline virtual void SetPos(EventPosition pos) override { m_pos = pos; }
-    inline virtual EventPosition GetPos() override { return m_pos; }
     inline virtual GHandle GetHandle() override { return m_handle; }
-    inline virtual bool IsOnHeap() override { return m_is_heap; }
     virtual void Free(EventEngine* engine) override;
 private:
-    EventPosition m_pos;
-    bool m_is_heap;
     EventType m_type;
     GHandle m_handle;
     std::function<void(Event*, EventEngine*)> m_callback;
@@ -97,53 +79,42 @@ private:
 class CoroutineEvent: public Event
 {
 public:
-    CoroutineEvent(GHandle handle, EventEngine* engine, EventType type, bool is_heap);
+    CoroutineEvent(GHandle handle, EventEngine* engine, EventType type);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "CoroutineEvent"; }
     inline virtual void SetEventType(EventType type) override { m_type = type; }
     inline virtual EventType GetEventType() override { return m_type; }
-    inline virtual void SetPos(EventPosition pos) override { m_pos = pos; }
-    inline virtual EventPosition GetPos() override { return m_pos; }
     inline virtual GHandle GetHandle() override { return m_handle; }
-    inline virtual bool IsOnHeap() override { return m_is_heap; }
-    
     virtual void Free(EventEngine* engine) override;
+    void ResumeCoroutine(coroutine::Coroutine* coroutine);
     
-    void AddCoroutine(coroutine::Coroutine* coroutine);
 private:
     std::shared_mutex m_mtx;
     GHandle m_handle;
-    bool m_is_heap;
-    EventPosition m_pos;
     EventType m_type;
     EventEngine* m_engine;
     std::queue<coroutine::Coroutine*> m_coroutines;
+    
 };
 
 class ListenEvent: public Event
 {
 public:
-    ListenEvent(GHandle handle, std::shared_ptr<Strategy> strategy \
-        , scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler, bool is_heap);
+    ListenEvent(GHandle handle, CallbackStore* callback_store \
+        , scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "ListenEvent"; }
     inline virtual void SetEventType(EventType type) override {}
     inline virtual EventType GetEventType() override { return kEventTypeRead; }
-    inline virtual void SetPos(EventPosition pos) override { m_pos = pos; }
-    inline virtual EventPosition GetPos() override { return m_pos; }
     inline virtual GHandle GetHandle() override { return m_handle; }
-    inline virtual bool IsOnHeap() override { return m_is_heap; }
-    
     virtual void Free(EventEngine* engine) override;
 private:
     coroutine::Coroutine CreateTcpSocket(EventEngine* engine);
 private:
     GHandle m_handle;
-    bool m_is_heap;
     scheduler::EventScheduler* m_net_scheduler;
     scheduler::CoroutineScheduler* m_co_scheduler;
-    std::shared_ptr<Strategy> m_strategy;
-    EventPosition m_pos;
+    CallbackStore* m_callback_store;
 };
 
 class TimeEvent: public Event
@@ -154,6 +125,7 @@ public:
     */
     class Timer: public std::enable_shared_from_this<Timer> 
     {
+        friend class TimeEvent;
     public:
         using ptr = std::shared_ptr<Timer>;
         class TimerCompare
@@ -161,73 +133,66 @@ public:
         public:
             bool operator()(const Timer::ptr &a, const Timer::ptr &b);
         };
-        Timer(uint64_t during_time, std::function<void(Timer::ptr)> &&func);
-        uint64_t GetDuringTime();  
-        uint64_t GetExpiredTime();
-        uint64_t GetRemainTime();
+        Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func);
+        int64_t GetDuringTime();  
+        int64_t GetExpiredTime();
+        int64_t GetRemainTime();
         inline std::any& GetContext() { return m_context; };
-        void SetDuringTime(uint64_t during_time);
+        void SetDuringTime(int64_t during_time);
         void Execute();
         void Cancle();
         bool Success();
     private:
         std::any m_context;
-        uint64_t m_expiredTime;
-        uint64_t m_duringTime;
+        int64_t m_expiredTime;
+        int64_t m_duringTime;
         std::atomic_bool m_cancle;
         std::atomic_bool m_success;
         std::function<void(Timer::ptr)> m_rightHandle;
     };
-    TimeEvent(GHandle handle, bool is_heap);
+    TimeEvent(GHandle handle);
     virtual std::string Name() override { return "TimeEvent"; };
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual void SetEventType(EventType type) override {};
     inline virtual EventType GetEventType() override { return kEventTypeRead; };
-    inline virtual void SetPos(EventPosition pos) override { m_pos = pos; };
-    inline virtual EventPosition GetPos() override { return m_pos; };
     inline virtual GHandle GetHandle() override { return m_handle; }
-    inline virtual bool IsOnHeap() override { return m_is_heap; }
     virtual void Free(EventEngine* engine) override;
-    Timer::ptr AddTimer(uint64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
-    void ReAddTimer(uint64_t during_time, Timer::ptr timer);
+    Timer::ptr AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
+    void ReAddTimer(int64_t during_time, Timer::ptr timer);
 private:
     void UpdateTimers();
 private:
     GHandle m_handle;
-    bool m_is_heap;
     std::shared_mutex m_mutex;
     std::priority_queue<Timer::ptr> m_timers;
-    EventPosition m_pos;
 };
 
 class WaitEvent: public Event
 {
 public:
-    WaitEvent(async::AsyncTcpSocket* socket, EventType type, bool is_heap);
+    WaitEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket, EventType type);
     inline virtual std::string Name() override { return "WaitEvent"; }
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual void SetEventType(EventType type) override { m_type = type; }
     inline virtual EventType GetEventType() override { return m_type; }
-    inline virtual void SetPos(EventPosition pos) override { m_pos = pos; }
-    inline virtual EventPosition GetPos() override { return m_pos; }
-    inline virtual bool IsOnHeap() override { return m_is_heap; }
     virtual void Free(EventEngine* engine) override;
     virtual GHandle GetHandle() override;
     inline async::AsyncTcpSocket* GetAsyncTcpSocket() { return m_socket; }
+    inline event::EventEngine* GetEventEngine() { return m_engine; }
+
     void SetWaitCoroutine(coroutine::Coroutine* co);
     virtual ~WaitEvent() = default;
 protected:
     EventType m_type;
-    bool m_is_heap;
+    event::EventEngine* m_engine;
     async::AsyncTcpSocket* m_socket;
-    EventPosition m_pos;
     coroutine::Coroutine* m_waitco;
 };
 
 class RecvEvent: public WaitEvent
 {
 public:
-    RecvEvent(async::AsyncTcpSocket* socket, bool is_heap);
+    RecvEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket);
     inline virtual std::string Name() override { return "RecvEvent"; }
     virtual void HandleEvent(EventEngine* engine) override;
     virtual ~RecvEvent() = default;
@@ -236,7 +201,7 @@ public:
 class SendEvent: public WaitEvent
 {
 public:
-    SendEvent(async::AsyncTcpSocket* socket, bool is_heap);
+    SendEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket);
     inline virtual std::string Name() override { return "SendEvent"; }
     virtual void HandleEvent(EventEngine* engine) override;
     virtual ~SendEvent() = default;

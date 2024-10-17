@@ -1,26 +1,21 @@
 #include "../galay/galay.h"
-#include "../galay/middleware/etcd.h"
+#include "../galay/middleware/Etcd.h"
 
-galay::coroutine::NetCoroutine func()
+galay::coroutine::Coroutine func()
 {
-    galay::middleware::etcd::EtcdClient client("http://127.0.0.1:2379");
-    auto res = client.RegisterService("/app/api/login/node4","127.0.0.5:8080");
-    co_await res.Wait();
-    if(!res.Success())
-    {
-        std::cout << res.Error() << std::endl;
-    }
-    galay::coroutine::NetCoroutinePool::GetInstance()->Stop();
-    co_return galay::coroutine::kCoroutineFinished;
+    galay::middleware::etcd::EtcdClient client("http://127.0.0.1:2379", 0);
+    bool res = co_await client.RegisterService("/app/api/login/node","127.0.0.1:7070");
+    auto resp = client.GetResponse();
+    std::cout << std::boolalpha << resp.Success() << std::endl;
+    co_return;
 }
 
 int main()
 {
+    galay::scheduler::ResizeCoroutineSchedulers(1);
+    galay::scheduler::StartCoroutineSchedulers();
     func();
     getchar();
-    if(!galay::coroutine::NetCoroutinePool::GetInstance()->IsDone()) 
-    {
-        galay::coroutine::NetCoroutinePool::GetInstance()->WaitForAllDone();
-    }
+    galay::scheduler::StopCoroutineSchedulers();
     return 0;
 }

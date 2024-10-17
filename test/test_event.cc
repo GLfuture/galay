@@ -54,7 +54,7 @@ void Test()
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     auto Work = galay::scheduler::GetCoroutineScheduler(0);
     auto co = Func(Work);
-    Work->AddCoroutine(co.GetHandle().promise().GetCoroutine());
+    Work->ResumeCoroutine(co.GetHandle().promise().GetCoroutine());
     getchar();
     galay::scheduler::StopCoroutineSchedulers();
 }
@@ -77,22 +77,47 @@ void Test()
     setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, (char*)&addr, sizeof(addr));
     int option = 1;
     setsockopt(handle, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
-    galay::event::UnaryStrategy::ptr strategy = std::make_shared<galay::event::UnaryStrategy>([](galay::event::UnaryOperation* operation, galay::coroutine::CoroutineWaitContext* context) ->galay::coroutine::Coroutine{
-        std::string_view data = operation->GetReadBuffer();
-        std::cout << "recv data " << data << std::endl;
-        operation->SetWriteBuffer(data, true);
+    galay::CallbackStore* store = new galay::CallbackStore([](galay::TcpOperation* op) -> galay::coroutine::Coroutine {
+        galay::coroutine::Coroutine* co;
+        co_await galay::coroutine::GetThisCoroutine(co);
+        op->SetTimerCallback([co, op](){
+            op->GetConnection()->CloseConnection();
+            co->Destroy();
+            op->Done();
+        });
+        op->FlushActiveTimer();
+        auto connection = op->GetConnection();
+        int length = co_await connection->WaitForRecv();
+        std::cout << "recv length: " << length << "  data: " << connection->FetchRecvData() << std::endl;
+        connection->ClearRecvData(true);
+        connection->PrepareSendData("hello world");
+        length = co_await connection->WaitForSend();
+        std::cout << "send length: " << length << std::endl;
+        connection->CloseConnection();
+        op->Done();
+        
         co_return;
-    });
     
+    });
+    std::vector<galay::event::ListenEvent*> listen_events;
     for( int i = 0 ; i < EVENT_SCHEDULER_NUM ; ++i )
     {
-        galay::event::ListenEvent* listen_event = new galay::event::ListenEvent(handle, strategy, \
-            galay::scheduler::GetNetIOScheduler(i), galay::scheduler::GetCoroutineScheduler(0), true);
+        galay::event::ListenEvent* listen_event = new galay::event::ListenEvent(handle, store, \
+            galay::scheduler::GetNetIOScheduler(i), galay::scheduler::GetCoroutineScheduler(0));
         galay::scheduler::GetNetIOScheduler(i)->AddEvent(listen_event);
+        listen_events.push_back(listen_event);
     }
     getchar();
+    delete store;
+    for( int i = 0 ; i < EVENT_SCHEDULER_NUM ; ++i )
+    {
+        galay::event::ListenEvent* listen_event = listen_events[i];
+        galay::scheduler::GetNetIOScheduler(i)->DelEvent(listen_event);
+        delete listen_event;
+    }
     galay::scheduler::StopCoroutineSchedulers();
     galay::scheduler::StopNetIOSchedulers();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 #elif defined(TEST_COROUTINE_WAITERS)
 
@@ -139,11 +164,11 @@ void Test()
             tmp = 1;
         }  
         int t = std::any_cast<int>(tmp);
-        if( t <= 10 ){
-            tmp = ++t;
-            time_event->ReAddTimer(1000, timer);
+        tmp = ++t;
+        time_event->ReAddTimer(1000, timer);
+        if(t >= 10) {
+            timer->Cancle();
         }
-        
     });
     getchar();
     galay::scheduler::StopNetIOSchedulers();

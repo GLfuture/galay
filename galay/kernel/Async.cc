@@ -64,13 +64,13 @@ std::string HandleOption::GetLastError()
     return strerror(errno);
 }
 
-AsyncTcpSocket::AsyncTcpSocket(GHandle handle, event::EventEngine *engine)
-    : m_handle(handle), m_engine(engine), m_handle_closed(true)
+AsyncTcpSocket::AsyncTcpSocket(GHandle handle)
+    : m_handle(handle), m_handle_closed(true)
 {
 }
 
-AsyncTcpSocket::AsyncTcpSocket(event::EventEngine *engine)
-    : m_engine(engine), m_handle_closed(true)
+AsyncTcpSocket::AsyncTcpSocket()
+    : m_handle_closed(true)
 {
 }
 
@@ -112,6 +112,27 @@ coroutine::Awaiter_bool AsyncTcpSocket::InitialHandle(GHandle handle)
     return coroutine::Awaiter_bool(true);
 }
 
+coroutine::Awaiter_bool AsyncTcpSocket::BindAndListen(int port, int backlog)
+{
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    if( bind(this->m_handle, (sockaddr*)&addr, sizeof(addr)) )
+    {
+        this->m_last_error = "Bind failed";
+        return coroutine::Awaiter_bool(false);
+    }
+    if( listen(this->m_handle, backlog) )
+    {
+        this->m_last_error = "Listen failed";
+        return coroutine::Awaiter_bool(false);
+    }
+    if( !m_last_error.empty() ) m_last_error.clear();
+    m_handle_closed = false;
+    return coroutine::Awaiter_bool(true);
+}
+
 coroutine::Awaiter_bool AsyncTcpSocket::Connect(const char *host, int port)
 {
     if( !m_last_error.empty() ) m_last_error.clear();
@@ -122,12 +143,14 @@ coroutine::Awaiter_int AsyncTcpSocket::Recv(action::WaitAction* action)
 {
     
     if( !m_last_error.empty() ) m_last_error.clear();
+    m_handle_closed = false;
     return coroutine::Awaiter_int(action);
 }
 
 coroutine::Awaiter_int AsyncTcpSocket::Send(action::WaitAction* action)
 {
     if( !m_last_error.empty() ) m_last_error.clear();
+    m_handle_closed = false;
     return coroutine::Awaiter_int(action);
 }
 

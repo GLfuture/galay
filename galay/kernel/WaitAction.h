@@ -15,17 +15,24 @@ namespace galay::action {
 class NetIoEventAction: public WaitAction
 {
 public:
+    enum ActionType
+    {
+        kActionToAddEvent,
+        kActionToModEvent,
+        kActionToDelEvent,
+    };
+    using ptr = std::shared_ptr<NetIoEventAction>;
+
     NetIoEventAction();
-    NetIoEventAction(event::WaitEvent* event, bool is_heap, ActionType type);
+    NetIoEventAction(event::WaitEvent* event, ActionType type);
     virtual bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     virtual bool DoAction(coroutine::Coroutine* co) override;
-    virtual void ResetEvent(event::WaitEvent* event, bool is_heap) override;
-    virtual void ResetActionType(ActionType type) override;
-    virtual event::WaitEvent* GetBindEvent() override;
+    void ResetEvent(event::WaitEvent* event);
+    void ResetActionType(ActionType type);
+    event::WaitEvent* GetBindEvent();
     virtual ~NetIoEventAction() = default;
 private:
-    bool m_is_heap;
     event::WaitEvent* m_event;
     ActionType m_type;
 };
@@ -41,15 +48,20 @@ public:
     virtual bool HasEventToDo() override;
     // Just Save Coroutine*
     virtual bool DoAction(coroutine::Coroutine* co) override;
-    // Do nothing
-    virtual void ResetEvent(event::WaitEvent* event, bool is_heap) override;
-    // Do nothing
-    virtual void ResetActionType(ActionType type) override;
-    // return nullptr
-    virtual event::WaitEvent* GetBindEvent() override;
     inline coroutine::Coroutine* GetCoroutine() { return m_coroutine; };
 private:
     coroutine::Coroutine* m_coroutine;
+};
+
+class GetCoroutineHandleAction: public WaitAction
+{
+public:
+    GetCoroutineHandleAction(coroutine::Coroutine** m_coroutine);
+    virtual bool HasEventToDo() override;
+    virtual bool DoAction(coroutine::Coroutine* co) override;
+    inline coroutine::Coroutine* GetCoroutine() { return *m_coroutine; };
+private:
+    coroutine::Coroutine** m_coroutine;
 };
 
 }

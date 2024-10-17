@@ -5,6 +5,8 @@
 #include <memory>
 #include <atomic>
 #include <coroutine>
+#include <spdlog/spdlog.h>
+#include "../util/ThreadSefe.hpp"
 
 namespace galay::action
 {
@@ -18,7 +20,21 @@ namespace galay::scheduler
 
 namespace galay::coroutine
 {
-    
+class Coroutine;
+
+class CoroutineStore
+{
+public:
+    void AddCoroutine(Coroutine* co);
+    void RemoveCoroutine(Coroutine* co);
+    ~CoroutineStore();
+private:
+    thread::safe::List<Coroutine*> m_coroutines;
+};
+
+extern CoroutineStore g_coroutine_store;
+
+//如果上一个协程还在执行过程中没有到达暂停点，resume会从第一个暂停点重新执行
 class Coroutine
 {
 public:
@@ -31,13 +47,14 @@ public:
         inline int get_return_object_on_alloaction_failure() noexcept { return -1; }
         inline Coroutine get_return_object() noexcept {
             this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this));
+            g_coroutine_store.AddCoroutine(m_coroutine);
             return *this->m_coroutine;
         }
         inline std::suspend_never initial_suspend() noexcept { return {}; }
         inline std::suspend_always yield_value() noexcept { return {}; }
         inline std::suspend_never final_suspend() noexcept { return {};  }
         inline void unhandled_exception() noexcept {}
-        inline void return_void () noexcept {}
+        inline void return_void () noexcept { g_coroutine_store.RemoveCoroutine(m_coroutine); }
         inline Coroutine* GetCoroutine() { return m_coroutine; }
         inline ~promise_type() { delete m_coroutine; }
     private:
@@ -49,12 +66,15 @@ public:
     Coroutine& operator=(Coroutine&& other) noexcept;
     
     inline std::coroutine_handle<promise_type> GetHandle() { return this->m_handle; }
+    void Destroy();
     inline bool Done() { return m_handle.done(); }
     inline void Resume() { return m_handle.resume(); }
     inline void SetContext(std::any context) { *this->m_context = context; }
     inline std::any GetContext() { return *this->m_context; }
+    inline thread::safe::ListNode<Coroutine*>*& GetListNode() { return m_node; }
     ~Coroutine() = default;
 private:
+    thread::safe::ListNode<Coroutine*>* m_node;
     std::shared_ptr<std::any> m_context;
     std::coroutine_handle<promise_type> m_handle;
 };
@@ -88,6 +108,9 @@ private:
     CoroutineWaiters& m_waiters;
 };
 
+class Awaiter_void;
+
+extern Awaiter_void GetThisCoroutine(Coroutine*& coroutine);
 
 }
 

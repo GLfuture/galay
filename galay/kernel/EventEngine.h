@@ -1,7 +1,6 @@
 #ifndef __GALAY_EVENTSCHEDULER_H__
 #define __GALAY_EVENTSCHEDULER_H__
 #include "Base.h"
-#include "../util/ThreadSecurity.hpp"
 #include <ctype.h>
 #include <string>
 #include <memory>
@@ -53,7 +52,6 @@ private:
     std::string m_error;
     epoll_event *m_ready_events;
     std::atomic_bool m_stop;
-    thread::security::SecurityList<Event*> m_event_list;
 };
 #elif defined(USE_IOURING)
 class IoUringEventEngine

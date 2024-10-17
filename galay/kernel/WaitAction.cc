@@ -8,16 +8,15 @@ namespace galay::action
 {
 
 NetIoEventAction::NetIoEventAction()
-    :m_event(nullptr), m_type(kActionToAddEvent), m_is_heap(false)
+    :m_event(nullptr), m_type(kActionToAddEvent)
 {
     
 }
 
-NetIoEventAction::NetIoEventAction(event::WaitEvent *event, bool is_heap, ActionType type)
+NetIoEventAction::NetIoEventAction(event::WaitEvent *event, ActionType type)
 {
     this->m_event = event;
     this->m_type = type;
-    this->m_is_heap = is_heap;
 }
 
 bool NetIoEventAction::HasEventToDo()
@@ -29,7 +28,7 @@ bool NetIoEventAction::DoAction(coroutine::Coroutine *co)
 {
     if( !m_event ) return false;
     m_event->SetWaitCoroutine(co);
-    event::EventEngine* engine = m_event->GetAsyncTcpSocket()->GetEngine();
+    event::EventEngine* engine = m_event->GetEventEngine();
     switch (m_type)
     {
     case kActionToAddEvent:
@@ -60,10 +59,9 @@ bool NetIoEventAction::DoAction(coroutine::Coroutine *co)
     return true;
 }
 
-void NetIoEventAction::ResetEvent(event::WaitEvent *event, bool is_heap)
+void NetIoEventAction::ResetEvent(event::WaitEvent *event)
 {
     this->m_event = event;
-    this->m_is_heap = is_heap;
 }
 
 void NetIoEventAction::ResetActionType(ActionType type)
@@ -92,18 +90,21 @@ bool CoroutineWaitAction::DoAction(coroutine::Coroutine *co)
     return true;
 }
 
-void CoroutineWaitAction::ResetActionType(ActionType type)
+GetCoroutineHandleAction::GetCoroutineHandleAction(coroutine::Coroutine** m_coroutine)
 {
+    this->m_coroutine = m_coroutine;
 }
 
-event::WaitEvent *CoroutineWaitAction::GetBindEvent()
+bool GetCoroutineHandleAction::HasEventToDo()
 {
-    return nullptr;
+    return true;
 }
 
-void CoroutineWaitAction::ResetEvent(event::WaitEvent *event, bool is_heap)
+bool GetCoroutineHandleAction::DoAction(coroutine::Coroutine *co)
 {
+    *(this->m_coroutine) = co;
+    delete this;
+    return false;
 }
-
 
 }

@@ -1,7 +1,7 @@
 #include "Scheduler.h"
 #include "Event.h"
 #include "EventEngine.h"
-#include "../util/thread.h"
+#include "../util/Thread.h"
 #include <sys/timerfd.h>
 
 namespace galay::scheduler
@@ -21,6 +21,7 @@ void ResizeCoroutineSchedulers(int num)
     }else if(sub < 0) {
         for(int i = g_coroutine_schedulers.size() - 1 ; i >= -sub ; -- i)
         {
+            g_coroutine_schedulers[i]->Stop();
             delete g_coroutine_schedulers[i];
             g_coroutine_schedulers.erase(std::prev(g_coroutine_schedulers.end()));
         }
@@ -38,6 +39,7 @@ void ResizeNetIOSchedulers(int num)
     }else if(sub < 0) {
         for(int i = g_netio_schedulers.size() - 1 ; i >= -sub ; -- i)
         {
+            g_netio_schedulers[i]->Stop();
             delete g_netio_schedulers[i];
             g_netio_schedulers.erase(std::prev(g_netio_schedulers.end()));
         }
@@ -113,11 +115,15 @@ EventScheduler::EventScheduler()
 
 bool EventScheduler::Loop(int timeout)
 {
+    GHandle handle = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+    m_time_event = new event::TimeEvent(handle);
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
+        m_time_event->Free(m_engine.get());
         m_waiter->Decrease();
     });
     this->m_thread->detach();
+    m_engine->AddEvent(m_time_event);
     return true;
 }
 
@@ -149,9 +155,9 @@ EventScheduler::DelEvent(event::Event* event)
     return m_engine->DelEvent(event);
 }
 
-int EventScheduler::AddTimer(std::function<void()> &&callback)
+event::TimeEvent* EventScheduler::GetTimeEvent()
 {
-    return 0;
+    return m_time_event;    
 }
 
 EventScheduler::~EventScheduler()
@@ -169,9 +175,9 @@ CoroutineScheduler::CoroutineScheduler()
 }
 
 void 
-CoroutineScheduler::AddCoroutine(coroutine::Coroutine *coroutine)
+CoroutineScheduler::ResumeCoroutine(coroutine::Coroutine *coroutine)
 {
-    m_coroutine_event->AddCoroutine(coroutine);
+    m_coroutine_event->ResumeCoroutine(coroutine);
 }
 
 bool CoroutineScheduler::Loop(int timeout)
@@ -183,7 +189,7 @@ bool CoroutineScheduler::Loop(int timeout)
     });
     this->m_thread->detach();
     GHandle handle = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC);
-    this->m_coroutine_event = new event::CoroutineEvent(handle, m_engine.get(), event::EventType::kEventTypeRead, true);
+    this->m_coroutine_event = new event::CoroutineEvent(handle, m_engine.get(), event::EventType::kEventTypeRead);
     m_engine->AddEvent(this->m_coroutine_event);
     return true;
 }
@@ -196,6 +202,7 @@ bool CoroutineScheduler::Stop()
 
 CoroutineScheduler::~CoroutineScheduler()
 {
+
 }
 
 
