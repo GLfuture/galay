@@ -5,8 +5,12 @@
 #include "Operation.h"
 #include "../util/Time.h"
 #include <string.h>
+#if defined(__linux__)
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
+#elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+
+#endif
 #include <spdlog/spdlog.h>
 
 namespace galay::event

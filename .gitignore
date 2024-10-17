@@ -5,3 +5,7 @@
 /build
 
 /.vscode
+
+/.vs
+
+/out

@@ -3,7 +3,6 @@
 #include "Protocol.h"
 #include <queue>
 #include <string.h>
-#include <arpa/inet.h>
 
 namespace galay::protocol::dns
 {

@@ -1,5 +1,12 @@
 #include "Dns.h"
 #include "../util/StringTools.h"
+#include <cstring>
+#if defined(__linux__)
+    #include <arpa/inet.h>
+#elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    #include <WinSock2.h>
+    #include <ws2tcpip.h>
+#endif // 
 
 
 namespace galay::protocol::dns
@@ -34,7 +41,7 @@ std::string
 DnsRequest::EncodePdu()
 {
     unsigned char buffer[MAX_UDP_LENGTH];
-    bzero(buffer, MAX_UDP_LENGTH);
+    memset(buffer, 0, MAX_UDP_LENGTH);
     unsigned char *ptr = buffer;
     unsigned short id = htons(m_header.m_id);
     memcpy(ptr, &id, sizeof(unsigned short));
@@ -86,7 +93,7 @@ DnsRequest::DecodePdu(const std::string &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
-    bzero(temp, buffer.length());
+    memset(temp, 0, buffer.length());
     memcpy(temp, buffer.c_str(), buffer.length());
     unsigned short id;
     memcpy(&id, temp, sizeof(unsigned short));
@@ -174,7 +181,7 @@ DnsRequest::DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string 
         }
         else
         {
-            bzero(temp, 64);
+            memset(temp, 0, 64);
             ptr++;
             memcpy(temp, ptr, flag);
             ptr += flag;
@@ -201,7 +208,7 @@ DnsResponse::DecodePdu(const std::string &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
-    bzero(temp, buffer.length());
+    memset(temp, 0, buffer.length());
     memcpy(temp, buffer.c_str(), buffer.length());
     unsigned short id;
     memcpy(&id, temp, sizeof(unsigned short));
@@ -365,7 +372,7 @@ DnsResponse::DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string
         }
         else
         {
-            bzero(temp, 64);
+            memset(temp, 0, 64);
             ptr++;
             memcpy(temp, ptr, flag);
             ptr += flag;

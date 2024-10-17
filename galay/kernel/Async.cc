@@ -5,6 +5,9 @@
     #include <sys/socket.h>
     #include <arpa/inet.h>
     #include <fcntl.h>
+#elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    #include <ws2ipdef.h>
+    #include <WS2tcpip.h>
 #endif
 #include <string.h>
 
@@ -18,9 +21,14 @@ HandleOption::HandleOption(GHandle handle)
 
 bool HandleOption::HandleBlock()
 {
+#if defined(__linux__)
     int flag = fcntl(this->m_handle, F_GETFL, 0);
     flag &= ~O_NONBLOCK;
     int ret = fcntl(this->m_handle, F_SETFL, flag);
+#elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    u_long mode = 0; // 1 表示非阻塞模式
+    int ret = ioctlsocket(m_handle, FIONBIO, &mode);
+#endif
     if (ret < 0) {
         return false;
     }
@@ -29,20 +37,29 @@ bool HandleOption::HandleBlock()
 
 bool HandleOption::HandleNonBlock()
 {
+#if defined(__linux__)
     int flag = fcntl(this->m_handle, F_GETFL, 0);
     flag |= O_NONBLOCK;
     int ret = fcntl(this->m_handle, F_SETFL, flag);
+#elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    u_long mode = 1; // 1 表示非阻塞模式
+    int ret = ioctlsocket(m_handle, FIONBIO, &mode);
+#endif
     if (ret < 0) {
         return false;
     }
-    
     return true;
 }
 
 bool HandleOption::HandleReuseAddr()
 {
+#if defined(__linux__)
     int option = 1;
     int ret = setsockopt(this->m_handle, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+#elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    BOOL option = TRUE;
+    int ret = setsockopt(m_handle, SOL_SOCKET, SO_REUSEADDR, (char*)&option, sizeof(option));
+#endif
     if (ret < 0) {   
         return false;
     }
@@ -51,11 +68,15 @@ bool HandleOption::HandleReuseAddr()
 
 bool HandleOption::HandleReusePort()
 {
+#if defined(__linux__)
     int option = 1;
     int ret = setsockopt(this->m_handle, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
     if (ret < 0) {
         return false;
     }
+#elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+
+#endif
     return true;
 }
 
@@ -136,7 +157,7 @@ coroutine::Awaiter_bool AsyncTcpSocket::BindAndListen(int port, int backlog)
 coroutine::Awaiter_bool AsyncTcpSocket::Connect(const char *host, int port)
 {
     if( !m_last_error.empty() ) m_last_error.clear();
-    //return coroutine::Awaiter_int();
+    return coroutine::Awaiter_bool(true);
 }
 
 coroutine::Awaiter_int AsyncTcpSocket::Recv(action::WaitAction* action)
@@ -158,7 +179,7 @@ coroutine::Awaiter_bool AsyncTcpSocket::Close()
 {
 
     if( m_handle_closed ) return coroutine::Awaiter_bool(false);
-    int ret = close(this->m_handle);
+    int ret = closesocket(this->m_handle);
     if( ret < 0 ) {
         this->m_last_error = "Close failed";
         return coroutine::Awaiter_bool(false);

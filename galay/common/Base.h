@@ -6,7 +6,12 @@ typedef int GHandle;
 #elif defined(__APPLE__)
 typedef int GHandle;
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
-typedef HANDLE GHandle;
+#include <WinSock2.h>
+#pragma comment(lib,"ws2_32.lib")
+typedef SOCKET GHandle;
+typedef int socklen_t;
+typedef signed long ssize_t;
+
 #else
 #error "Unsupported platform"
 #endif
@@ -18,6 +23,8 @@ typedef HANDLE GHandle;
     //#else
         #define USE_EPOLL
     //#endif
+#elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    #define USE_IOCP
 #endif
 
 #if defined(USE_EPOLL)
@@ -28,6 +35,8 @@ typedef HANDLE GHandle;
     #include <arpa/inet.h>
 #elif defined(USE_IOURING)
     #include <liburing.h>
+#elif defined(USE_IOCP)
+    
 #endif
 
 #endif

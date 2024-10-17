@@ -1,6 +1,7 @@
 #ifndef __GALAY_IO_H__
 #define __GALAY_IO_H__
 
+#include "../common/Base.h"
 #include <string>
 #include <string.h>
 #include <memory>

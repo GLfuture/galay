@@ -2,7 +2,11 @@
 #define __GALAY_TYPENAME_H__
 
 #include <string>
+#if  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+#elif
 #include <cxxabi.h>
+#endif
+
 
 namespace galay::util
 {
