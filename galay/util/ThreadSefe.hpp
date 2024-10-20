@@ -33,7 +33,7 @@ public:
         m_tail = new ListNode<T>();
         m_head->m_next = m_tail;
         m_tail->m_prev = m_head;
-        m_size = 0;
+        m_size.store(0);
     }
 
     ListNode<T>* PushFront(const T& data)
@@ -87,11 +87,13 @@ public:
     ListNode<T>* PopFront()
     {
         std::unique_lock lock(this->m_mtx);
-        if( m_size.load() == 0 ) return nullptr;
+        if( m_size.load() <= 0 ) return nullptr;
         ListNode<T>* node = m_head->m_next;
         node->m_next->m_prev = m_head;
         m_head->m_next = node->m_next;
         m_size.fetch_sub(1);
+        node->m_next = nullptr;
+        node->m_prev = nullptr;
         return node;
     }
 
@@ -103,6 +105,8 @@ public:
         node->m_prev->m_next = m_tail;
         m_tail->m_prev = node->m_prev;
         m_size.fetch_sub(1);
+        node->m_next = nullptr;
+        node->m_prev = nullptr;
         return node;
     }
     
@@ -110,7 +114,7 @@ public:
     bool Remove(ListNode<T>* node)
     {
         std::unique_lock lock(this->m_mtx);
-        if( node == nullptr ) return false;
+        if( node == nullptr || node->m_next == nullptr || node->m_prev == nullptr ) return false;
         node->m_prev->m_next = node->m_next;
         node->m_next->m_prev = node->m_prev;
         m_size.fetch_sub(1);

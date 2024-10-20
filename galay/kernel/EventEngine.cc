@@ -91,6 +91,7 @@ EpollEventEngine::AddEvent(Event *event)
         if (!m_error.empty()){
             m_error.clear();
         }
+        event->SetEventInEngine(true);
     }
     return ret;
 }
@@ -131,6 +132,7 @@ EpollEventEngine::DelEvent(Event* event)
         if (!m_error.empty()){
             m_error.clear();
         }
+        event->SetEventInEngine(false);
     }
     return ret;
 }
@@ -144,16 +146,14 @@ EpollEventEngine::~EpollEventEngine()
 void 
 EpollEventEngine::ConvertToEpollEvent(epoll_event &ev, Event *event)
 {
-    switch (event->GetEventType())
-    {
-    case kEventTypeRead:
-        ev.events = EPOLLIN | EPOLLET;
-        break;
-    case kEventTypeWrite:
-        ev.events = EPOLLOUT | EPOLLET;
-        break;
-    default:
-        break;
+    int event_type = event->GetEventType();
+    ev.events = 0;
+    ev.events = EPOLLET;
+    if( event_type & kEventTypeRead) {
+        ev.events |= EPOLLIN;
+    }
+    if( event_type & kEventTypeWrite) {
+        ev.events |= EPOLLOUT;
     }
 }
 

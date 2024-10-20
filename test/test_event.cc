@@ -77,24 +77,18 @@ void Test()
     setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, (char*)&addr, sizeof(addr));
     int option = 1;
     setsockopt(handle, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
-    galay::CallbackStore* store = new galay::CallbackStore([](galay::TcpOperation* op) -> galay::coroutine::Coroutine {
+    galay::CallbackStore* store = new galay::CallbackStore([](galay::TcpOperation op) -> galay::coroutine::Coroutine {
         galay::coroutine::Coroutine* co;
         co_await galay::coroutine::GetThisCoroutine(co);
-        op->SetTimerCallback([co, op](){
-            op->GetConnection()->CloseConnection();
-            co->Destroy();
-            op->Done();
-        });
-        op->FlushActiveTimer();
-        auto connection = op->GetConnection();
+        auto connection = op.GetConnection();
         int length = co_await connection->WaitForRecv();
-        std::cout << "recv length: " << length << "  data: " << connection->FetchRecvData() << std::endl;
-        connection->ClearRecvData(true);
+        galay::StringViewWrapper data = connection->FetchRecvData();
+        std::cout << "recv length: " << length << "  data: " << data.Data() << std::endl;
+        data.Clear();
         connection->PrepareSendData("hello world");
         length = co_await connection->WaitForSend();
         std::cout << "send length: " << length << std::endl;
         connection->CloseConnection();
-        op->Done();
         
         co_return;
     

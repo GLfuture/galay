@@ -1,9 +1,9 @@
 #ifndef GALAY_PROTOCOL_H
 #define GALAY_PROTOCOL_H
 
-#include <string>
 #include <memory>
-#include <any>
+#include <string>
+#include <string_view>
 #include "../common/Reflection.h"
 
 namespace galay::protocol
@@ -21,7 +21,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<SRequest>;
         using wptr = std::weak_ptr<SRequest>;
         using uptr = std::unique_ptr<SRequest>;
-        virtual int DecodePdu(const std::string &buffer) = 0;
+        virtual int DecodePdu(const std::string_view &buffer) = 0;
     };
 
     class CResponse{
@@ -29,7 +29,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<CResponse>;
         using wptr = std::weak_ptr<CResponse>;
         using uptr = std::unique_ptr<CResponse>;
-        virtual int DecodePdu(const std::string &buffer) = 0;
+        virtual int DecodePdu(const std::string_view &buffer) = 0;
     };
 
     class SResponse{
@@ -54,7 +54,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<Request>;
         using wptr = std::weak_ptr<Request>;
         using uptr = std::unique_ptr<Request>;
-        virtual int DecodePdu(const std::string &buffer) = 0;
+        virtual int DecodePdu(const std::string_view &buffer) = 0;
         virtual std::string EncodePdu() = 0;
         virtual bool ParseIncomplete() final;
         virtual bool ParseIllegal() final;
@@ -73,7 +73,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<Response>;
         using wptr = std::weak_ptr<Response>;
         using uptr = std::unique_ptr<Response>;
-        virtual int DecodePdu(const std::string &buffer) = 0;
+        virtual int DecodePdu(const std::string_view &buffer) = 0;
         virtual std::string EncodePdu() = 0;
         virtual bool ParseIncomplete() final;
         virtual bool ParseIllegal() final;

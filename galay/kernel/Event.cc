@@ -17,7 +17,7 @@ namespace galay::event
 {
     
 CallbackEvent::CallbackEvent(GHandle handle, EventType type, std::function<void(Event*, EventEngine*)> callback)
-    : m_handle(handle), m_type(type), m_callback(callback)
+    : m_handle(handle), m_type(type), m_callback(callback), m_event_in_engine(false)
 {
     
 }
@@ -29,12 +29,12 @@ void CallbackEvent::HandleEvent(EventEngine *engine)
 
 void CallbackEvent::Free(EventEngine *engine)
 {
-    engine->DelEvent(this); 
+    if (m_event_in_engine) engine->DelEvent(this); 
     delete this;
 }
 
 CoroutineEvent::CoroutineEvent(GHandle handle, EventEngine* engine, EventType type)
-    : m_handle(handle), m_engine(engine), m_type(type)
+    : m_handle(handle), m_engine(engine), m_type(type), m_event_in_engine(false)
 {
 }
 
@@ -55,7 +55,7 @@ void CoroutineEvent::HandleEvent(EventEngine *engine)
 
 void CoroutineEvent::Free(EventEngine *engine)
 {
-    engine->DelEvent(this);  
+    if( m_event_in_engine ) engine->DelEvent(this);  
     delete this;
 }
 
@@ -69,7 +69,7 @@ void CoroutineEvent::ResumeCoroutine(coroutine::Coroutine *coroutine)
 }
 
 ListenEvent::ListenEvent(GHandle handle, CallbackStore* callback_store, scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_schedule)
-    : m_handle(handle), m_callback_store(callback_store), m_net_scheduler(net_scheduler), m_co_scheduler(co_schedule)
+    : m_handle(handle), m_callback_store(callback_store), m_net_scheduler(net_scheduler), m_co_scheduler(co_schedule), m_event_in_engine(false)
 {
     async::HandleOption option(this->m_handle);
     option.HandleNonBlock();
@@ -82,13 +82,13 @@ void ListenEvent::HandleEvent(EventEngine *engine)
 
 void ListenEvent::Free(EventEngine *engine)
 {
-    engine->DelEvent(this);  
+    if( m_event_in_engine ) engine->DelEvent(this);  
     delete this;
 }
 
 coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
 {
-    #if defined(USE_EPOLL)
+#if defined(USE_EPOLL)
     while(1)
     {
         async::AsyncTcpSocket* socket = new async::AsyncTcpSocket();
@@ -104,7 +104,7 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle());
         if (!socket->GetOption().HandleNonBlock())
         {
-            socket->Close();
+            closesocket(this->m_handle);
             spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
@@ -180,7 +180,7 @@ TimeEvent::Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr
 }
 
 TimeEvent::TimeEvent(GHandle handle)
-    : m_handle(handle)
+    : m_handle(handle), m_event_in_engine(false)
 {
     
 }
@@ -204,7 +204,7 @@ void TimeEvent::HandleEvent(EventEngine *engine)
 
 void TimeEvent::Free(EventEngine *engine)
 {
-    engine->DelEvent(this);
+    if( m_event_in_engine ) engine->DelEvent(this);
     delete this;
 }
 
@@ -259,38 +259,168 @@ void TimeEvent::UpdateTimers()
     timerfd_settime(this->m_handle, 0, &its, nullptr);
 }
 
-WaitEvent::WaitEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket, EventType type)
-    :m_engine(engine), m_waitco(nullptr), m_type(type), m_socket(socket)
+WaitEvent::WaitEvent(event::EventEngine* engine)
+    :m_engine(engine), m_waitco(nullptr), m_event_in_engine(false)
 {
 }
 
-void WaitEvent::HandleEvent(EventEngine *engine)
+NetWaitEvent::NetWaitEvent(NetWaitEventType type, event::EventEngine *engine, async::AsyncTcpSocket *socket)
+    :WaitEvent(engine), m_type(type), m_socket(socket)
 {
-    scheduler::GetCoroutineScheduler(m_socket->GetHandle() % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
 }
 
-void WaitEvent::Free(EventEngine *engine)
+std::string NetWaitEvent::Name()
 {
-    engine->DelEvent(this);  
+    switch (m_type)
+    {
+    case kWaitEventTypeRecv:
+        return "RecvEvent";
+    case kWaitEventTypeSend:
+        return "SendEvent";
+    case kWaitEventTypeConnect:
+        return "ConnectEvent";
+    case kWaitEventTypeClose:
+        return "CloseEvent";
+    default:
+        break;
+    }
+    return "UnknownEvent";
+}
+
+bool NetWaitEvent::OnWaitPrepare(coroutine::Coroutine *co)
+{
+    switch (m_type)
+    {
+    case kWaitEventTypeRecv:
+        return OnRecvWaitPrepare(co);
+    case kWaitEventTypeSend:
+        return OnSendWaitPrepare(co);
+    case kWaitEventTypeConnect:
+        return OnConnectWaitPrepare(co);
+    case kWaitEventTypeClose:
+        return OnCloseWaitPrepare(co);
+    default:
+        break;
+    }
+    return false;
+}
+
+void NetWaitEvent::HandleEvent(EventEngine *engine)
+{
+    switch (m_type)
+    {
+    case kWaitEventTypeRecv:
+        HandleRecvEvent(engine);
+        return;
+    case kWaitEventTypeSend:
+        HandleSendEvent(engine);
+        return;
+    case kWaitEventTypeConnect:
+        HandleConnectEvent(engine);
+        return;
+    }
+}
+
+int NetWaitEvent::GetEventType()
+{
+    switch (m_type)
+    {
+    case kWaitEventTypeRecv:
+        return kEventTypeRead;
+    case kWaitEventTypeSend:
+        return kEventTypeWrite;
+    case kWaitEventTypeConnect:
+        return kEventTypeWrite;
+    case kWaitEventTypeClose:
+        return kEventTypeRead | kEventTypeWrite;
+    default:
+        break;
+    }
+    return kEventTypeRead;
+}
+
+GHandle NetWaitEvent::GetHandle()
+{
+    return m_socket->GetHandle();
+}
+
+void NetWaitEvent::Free(EventEngine *engine)
+{
+    if( m_event_in_engine ) engine->DelEvent(this);  
     delete this;
 }
 
-GHandle WaitEvent::GetHandle()
-{
-    return m_socket->GetHandle();;
-}
-
-void WaitEvent::SetWaitCoroutine(coroutine::Coroutine *co)
+bool NetWaitEvent::OnRecvWaitPrepare(coroutine::Coroutine *co)
 {
     this->m_waitco = co;
+    int recvBytes = DealRecv();
+    if( recvBytes == 0 ) return true;
+    return false;
 }
 
-RecvEvent::RecvEvent(event::EventEngine* engine, async::AsyncTcpSocket *socket)
-    :WaitEvent(engine, socket, kEventTypeRead)
+bool NetWaitEvent::OnSendWaitPrepare(coroutine::Coroutine *co)
 {
+    this->m_waitco = co;
+    int sendBytes = DealSend();
+    if (sendBytes == 0){
+        return true;
+    }
+    //mod为recv状态
+    ResetNetWaitEventType(kWaitEventTypeRecv);
+    m_engine->ModEvent(this);
+    return false;
 }
 
-void RecvEvent::HandleEvent(EventEngine *engine)
+bool NetWaitEvent::OnConnectWaitPrepare(coroutine::Coroutine *co)
+{
+    // To Do
+}
+
+bool NetWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co)
+{
+    if (m_event_in_engine) {
+        if( m_engine->DelEvent(this) != 0 ) {
+            co->SetContext(false);
+        }else{
+            co->SetContext(true);
+        }
+    }
+    int ret = closesocket(m_socket->GetHandle());
+    if( ret < 0 ) {
+        co->SetContext(false);
+    } else {
+        co->SetContext(true);
+    }
+    return false;
+}
+
+void NetWaitEvent::HandleRecvEvent(EventEngine *engine)
+{
+    DealRecv();
+    //2.唤醒协程
+    scheduler::GetCoroutineScheduler(m_socket->GetHandle() % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
+}
+
+void NetWaitEvent::HandleSendEvent(EventEngine *engine)
+{
+    DealSend();
+    //mod为recv状态
+    ResetNetWaitEventType(kWaitEventTypeRecv);
+    m_engine->ModEvent(this);
+    scheduler::GetCoroutineScheduler(m_socket->GetHandle() % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
+}
+
+void NetWaitEvent::HandleConnectEvent(EventEngine *engine)
+{
+    //To Do
+}
+
+void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
+{
+    //do nothing    
+}
+
+int NetWaitEvent::DealRecv()
 {
     GHandle handle = this->m_socket->GetHandle();
     char* result = nullptr;
@@ -318,7 +448,7 @@ void RecvEvent::HandleEvent(EventEngine *engine)
         } else {
             if(initial) {
                 result = new char[ret];
-                bzero(result, ret);
+                memset(result, 0, ret);
                 initial = false;
             }else{
                 result = (char*)realloc(result, ret + recvBytes);
@@ -328,7 +458,7 @@ void RecvEvent::HandleEvent(EventEngine *engine)
         }
     } while(1); 
     if( recvBytes > 0){
-        spdlog::debug("RecvEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", engine->GetHandle(), handle, recvBytes, std::string_view(result, recvBytes));   
+        spdlog::debug("RecvEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle(), handle, recvBytes, std::string_view(result, recvBytes));   
         std::string_view origin = m_socket->GetRBuffer();
         char* new_buffer = nullptr;
         if(!origin.empty()) {
@@ -342,20 +472,14 @@ void RecvEvent::HandleEvent(EventEngine *engine)
         }
         m_socket->SetRBuffer(std::string_view(new_buffer, recvBytes + origin.size()));
     }
-    //2.唤醒协程
-    scheduler::GetCoroutineScheduler(handle % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
+    return recvBytes;
 }
 
-SendEvent::SendEvent(event::EventEngine* engine, async::AsyncTcpSocket *socket)
-    :WaitEvent(engine, socket, kEventTypeWrite)
-{
-}
-
-void SendEvent::HandleEvent(EventEngine *engine)
+int NetWaitEvent::DealSend()
 {
     GHandle handle = this->m_socket->GetHandle();
     int sendBytes = 0;
-    std::string_view wbuffer = m_socket->MoveWBuffer();
+    std::string_view wbuffer = m_socket->GetWBuffer();
     do {
         std::string_view view = wbuffer.substr(sendBytes);
         int ret = send(handle, view.data(), view.size(), 0);
@@ -378,8 +502,8 @@ void SendEvent::HandleEvent(EventEngine *engine)
         }
     } while (1);
     m_socket->SetWBuffer(wbuffer.substr(sendBytes));
-    spdlog::debug("RecvEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", engine->GetHandle(), handle, sendBytes, wbuffer.substr(0, sendBytes));
-    scheduler::GetCoroutineScheduler(handle % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
+    spdlog::debug("SendEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle(), handle, sendBytes, wbuffer.substr(0, sendBytes));
+    return sendBytes;
 }
 
 }

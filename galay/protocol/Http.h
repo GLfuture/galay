@@ -203,15 +203,15 @@ namespace galay::protocol::http
         error::HttpError::ptr Error();
         HttpRequestHeader::ptr Header();
         std::string& Body();
-        int DecodePdu(const std::string &buffer) override;
+        int DecodePdu(const std::string_view &buffer) override;
         std::string EncodePdu() override;
         //chunck
         bool StartChunck();
-        std::string ChunckStream(std::string&& buffer);
+        std::string ToChunckData(std::string&& buffer);
         std::string EndChunck();
     private:
-        int GetHttpBody(const std::string& buffer, int elength);
-        int GetChunckBody(const std::string& buffer, int elength);
+        int GetHttpBody(const std::string_view& buffer, int elength);
+        int GetChunckBody(const std::string_view& buffer, int elength);
         void DealProtoError(error::HttpErrorCode code);
     private:
         HttpProStatus m_status = kHttpHeader;
@@ -248,14 +248,14 @@ namespace galay::protocol::http
         HttpResponseHeader::ptr Header();
         std::string& Body();
         std::string EncodePdu() override;
-        int DecodePdu(const std::string &buffer) override;
+        int DecodePdu(const std::string_view &buffer) override;
         //chunck
         bool StartChunck();
-        std::string ChunckStream(std::string&& buffer);
+        std::string ToChunckData(std::string&& buffer);
         std::string EndChunck();
     private:
-        int GetHttpBody(const std::string& buffer, int eLength);
-        int GetChunckBody(const std::string& buffer, int eLength);
+        int GetHttpBody(const std::string_view& buffer, int eLength);
+        int GetChunckBody(const std::string_view& buffer, int eLength);
         void DealProtoError(error::HttpErrorCode code);
     private:
         HttpProStatus m_status = kHttpHeader;

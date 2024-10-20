@@ -3,7 +3,7 @@
 
 #include <string>
 #if  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
-#elif
+#else
 #include <cxxabi.h>
 #endif
 

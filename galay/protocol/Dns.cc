@@ -1,12 +1,6 @@
 #include "Dns.h"
-#include "../util/StringTools.h"
+#include "../util/String.h"
 #include <cstring>
-#if defined(__linux__)
-    #include <arpa/inet.h>
-#elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
-    #include <WinSock2.h>
-    #include <ws2tcpip.h>
-#endif // 
 
 
 namespace galay::protocol::dns
@@ -89,12 +83,12 @@ DnsRequest::EncodePdu()
 }
 
 int 
-DnsRequest::DecodePdu(const std::string &buffer)
+DnsRequest::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
     memset(temp, 0, buffer.length());
-    memcpy(temp, buffer.c_str(), buffer.length());
+    memcpy(temp, buffer.cbegin(), buffer.length());
     unsigned short id;
     memcpy(&id, temp, sizeof(unsigned short));
     temp += sizeof(unsigned short);
@@ -149,7 +143,7 @@ DnsRequest::DecodePdu(const std::string &buffer)
 std::string 
 DnsRequest::ModifyHostname(std::string hostname)
 {
-    std::vector<std::string> temp = tools::StringSplitter::SpiltWithChar(hostname, '.');
+    std::vector<std::string> temp = string::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {
@@ -204,12 +198,12 @@ DnsRequest::IsPointer(int in)
 
 
 int 
-DnsResponse::DecodePdu(const std::string &buffer)
+DnsResponse::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
     memset(temp, 0, buffer.length());
-    memcpy(temp, buffer.c_str(), buffer.length());
+    memcpy(temp, buffer.cbegin(), buffer.length());
     unsigned short id;
     memcpy(&id, temp, sizeof(unsigned short));
     temp += sizeof(unsigned short);
@@ -300,7 +294,7 @@ DnsResponse::EncodePdu()
 std::string 
 DnsResponse::ModifyHostname(std::string hostname)
 {
-    std::vector<std::string> temp = tools::StringSplitter::SpiltWithChar(hostname, '.');
+    std::vector<std::string> temp = string::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {

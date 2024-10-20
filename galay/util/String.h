@@ -8,7 +8,7 @@
 #endif
 #include <algorithm>
 
-namespace galay::tools
+namespace galay::string
 {
     class StringSplitter
     {

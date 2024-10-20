@@ -39,7 +39,7 @@ namespace galay::protocol::smtp
         using wpt = std::weak_ptr<SmtpRequest>;
         using uptr = std::unique_ptr<SmtpRequest>;
         SmtpRequest() = default;
-        virtual int DecodePdu(const std::string &buffer) override;
+        virtual int DecodePdu(const std::string_view &buffer) override;
         virtual std::string EncodePdu() override;
         std::string& GetContent();
     private:
@@ -56,7 +56,7 @@ namespace galay::protocol::smtp
         using wptr = std::weak_ptr<SmtpResponse>;
         using uptr = std::unique_ptr<SmtpResponse>;
         SmtpResponse() = default;
-        virtual int DecodePdu(const std::string &buffer) override;
+        virtual int DecodePdu(const std::string_view &buffer) override;
         virtual std::string EncodePdu() override;
         std::string& GetContent();
     private:

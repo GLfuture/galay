@@ -88,7 +88,7 @@ SmtpHelper::Quit(SmtpRequest& request)
 }
 
 int 
-SmtpRequest::DecodePdu(const std::string& buffer)
+SmtpRequest::DecodePdu(const std::string_view& buffer)
 {
     int pos = buffer.find("\r\n");
     if(pos == std::string::npos) {
@@ -114,7 +114,7 @@ SmtpRequest::GetContent()
 
 
 int 
-SmtpResponse::DecodePdu(const std::string &buffer)
+SmtpResponse::DecodePdu(const std::string_view &buffer)
 {
     int pos = buffer.find("\r\n");
     if(pos == std::string::npos) {

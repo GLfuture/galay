@@ -517,7 +517,7 @@ HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& v
 
 
 int 
-HttpRequest::DecodePdu(const std::string& buffer)
+HttpRequest::DecodePdu(const std::string_view& buffer)
 {
     Success();
     size_t n = buffer.length();
@@ -625,7 +625,7 @@ HttpRequest::StartChunck()
 }
 
 std::string 
-HttpRequest::ChunckStream(std::string&& buffer)
+HttpRequest::ToChunckData(std::string&& buffer)
 {
     size_t length = buffer.length();
     std::string res = std::to_string(length);
@@ -666,7 +666,7 @@ HttpRequest::Body()
 }
 
 int 
-HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
+HttpRequest::GetHttpBody(const std::string_view &buffer, int eLength)
 {
     size_t n = buffer.length();
     if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
@@ -703,16 +703,16 @@ HttpRequest::GetHttpBody(const std::string &buffer, int eLength)
 }
 
 int 
-HttpRequest::GetChunckBody(const std::string& buffer, int eLength)
+HttpRequest::GetChunckBody(const std::string_view& buffer, int eLength)
 {
     while (!buffer.empty())
     {
         int pos = buffer.find("\r\n", eLength);
-        std::string temp = buffer.substr(eLength, pos - eLength);
+        std::string_view temp = buffer.substr(eLength, pos - eLength);
         int length;
         try
         {
-            length = std::stoi(temp);
+            length = std::stoi(std::string(temp.cbegin(), temp.length()));
         }
         catch (const std::exception &e)
         {
@@ -1048,7 +1048,7 @@ HttpResponse::EncodePdu()
 
 
 int 
-HttpResponse::DecodePdu(const std::string& buffer)
+HttpResponse::DecodePdu(const std::string_view& buffer)
 {
     Success();
     size_t n = buffer.length();
@@ -1139,7 +1139,7 @@ HttpResponse::StartChunck()
 }
 
 std::string 
-HttpResponse::ChunckStream(std::string&& buffer)
+HttpResponse::ToChunckData(std::string&& buffer)
 {
     size_t length = buffer.length();
     std::string res = std::to_string(length);
@@ -1157,7 +1157,7 @@ HttpResponse::EndChunck()
 
 
 int 
-HttpResponse::GetHttpBody(const std::string& buffer, int eLength)
+HttpResponse::GetHttpBody(const std::string_view& buffer, int eLength)
 {
     size_t n = buffer.length();
     if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
@@ -1195,16 +1195,16 @@ HttpResponse::GetHttpBody(const std::string& buffer, int eLength)
 
 
 int 
-HttpResponse::GetChunckBody(const std::string& buffer, int eLength)
+HttpResponse::GetChunckBody(const std::string_view& buffer, int eLength)
 {
     while (!buffer.empty())
     {
         int pos = buffer.find("\r\n", eLength);
-        std::string temp = buffer.substr(eLength, pos - eLength);
+        std::string_view temp = buffer.substr(eLength, pos - eLength);
         int length;
         try
         {
-            length = std::stoi(temp);
+            length = std::stoi(std::string(temp.cbegin(), temp.length()));
         }
         catch (const std::exception &e)
         {

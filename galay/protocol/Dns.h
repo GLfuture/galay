@@ -3,6 +3,12 @@
 #include "Protocol.h"
 #include <queue>
 #include <string.h>
+#if defined(__linux__)
+    #include <arpa/inet.h>
+#elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    #include <WinSock2.h>
+    #include <ws2tcpip.h>
+#endif // 
 
 namespace galay::protocol::dns
 {
@@ -84,7 +90,7 @@ namespace galay::protocol::dns
         using ptr = std::shared_ptr<DnsRequest>;
         std::string EncodePdu() override;
         // ignore
-        int DecodePdu(const std::string &buffer) override;
+        int DecodePdu(const std::string_view &buffer) override;
     protected:
         std::string ModifyHostname(std::string hostname);
         int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);
@@ -95,7 +101,7 @@ namespace galay::protocol::dns
     {
     public:
         using ptr = std::shared_ptr<DnsResponse>;
-        int DecodePdu(const std::string &buffer) override;
+        int DecodePdu(const std::string_view &buffer) override;
         // ignore
         std::string EncodePdu() override;
     protected:

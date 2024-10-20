@@ -1,6 +1,6 @@
-#include "StringTools.h"
+#include "String.h"
 
-namespace galay::tools
+namespace galay::string
 {
 std::vector<std::string> 
 StringSplitter::SpiltWithChar(const std::string &str, const char symbol)

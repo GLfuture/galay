@@ -25,7 +25,7 @@
 //util
 #include "util/Parser.h"
 #include "util/Io.h"
-#include "util/StringTools.h"
+#include "util/String.h"
 #include "util/TypeName.h"
 #include "util/Random.h"
 #include "util/RateLimiter.h"

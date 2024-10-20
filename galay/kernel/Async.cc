@@ -75,7 +75,7 @@ bool HandleOption::HandleReusePort()
         return false;
     }
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
-
+    //To Do
 #endif
     return true;
 }
@@ -86,12 +86,11 @@ std::string HandleOption::GetLastError()
 }
 
 AsyncTcpSocket::AsyncTcpSocket(GHandle handle)
-    : m_handle(handle), m_handle_closed(true)
+    : m_handle(handle)
 {
 }
 
 AsyncTcpSocket::AsyncTcpSocket()
-    : m_handle_closed(true)
 {
 }
 
@@ -109,7 +108,6 @@ coroutine::Awaiter_bool AsyncTcpSocket::InitialHandle()
         return coroutine::Awaiter_bool(false);
     }
     if( !m_last_error.empty() ) m_last_error.clear();
-    m_handle_closed = false;
     return coroutine::Awaiter_bool(true);
 }
 
@@ -129,7 +127,6 @@ coroutine::Awaiter_bool AsyncTcpSocket::InitialHandle(GHandle handle)
         }
     }
     if( !m_last_error.empty() ) m_last_error.clear();
-    m_handle_closed = false;
     return coroutine::Awaiter_bool(true);
 }
 
@@ -150,43 +147,32 @@ coroutine::Awaiter_bool AsyncTcpSocket::BindAndListen(int port, int backlog)
         return coroutine::Awaiter_bool(false);
     }
     if( !m_last_error.empty() ) m_last_error.clear();
-    m_handle_closed = false;
     return coroutine::Awaiter_bool(true);
 }
 
-coroutine::Awaiter_bool AsyncTcpSocket::Connect(const char *host, int port)
+coroutine::Awaiter_bool AsyncTcpSocket::Connect(action::NetIoEventAction* action)
 {
     if( !m_last_error.empty() ) m_last_error.clear();
-    return coroutine::Awaiter_bool(true);
+    return coroutine::Awaiter_bool(action);
 }
 
-coroutine::Awaiter_int AsyncTcpSocket::Recv(action::WaitAction* action)
+coroutine::Awaiter_int AsyncTcpSocket::Recv(action::NetIoEventAction * action)
 {
     
     if( !m_last_error.empty() ) m_last_error.clear();
-    m_handle_closed = false;
     return coroutine::Awaiter_int(action);
 }
 
-coroutine::Awaiter_int AsyncTcpSocket::Send(action::WaitAction* action)
+coroutine::Awaiter_int AsyncTcpSocket::Send(action::NetIoEventAction* action)
 {
     if( !m_last_error.empty() ) m_last_error.clear();
-    m_handle_closed = false;
     return coroutine::Awaiter_int(action);
 }
 
-coroutine::Awaiter_bool AsyncTcpSocket::Close()
+coroutine::Awaiter_bool AsyncTcpSocket::Close(action::NetIoEventAction* action)
 {
-
-    if( m_handle_closed ) return coroutine::Awaiter_bool(false);
-    int ret = closesocket(this->m_handle);
-    if( ret < 0 ) {
-        this->m_last_error = "Close failed";
-        return coroutine::Awaiter_bool(false);
-    }
     if( !m_last_error.empty() ) m_last_error.clear();
-    m_handle_closed = true;
-    return coroutine::Awaiter_bool(true);
+    return coroutine::Awaiter_bool(action);
 }
 
 
@@ -202,9 +188,6 @@ std::string AsyncTcpSocket::GetLastError()
 
 AsyncTcpSocket::~AsyncTcpSocket()
 {
-    if( ! m_handle_closed ) {
-        Close();
-    }
 }
 
 std::string AsyncTcpSocket::GetRemoteAddr()
@@ -251,5 +234,51 @@ int AsyncTcpSocket::GetRemotePort()
     return ntohs(addr.sin_port);
 }
 
-    
+AsyncUdpSocket::AsyncUdpSocket()
+    : m_handle_closed(true)
+{
+}
+
+HandleOption AsyncUdpSocket::GetOption()
+{
+    return HandleOption(m_handle);
+}
+
+coroutine::Awaiter_bool AsyncUdpSocket::InitialHandle()
+{
+    m_handle = socket(AF_INET, SOCK_DGRAM, 0);
+    if( this->m_handle < 0 ) {
+        this->m_last_error = "Socket failed";
+        return coroutine::Awaiter_bool(false);
+    }
+    if( !m_last_error.empty() ) m_last_error.clear();
+    m_handle_closed = false;
+    return coroutine::Awaiter_bool(true);
+}
+
+coroutine::Awaiter_bool AsyncUdpSocket::Close()
+{
+    if( m_handle_closed ) return coroutine::Awaiter_bool(false);
+#if defined(__linux__)
+    int ret = close(this->m_handle);
+#elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
+    int ret = closesocket(this->m_handle);
+#endif
+    if( ret < 0 ) {
+        this->m_last_error = "Close failed";
+        return coroutine::Awaiter_bool(false);
+    }
+    if( !m_last_error.empty() ) m_last_error.clear();
+    m_handle_closed = true;
+    return coroutine::Awaiter_bool(true);
+}
+
+AsyncUdpSocket::~AsyncUdpSocket()
+{
+    if( ! m_handle_closed ) {
+        Close();
+    }
+}
+
+
 }

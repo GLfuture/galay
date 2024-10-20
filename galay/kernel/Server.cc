@@ -7,9 +7,9 @@
 namespace galay::server
 {
 TcpServer::TcpServer()
-	: m_co_sche_num(DEFAULT_SERVER_CO_SCHEDULER_NUM), m_net_sche_num(DEFAULT_SERVER_NET_SCHEDULER_NUM), m_co_sche_timeout(-1), m_net_sche_timeout(-1)
+	: m_co_sche_num(DEFAULT_SERVER_CO_SCHEDULER_NUM), m_net_sche_num(DEFAULT_SERVER_NET_SCHEDULER_NUM), m_co_sche_timeout(-1)\
+		, m_net_sche_timeout(-1), m_socket(nullptr)
 {
-	this->m_socket = nullptr;
 }
 
 void TcpServer::Start(CallbackStore* store, int port, int backlog)
@@ -63,7 +63,7 @@ void TcpServer::ReSetNetworkSchedulerNum(int num)
 
 TcpServer::~TcpServer()
 {
-	if(m_socket) {
+	if( m_socket ) {
 		delete m_socket;
 	}
 }

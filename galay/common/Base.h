@@ -23,6 +23,7 @@ typedef signed long ssize_t;
     //#else
         #define USE_EPOLL
     //#endif
+    #define closesocket(x) close(x)
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     #define USE_IOCP
 #endif

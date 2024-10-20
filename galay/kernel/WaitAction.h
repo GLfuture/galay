@@ -15,26 +15,18 @@ namespace galay::action {
 class NetIoEventAction: public WaitAction
 {
 public:
-    enum ActionType
-    {
-        kActionToAddEvent,
-        kActionToModEvent,
-        kActionToDelEvent,
-    };
     using ptr = std::shared_ptr<NetIoEventAction>;
 
     NetIoEventAction();
-    NetIoEventAction(event::WaitEvent* event, ActionType type);
+    NetIoEventAction(event::WaitEvent* event);
     virtual bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     virtual bool DoAction(coroutine::Coroutine* co) override;
     void ResetEvent(event::WaitEvent* event);
-    void ResetActionType(ActionType type);
     event::WaitEvent* GetBindEvent();
     virtual ~NetIoEventAction() = default;
 private:
     event::WaitEvent* m_event;
-    ActionType m_type;
 };
 
 /*

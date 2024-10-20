@@ -8,15 +8,14 @@ namespace galay::action
 {
 
 NetIoEventAction::NetIoEventAction()
-    :m_event(nullptr), m_type(kActionToAddEvent)
+    :m_event(nullptr)
 {
     
 }
 
-NetIoEventAction::NetIoEventAction(event::WaitEvent *event, ActionType type)
+NetIoEventAction::NetIoEventAction(event::WaitEvent *event)
 {
     this->m_event = event;
-    this->m_type = type;
 }
 
 bool NetIoEventAction::HasEventToDo()
@@ -27,34 +26,18 @@ bool NetIoEventAction::HasEventToDo()
 bool NetIoEventAction::DoAction(coroutine::Coroutine *co)
 {
     if( !m_event ) return false;
-    m_event->SetWaitCoroutine(co);
+    if (m_event->OnWaitPrepare(co) == false) return false;
     event::EventEngine* engine = m_event->GetEventEngine();
-    switch (m_type)
-    {
-    case kActionToAddEvent:
-    {
+    if( !m_event->EventInEngine() ){
         if( engine->AddEvent(this->m_event) != 0 ) {
             spdlog::error("NetIoEventAction::DoAction.AddEvent failed, {}", engine->GetLastError());
             return false;
         }
-    }
-        break;
-    case kActionToModEvent:
-    {
+    } else {
         if( engine->ModEvent(this->m_event) != 0 ) {
             spdlog::error("NetIoEventAction::DoAction.ModEvent failed, {}", engine->GetLastError());
             return false;
         }
-    }
-        break;
-    case kActionToDelEvent:
-    {
-        if( engine->DelEvent(this->m_event) != 0 ) {
-            spdlog::error("NetIoEventAction::DoAction.DelEvent failed, {}", engine->GetLastError());
-            return false;
-        }
-    }
-        break;
     }
     return true;
 }
@@ -62,11 +45,6 @@ bool NetIoEventAction::DoAction(coroutine::Coroutine *co)
 void NetIoEventAction::ResetEvent(event::WaitEvent *event)
 {
     this->m_event = event;
-}
-
-void NetIoEventAction::ResetActionType(ActionType type)
-{
-    this->m_type = type;
 }
 
 event::WaitEvent *NetIoEventAction::GetBindEvent()

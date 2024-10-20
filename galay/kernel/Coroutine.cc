@@ -25,8 +25,10 @@ CoroutineStore::~CoroutineStore()
     while(!m_coroutines.Empty())
     {
         auto node = m_coroutines.PopFront();
-        node->m_data->Destroy();
-        delete node;
+        if(node){
+            node->m_data->Destroy();
+            delete node;
+        }
     }
 }
 
