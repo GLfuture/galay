@@ -1,20 +1,19 @@
 #include "../galay/galay.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 int main()
 {
-    spdlog::set_level(spdlog::level::debug);
     galay::server::TcpServer server;
+    server.ReSetNetworkSchedulerNum(8);
+    server.ReSetCoroutineSchedulerNum(8);
     galay::CallbackStore store([](galay::TcpOperation op)->galay::coroutine::Coroutine {
         auto connection = op.GetConnection();
-        std::cout << "------------------------------\n";
         int length = co_await connection->WaitForRecv();
-        std::cout << "recv data length: " << length << std::endl;
         if( length == 0 ) {
             auto data = connection->FetchRecvData();
             data.Clear();
             bool b = co_await connection->CloseConnection();
-            std::cout << "step1: " << std::boolalpha << b << std::endl;
             co_return;
         }
         auto data = connection->FetchRecvData();
@@ -37,8 +36,6 @@ int main()
             std::string respStr = response.EncodePdu();
             connection->PrepareSendData(respStr);
             length = co_await connection->WaitForSend();
-            bool b = co_await connection->CloseConnection();
-            std::cout << "step2: " << std::boolalpha << b << std::endl;
         }
         co_return;
     });

@@ -4,6 +4,7 @@
 #include "Scheduler.h"
 #include "Operation.h"
 #include "../util/Time.h"
+#include "Step.h"
 #include <string.h>
 #if defined(__linux__)
 #include <sys/eventfd.h>
@@ -41,7 +42,7 @@ CoroutineEvent::CoroutineEvent(GHandle handle, EventEngine* engine, EventType ty
 void CoroutineEvent::HandleEvent(EventEngine *engine)
 {
     eventfd_t val;
-    eventfd_read(m_handle, &val);
+    eventfd_read(m_handle.fd, &val);
     std::unique_lock lock(this->m_mtx);
     while (!m_coroutines.empty())
     {
@@ -51,6 +52,7 @@ void CoroutineEvent::HandleEvent(EventEngine *engine)
         co->Resume();
         lock.lock();
     }
+    engine->ModEvent(this);
 }
 
 void CoroutineEvent::Free(EventEngine *engine)
@@ -61,23 +63,29 @@ void CoroutineEvent::Free(EventEngine *engine)
 
 void CoroutineEvent::ResumeCoroutine(coroutine::Coroutine *coroutine)
 {
-    spdlog::debug("CoroutineEvent::ResumeCoroutine [Engine: {}] [Handle:{}]]", m_engine->GetHandle() , m_handle);
+    spdlog::debug("CoroutineEvent::ResumeCoroutine [Engine: {}] [Handle:{}]]", m_engine->GetHandle().fd, m_handle.fd);
     std::unique_lock lock(this->m_mtx);
     m_coroutines.push(coroutine);
     lock.unlock();
-    eventfd_write(m_handle, 1);
+    eventfd_write(m_handle.fd, 1);
 }
 
-ListenEvent::ListenEvent(GHandle handle, CallbackStore* callback_store, scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_schedule)
-    : m_handle(handle), m_callback_store(callback_store), m_net_scheduler(net_scheduler), m_co_scheduler(co_schedule), m_event_in_engine(false)
+ListenEvent::ListenEvent(async::AsyncTcpSocket* socket, CallbackStore* callback_store, scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_schedule)
+    : m_socket(socket), m_callback_store(callback_store), m_net_scheduler(net_scheduler), m_co_scheduler(co_schedule), m_event_in_engine(false), m_net_event(new NetWaitEvent(nullptr, socket)), m_action(new action::NetIoEventAction(m_net_event))
 {
-    async::HandleOption option(this->m_handle);
+    async::HandleOption option(this->m_socket->GetHandle());
     option.HandleNonBlock();
 }
 
 void ListenEvent::HandleEvent(EventEngine *engine)
 {
     CreateTcpSocket(engine);
+    engine->ModEvent(this);
+}
+
+GHandle ListenEvent::GetHandle()
+{
+    return m_socket->GetHandle();
 }
 
 void ListenEvent::Free(EventEngine *engine)
@@ -86,14 +94,21 @@ void ListenEvent::Free(EventEngine *engine)
     delete this;
 }
 
+ListenEvent::~ListenEvent()
+{
+    delete m_net_event;
+    delete m_action;
+}
+
 coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
 {
 #if defined(USE_EPOLL)
     while(1)
     {
         async::AsyncTcpSocket* socket = new async::AsyncTcpSocket();
-        bool res = co_await socket->InitialHandle(m_handle);
-        if( !res ){
+        GHandle new_handle = co_await socket->Accept(m_action);
+        socket->GetHandle() = new_handle;
+        if( new_handle.fd == -1 ){
             std::string error = socket->GetLastError();
             if( !error.empty() ) {
                 spdlog::error("[{}:{}] [[Accept error] [Errmsg:{}]]", __FILE__, __LINE__, error);
@@ -101,14 +116,16 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
             delete socket;
             co_return;
         }
-        spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle());
+        spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
         {
-            closesocket(this->m_handle);
+            closesocket(new_handle.fd);
             spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
         }
+        // 动态修改event max size
+        AfterCreateTcpSocketStep::Execute(socket->GetHandle());
         this->m_callback_store->Execute(socket, m_net_scheduler, m_co_scheduler);
     }
 #endif
@@ -200,6 +217,7 @@ void TimeEvent::HandleEvent(EventEngine *engine)
         timer->Execute();
     }
     UpdateTimers();
+    engine->ModEvent(this);
 }
 
 void TimeEvent::Free(EventEngine *engine)
@@ -256,7 +274,7 @@ void TimeEvent::UpdateTimers()
     struct itimerspec its = {
         .it_interval = {},
         .it_value = abstime};
-    timerfd_settime(this->m_handle, 0, &its, nullptr);
+    timerfd_settime(this->m_handle.fd, 0, &its, nullptr);
 }
 
 WaitEvent::WaitEvent(event::EventEngine* engine)
@@ -264,8 +282,8 @@ WaitEvent::WaitEvent(event::EventEngine* engine)
 {
 }
 
-NetWaitEvent::NetWaitEvent(NetWaitEventType type, event::EventEngine *engine, async::AsyncTcpSocket *socket)
-    :WaitEvent(engine), m_type(type), m_socket(socket)
+NetWaitEvent::NetWaitEvent(event::EventEngine *engine, async::AsyncTcpSocket *socket)
+    :WaitEvent(engine), m_socket(socket)
 {
 }
 
@@ -273,6 +291,8 @@ std::string NetWaitEvent::Name()
 {
     switch (m_type)
     {
+    case kWaitEventTypeSocket:
+        return "SocketEvent";
     case kWaitEventTypeRecv:
         return "RecvEvent";
     case kWaitEventTypeSend:
@@ -291,6 +311,10 @@ bool NetWaitEvent::OnWaitPrepare(coroutine::Coroutine *co)
 {
     switch (m_type)
     {
+    case kWaitEventTypeSocket:
+        return OnSocketPrepare(co);
+    case kWaitEventTypeAccept:
+        return OnAcceptPrepare(co);
     case kWaitEventTypeRecv:
         return OnRecvWaitPrepare(co);
     case kWaitEventTypeSend:
@@ -309,6 +333,12 @@ void NetWaitEvent::HandleEvent(EventEngine *engine)
 {
     switch (m_type)
     {
+    case kWaitEventTypeSocket:
+        HandleSocketEvent(engine);
+        return;
+    case kWaitEventTypeAccept:
+        HandleAcceptEvent(engine);
+        return;
     case kWaitEventTypeRecv:
         HandleRecvEvent(engine);
         return;
@@ -318,6 +348,9 @@ void NetWaitEvent::HandleEvent(EventEngine *engine)
     case kWaitEventTypeConnect:
         HandleConnectEvent(engine);
         return;
+    case kWaitEventTypeClose:
+        HandleCloseEvent(engine);
+        return;
     }
 }
 
@@ -325,6 +358,10 @@ int NetWaitEvent::GetEventType()
 {
     switch (m_type)
     {
+    case kWaitEventTypeSocket:
+        break;
+    case kWaitEventTypeAccept:
+        return kEventTypeRead;
     case kWaitEventTypeRecv:
         return kEventTypeRead;
     case kWaitEventTypeSend:
@@ -336,7 +373,7 @@ int NetWaitEvent::GetEventType()
     default:
         break;
     }
-    return kEventTypeRead;
+    return kEventTypeNone;
 }
 
 GHandle NetWaitEvent::GetHandle()
@@ -350,11 +387,59 @@ void NetWaitEvent::Free(EventEngine *engine)
     delete this;
 }
 
+bool NetWaitEvent::OnSocketPrepare(coroutine::Coroutine *co)
+{
+    spdlog::debug("NetWaitEvent::OnSocketPrepare");
+    m_socket->GetHandle().fd = socket(AF_INET, SOCK_STREAM, 0);
+    galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
+    if( !awaiter ) {
+        spdlog::error("NetWaitEvent::OnSendWaitPrepare awaiter is nullptr");
+        return false;
+    }
+    if( m_socket->GetHandle().fd < 0 ) {
+        m_socket->SetLastError("Socket failed");
+        awaiter->SetResult(false);
+    } else {
+        awaiter->SetResult(true);
+    }
+    return false;
+}
+
+bool NetWaitEvent::OnAcceptPrepare(coroutine::Coroutine *co)
+{
+    sockaddr addr;
+    socklen_t addrlen = sizeof(addr);
+    GHandle handle {
+        .fd = accept(m_socket->GetHandle().fd, &addr, &addrlen),
+    };
+    galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
+    if( !awaiter ) {
+        spdlog::error("NetWaitEvent::OnSendWaitPrepare awaiter is nullptr");
+        return false;
+    }
+    awaiter->SetResult(handle);
+    return false;
+}
+
 bool NetWaitEvent::OnRecvWaitPrepare(coroutine::Coroutine *co)
 {
     this->m_waitco = co;
     int recvBytes = DealRecv();
-    if( recvBytes == 0 ) return true;
+    spdlog::debug("NetWaitEvent::OnRecvWaitPrepare recvBytes: {}", recvBytes);
+    if( recvBytes < 0 ) {
+        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
+            return true;
+        }else {
+            recvBytes = -1;
+            std::string error = "recv error, ";
+            error += strerror(errno);
+            m_socket->SetLastError(error);
+            return false;
+        }
+    }
+    galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
+    if( awaiter ) awaiter->SetResult(recvBytes);
+    else spdlog::error("NetWaitEvent::OnSendWaitPrepare awaiter is nullptr");
     return false;
 }
 
@@ -362,62 +447,116 @@ bool NetWaitEvent::OnSendWaitPrepare(coroutine::Coroutine *co)
 {
     this->m_waitco = co;
     int sendBytes = DealSend();
-    if (sendBytes == 0){
+    spdlog::debug("NetWaitEvent::OnSendWaitPrepare sendBytes: {}", sendBytes);
+    if( sendBytes < 0){
+        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
+        }else{
+            galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
+            if( awaiter ) awaiter->SetResult(sendBytes);
+            else spdlog::error("NetWaitEvent::OnSendWaitPrepare awaiter is nullptr");
+            return false; 
+        }
+    }
+    if (!m_socket->GetWBuffer().empty()){
         return true;
     }
-    //mod为recv状态
-    ResetNetWaitEventType(kWaitEventTypeRecv);
-    m_engine->ModEvent(this);
+    galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
+    if( awaiter ) awaiter->SetResult(sendBytes);
+    else spdlog::error("NetWaitEvent::OnSendWaitPrepare awaiter is nullptr");
     return false;
 }
 
 bool NetWaitEvent::OnConnectWaitPrepare(coroutine::Coroutine *co)
 {
-    // To Do
-}
-
-bool NetWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co)
-{
-    if (m_event_in_engine) {
-        if( m_engine->DelEvent(this) != 0 ) {
-            co->SetContext(false);
-        }else{
-            co->SetContext(true);
+    spdlog::debug("NetWaitEvent::OnConnectWaitPrepare");
+    this->m_waitco = co;
+    async::NetAddr addr = m_socket->GetConnectAddr();
+    sockaddr_in saddr;
+    saddr.sin_family = AF_INET;
+    saddr.sin_addr.s_addr = inet_addr(addr.m_ip.c_str());
+    saddr.sin_port = htons(addr.m_port);
+    int ret = connect(m_socket->GetHandle().fd, (sockaddr*) &saddr, sizeof(sockaddr_in));
+    if( ret != 0) {
+        if( errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN || errno == EINPROGRESS) {
+            return true;
         }
     }
-    int ret = closesocket(m_socket->GetHandle());
-    if( ret < 0 ) {
-        co->SetContext(false);
+    galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
+    if( ret == 0 ){
+        if(awaiter) awaiter->SetResult(true);
+        else spdlog::error("NetWaitEvent::OnConnectWaitPrepare awaiter is nullptr");
     } else {
-        co->SetContext(true);
+        if(awaiter) awaiter->SetResult(false);
+        else spdlog::error("NetWaitEvent::OnConnectWaitPrepare awaiter is nullptr");
     }
     return false;
 }
 
+bool NetWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co)
+{
+    spdlog::debug("NetWaitEvent::OnCloseWaitPrepare");
+    coroutine::Awaiter* awaiter = co->GetAwaiter(); 
+    if (m_event_in_engine) {
+        if( m_engine->DelEvent(this) != 0 ) {
+            awaiter->SetResult(false);
+            m_socket->SetLastError(strerror(errno));
+            return false;
+        }
+    }
+    int ret = closesocket(m_socket->GetHandle().fd);
+    if( ret < 0 ) {
+        m_socket->SetLastError(strerror(errno));
+        awaiter->SetResult(false);
+    } else {
+        awaiter->SetResult(true);
+    }
+    return false;
+}
+
+void NetWaitEvent::HandleSocketEvent(EventEngine *engine)
+{
+    spdlog::debug("NetWaitEvent::HandleSocketEvent");
+    // doing nothing
+}
+
+void NetWaitEvent::HandleAcceptEvent(EventEngine *engine)
+{
+    spdlog::debug("NetWaitEvent::HandleAcceptEvent");
+    // doing nothing
+}
+
 void NetWaitEvent::HandleRecvEvent(EventEngine *engine)
 {
-    DealRecv();
+    spdlog::debug("NetWaitEvent::HandleRecvEvent");
+    int recvBytes = DealRecv();
+    galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
+    if(awaiter) awaiter->SetResult(recvBytes);
+    else spdlog::error("NetWaitEvent::HandleRecvEvent awaiter is nullptr");
     //2.唤醒协程
-    scheduler::GetCoroutineScheduler(m_socket->GetHandle() % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
+    scheduler::GetCoroutineScheduler(m_socket->GetHandle().fd % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleSendEvent(EventEngine *engine)
 {
-    DealSend();
-    //mod为recv状态
-    ResetNetWaitEventType(kWaitEventTypeRecv);
-    m_engine->ModEvent(this);
-    scheduler::GetCoroutineScheduler(m_socket->GetHandle() % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
+    spdlog::debug("NetWaitEvent::HandleSendEvent");
+    int sendBytes = DealSend();
+    galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
+    if(awaiter) awaiter->SetResult(sendBytes);
+    else spdlog::error("NetWaitEvent::HandleSendEvent awaiter is nullptr");
+    scheduler::GetCoroutineScheduler(m_socket->GetHandle().fd % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleConnectEvent(EventEngine *engine)
 {
-    //To Do
+    spdlog::debug("NetWaitEvent::HandleConnectEvent");
+    m_waitco->GetAwaiter()->SetResult(true);
+    scheduler::GetCoroutineScheduler(m_socket->GetHandle().fd % scheduler::GetCoroutineSchedulerNum())->ResumeCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
-{
-    //do nothing    
+{ 
+    spdlog::debug("NetWaitEvent::HandleCloseEvent");
+    //doing nothing
 }
 
 int NetWaitEvent::DealRecv()
@@ -429,22 +568,14 @@ int NetWaitEvent::DealRecv()
     bool initial = true;
     do{
         bzero(buffer, sizeof(buffer));
-        int ret = recv(handle, buffer, DEFAULT_READ_BUFFER_SIZE, 0);
+        int ret = recv(handle.fd, buffer, DEFAULT_READ_BUFFER_SIZE, 0);
         if( ret == 0 ) {
-            m_waitco->SetContext(0);
+            recvBytes = 0;
             break;
         }
         if( ret == -1 ) {
-            if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
-                m_waitco->SetContext(recvBytes);
-                break;
-            }else{
-                m_waitco->SetContext(-1);
-                std::string error = "recv error, ";
-                error += strerror(errno);
-                m_socket->SetLastError(error);
-                break;
-            }
+            if (recvBytes == 0) recvBytes = -1;
+            break;
         } else {
             if(initial) {
                 result = new char[ret];
@@ -458,7 +589,7 @@ int NetWaitEvent::DealRecv()
         }
     } while(1); 
     if( recvBytes > 0){
-        spdlog::debug("RecvEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle(), handle, recvBytes, std::string_view(result, recvBytes));   
+        spdlog::debug("RecvEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle().fd, handle.fd, recvBytes, std::string_view(result, recvBytes));   
         std::string_view origin = m_socket->GetRBuffer();
         char* new_buffer = nullptr;
         if(!origin.empty()) {
@@ -482,27 +613,20 @@ int NetWaitEvent::DealSend()
     std::string_view wbuffer = m_socket->GetWBuffer();
     do {
         std::string_view view = wbuffer.substr(sendBytes);
-        int ret = send(handle, view.data(), view.size(), 0);
+        int ret = send(handle.fd, view.data(), view.size(), 0);
         if( ret == -1 ) {
-            if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
-                m_waitco->SetContext(sendBytes);
-                break;
-            }else{
-                m_waitco->SetContext(-1);
-                std::string error = "send error, ";
-                error += strerror(errno);
-                m_socket->SetLastError(error);
-                break;
+            if(sendBytes == 0) {
+                return -1;
             }
+            break;
         }
         sendBytes += ret;
         if( sendBytes == wbuffer.size() ) {
-            m_waitco->SetContext(sendBytes);
             break;
         }
     } while (1);
     m_socket->SetWBuffer(wbuffer.substr(sendBytes));
-    spdlog::debug("SendEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle(), handle, sendBytes, wbuffer.substr(0, sendBytes));
+    spdlog::debug("SendEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle().fd, handle.fd, sendBytes, wbuffer.substr(0, sendBytes));
     return sendBytes;
 }
 

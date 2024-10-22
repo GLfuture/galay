@@ -2,13 +2,19 @@
 #define __GALAY_BASE_H__
 
 #if defined(__linux__)
-typedef int GHandle;
+struct GHandle {
+    int fd;
+};
 #elif defined(__APPLE__)
-typedef int GHandle;
+struct GHandle {
+    int fd;
+};
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
 #include <WinSock2.h>
 #pragma comment(lib,"ws2_32.lib")
-typedef SOCKET GHandle;
+struct GHandle {
+    SOCKET fd;
+};
 typedef int socklen_t;
 typedef signed long ssize_t;
 

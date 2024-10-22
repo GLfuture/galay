@@ -22,7 +22,7 @@ galay::coroutine::Coroutine func()
 
 int main()
 {
-    galay::scheduler::ResizeCoroutineSchedulers(1);
+    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
     galay::scheduler::StartCoroutineSchedulers();
     func();
     getchar();

@@ -5,6 +5,7 @@
 #include "Coroutine.h"
 #include "WaitAction.h"
 #include "../util/Time.h"
+#include <cstring>
 
 namespace galay
 {
@@ -49,14 +50,13 @@ TcpConnection::TcpConnection(async::AsyncTcpSocket* socket,\
     scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler)
     : m_net_scheduler(net_scheduler), m_co_scheduler(co_scheduler)
 {
-    this->m_net_event = new event::NetWaitEvent(event::NetWaitEvent::kWaitEventTypeRecv, net_scheduler->GetEngine(), socket);
+    this->m_net_event = new event::NetWaitEvent(net_scheduler->GetEngine(), socket);
     this->m_socket = socket;
     this->m_event_action = new action::NetIoEventAction(m_net_event);
 }
 
 coroutine::Awaiter_int TcpConnection::WaitForRecv()
 {
-    m_net_event->ResetNetWaitEventType(event::NetWaitEvent::kWaitEventTypeRecv);
     return m_socket->Recv(m_event_action);
 }
 
@@ -72,13 +72,11 @@ void TcpConnection::PrepareSendData(std::string_view data)
 
 coroutine::Awaiter_int TcpConnection::WaitForSend()
 {
-    m_net_event->ResetNetWaitEventType(event::NetWaitEvent::kWaitEventTypeSend);
     return m_socket->Send(m_event_action);
 }
 
 coroutine::Awaiter_bool TcpConnection::CloseConnection()
 {
-    m_net_event->ResetNetWaitEventType(event::NetWaitEvent::kWaitEventTypeClose);
     return m_socket->Close(m_event_action);
 }
 

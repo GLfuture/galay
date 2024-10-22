@@ -35,23 +35,23 @@ CoroutineStore::~CoroutineStore()
 Coroutine::Coroutine(std::coroutine_handle<promise_type> handle) noexcept
 {
     this->m_handle = handle;
-    this->m_context = std::make_shared<std::any>();
     this->m_node = nullptr;
+    this->m_awaiter = nullptr;
 }
 
 Coroutine::Coroutine(Coroutine&& other) noexcept
 {
-    this->m_context.swap(other.m_context);
-    other.m_context.reset();
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
     this->m_node = other.m_node;
     other.m_node = nullptr;
+    this->m_awaiter.store(other.m_awaiter);
+    other.m_awaiter = nullptr;
 }
 
 Coroutine::Coroutine(const Coroutine& other) noexcept
 {
-    this->m_context = other.m_context;
+    this->m_awaiter.store(other.m_awaiter);
     this->m_handle = other.m_handle;
     this->m_node = other.m_node;
 }
@@ -59,12 +59,12 @@ Coroutine::Coroutine(const Coroutine& other) noexcept
 Coroutine&
 Coroutine::operator=(Coroutine&& other) noexcept
 {
-    this->m_context.swap(other.m_context);
-    other.m_context.reset();
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
     this->m_node = other.m_node;
     other.m_node = nullptr;
+    this->m_awaiter.store(other.m_awaiter);
+    other.m_awaiter = nullptr;
     return *this;
 }
 
@@ -97,7 +97,7 @@ bool CoroutineWaiters::Decrease()
     if( ! m_action ) return true;
     if( m_num.load() == 0 )
     {
-        m_action->GetCoroutine()->SetContext(true);
+        m_action->GetCoroutine()->GetAwaiter()->SetResult(true);
         m_scheduler->ResumeCoroutine(m_action->GetCoroutine());
     }
     return true;

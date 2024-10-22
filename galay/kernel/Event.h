@@ -20,6 +20,11 @@ namespace galay::async
     class AsyncTcpSocket;
 }
 
+namespace galay::action
+{
+    class NetIoEventAction;
+}
+
 namespace galay::scheduler
 {
     class EventScheduler;
@@ -37,6 +42,7 @@ namespace galay::event
 
 enum EventType
 {
+    kEventTypeNone = 0,
     kEventTypeRead = 1,
     kEventTypeWrite = 2,
 };
@@ -98,26 +104,31 @@ private:
     
 };
 
+class NetWaitEvent;
+
 class ListenEvent: public Event
 {
 public:
-    ListenEvent(GHandle handle, CallbackStore* callback_store \
+    ListenEvent(async::AsyncTcpSocket* socket, CallbackStore* callback_store \
         , scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "ListenEvent"; }
     inline virtual int GetEventType() override { return kEventTypeRead; }
-    inline virtual GHandle GetHandle() override { return m_handle; }
+    virtual GHandle GetHandle() override;
     inline virtual void SetEventInEngine(bool flag) override { m_event_in_engine = flag; }
     inline virtual bool EventInEngine() override { return m_event_in_engine; }
     virtual void Free(EventEngine* engine) override;
+    virtual ~ListenEvent();
 private:
     coroutine::Coroutine CreateTcpSocket(EventEngine* engine);
 private:
-    GHandle m_handle;
+    async::AsyncTcpSocket* m_socket;
     bool m_event_in_engine;
     scheduler::EventScheduler* m_net_scheduler;
     scheduler::CoroutineScheduler* m_co_scheduler;
     CallbackStore* m_callback_store;
+    NetWaitEvent* m_net_event;
+    action::NetIoEventAction* m_action;
 };
 
 class TimeEvent: public Event
@@ -201,12 +212,14 @@ class NetWaitEvent: public WaitEvent
 public:
     enum NetWaitEventType
     {
+        kWaitEventTypeSocket,
+        kWaitEventTypeAccept,
         kWaitEventTypeRecv,
         kWaitEventTypeSend,
         kWaitEventTypeConnect,
         kWaitEventTypeClose,
     };
-    NetWaitEvent(NetWaitEventType type, event::EventEngine* engine, async::AsyncTcpSocket* socket);
+    NetWaitEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket);
     
     virtual std::string Name() override;
     virtual bool OnWaitPrepare(coroutine::Coroutine* co) override;
@@ -218,11 +231,15 @@ public:
     inline async::AsyncTcpSocket* GetAsyncTcpSocket() { return m_socket; }
     virtual void Free(EventEngine* engine) override;
 private:
+    bool OnSocketPrepare(coroutine::Coroutine* co);
+    bool OnAcceptPrepare(coroutine::Coroutine* co);
     bool OnRecvWaitPrepare(coroutine::Coroutine* co);
     bool OnSendWaitPrepare(coroutine::Coroutine* co);
     bool OnConnectWaitPrepare(coroutine::Coroutine* co);
     bool OnCloseWaitPrepare(coroutine::Coroutine* co);
 
+    void HandleSocketEvent(EventEngine* engine);
+    void HandleAcceptEvent(EventEngine* engine);
     void HandleRecvEvent(EventEngine* engine);
     void HandleSendEvent(EventEngine* engine);
     void HandleConnectEvent(EventEngine* engine);
@@ -236,37 +253,6 @@ private:
     NetWaitEventType m_type;
     async::AsyncTcpSocket* m_socket;
 };
-
-// class RecvEvent: public WaitEvent
-// {
-// public:
-//     RecvEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket);
-//     inline virtual std::string Name() override { return "RecvEvent"; }
-    
-//     virtual bool OnWaitPrepare(coroutine::Coroutine* co) override;
-//     virtual void HandleEvent(EventEngine* engine) override;
-//     virtual ~RecvEvent() = default;
-// };
-
-// class SendEvent: public WaitEvent
-// {
-// public:
-//     SendEvent(event::EventEngine* engine, async::AsyncTcpSocket* socket);
-//     inline virtual std::string Name() override { return "SendEvent"; }
-//     virtual bool OnWaitPrepare(coroutine::Coroutine* co) override;
-//     virtual void HandleEvent(EventEngine* engine) override;
-//     virtual ~SendEvent() = default;
-// };
-
-// class ConnectEvent: public WaitEvent
-// {
-// public:
-//     ConnectEvent(event::EventEngine* engine);
-//     inline virtual std::string Name() override { return "ConnectEvent"; }
-//     virtual bool OnWaitPrepare(coroutine::Coroutine* co) override;
-//     virtual void HandleEvent(EventEngine* engine) override;
-//     virtual ~ConnectEvent() = default;
-// };
     
 }
 #endif

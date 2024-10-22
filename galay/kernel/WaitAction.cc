@@ -13,7 +13,7 @@ NetIoEventAction::NetIoEventAction()
     
 }
 
-NetIoEventAction::NetIoEventAction(event::WaitEvent *event)
+NetIoEventAction::NetIoEventAction(event::NetWaitEvent *event)
 {
     this->m_event = event;
 }
@@ -42,12 +42,12 @@ bool NetIoEventAction::DoAction(coroutine::Coroutine *co)
     return true;
 }
 
-void NetIoEventAction::ResetEvent(event::WaitEvent *event)
+void NetIoEventAction::ResetEvent(event::NetWaitEvent *event)
 {
     this->m_event = event;
 }
 
-event::WaitEvent *NetIoEventAction::GetBindEvent()
+event::NetWaitEvent *NetIoEventAction::GetBindEvent()
 {
     return m_event;
 }

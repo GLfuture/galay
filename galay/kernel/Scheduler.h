@@ -61,8 +61,12 @@ private:
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
 };
 
-extern void ResizeCoroutineSchedulers(int num);
-extern void ResizeNetIOSchedulers(int num);
+
+extern void DynamicResizeCoroutineSchedulers(int num);
+extern void DynamicResizeNetIOSchedulers(int num);
+
+// extern void SetCoroutineSchedulerNum(int num);
+// extern void SetNetIOSchedulerNum(int num);
 extern int GetCoroutineSchedulerNum();
 extern int GetNetIOSchedulerNum();
 

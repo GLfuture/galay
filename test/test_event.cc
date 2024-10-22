@@ -49,7 +49,7 @@ galay::coroutine::Coroutine Func(galay::scheduler::CoroutineScheduler::ptr sched
 
 void Test()
 {
-    galay::scheduler::ResizeCoroutineSchedulers(1);
+    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
     galay::scheduler::StartCoroutineSchedulers();
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     auto Work = galay::scheduler::GetCoroutineScheduler(0);
@@ -62,21 +62,24 @@ void Test()
 #elif defined(TEST_NET_EVENT)
 void Test()
 {
-    galay::scheduler::ResizeCoroutineSchedulers(1);
+    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
     galay::scheduler::StartCoroutineSchedulers();
-    galay::scheduler::ResizeNetIOSchedulers(EVENT_SCHEDULER_NUM);
+    galay::scheduler::DynamicResizeNetIOSchedulers(EVENT_SCHEDULER_NUM);
     galay::scheduler::StartNetIOSchedulers();
-    GHandle handle = socket(AF_INET, SOCK_STREAM, 0);
+    GHandle handle {
+        .fd = socket(AF_INET, SOCK_STREAM, 0)
+    };
     sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(7070);
     addr.sin_addr.s_addr = INADDR_ANY;
-    bind(handle,(sockaddr*)&addr, sizeof(addr));
-    listen(handle, 5);
-    setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, (char*)&addr, sizeof(addr));
+    bind(handle.fd,(sockaddr*)&addr, sizeof(addr));
+    listen(handle.fd, 5);
+    setsockopt(handle.fd, SOL_SOCKET, SO_REUSEADDR, (char*)&addr, sizeof(addr));
     int option = 1;
-    setsockopt(handle, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
+    setsockopt(handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
+    galay::async::AsyncTcpSocket socket(handle);
     galay::CallbackStore* store = new galay::CallbackStore([](galay::TcpOperation op) -> galay::coroutine::Coroutine {
         galay::coroutine::Coroutine* co;
         co_await galay::coroutine::GetThisCoroutine(co);
@@ -96,7 +99,7 @@ void Test()
     std::vector<galay::event::ListenEvent*> listen_events;
     for( int i = 0 ; i < EVENT_SCHEDULER_NUM ; ++i )
     {
-        galay::event::ListenEvent* listen_event = new galay::event::ListenEvent(handle, store, \
+        galay::event::ListenEvent* listen_event = new galay::event::ListenEvent(&socket, store, \
             galay::scheduler::GetNetIOScheduler(i), galay::scheduler::GetCoroutineScheduler(0));
         galay::scheduler::GetNetIOScheduler(i)->AddEvent(listen_event);
         listen_events.push_back(listen_event);
@@ -135,7 +138,7 @@ galay::coroutine::Coroutine func()
 
 void Test()
 {
-    galay::scheduler::ResizeCoroutineSchedulers(1);
+    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
     galay::scheduler::StartCoroutineSchedulers();
     func();
     getchar();
@@ -146,7 +149,7 @@ void Test()
 
 void Test()
 {
-    galay::scheduler::ResizeNetIOSchedulers(1);
+    galay::scheduler::DynamicResizeNetIOSchedulers(1);
     galay::scheduler::StartNetIOSchedulers();
     GHandle timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
     galay::event::TimeEvent* time_event = new galay::event::TimeEvent(timerfd);

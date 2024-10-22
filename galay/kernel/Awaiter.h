@@ -23,7 +23,7 @@ public:
 namespace galay::coroutine
 {
 
-class Awaiter_void
+class Awaiter_void: public Awaiter
 {
 public:
     Awaiter_void(action::WaitAction* action);
@@ -31,14 +31,15 @@ public:
     bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
-    inline void await_resume() const noexcept {};
+    void await_resume() const noexcept;
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
     Coroutine* GetCoroutine();
 private:
     action::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_int
+class Awaiter_int: public Awaiter
 {
 public:
     Awaiter_int(action::WaitAction* action);
@@ -47,6 +48,7 @@ public:
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     int await_resume() const noexcept;
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
     Coroutine* GetCoroutine();
 private:
     int m_result;
@@ -54,7 +56,7 @@ private:
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_bool
+class Awaiter_bool: public Awaiter
 {
 public:
     Awaiter_bool(action::WaitAction* action);
@@ -63,6 +65,7 @@ public:
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     bool await_resume() const noexcept;
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
     Coroutine* GetCoroutine();
 private:
     bool m_result;
@@ -70,7 +73,7 @@ private:
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_ptr
+class Awaiter_ptr: public Awaiter
 {
 public:
     Awaiter_ptr(action::WaitAction* action);
@@ -79,6 +82,7 @@ public:
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     void* await_resume() const noexcept;
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
     Coroutine* GetCoroutine();
 private:
     void* m_ptr;
@@ -87,7 +91,7 @@ private:
 };
 
 
-class Awaiter_string
+class Awaiter_string: public Awaiter
 {
 public:
     Awaiter_string(action::WaitAction* action);
@@ -96,9 +100,27 @@ public:
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     std::string await_resume() const noexcept;
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
     Coroutine* GetCoroutine();
 private:
     std::string m_result;
+    action::WaitAction* m_action;
+    std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
+};
+
+class Awaiter_GHandle: public Awaiter
+{
+public:
+    Awaiter_GHandle(action::WaitAction* action);
+    Awaiter_GHandle(GHandle handle);
+    bool await_ready() const noexcept;
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
+    GHandle await_resume() const noexcept;
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    Coroutine* GetCoroutine();
+private:
+    GHandle m_result;
     action::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };

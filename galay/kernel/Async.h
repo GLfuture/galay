@@ -3,6 +3,7 @@
 
 #include "../common/Base.h"
 #include "WaitAction.h"
+#include <openssl/ssl.h>
 
 namespace galay::event
 {
@@ -24,17 +25,24 @@ private:
     GHandle m_handle;
 };
 
+struct NetAddr
+{
+    std::string m_ip;
+    uint16_t m_port;
+};
+
+
 class AsyncTcpSocket
 {
 public:
     using ptr = std::shared_ptr<AsyncTcpSocket>;
-    AsyncTcpSocket(GHandle handle);
     AsyncTcpSocket();
+    AsyncTcpSocket(GHandle handle);
     HandleOption GetOption();
-    coroutine::Awaiter_bool InitialHandle();
-    coroutine::Awaiter_bool InitialHandle(GHandle handle);
+    coroutine::Awaiter_bool InitialHandle(action::NetIoEventAction* action);
+    coroutine::Awaiter_GHandle Accept(action::NetIoEventAction* action);
     coroutine::Awaiter_bool BindAndListen(int port, int backlog);
-    coroutine::Awaiter_bool Connect(action::NetIoEventAction* action);
+    coroutine::Awaiter_bool Connect(action::NetIoEventAction* action, const NetAddr& addr);
     //return send length, -1 has error 0 disconnect 
     coroutine::Awaiter_int Recv(action::NetIoEventAction* action);
     coroutine::Awaiter_int Send(action::NetIoEventAction* action);
@@ -45,8 +53,9 @@ public:
     inline void SetRBuffer(std::string_view view) { m_rbuffer = view; }
     inline void SetWBuffer(std::string_view view) { m_wbuffer = view; }
     inline std::string_view& GetWBuffer() { return m_wbuffer; }
+    inline NetAddr GetConnectAddr() { return m_connect_addr; }
 
-    inline GHandle GetHandle() { return m_handle; }
+    inline GHandle& GetHandle() { return m_handle; }
     
     int GetRemotePort();
     std::string GetRemoteAddr();
@@ -56,9 +65,24 @@ public:
     ~AsyncTcpSocket();
 private:
     GHandle m_handle;
+    NetAddr m_connect_addr;
     std::string m_last_error;
     std::string_view m_rbuffer;
     std::string_view m_wbuffer;
+};
+
+class AsyncTcpSslSocket
+{
+public:
+    coroutine::Awaiter_bool Connect(action::NetIoEventAction* action, const NetAddr& addr);
+    coroutine::Awaiter_bool SSLConnect(action::NetIoEventAction* action);
+    coroutine::Awaiter_GHandle Accept(action::NetIoEventAction *action);
+    coroutine::Awaiter_bool SSLAccept();
+
+    inline SSL* GetSSL() { return m_ssl; }
+private:
+    SSL* m_ssl;
+    AsyncTcpSocket m_socket;
 };
 
 class AsyncUdpSocket

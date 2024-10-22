@@ -20,6 +20,11 @@ namespace galay
     class CallbackStore;
 }
 
+namespace galay::coroutine
+{
+    class Coroutine;
+}
+
 namespace galay::server 
 {
 
@@ -31,8 +36,9 @@ namespace galay::server
     public:
         TcpServer();
         //no block
-        void Start(CallbackStore* store, int port, int backlog);
+        coroutine::Coroutine Start(CallbackStore* store, int port, int backlog);
         void Stop();
+        inline bool IsRunning() { return m_is_running; }
         void ReSetNetworkSchedulerNum(int num);
         void ReSetCoroutineSchedulerNum(int num);
         async::AsyncTcpSocket* GetSocket();
@@ -42,6 +48,7 @@ namespace galay::server
         int m_net_sche_num;
         int m_co_sche_timeout;
         int m_net_sche_timeout;
+        bool m_is_running;
         async::AsyncTcpSocket* m_socket;
         std::vector<event::ListenEvent*> m_listen_events;
     };

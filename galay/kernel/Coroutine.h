@@ -5,7 +5,9 @@
 #include <memory>
 #include <atomic>
 #include <coroutine>
-#include <spdlog/spdlog.h>
+#include <variant>
+#include <string>
+#include "../common/Base.h"
 #include "../util/ThreadSefe.hpp"
 
 namespace galay::action
@@ -21,6 +23,12 @@ namespace galay::scheduler
 namespace galay::coroutine
 {
 class Coroutine;
+
+class Awaiter
+{
+public:
+    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) = 0;
+};
 
 class CoroutineStore
 {
@@ -69,13 +77,13 @@ public:
     void Destroy();
     inline bool Done() { return m_handle.done(); }
     inline void Resume() { return m_handle.resume(); }
-    inline void SetContext(std::any context) { *this->m_context = context; }
-    inline std::any GetContext() { return *this->m_context; }
+    inline void SetAwaiter(Awaiter* awaiter) { m_awaiter = awaiter; }
+    inline Awaiter* GetAwaiter() { return m_awaiter.load(); }
     inline thread::safe::ListNode<Coroutine*>*& GetListNode() { return m_node; }
     ~Coroutine() = default;
 private:
+    std::atomic<Awaiter*> m_awaiter;
     thread::safe::ListNode<Coroutine*>* m_node;
-    std::shared_ptr<std::any> m_context;
     std::coroutine_handle<promise_type> m_handle;
 };
 

@@ -10,7 +10,7 @@ namespace galay::scheduler
 std::vector<CoroutineScheduler*> g_coroutine_schedulers;
 std::vector<EventScheduler*> g_netio_schedulers;
 
-void ResizeCoroutineSchedulers(int num)
+void DynamicResizeCoroutineSchedulers(int num)
 {
     int now = g_coroutine_schedulers.size();
     int sub = num - now;
@@ -28,7 +28,7 @@ void ResizeCoroutineSchedulers(int num)
     }
 }
 
-void ResizeNetIOSchedulers(int num)
+void DynamicResizeNetIOSchedulers(int num)
 {
     int now = g_netio_schedulers.size();
     int sub = num - now;
@@ -36,7 +36,7 @@ void ResizeNetIOSchedulers(int num)
         for(int i = 0; i < sub; ++i) {
             g_netio_schedulers.push_back(new EventScheduler);
         }
-    }else if(sub < 0) {
+    } else if(sub < 0) {
         for(int i = g_netio_schedulers.size() - 1 ; i >= -sub ; -- i)
         {
             g_netio_schedulers[i]->Stop();
@@ -45,6 +45,16 @@ void ResizeNetIOSchedulers(int num)
         }
     }
 }
+
+// void SetCoroutineSchedulerNum(int num)
+// {
+
+// }
+
+// void SetNetIOSchedulerNum(int num)
+// {
+
+// }
 
 int GetCoroutineSchedulerNum()
 {
@@ -115,7 +125,9 @@ EventScheduler::EventScheduler()
 
 bool EventScheduler::Loop(int timeout)
 {
-    GHandle handle = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+    GHandle handle{
+        .fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)
+    };
     m_time_event = new event::TimeEvent(handle);
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
@@ -188,7 +200,9 @@ bool CoroutineScheduler::Loop(int timeout)
         m_waiter->Decrease();
     });
     this->m_thread->detach();
-    GHandle handle = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC);
+    GHandle handle{
+        .fd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC)
+    };
     this->m_coroutine_event = new event::CoroutineEvent(handle, m_engine.get(), event::EventType::kEventTypeRead);
     m_engine->AddEvent(this->m_coroutine_event);
     return true;

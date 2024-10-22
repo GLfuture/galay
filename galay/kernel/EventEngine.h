@@ -9,7 +9,7 @@
 
 namespace galay::event
 {
-    #define MAX_EVENTS 1024
+    #define DEFAULT_MAX_EVENTS 1024
 
 class EventEngine;
 class Event;
@@ -28,6 +28,8 @@ public:
     virtual int DelEvent(Event* event) = 0;
     virtual std::string GetLastError() const = 0;
     virtual GHandle GetHandle() = 0;
+    virtual uint32_t GetMaxEventSize() = 0;
+    virtual void ResetMaxEventSize(uint32_t size) = 0; 
 };
 
 #if defined(USE_EPOLL)
@@ -35,7 +37,7 @@ public:
 class EpollEventEngine: public EventEngine
 {
 public:
-    EpollEventEngine(int max_events = MAX_EVENTS);
+    EpollEventEngine(uint32_t max_events = DEFAULT_MAX_EVENTS);
     virtual bool Loop(int timeout = -1) override;
     virtual bool Stop() override;
     virtual int AddEvent(Event* event) override;
@@ -43,14 +45,16 @@ public:
     virtual int DelEvent(Event* event) override;
     inline virtual std::string GetLastError() const override { return m_error; }
     inline virtual GHandle GetHandle() override { return m_handle; }
+    inline virtual uint32_t GetMaxEventSize() override { return m_event_size; }
+    virtual void ResetMaxEventSize(uint32_t size) override;
     virtual ~EpollEventEngine();
 private:
-    void ConvertToEpollEvent(struct epoll_event &ev, Event *event);
+    bool ConvertToEpollEvent(struct epoll_event &ev, Event *event);
 private:
     GHandle m_handle;
-    int m_event_num;
+    uint32_t m_event_size;
     std::string m_error;
-    epoll_event *m_ready_events;
+    epoll_event *m_events;
     std::atomic_bool m_stop;
 };
 #elif defined(USE_IOURING)

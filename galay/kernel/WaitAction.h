@@ -4,7 +4,7 @@
 #include "Awaiter.h"
 
 namespace galay::event{
-    class WaitEvent;
+    class NetWaitEvent;
 }
 
 namespace galay::action {
@@ -18,15 +18,15 @@ public:
     using ptr = std::shared_ptr<NetIoEventAction>;
 
     NetIoEventAction();
-    NetIoEventAction(event::WaitEvent* event);
+    NetIoEventAction(event::NetWaitEvent* event);
     virtual bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     virtual bool DoAction(coroutine::Coroutine* co) override;
-    void ResetEvent(event::WaitEvent* event);
-    event::WaitEvent* GetBindEvent();
+    void ResetEvent(event::NetWaitEvent* event);
+    event::NetWaitEvent* GetBindEvent();
     virtual ~NetIoEventAction() = default;
 private:
-    event::WaitEvent* m_event;
+    event::NetWaitEvent* m_event;
 };
 
 /*
