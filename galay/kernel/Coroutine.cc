@@ -87,7 +87,7 @@ Awaiter_bool CoroutineWaiters::Wait(int timeout)
         return Awaiter_bool(true);
     }
     if( !m_action ) m_action = new action::CoroutineWaitAction();
-    return Awaiter_bool(m_action);
+    return Awaiter_bool(m_action, nullptr);
 }
 
 bool CoroutineWaiters::Decrease()
@@ -126,7 +126,7 @@ bool CoroutineWaitContext::Done()
 Awaiter_void GetThisCoroutine(Coroutine*& coroutine)
 {
     action::GetCoroutineHandleAction* action = new action::GetCoroutineHandleAction(&coroutine);
-    return Awaiter_void(action);
+    return Awaiter_void(action, nullptr);
 }
 
 

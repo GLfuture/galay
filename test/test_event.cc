@@ -39,7 +39,7 @@ void Test()
     sleep(1);
 }
 #elif defined(TEST_COROUTINE_EVENT)
-galay::coroutine::Coroutine Func(galay::scheduler::CoroutineScheduler::ptr scheduler)
+galay::coroutine::Coroutine Func(galay::Coroutineptr scheduler)
 {
     std::cout << "ready to wait\n";
     co_await std::suspend_always{};
@@ -49,23 +49,23 @@ galay::coroutine::Coroutine Func(galay::scheduler::CoroutineScheduler::ptr sched
 
 void Test()
 {
-    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
-    galay::scheduler::StartCoroutineSchedulers();
+    galay::DynamicResizeCoroutineSchedulers(1);
+    galay::StartCoroutineSchedulers();
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    auto Work = galay::scheduler::GetCoroutineScheduler(0);
+    auto Work = galay::GetCoroutineScheduler(0);
     auto co = Func(Work);
     Work->ResumeCoroutine(co.GetHandle().promise().GetCoroutine());
     getchar();
-    galay::scheduler::StopCoroutineSchedulers();
+    galay::StopCoroutineSchedulers();
 }
 
 #elif defined(TEST_NET_EVENT)
 void Test()
 {
-    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
-    galay::scheduler::StartCoroutineSchedulers();
-    galay::scheduler::DynamicResizeNetIOSchedulers(EVENT_SCHEDULER_NUM);
-    galay::scheduler::StartNetIOSchedulers();
+    galay::DynamicResizeCoroutineSchedulers(1);
+    galay::StartCoroutineSchedulers();
+    galay::DynamicResizeNetIOSchedulers(EVENT_SCHEDULER_NUM);
+    galay::StartNetIOSchedulers();
     GHandle handle {
         .fd = socket(AF_INET, SOCK_STREAM, 0)
     };
@@ -80,7 +80,7 @@ void Test()
     int option = 1;
     setsockopt(handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
     galay::async::AsyncTcpSocket socket(handle);
-    galay::CallbackStore* store = new galay::CallbackStore([](galay::TcpOperation op) -> galay::coroutine::Coroutine {
+    galay::TcpCallbackStore* store = new galay::TcpCallbackStore([](galay::TcpOperation op) -> galay::coroutine::Coroutine {
         galay::coroutine::Coroutine* co;
         co_await galay::coroutine::GetThisCoroutine(co);
         auto connection = op.GetConnection();
@@ -100,8 +100,8 @@ void Test()
     for( int i = 0 ; i < EVENT_SCHEDULER_NUM ; ++i )
     {
         galay::event::ListenEvent* listen_event = new galay::event::ListenEvent(&socket, store, \
-            galay::scheduler::GetNetIOScheduler(i), galay::scheduler::GetCoroutineScheduler(0));
-        galay::scheduler::GetNetIOScheduler(i)->AddEvent(listen_event);
+            galay::GetNetIOScheduler(i), galay::GetCoroutineScheduler(0));
+        galay::GetNetIOScheduler(i)->AddEvent(listen_event);
         listen_events.push_back(listen_event);
     }
     getchar();
@@ -109,11 +109,11 @@ void Test()
     for( int i = 0 ; i < EVENT_SCHEDULER_NUM ; ++i )
     {
         galay::event::ListenEvent* listen_event = listen_events[i];
-        galay::scheduler::GetNetIOScheduler(i)->DelEvent(listen_event);
+        galay::GetNetIOScheduler(i)->DelEvent(listen_event);
         delete listen_event;
     }
-    galay::scheduler::StopCoroutineSchedulers();
-    galay::scheduler::StopNetIOSchedulers();
+    galay::StopCoroutineSchedulers();
+    galay::StopNetIOSchedulers();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 #elif defined(TEST_COROUTINE_WAITERS)
@@ -138,22 +138,22 @@ galay::coroutine::Coroutine func()
 
 void Test()
 {
-    galay::scheduler::DynamicResizeCoroutineSchedulers(1);
-    galay::scheduler::StartCoroutineSchedulers();
+    galay::DynamicResizeCoroutineSchedulers(1);
+    galay::StartCoroutineSchedulers();
     func();
     getchar();
-    galay::scheduler::StopCoroutineSchedulers();
+    galay::StopCoroutineSchedulers();
 }
 
 #elif defined(TEST_TIMER_EVENT)
 
 void Test()
 {
-    galay::scheduler::DynamicResizeNetIOSchedulers(1);
-    galay::scheduler::StartNetIOSchedulers();
+    galay::DynamicResizeNetIOSchedulers(1);
+    galay::StartNetIOSchedulers();
     GHandle timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
     galay::event::TimeEvent* time_event = new galay::event::TimeEvent(timerfd);
-    galay::scheduler::GetNetIOScheduler(0)->AddEvent(time_event);
+    galay::GetNetIOScheduler(0)->AddEvent(time_event);
     time_event->AddTimer(1000, [time_event](galay::event::TimeEvent::Timer::ptr timer){
         std::cout << "timer callback" << std::endl;
         std::any& tmp = timer->GetContext();
@@ -168,7 +168,7 @@ void Test()
         }
     });
     getchar();
-    galay::scheduler::StopNetIOSchedulers();
+    galay::StopNetIOSchedulers();
 }
     
     

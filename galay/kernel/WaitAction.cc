@@ -7,49 +7,62 @@
 namespace galay::action
 {
 
-NetIoEventAction::NetIoEventAction()
+TcpEventAction::TcpEventAction()
     :m_event(nullptr)
 {
     
 }
 
-NetIoEventAction::NetIoEventAction(event::NetWaitEvent *event)
+TcpEventAction::TcpEventAction(event::TcpWaitEvent *event)
 {
     this->m_event = event;
 }
 
-bool NetIoEventAction::HasEventToDo()
+bool TcpEventAction::HasEventToDo()
 {
     return m_event != nullptr;
 }
 
-bool NetIoEventAction::DoAction(coroutine::Coroutine *co)
+bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
     if( !m_event ) return false;
-    if (m_event->OnWaitPrepare(co) == false) return false;
+    if (m_event->OnWaitPrepare(co, ctx) == false) return false;
     event::EventEngine* engine = m_event->GetEventEngine();
+    /*
+        MultiThread environment, EventInEngine may be incorrect, so we need to call ModEvent/AddEvent
+        after AddEvent/ModEvent failed. 
+    */
     if( !m_event->EventInEngine() ){
-        if( engine->AddEvent(this->m_event) != 0 ) {
-            spdlog::error("NetIoEventAction::DoAction.AddEvent failed, {}", engine->GetLastError());
-            return false;
-        }
+        int ret = engine->AddEvent(this->m_event);
+        if(  ret != 0 ) {
+            spdlog::error("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(engine->GetErrorCode()));
+            engine->ModEvent(this->m_event);
+            return true;
+        } 
     } else {
-        if( engine->ModEvent(this->m_event) != 0 ) {
-            spdlog::error("NetIoEventAction::DoAction.ModEvent failed, {}", engine->GetLastError());
-            return false;
+        int ret = engine->ModEvent(this->m_event);
+        if( ret != 0 ) {
+            spdlog::error("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(engine->GetErrorCode()));
+            engine->AddEvent(this->m_event);
+            return true;
         }
     }
     return true;
 }
 
-void NetIoEventAction::ResetEvent(event::NetWaitEvent *event)
+void TcpEventAction::ResetEvent(event::TcpWaitEvent *event)
 {
     this->m_event = event;
 }
 
-event::NetWaitEvent *NetIoEventAction::GetBindEvent()
+event::TcpWaitEvent *TcpEventAction::GetBindEvent()
 {
     return m_event;
+}
+
+TcpSslEventAction::TcpSslEventAction(event::TcpSslWaitEvent * event)
+    :TcpEventAction(event)
+{
 }
 
 CoroutineWaitAction::CoroutineWaitAction()
@@ -62,7 +75,7 @@ bool CoroutineWaitAction::HasEventToDo()
     return true;
 }
 
-bool CoroutineWaitAction::DoAction(coroutine::Coroutine *co)
+bool CoroutineWaitAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
     this->m_coroutine = co;
     return true;
@@ -78,7 +91,7 @@ bool GetCoroutineHandleAction::HasEventToDo()
     return true;
 }
 
-bool GetCoroutineHandleAction::DoAction(coroutine::Coroutine *co)
+bool GetCoroutineHandleAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
     *(this->m_coroutine) = co;
     delete this;

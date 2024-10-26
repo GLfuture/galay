@@ -16,6 +16,7 @@
 #include "kernel/Operation.h"
 #include "kernel/WaitAction.h"
 #include "kernel/Server.h"
+#include "kernel/Step.h"
 
 //protocol
 #include "protocol/Http.h"

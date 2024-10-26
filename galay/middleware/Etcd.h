@@ -19,11 +19,11 @@ namespace galay::action
     class EtcdAction: public WaitAction
     {
     public:
-        inline virtual bool DoAction(coroutine::Coroutine* co) override { m_callback(co);   return true; }
+        virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
         inline virtual bool HasEventToDo() override { return true; }
-        void ResetCallback(std::function<void(coroutine::Coroutine*)>&& callback) { m_callback = std::forward<std::function<void(coroutine::Coroutine*)>>(callback); }
+        void ResetCallback(std::function<void(coroutine::Coroutine*, void*)>&& callback) { m_callback = std::forward<std::function<void(coroutine::Coroutine*,void*)>>(callback); }
     private:
-        std::function<void(coroutine::Coroutine*)> m_callback;
+        std::function<void(coroutine::Coroutine*, void*)> m_callback;
     };
 }
 

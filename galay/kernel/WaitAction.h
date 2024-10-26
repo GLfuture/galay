@@ -4,7 +4,9 @@
 #include "Awaiter.h"
 
 namespace galay::event{
-    class NetWaitEvent;
+    class TcpWaitEvent;
+    class TcpSslWaitEvent;
+    class UdpWaitEvent;
 }
 
 namespace galay::action {
@@ -12,21 +14,34 @@ namespace galay::action {
 /*
     one net event be triggered will resume this coroutine
 */
-class NetIoEventAction: public WaitAction
+class TcpEventAction: public WaitAction
 {
 public:
-    using ptr = std::shared_ptr<NetIoEventAction>;
+    using ptr = std::shared_ptr<TcpEventAction>;
 
-    NetIoEventAction();
-    NetIoEventAction(event::NetWaitEvent* event);
+    TcpEventAction();
+    TcpEventAction(event::TcpWaitEvent* event);
     virtual bool HasEventToDo() override;
     // Add NetEvent to EventEngine
-    virtual bool DoAction(coroutine::Coroutine* co) override;
-    void ResetEvent(event::NetWaitEvent* event);
-    event::NetWaitEvent* GetBindEvent();
-    virtual ~NetIoEventAction() = default;
+    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
+    void ResetEvent(event::TcpWaitEvent* event);
+    event::TcpWaitEvent* GetBindEvent();
+    virtual ~TcpEventAction() = default;
 private:
-    event::NetWaitEvent* m_event;
+    event::TcpWaitEvent* m_event;
+};
+
+class TcpSslEventAction: public TcpEventAction
+{
+public:
+    using ptr = std::shared_ptr<TcpSslEventAction>;
+    TcpSslEventAction(event::TcpSslWaitEvent* event);
+};
+
+class UdpEventAction
+{
+public:
+    UdpEventAction(event::UdpWaitEvent* event);
 };
 
 /*
@@ -39,7 +54,7 @@ public:
     // return true
     virtual bool HasEventToDo() override;
     // Just Save Coroutine*
-    virtual bool DoAction(coroutine::Coroutine* co) override;
+    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
     inline coroutine::Coroutine* GetCoroutine() { return m_coroutine; };
 private:
     coroutine::Coroutine* m_coroutine;
@@ -50,7 +65,7 @@ class GetCoroutineHandleAction: public WaitAction
 public:
     GetCoroutineHandleAction(coroutine::Coroutine** m_coroutine);
     virtual bool HasEventToDo() override;
-    virtual bool DoAction(coroutine::Coroutine* co) override;
+    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
     inline coroutine::Coroutine* GetCoroutine() { return *m_coroutine; };
 private:
     coroutine::Coroutine** m_coroutine;

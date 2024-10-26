@@ -1,6 +1,7 @@
 #include "EventEngine.h"
 #include "Event.h"
 #include "Step.h"
+#include "../common/Error.h"
 #include <cstring>
 #include <spdlog/spdlog.h>
 
@@ -11,14 +12,13 @@ EpollEventEngine::EpollEventEngine(uint32_t max_events)
 {
     this->m_handle.fd = 0;
     this->m_event_size = max_events;
-    this->m_events = new epoll_event[max_events];
+    this->m_events = (epoll_event*)malloc(sizeof(epoll_event) * max_events);
     bzero(m_events, sizeof(epoll_event) * max_events);
     this->m_stop = true;
     this->m_handle.fd = epoll_create(1);
     spdlog::debug("EpollEventEngine::EpollEventEngine [Create Engine: {}]", m_handle.fd);
     if(this->m_handle.fd < 0) {
-        m_error = "epoll_create: ";
-        m_error += strerror(errno);
+        m_error_code = error::MakeErrorCode(error::Error_EpollCreateError, errno);
     }
 }
 
@@ -26,24 +26,6 @@ bool
 EpollEventEngine::Loop(int timeout)
 {
     bool initial = true;
-    /*
-        设置步骤
-            1.if GHandle > m_event_size, then m_event_size *= 2;
-            2.if GHandle < m_event_size / 4, then m_event /= 2;
-            3.m_event_size >= DEFAULT_MAX_EVENTS
-    */
-    AfterCreateTcpSocketStep::Setup([this](GHandle handle){
-        if (handle.fd >= m_event_size) {
-            ResetMaxEventSize(2 * m_event_size);
-        }else {
-            int capacity = m_event_size / 4 ;
-            if( handle.fd <= capacity ) {
-                if( m_event_size / 2 >= DEFAULT_MAX_EVENTS ) {
-                    ResetMaxEventSize(m_event_size / 2);
-                }
-            }
-        }
-    });
     do
     {
         int nEvents;
@@ -85,8 +67,7 @@ bool EpollEventEngine::Stop()
         AddEvent(event);
         int ret = eventfd_write(handle.fd, 1);
         if(ret < 0) {
-            spdlog::error("EventScheduler::Stop eventfd_write failed, error: {}", strerror(errno));
-            this->m_error = strerror(errno);
+            m_error_code = error::MakeErrorCode(error::Error_EventWriteError, errno);
             return false;
         }
         return true;
@@ -106,13 +87,11 @@ EpollEventEngine::AddEvent(Event *event)
     ev.data.ptr = event;
     int ret = epoll_ctl(m_handle.fd, EPOLL_CTL_ADD, event->GetHandle().fd, &ev);
     if( ret != 0 ){
-        m_error = strerror(errno);
+        m_error_code = error::MakeErrorCode(error::Error_AddEventError, errno);
         return ret;
     }
     else {
-        if (!m_error.empty()){
-            m_error.clear();
-        }
+        m_error_code = error::Error_NoError;
         event->SetEventInEngine(true);
     }
     return ret;
@@ -130,13 +109,11 @@ EpollEventEngine::ModEvent(Event* event)
     }
     int ret = epoll_ctl(m_handle.fd, EPOLL_CTL_MOD, event->GetHandle().fd, &ev);
     if( ret != 0 ) {
-        m_error = strerror(errno);
+        m_error_code = error::MakeErrorCode(error::Error_ModEventError, errno);
         return ret;
     }
     else {
-        if (!m_error.empty()){
-            m_error.clear();
-        }
+        m_error_code = error::Error_NoError;
     }
     return ret;
 }
@@ -150,13 +127,11 @@ EpollEventEngine::DelEvent(Event* event)
     ev.data.ptr = event;
     int ret = epoll_ctl(m_handle.fd, EPOLL_CTL_DEL, handle.fd, &ev);
     if( ret != 0 ) {
-        m_error = strerror(errno);
+        m_error_code = error::MakeErrorCode(error::Error_DelEventError, errno);
         return ret;
     }
     else {
-        if (!m_error.empty()){
-            m_error.clear();
-        }
+        m_error_code = error::Error_NoError;
         event->SetEventInEngine(false);
     }
     return ret;
@@ -164,14 +139,22 @@ EpollEventEngine::DelEvent(Event* event)
 
 void EpollEventEngine::ResetMaxEventSize(uint32_t size)
 {
-    m_event_size = size;
-    m_events = (epoll_event*)realloc(m_events, sizeof(epoll_event) * size);
+    if (size == m_event_size) {
+        m_event_size = m_event_size * 2;
+        epoll_event* new_events = (epoll_event*)realloc(m_events, sizeof(epoll_event) * m_event_size);                                                
+        if( new_events ) m_events = new_events;
+    }
+    if(size == m_event_size / 4 && m_event_size / 2 >= DEFAULT_MAX_EVENTS) {
+        m_event_size = m_event_size / 2;
+        epoll_event* new_events = (epoll_event*)realloc(m_events, sizeof(epoll_event) * m_event_size );                                                
+        if( new_events ) m_events = new_events;
+    }
 }
 
 EpollEventEngine::~EpollEventEngine()
 {
     if(m_handle.fd > 0) close(m_handle.fd);
-    delete[] m_events;
+    free(m_events);
 }
 
 bool 

@@ -6,115 +6,10 @@
 
 namespace galay::scheduler
 {
-    
-std::vector<CoroutineScheduler*> g_coroutine_schedulers;
-std::vector<EventScheduler*> g_netio_schedulers;
-
-void DynamicResizeCoroutineSchedulers(int num)
-{
-    int now = g_coroutine_schedulers.size();
-    int sub = num - now;
-    if(sub > 0) {
-        for(int i = 0; i < sub; ++i) {
-            g_coroutine_schedulers.push_back(new CoroutineScheduler);
-        }
-    }else if(sub < 0) {
-        for(int i = g_coroutine_schedulers.size() - 1 ; i >= -sub ; -- i)
-        {
-            g_coroutine_schedulers[i]->Stop();
-            delete g_coroutine_schedulers[i];
-            g_coroutine_schedulers.erase(std::prev(g_coroutine_schedulers.end()));
-        }
-    }
-}
-
-void DynamicResizeNetIOSchedulers(int num)
-{
-    int now = g_netio_schedulers.size();
-    int sub = num - now;
-    if(sub > 0) {
-        for(int i = 0; i < sub; ++i) {
-            g_netio_schedulers.push_back(new EventScheduler);
-        }
-    } else if(sub < 0) {
-        for(int i = g_netio_schedulers.size() - 1 ; i >= -sub ; -- i)
-        {
-            g_netio_schedulers[i]->Stop();
-            delete g_netio_schedulers[i];
-            g_netio_schedulers.erase(std::prev(g_netio_schedulers.end()));
-        }
-    }
-}
-
-// void SetCoroutineSchedulerNum(int num)
-// {
-
-// }
-
-// void SetNetIOSchedulerNum(int num)
-// {
-
-// }
-
-int GetCoroutineSchedulerNum()
-{
-    return g_coroutine_schedulers.size();
-}
-
-int GetNetIOSchedulerNum()
-{
-    return g_netio_schedulers.size();
-}
-
-EventScheduler* GetNetIOScheduler(int index)
-{
-    return g_netio_schedulers[index];
-}
-
-CoroutineScheduler* GetCoroutineScheduler(int index)
-{
-    return g_coroutine_schedulers[index];
-}
-
-void StartCoroutineSchedulers(int timeout)
-{
-    for(int i = 0 ; i < g_coroutine_schedulers.size() ; ++i )
-    {
-        g_coroutine_schedulers[i]->Loop(timeout);
-    }
-}
-
-void StartNetIOSchedulers(int timeout)
-{
-    for(int i = 0 ; i < g_netio_schedulers.size() ; ++i )
-    {
-        g_netio_schedulers[i]->Loop(timeout);
-    }
-}
-
-void StopCoroutineSchedulers()
-{
-    for(int i = 0 ; i < g_coroutine_schedulers.size() ; ++i )
-    {
-        g_coroutine_schedulers[i]->Stop();
-        delete g_coroutine_schedulers[i];
-    }
-    g_coroutine_schedulers.clear();
-}
-
-void StopNetIOSchedulers()
-{
-    for(int i = 0 ; i < g_netio_schedulers.size() ; ++i )
-    {
-        g_netio_schedulers[i]->Stop();
-        delete g_netio_schedulers[i];
-    }
-    g_netio_schedulers.clear();
-}
-
 
 EventScheduler::EventScheduler()
 {
+    m_start = false;
 #if defined(USE_EPOLL)
     m_engine = std::make_shared<event::EpollEventEngine>();
 #elif defined(USE_IOURING)
@@ -136,18 +31,22 @@ bool EventScheduler::Loop(int timeout)
     });
     this->m_thread->detach();
     m_engine->AddEvent(m_time_event);
+    m_start = true;
     return true;
 }
 
 bool EventScheduler::Stop()
 {
+    if(!m_start) {
+        return false;
+    }
     m_engine->Stop();
     return m_waiter->Wait(5000);
 }
 
-std::string EventScheduler::GetLastError()
+uint32_t EventScheduler::GetErrorCode()
 {
-    return m_engine->GetLastError();
+    return m_engine->GetErrorCode();
 }
 
 int 
@@ -178,6 +77,7 @@ EventScheduler::~EventScheduler()
 
 CoroutineScheduler::CoroutineScheduler()
 {
+    m_start = false;
 #if defined(USE_EPOLL)
     m_engine = std::make_shared<event::EpollEventEngine>();
 #elif defined(USE_IOURING)
@@ -205,11 +105,15 @@ bool CoroutineScheduler::Loop(int timeout)
     };
     this->m_coroutine_event = new event::CoroutineEvent(handle, m_engine.get(), event::EventType::kEventTypeRead);
     m_engine->AddEvent(this->m_coroutine_event);
+    m_start = true;
     return true;
 }
 
 bool CoroutineScheduler::Stop()
 {
+    if(!m_start) {
+        return false;
+    }
     m_engine->Stop();
     return m_waiter->Wait(5000);
 }

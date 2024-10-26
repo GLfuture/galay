@@ -26,7 +26,7 @@ public:
         DelEvent will move the event from event list, please call Event.Free() to free the event
     */
     virtual int DelEvent(Event* event) = 0;
-    virtual std::string GetLastError() const = 0;
+    virtual uint32_t GetErrorCode() const = 0;
     virtual GHandle GetHandle() = 0;
     virtual uint32_t GetMaxEventSize() = 0;
     virtual void ResetMaxEventSize(uint32_t size) = 0; 
@@ -43,18 +43,25 @@ public:
     virtual int AddEvent(Event* event) override;
     virtual int ModEvent(Event* event) override;
     virtual int DelEvent(Event* event) override;
-    inline virtual std::string GetLastError() const override { return m_error; }
+    inline virtual uint32_t GetErrorCode() const override { return m_error_code; }
     inline virtual GHandle GetHandle() override { return m_handle; }
     inline virtual uint32_t GetMaxEventSize() override { return m_event_size; }
+
+    /*
+        设置步骤
+            1.if size > m_event_size, then m_event_size *= 2;
+            2.if size < m_event_size / 4, then m_event /= 2;
+            3.m_event_size >= DEFAULT_MAX_EVENTS
+    */
     virtual void ResetMaxEventSize(uint32_t size) override;
     virtual ~EpollEventEngine();
 private:
     bool ConvertToEpollEvent(struct epoll_event &ev, Event *event);
 private:
     GHandle m_handle;
-    uint32_t m_event_size;
-    std::string m_error;
-    epoll_event *m_events;
+    uint32_t m_error_code;
+    std::atomic_uint32_t m_event_size;
+    std::atomic<epoll_event*> m_events;
     std::atomic_bool m_stop;
 };
 #elif defined(USE_IOURING)

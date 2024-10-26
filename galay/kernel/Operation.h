@@ -28,7 +28,7 @@ namespace galay::scheduler
 
 namespace galay::action
 {
-    class NetIoEventAction;
+    class TcpEventAction;
 };
 
 namespace galay
@@ -71,8 +71,8 @@ public:
     
     ~TcpConnection();
 private:
-    event::NetWaitEvent* m_net_event;
-    action::NetIoEventAction* m_event_action;
+    event::TcpWaitEvent* m_net_event;
+    action::TcpEventAction* m_event_action;
     async::AsyncTcpSocket* m_socket;
     scheduler::EventScheduler* m_net_scheduler;
     scheduler::CoroutineScheduler* m_co_scheduler;
@@ -92,8 +92,7 @@ public:
     void ReExecute(TcpOperation operation);
     
     Timer::ptr AddTimer(int64_t during_ms, const std::function<void()>& timer_callback);
-
-    void SetContext(const std::any& context);
+    
     std::any& GetContext();
 
     ~TcpOperation();
@@ -104,16 +103,79 @@ private:
     event::TimeEvent::Timer::ptr m_timer;
 };
 
-class CallbackStore
+class TcpSslConnection
 {
 public:
-    CallbackStore(const std::function<coroutine::Coroutine(TcpOperation)>& callback);
+    using ptr = std::shared_ptr<TcpSslConnection>;
+    TcpSslConnection(action::TcpSslEventAction* action,\
+        scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
+    coroutine::Awaiter_int WaitForSslRecv();
+    /*
+        you should free recv data manually
+    */
+    StringViewWrapper FetchRecvData();
+    
+    void PrepareSendData(std::string_view data);
+    coroutine::Awaiter_int WaitForSslSend();
+
+    coroutine::Awaiter_bool CloseConnection();
+
+    scheduler::EventScheduler* GetNetScheduler();
+    scheduler::CoroutineScheduler* GetCoScheduler();
+    
+    ~TcpSslConnection();
+private:
+    event::TcpSslWaitEvent* m_net_event;
+    action::TcpSslEventAction* m_event_action;
+    async::AsyncTcpSslSocket* m_socket;
+    scheduler::EventScheduler* m_net_scheduler;
+    scheduler::CoroutineScheduler* m_co_scheduler;
+};
+
+class TcpSslOperation
+{
+    using Timer = event::TimeEvent::Timer;
+public:
+    TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)>& callback, action::TcpSslEventAction* action, \
+        scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
+    TcpSslConnection::ptr GetConnection();
+
+    /*
+        ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
+    */
+    void ReExecute(TcpSslOperation operation);
+    
+    Timer::ptr AddTimer(int64_t during_ms, const std::function<void()>& timer_callback);
+    
+    std::any& GetContext();
+
+    ~TcpSslOperation();
+private:
+    std::function<coroutine::Coroutine(TcpSslOperation)>& m_callback;
+    std::any m_context;
+    TcpSslConnection::ptr m_connection;
+    event::TimeEvent::Timer::ptr m_timer;
+};
+
+class TcpCallbackStore
+{
+public:
+    TcpCallbackStore(const std::function<coroutine::Coroutine(TcpOperation)>& callback);
     void Execute(async::AsyncTcpSocket* socket, \
         scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
 private:
     std::function<coroutine::Coroutine(TcpOperation)> m_callback;
 };
 
+class TcpSslCallbackStore
+{
+public:
+    TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)>& callback);
+    void Execute(action::TcpSslEventAction* action, \
+        scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
+private:
+    std::function<coroutine::Coroutine(TcpSslOperation)> m_callback;
+};
 
 }
 
