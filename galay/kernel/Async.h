@@ -41,15 +41,17 @@ public:
     AsyncTcpSocket();
     AsyncTcpSocket(GHandle handle);
     HandleOption GetOption();
-    coroutine::Awaiter_bool Socket(action::TcpEventAction* action);
+
+    static GHandle Socket();
+    bool BindAndListen(int port, int backlog);
+    
+
     coroutine::Awaiter_GHandle Accept(action::TcpEventAction* action);
-    coroutine::Awaiter_bool BindAndListen(int port, int backlog);
     coroutine::Awaiter_bool Connect(action::TcpEventAction* action, NetAddr* addr);
     //return send length, -1 has error 0 disconnect 
     coroutine::Awaiter_int Recv(action::TcpEventAction* action);
     coroutine::Awaiter_int Send(action::TcpEventAction* action);
     coroutine::Awaiter_bool Close(action::TcpEventAction* action);
-    
     //获取rbuffer，清空视图，注意内存释放(attention)
     inline std::string_view& GetRBuffer() { return m_rbuffer; }
     inline void SetRBuffer(std::string_view view) { m_rbuffer = view; }
@@ -71,9 +73,8 @@ class AsyncTcpSslSocket: public AsyncTcpSocket
 {
 public:
     AsyncTcpSslSocket();
-    AsyncTcpSslSocket(SSL* ssl);
-    coroutine::Awaiter_bool SSLSocket(action::TcpSslEventAction* action, SSL_CTX* ctx);
-    bool InitSSL(SSL_CTX* ctx);
+    AsyncTcpSslSocket(GHandle handle, SSL* ssl);
+    static SSL* SSLSocket(GHandle& handle, SSL_CTX* ctx);
     coroutine::Awaiter_GHandle Accept(action::TcpSslEventAction* action);
     //
     coroutine::Awaiter_bool SSLAccept(action::TcpSslEventAction* action);
@@ -87,7 +88,7 @@ public:
     inline SSL*& GetSSL() { return m_ssl; }
     ~AsyncTcpSslSocket();
 protected:
-    coroutine::Awaiter_bool Socket(action::TcpEventAction* action);
+    static GHandle Socket();
     coroutine::Awaiter_int Recv(action::TcpEventAction* action);
     coroutine::Awaiter_int Send(action::TcpEventAction* action);
     coroutine::Awaiter_bool Close(action::TcpEventAction* action);

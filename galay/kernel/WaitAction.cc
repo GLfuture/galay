@@ -7,15 +7,15 @@
 namespace galay::action
 {
 
-TcpEventAction::TcpEventAction()
-    :m_event(nullptr)
+TcpEventAction::TcpEventAction(event::EventEngine* engine)
+    :m_engine(engine), m_event(nullptr)
 {
     
 }
 
-TcpEventAction::TcpEventAction(event::TcpWaitEvent *event)
+TcpEventAction::TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent *event)
+    :m_engine(engine), m_event(event)
 {
-    this->m_event = event;
 }
 
 bool TcpEventAction::HasEventToDo()
@@ -27,23 +27,22 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
     if( !m_event ) return false;
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
-    event::EventEngine* engine = m_event->GetEventEngine();
     /*
         MultiThread environment, EventInEngine may be incorrect, so we need to call ModEvent/AddEvent
         after AddEvent/ModEvent failed. 
     */
-    if( !m_event->EventInEngine() ){
-        int ret = engine->AddEvent(this->m_event);
+    if( !m_event->BelongEngine() ){
+        int ret = m_engine->AddEvent(this->m_event);
         if(  ret != 0 ) {
-            spdlog::error("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(engine->GetErrorCode()));
-            engine->ModEvent(this->m_event);
+            spdlog::warn("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
+            m_engine->ModEvent(this->m_event);
             return true;
         } 
     } else {
-        int ret = engine->ModEvent(this->m_event);
+        int ret = m_engine->ModEvent(this->m_event);
         if( ret != 0 ) {
-            spdlog::error("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(engine->GetErrorCode()));
-            engine->AddEvent(this->m_event);
+            spdlog::warn("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
+            m_engine->AddEvent(this->m_event);
             return true;
         }
     }
@@ -60,8 +59,8 @@ event::TcpWaitEvent *TcpEventAction::GetBindEvent()
     return m_event;
 }
 
-TcpSslEventAction::TcpSslEventAction(event::TcpSslWaitEvent * event)
-    :TcpEventAction(event)
+TcpSslEventAction::TcpSslEventAction(event::EventEngine* engine, event::TcpSslWaitEvent * event)
+    :TcpEventAction(engine, event)
 {
 }
 

@@ -4,13 +4,18 @@
 #include <string>
 #include <memory>
 #include <thread>
+#include <mutex>
+#include <queue>
+#include <shared_mutex>
 #include <functional>
+#include "concurrentqueue/moodycamel/blockingconcurrentqueue.h"
+#include "../common/Base.h"
 
 namespace galay::event {
     class Event;
+    class CallbackEvent;
     class TimeEvent;
-    class EventEngine;
-    class CoroutineEvent;   
+    class EventEngine; 
 };
 
 namespace galay::coroutine {
@@ -50,17 +55,14 @@ class CoroutineScheduler
 public:
     using ptr = std::shared_ptr<CoroutineScheduler>;
     CoroutineScheduler();
-    void ResumeCoroutine(coroutine::Coroutine* coroutine);
+    void EnqueueCoroutine(coroutine::Coroutine* coroutine);
     bool Loop(int timeout = -1);
     bool Stop();
-    inline event::EventEngine* GetEngine() { return m_engine.get(); }
-    virtual ~CoroutineScheduler();
 private:
     std::atomic_bool m_start;
     std::unique_ptr<std::thread> m_thread;
-    std::shared_ptr<event::EventEngine> m_engine;
-    event::CoroutineEvent* m_coroutine_event;
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
+    moodycamel::BlockingConcurrentQueue<coroutine::Coroutine*> m_coroutines_queue;
 };
 
 }

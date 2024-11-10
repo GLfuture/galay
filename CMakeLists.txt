@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
-project(galay)
+project(galay VERSION 1.0)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(CXX_STANDARD_REQUIRED on)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_INSTALL_PREFIX /usr/local)
 set(HEADER_SRC_DIR galay)
@@ -18,10 +22,89 @@ endif()
 #查找依赖
 include(cmake/Dependence.cmake)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(MIDDLEWARE)
+if(ENABLE_MIDDLEWARE)
+    list(APPEND MIDDLEWARE middleware)
+endif()
+
+include_directories(thirdparty)
+
+set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security common helper)
+set(STATIC_LIB ${PROJECT_NAME}-static)
+set(SHARED_LIB ${PROJECT_NAME}-shared)
+
 #添加子目录
 add_subdirectory(galay)
+
+# 初始化对象库列表
+set(OBJECT_LIBS)
+
+foreach(depend_lib ${DEPEND_LIBS})
+  message(STATUS "Processing dependency: ${depend_lib}")
+  if(TARGET ${depend_lib})
+      list(APPEND OBJECT_LIBS $<TARGET_OBJECTS:${depend_lib}>)
+  else()
+      message(FATAL_ERROR "Target ${depend_lib}_obj does not exist")
+  endif()
+endforeach()
+
+
+# 创建静态库
+add_library(${STATIC_LIB} STATIC ${OBJECT_LIBS})
+target_link_libraries(${STATIC_LIB} PRIVATE ${DEPEND_LIBS})
+
+# 创建共享库
+add_library(${SHARED_LIB} SHARED ${OBJECT_LIBS})
+target_link_libraries(${SHARED_LIB} PRIVATE ${DEPEND_LIBS})
+
+
+
+install(TARGETS ${STATIC_LIB} DESTINATION lib EXPORT ${PROJECT_NAME}Targets)
+install(TARGETS ${SHARED_LIB} DESTINATION lib EXPORT ${PROJECT_NAME}Targets)
+
+target_compile_features(${STATIC_LIB} PRIVATE cxx_std_20)
+target_compile_features(${SHARED_LIB} PRIVATE cxx_std_20)
+
+# 生成版本配置文件
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${PROJECT_NAME}Config.cmake.in
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+        INSTALL_DESTINATION 
+                ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}/
+)
+
+install(EXPORT 
+                ${PROJECT_NAME}Targets
+        FILE
+                ${PROJECT_NAME}Targets.cmake
+        NAMESPACE 
+                "${PROJECT_NAME}::"
+        DESTINATION
+                ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+        COMPONENT
+                Devel
+)
+
+install(
+        FILES
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+        DESTINATION
+                ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+        COMPONENT
+                Devel
+)
+
+
 add_subdirectory(tutorial)
 
+#test
 if(ENABLE_GTEST)
   message(STATUS "add test directory")
   add_subdirectory(test)

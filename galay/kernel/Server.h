@@ -52,7 +52,6 @@ namespace galay::server
         int m_co_sche_timeout;
         int m_net_sche_timeout;
         bool m_is_running;
-        async::AsyncTcpSocket* m_socket;
         std::vector<event::ListenEvent*> m_listen_events;
     };
 
@@ -76,7 +75,6 @@ namespace galay::server
         bool m_is_running;
         const char* m_cert_file;
         const char* m_key_file;
-        async::AsyncTcpSslSocket* m_socket;
         std::vector<event::SslListenEvent*> m_listen_events;
     };
 }

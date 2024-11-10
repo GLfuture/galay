@@ -7,6 +7,7 @@ namespace galay::event{
     class TcpWaitEvent;
     class TcpSslWaitEvent;
     class UdpWaitEvent;
+    class EventEngine;
 }
 
 namespace galay::action {
@@ -19,8 +20,8 @@ class TcpEventAction: public WaitAction
 public:
     using ptr = std::shared_ptr<TcpEventAction>;
 
-    TcpEventAction();
-    TcpEventAction(event::TcpWaitEvent* event);
+    TcpEventAction(event::EventEngine* engine);
+    TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent* event);
     virtual bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
@@ -28,6 +29,7 @@ public:
     event::TcpWaitEvent* GetBindEvent();
     virtual ~TcpEventAction() = default;
 private:
+    event::EventEngine* m_engine;
     event::TcpWaitEvent* m_event;
 };
 
@@ -35,7 +37,7 @@ class TcpSslEventAction: public TcpEventAction
 {
 public:
     using ptr = std::shared_ptr<TcpSslEventAction>;
-    TcpSslEventAction(event::TcpSslWaitEvent* event);
+    TcpSslEventAction(event::EventEngine* engine, event::TcpSslWaitEvent* event);
 };
 
 class UdpEventAction

@@ -98,7 +98,7 @@ bool CoroutineWaiters::Decrease()
     if( m_num.load() == 0 )
     {
         m_action->GetCoroutine()->GetAwaiter()->SetResult(true);
-        m_scheduler->ResumeCoroutine(m_action->GetCoroutine());
+        m_scheduler->EnqueueCoroutine(m_action->GetCoroutine());
     }
     return true;
 }

@@ -15,7 +15,7 @@ foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
     target_link_directories(${EXECUTABLE_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
-    target_link_libraries(${EXECUTABLE_NAME} galay-static)
+    target_link_libraries(${EXECUTABLE_NAME} galay-static jemalloc)
 endforeach()
 
 if(ETCD_FOUND)

@@ -50,9 +50,9 @@ TcpConnection::TcpConnection(async::AsyncTcpSocket* socket,\
     scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler)
     : m_net_scheduler(net_scheduler), m_co_scheduler(co_scheduler)
 {
-    this->m_net_event = new event::TcpWaitEvent(net_scheduler->GetEngine(), socket);
+    this->m_net_event = new event::TcpWaitEvent(socket);
     this->m_socket = socket;
-    this->m_event_action = new action::TcpEventAction(m_net_event);
+    this->m_event_action = new action::TcpEventAction(net_scheduler->GetEngine(), m_net_event);
 }
 
 coroutine::Awaiter_int TcpConnection::WaitForRecv()

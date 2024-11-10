@@ -4,3 +4,4 @@ project(protocol)
 file(GLOB SRC_LIST "*.cc")
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
+install(TARGETS protocol EXPORT galayTargets)

@@ -105,15 +105,14 @@ AsyncTcpSocket::GetOption()
     return HandleOption(this->m_handle);
 }
 
-coroutine::Awaiter_bool AsyncTcpSocket::Socket(action::TcpEventAction* action)
+GHandle AsyncTcpSocket::Socket()
 {
-    spdlog::debug("AsyncTcpSocket::Socket");
-    action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSocket);
-    m_err_code = error::ErrorCode::Error_NoError;
-    return coroutine::Awaiter_bool(action, nullptr);
+    return GHandle{
+        .fd = socket(AF_INET, SOCK_STREAM, 0)
+    };
 }
 
-coroutine::Awaiter_GHandle AsyncTcpSocket::Accept(action::TcpEventAction* action)
+coroutine::Awaiter_GHandle AsyncTcpSocket::Accept(action::TcpEventAction *action)
 {
     spdlog::debug("AsyncTcpSocket::Accept");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeAccept);
@@ -121,7 +120,7 @@ coroutine::Awaiter_GHandle AsyncTcpSocket::Accept(action::TcpEventAction* action
     return coroutine::Awaiter_GHandle(action, nullptr);
 }
 
-coroutine::Awaiter_bool AsyncTcpSocket::BindAndListen(int port, int backlog)
+bool AsyncTcpSocket::BindAndListen(int port, int backlog)
 {
     sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -130,15 +129,15 @@ coroutine::Awaiter_bool AsyncTcpSocket::BindAndListen(int port, int backlog)
     if( bind(this->m_handle.fd, (sockaddr*)&addr, sizeof(addr)) )
     {
         this->m_err_code = error::MakeErrorCode(error::ErrorCode::Error_BindError, errno);
-        return coroutine::Awaiter_bool(false);
+        return false;
     }
     if( listen(this->m_handle.fd, backlog) )
     {
         this->m_err_code = error::MakeErrorCode(error::ErrorCode::Error_ListenError, errno);
-        return coroutine::Awaiter_bool(false);
+        return false;
     }
     this->m_err_code = error::ErrorCode::Error_NoError;
-    return coroutine::Awaiter_bool(true);
+    return true;
 }
 
 coroutine::Awaiter_bool AsyncTcpSocket::Connect(action::TcpEventAction* action, NetAddr* addr)
@@ -231,31 +230,22 @@ AsyncTcpSslSocket::AsyncTcpSslSocket()
 {
 }
 
-AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl)
-    :m_ssl(ssl)
+AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, SSL *ssl)
+    : AsyncTcpSocket(handle), m_ssl(ssl)
 {
 }
 
-coroutine::Awaiter_bool AsyncTcpSslSocket::SSLSocket(action::TcpSslEventAction *action, SSL_CTX* ctx)
+SSL* AsyncTcpSslSocket::SSLSocket(GHandle& handle, SSL_CTX* ctx)
 {
-    spdlog::debug("AsyncTcpSslSocket::SSLSocket");
-    m_ssl = SSL_new(ctx);
-    if( m_ssl == nullptr )  return coroutine::Awaiter_bool(false);
-    action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslSocket);
-    this->m_err_code = error::ErrorCode::Error_NoError;
-    return coroutine::Awaiter_bool(action);
-}
-
-
-bool AsyncTcpSslSocket::InitSSL(SSL_CTX *ctx)
-{
-    this->m_ssl = SSL_new(ctx);
-    if(m_ssl == nullptr) return false;
-    if(SSL_set_fd(m_ssl, this->m_handle.fd)) {
-        return true;
+    SSL* ssl = SSL_new(ctx);
+    if(ssl == nullptr) return nullptr;
+    if(SSL_set_fd(ssl, handle.fd)) {
+        return ssl;
     }
-    return false;
+    SSL_free(ssl);
+    return nullptr;
 }
+
 
 coroutine::Awaiter_GHandle AsyncTcpSslSocket::Accept(action::TcpSslEventAction *action)
 {
@@ -267,7 +257,7 @@ coroutine::Awaiter_bool AsyncTcpSslSocket::SSLAccept(action::TcpSslEventAction *
     spdlog::debug("AsyncTcpSslSocket::SSLAccept");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslAccept);
     this->m_err_code = error::ErrorCode::Error_NoError;
-    return coroutine::Awaiter_bool(action);
+    return coroutine::Awaiter_bool(action, nullptr);
 }
 
 coroutine::Awaiter_bool AsyncTcpSslSocket::BindAndListen(int port, int backlog)
@@ -320,9 +310,9 @@ AsyncTcpSslSocket::~AsyncTcpSslSocket()
     }
 }
 
-coroutine::Awaiter_bool AsyncTcpSslSocket::Socket(action::TcpEventAction *action)
+GHandle AsyncTcpSslSocket::Socket()
 {
-    return AsyncTcpSocket::Socket(action);
+    return AsyncTcpSocket::Socket();
 }
 
 coroutine::Awaiter_int AsyncTcpSslSocket::Recv(action::TcpEventAction *action)
