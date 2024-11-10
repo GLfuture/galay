@@ -1,10 +1,11 @@
 #include "Scheduler.h"
 #include "Event.h"
 #include "EventEngine.h"
+#include "Coroutine.h"
 #include "../util/Thread.h"
-#if defined(__linux__)
-    #include <sys/timerfd.h>
-#endif
+#include <sys/timerfd.h>
+#include <spdlog/spdlog.h>
+
 namespace galay::scheduler
 {
 
@@ -27,7 +28,7 @@ bool EventScheduler::Loop(int timeout)
     m_time_event = new event::TimeEvent(handle);
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
-        m_time_event->Free(m_engine.get());
+        spdlog::info("EventScheduler::Loop exit");
         m_waiter->Decrease();
     });
     this->m_thread->detach();
@@ -74,38 +75,38 @@ event::TimeEvent* EventScheduler::GetTimeEvent()
 
 EventScheduler::~EventScheduler()
 {
+    delete m_time_event;
 }
 
 CoroutineScheduler::CoroutineScheduler()
 {
     m_start = false;
-#if defined(USE_EPOLL)
-    m_engine = std::make_shared<event::EpollEventEngine>();
-#elif defined(USE_IOURING)
-    m_engine = std::make_shared<event::IoUringEventEngine>();
-#endif
     m_waiter = std::make_shared<thread::ThreadWaiters>(1);
 }
 
 void 
-CoroutineScheduler::ResumeCoroutine(coroutine::Coroutine *coroutine)
+CoroutineScheduler::EnqueueCoroutine(coroutine::Coroutine *coroutine)
 {
-    m_coroutine_event->ResumeCoroutine(coroutine);
+    m_coroutines_queue.enqueue(std::move(coroutine));
 }
 
 bool CoroutineScheduler::Loop(int timeout)
 {
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
-        m_engine->Loop(timeout);
-        m_coroutine_event->Free(m_engine.get());
+        coroutine::Coroutine* co = nullptr;
+        while(1)
+        {
+            m_coroutines_queue.wait_dequeue(co);
+            if(co) {
+                co->Resume();
+            }else{
+                break;
+            }
+        }
+        spdlog::info("CoroutineScheduler::Loop exit");
         m_waiter->Decrease();
     });
     this->m_thread->detach();
-    GHandle handle{
-        .fd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC)
-    };
-    this->m_coroutine_event = new event::CoroutineEvent(handle, m_engine.get(), event::EventType::kEventTypeRead);
-    m_engine->AddEvent(this->m_coroutine_event);
     m_start = true;
     return true;
 }
@@ -115,14 +116,8 @@ bool CoroutineScheduler::Stop()
     if(!m_start) {
         return false;
     }
-    m_engine->Stop();
+    m_coroutines_queue.enqueue(nullptr);
     return m_waiter->Wait(5000);
 }
-
-CoroutineScheduler::~CoroutineScheduler()
-{
-
-}
-
 
 }

@@ -51,7 +51,7 @@ EtcdClient::RegisterService(const std::string& ServiceName, const std::string& S
         this->m_client->put(ServiceName, ServiceAddr).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
             co->GetAwaiter()->SetResult(true);
-            GetCoroutineScheduler(m_co_sche_index)->ResumeCoroutine(co);
+            GetCoroutineScheduler(m_co_sche_index)->EnqueueCoroutine(co);
         });
     });
     return coroutine::Awaiter_bool(&m_action, nullptr);
@@ -67,7 +67,7 @@ EtcdClient::RegisterService(const std::string& ServiceName, const std::string& S
             m_client->put(ServiceName,ServiceAddr,leaseid).then([this, co](::etcd::Response resp){
                 m_response = std::move(resp);
                 co->GetAwaiter()->SetResult(true);
-                GetCoroutineScheduler(m_co_sche_index)->ResumeCoroutine(co);
+                GetCoroutineScheduler(m_co_sche_index)->EnqueueCoroutine(co);
             });
         });
     });
@@ -81,7 +81,7 @@ EtcdClient::DiscoverService(const std::string& ServiceName)
         m_client->get(ServiceName).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
             co->GetAwaiter()->SetResult(true);
-            GetCoroutineScheduler(m_co_sche_index)->ResumeCoroutine(co);
+            GetCoroutineScheduler(m_co_sche_index)->EnqueueCoroutine(co);
         });
     });
     return coroutine::Awaiter_bool(&m_action, nullptr);
@@ -94,7 +94,7 @@ EtcdClient::DiscoverServicePrefix(const std::string& Prefix)
         m_client->ls(Prefix).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
             co->GetAwaiter()->SetResult(true);
-            GetCoroutineScheduler(m_co_sche_index)->ResumeCoroutine(co);
+            GetCoroutineScheduler(m_co_sche_index)->EnqueueCoroutine(co);
         });
     });
     return coroutine::Awaiter_bool(&m_action, nullptr);

@@ -7,6 +7,7 @@ int main()
     galay::server::TcpServer server;
     server.ReSetNetworkSchedulerNum(8);
     server.ReSetCoroutineSchedulerNum(8);
+    std::cout << getpid() << '\n';
     galay::TcpCallbackStore store([](galay::TcpOperation op)->galay::coroutine::Coroutine {
         auto connection = op.GetConnection();
         int length = co_await connection->WaitForRecv();
@@ -34,8 +35,10 @@ int main()
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";
             std::string respStr = response.EncodePdu();
-            connection->PrepareSendData(respStr);
+            connection->PrepareSendData(data.Data());
             length = co_await connection->WaitForSend();
+            data.Clear();
+            bool b = co_await connection->CloseConnection();
         }
         co_return;
     });

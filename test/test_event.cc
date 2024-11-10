@@ -54,7 +54,7 @@ void Test()
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     auto Work = galay::GetCoroutineScheduler(0);
     auto co = Func(Work);
-    Work->ResumeCoroutine(co.GetHandle().promise().GetCoroutine());
+    Work->EnqueueCoroutine(co.GetHandle().promise().GetCoroutine());
     getchar();
     galay::StopCoroutineSchedulers();
 }

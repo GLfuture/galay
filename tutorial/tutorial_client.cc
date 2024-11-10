@@ -11,8 +11,8 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
     for (i = begin; i < end; ++ i)
     {
         galay::async::AsyncTcpSocket socket = sockets[i];
-        galay::event::TcpWaitEvent event(engine, &socket);
-        galay::action::TcpEventAction action(&event);
+        galay::event::TcpWaitEvent event(&socket);
+        galay::action::TcpEventAction action(engine, &event);
         galay::async::NetAddr addr{
             .m_ip = "127.0.0.1",
             .m_port = g_port
@@ -36,17 +36,16 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
     co_return;
 }
 
-galay::coroutine::Coroutine initSocket(galay::async::AsyncTcpSocket& socket)
+galay::async::AsyncTcpSocket initSocket()
 {
-    galay::event::TcpWaitEvent event(nullptr, &socket);
-    galay::action::TcpEventAction action(&event);
-    bool res = co_await socket.Socket(&action);
+    GHandle handle = galay::async::AsyncTcpSocket::Socket();
+    galay::async::AsyncTcpSocket socket(handle);
     socket.GetOption().HandleNonBlock();
+    return socket;
 }
 
 int main(int argc, char* argv[])
 {
-    spdlog::set_level(spdlog::level::debug);
     if(argc != 2) {
         std::cout << "./tutorial_client [port]\n";
         return -1;
@@ -60,8 +59,7 @@ int main(int argc, char* argv[])
     std::vector<galay::async::AsyncTcpSocket> sockets;
     for (size_t i = 0; i < 2048; ++i)
     {
-        galay::async::AsyncTcpSocket socket;
-        initSocket(socket);
+        galay::async::AsyncTcpSocket socket = initSocket();
         sockets.push_back(socket);
     }
     std::vector<std::thread> ths;

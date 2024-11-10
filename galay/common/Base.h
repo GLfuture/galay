@@ -40,7 +40,6 @@ typedef signed long ssize_t;
 
 #if defined(USE_EPOLL)
     #include <sys/epoll.h>
-    #include <sys/eventfd.h>
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>

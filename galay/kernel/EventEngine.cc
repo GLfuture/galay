@@ -2,6 +2,7 @@
 #include "Event.h"
 #include "Step.h"
 #include "../common/Error.h"
+#include <sys/eventfd.h>
 #include <cstring>
 #include <spdlog/spdlog.h>
 
@@ -46,7 +47,6 @@ EpollEventEngine::Loop(int timeout)
             event->HandleEvent(this);
         }
     } while (!this->m_stop);
-    spdlog::info("EpollEventEngine::Loop [Engine: {} exit]", this->m_handle.fd);
     return true;
 }
 
@@ -62,7 +62,7 @@ bool EpollEventEngine::Stop()
         CallbackEvent* event = new CallbackEvent(handle, EventType::kEventTypeRead, [this](Event *event, EventEngine *engine) {
             eventfd_t val;
             int ret = eventfd_read(event->GetHandle().fd, &val);
-            event->Free(engine);
+            delete event;
         });
         AddEvent(event);
         int ret = eventfd_write(handle.fd, 1);
@@ -92,7 +92,7 @@ EpollEventEngine::AddEvent(Event *event)
     }
     else {
         m_error_code = error::Error_NoError;
-        event->SetEventInEngine(true);
+        event->BelongEngine() = this;
     }
     return ret;
 }
@@ -132,7 +132,7 @@ EpollEventEngine::DelEvent(Event* event)
     }
     else {
         m_error_code = error::Error_NoError;
-        event->SetEventInEngine(false);
+        event->BelongEngine() = nullptr;
     }
     return ret;
 }

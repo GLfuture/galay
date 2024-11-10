@@ -42,6 +42,7 @@ int main(int argc, char** argv)
             std::string respStr = response.EncodePdu();
             connection->PrepareSendData(respStr);
             length = co_await connection->WaitForSslSend();
+            bool b = co_await connection->CloseConnection();
         }
         co_return;
     });

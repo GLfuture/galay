@@ -36,24 +36,24 @@ namespace galay::thread
         std::condition_variable m_cond;
     };
 
-    class ThreadPool
+    class ScrambleThreadPool
     {
     private:
         void Run();
         void Done();
     public:
-        using ptr = std::shared_ptr<ThreadPool>;
-        using wptr = std::weak_ptr<ThreadPool>;
-        using uptr = std::unique_ptr<ThreadPool>;
+        using ptr = std::shared_ptr<ScrambleThreadPool>;
+        using wptr = std::weak_ptr<ScrambleThreadPool>;
+        using uptr = std::unique_ptr<ScrambleThreadPool>;
         
-        ThreadPool();
+        ScrambleThreadPool();
         template <typename F, typename... Args>
         inline auto AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>;
         void Start(int num);
         bool WaitForAllDone(uint32_t timeout = 0);
         bool IsDone();
         void Stop();
-        ~ThreadPool();
+        ~ScrambleThreadPool();
 
     protected:
         std::mutex m_mtx;
@@ -67,7 +67,7 @@ namespace galay::thread
     };
 
     template <typename F, typename... Args>
-    inline auto ThreadPool::AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
+    inline auto ScrambleThreadPool::AddTask(F &&f, Args &&...args) -> std::future<decltype(f(args...))>
     {
         using RetType = decltype(f(args...));
         std::shared_ptr<std::packaged_task<RetType()>> func = std::make_shared<std::packaged_task<RetType()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));

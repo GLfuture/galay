@@ -51,7 +51,7 @@ bool ThreadWaiters::Decrease()
     return true;
 }
 
-ThreadPool::ThreadPool()
+ScrambleThreadPool::ScrambleThreadPool()
 {
     m_terminate.store(false, std::memory_order_relaxed);
     m_nums.store(0);
@@ -59,7 +59,7 @@ ThreadPool::ThreadPool()
 }
 
 void 
-ThreadPool::Run()
+ScrambleThreadPool::Run()
 {
     while (!m_terminate.load())
     {
@@ -76,7 +76,7 @@ ThreadPool::Run()
 }
 
 void 
-ThreadPool::Start(int num)
+ScrambleThreadPool::Start(int num)
 {
     this->m_nums.store(num);
     for (int i = 0; i < num; i++)
@@ -92,7 +92,7 @@ ThreadPool::Start(int num)
 }
 
 bool 
-ThreadPool::WaitForAllDone(uint32_t timeout)
+ScrambleThreadPool::WaitForAllDone(uint32_t timeout)
 {
     std::mutex mtx;
     std::unique_lock<std::mutex> lock(mtx);
@@ -111,13 +111,13 @@ ThreadPool::WaitForAllDone(uint32_t timeout)
 }
 
 bool 
-ThreadPool::IsDone()
+ScrambleThreadPool::IsDone()
 {
     return this->m_isDone.load();
 }
 
 void 
-ThreadPool::Done()
+ScrambleThreadPool::Done()
 {
     this->m_nums.fetch_sub(1);
     if(this->m_nums.load() == 0){
@@ -127,7 +127,7 @@ ThreadPool::Done()
 }
 
 void 
-ThreadPool::Stop()
+ScrambleThreadPool::Stop()
 {
     if (!m_terminate.load())
     {
@@ -136,7 +136,7 @@ ThreadPool::Stop()
     }
 }
 
-ThreadPool::~ThreadPool()
+ScrambleThreadPool::~ScrambleThreadPool()
 {
     if (!m_terminate.load())
     {

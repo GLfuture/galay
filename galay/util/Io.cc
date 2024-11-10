@@ -6,14 +6,9 @@
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OPenBSD__) || defined(__NetBSD__)
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <fcntl.h>
 #include <sys/mman.h>
-#include <netinet/tcp.h>
 #endif
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OPenBSD__)
-#include <sys/types.h>
-#endif
+
 
 namespace galay::io
 {
@@ -110,25 +105,11 @@ TcpFunction::SockKeepalive(int fd , int t_idle , int t_interval , int retry)
     int ret ;
     ret = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const void *)&optval, sizeof(optval));
     if(ret != 0) return ret;
-#if defined(__linux__)
     ret = setsockopt(fd,SOL_TCP,TCP_KEEPIDLE,(void*)&t_idle,sizeof(t_idle));
     if(ret != 0) return ret;
     ret = setsockopt(fd,SOL_TCP,TCP_KEEPINTVL,(void*)&t_interval,sizeof(t_interval));
     if(ret != 0) return ret;
     ret = setsockopt(fd,SOL_TCP,TCP_KEEPCNT,(void*)&retry,sizeof(retry));
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OPenBSD__)
-    ret = setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, (void *)&t_idle, sizeof(t_idle));
-    if (ret != 0) return ret;
-
-    // 设置 TCP_KEEPINTVL 选项
-    ret = setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, (void *)&t_interval, sizeof(t_interval));
-    if (ret != 0) return ret;
-
-    // 设置 TCP_KEEPCNT 选项
-    ret = setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, (void *)&retry, sizeof(retry));
-    if (ret != 0) return ret;
-#endif
-    
     return ret;
 }
 
