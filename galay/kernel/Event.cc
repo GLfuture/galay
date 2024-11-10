@@ -143,7 +143,7 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
         {
-            closesocket(new_handle.fd);
+            close(new_handle.fd);
             spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
@@ -208,7 +208,7 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
         {
-            closesocket(new_handle.fd);
+            close(new_handle.fd);
             spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
@@ -218,7 +218,7 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
         action::TcpSslEventAction* action = new action::TcpSslEventAction(event);
         bool success = co_await socket->SSLAccept(action);
         if( !success ){
-            closesocket(new_handle.fd);
+            close(new_handle.fd);
             spdlog::error("[{}:{}] [[SSLAccept error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
@@ -602,7 +602,7 @@ bool TcpWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
             return false;
         }
     }
-    int ret = closesocket(m_socket->GetHandle().fd);
+    int ret = close(m_socket->GetHandle().fd);
     if( ret < 0 ) {
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
         awaiter->SetResult(false);
@@ -1008,7 +1008,7 @@ bool TcpSslWaitEvent::OnSslCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
             return false;
         }
     }
-    int ret = closesocket(m_socket->GetHandle().fd);
+    int ret = close(m_socket->GetHandle().fd);
     if( ret < 0 ) {
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLCloseError, errno);
         awaiter->SetResult(false);

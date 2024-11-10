@@ -2,8 +2,9 @@
 #include "Event.h"
 #include "EventEngine.h"
 #include "../util/Thread.h"
-#include <sys/timerfd.h>
-
+#if defined(__linux__)
+    #include <sys/timerfd.h>
+#endif
 namespace galay::scheduler
 {
 

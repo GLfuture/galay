@@ -217,16 +217,10 @@ class WaitEvent: public Event
 {
 public:
     WaitEvent(event::EventEngine* engine);
-    virtual std::string Name() = 0;
     /*
         OnWaitPrepare() return false coroutine will not suspend, else suspend
     */
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) = 0;
-    virtual void HandleEvent(EventEngine* engine) = 0;
-    virtual int GetEventType() = 0;
-    
-    virtual void Free(EventEngine* engine) = 0;
-    virtual GHandle GetHandle() = 0;
     inline event::EventEngine* GetEventEngine() { return m_engine; }
     virtual void SetEventInEngine(bool flag) override;
     inline virtual bool EventInEngine() override { return m_event_in_engine; }

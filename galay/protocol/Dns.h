@@ -3,7 +3,7 @@
 #include "Protocol.h"
 #include <queue>
 #include <string.h>
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
     #include <arpa/inet.h>
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     #include <WinSock2.h>

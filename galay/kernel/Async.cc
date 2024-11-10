@@ -22,7 +22,7 @@ HandleOption::HandleOption(GHandle handle)
 
 bool HandleOption::HandleBlock()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     int flag = fcntl(this->m_handle.fd, F_GETFL, 0);
     flag &= ~O_NONBLOCK;
     int ret = fcntl(this->m_handle.fd, F_SETFL, flag);
@@ -39,7 +39,7 @@ bool HandleOption::HandleBlock()
 
 bool HandleOption::HandleNonBlock()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     int flag = fcntl(this->m_handle.fd, F_GETFL, 0);
     flag |= O_NONBLOCK;
     int ret = fcntl(this->m_handle.fd, F_SETFL, flag);
@@ -56,7 +56,7 @@ bool HandleOption::HandleNonBlock()
 
 bool HandleOption::HandleReuseAddr()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     int option = 1;
     int ret = setsockopt(this->m_handle.fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
@@ -362,7 +362,7 @@ coroutine::Awaiter_bool AsyncUdpSocket::Socket()
 
 coroutine::Awaiter_bool AsyncUdpSocket::Close()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     int ret = close(this->m_handle.fd);
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     int ret = closesocket(this->m_handle);
