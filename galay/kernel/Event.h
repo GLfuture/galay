@@ -2,6 +2,7 @@
 #define __GALAY_EVENT_H__
 
 #include "../common/Base.h"
+#include "concurrentqueue/moodycamel/concurrentqueue.h"
 #include <any>
 #include <queue>
 #include <mutex>
@@ -28,12 +29,6 @@ namespace galay::action
     class TcpSslEventAction;
 }
 
-namespace galay::scheduler
-{
-    class EventScheduler;
-    class CoroutineScheduler;
-}
-
 namespace galay
 {
     class TcpCallbackStore;
@@ -46,10 +41,14 @@ namespace galay::event
 
 enum EventType
 {
-    kEventTypeNone = 0,
-    kEventTypeRead = 1,
-    kEventTypeWrite = 2,
+    kEventTypeNone,
+    kEventTypeError,
+    kEventTypeRead,
+    kEventTypeWrite,
+    kEventTypeTimer,
 };
+
+extern std::string ToString(EventType type);
 
 class EventEngine;
 class Event;
@@ -60,9 +59,9 @@ class Event
 public:
     virtual std::string Name() = 0;
     virtual void HandleEvent(EventEngine* engine) = 0;
-    virtual int GetEventType() = 0;
+    virtual EventType GetEventType() = 0;
     virtual GHandle GetHandle() = 0;
-    virtual EventEngine* &BelongEngine() = 0;
+    virtual EventEngine*& BelongEngine() = 0;
 };
 
 class CallbackEvent: public Event
@@ -71,9 +70,9 @@ public:
     CallbackEvent(GHandle handle, EventType type, std::function<void(Event*, EventEngine*)> callback);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "CallbackEvent"; }
-    inline virtual int GetEventType() override { return m_type; }
+    inline virtual EventType GetEventType() override { return m_type; }
     inline virtual GHandle GetHandle() override { return m_handle; }
-    virtual EventEngine* &BelongEngine() override;
+    virtual EventEngine*& BelongEngine() override;
     virtual ~CallbackEvent();
 private:
     EventType m_type;
@@ -81,93 +80,45 @@ private:
     EventEngine* m_engine;
     std::function<void(Event*, EventEngine*)> m_callback;
 };
-
-class TcpWaitEvent;
-class TcpSslWaitEvent;
-
-class ListenEvent: public Event
+/*
+    if timer is cancled and callback is not executed, Success while return false
+*/
+class Timer: public std::enable_shared_from_this<Timer> 
 {
+    friend class TimeEvent;
 public:
-    ListenEvent(async::AsyncTcpSocket* socket, TcpCallbackStore* callback_store \
-        , scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
-    virtual void HandleEvent(EventEngine* engine) override;
-    inline virtual std::string Name() override { return "ListenEvent"; }
-    inline virtual int GetEventType() override { return kEventTypeRead; }
-    virtual GHandle GetHandle() override;
-    virtual EventEngine* &BelongEngine() override;
-    virtual ~ListenEvent();
+    using ptr = std::shared_ptr<Timer>;
+    class TimerCompare
+    {
+    public:
+        bool operator()(const Timer::ptr &a, const Timer::ptr &b);
+    };
+    Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func);
+    int64_t GetDuringTime();  
+    int64_t GetExpiredTime();
+    int64_t GetRemainTime();
+    inline std::any& GetContext() { return m_context; };
+    void SetDuringTime(int64_t during_time);
+    void Execute();
+    void Cancle();
+    bool Success();
 private:
-    coroutine::Coroutine CreateTcpSocket(EventEngine* engine);
-private:
-    EventEngine* m_engine;
-    async::AsyncTcpSocket* m_socket;
-    scheduler::EventScheduler* m_net_scheduler;
-    scheduler::CoroutineScheduler* m_co_scheduler;
-    TcpCallbackStore* m_callback_store;
-    TcpWaitEvent* m_net_event;
-    action::TcpEventAction* m_action;
+    std::any m_context;
+    int64_t m_expiredTime;
+    int64_t m_duringTime;
+    std::atomic_bool m_cancle;
+    std::atomic_bool m_success;
+    std::function<void(Timer::ptr)> m_rightHandle;
 };
 
-class SslListenEvent: public Event
-{
-public:
-    SslListenEvent(async::AsyncTcpSslSocket* socket, TcpSslCallbackStore* callback_store \
-        , scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler);
-    virtual void HandleEvent(EventEngine* engine) override;
-    inline virtual std::string Name() override { return "SslListenEvent"; }
-    inline virtual int GetEventType() override { return kEventTypeRead; }
-    virtual GHandle GetHandle() override;
-    virtual EventEngine* &BelongEngine() override;
-    virtual ~SslListenEvent();
-private:
-    coroutine::Coroutine CreateTcpSslSocket(EventEngine* engine);
-private:
-    EventEngine* m_engine;
-    async::AsyncTcpSslSocket* m_socket;
-    scheduler::EventScheduler* m_net_scheduler;
-    scheduler::CoroutineScheduler* m_co_scheduler;
-    TcpSslCallbackStore* m_callback_store;
-    TcpSslWaitEvent* m_net_event;
-    action::TcpSslEventAction* m_action;
-};
-
+#ifdef __linux__
 class TimeEvent: public Event
 {
 public:
-    /*
-        if timer is cancled and callback is not executed, Success while return false
-    */
-    class Timer: public std::enable_shared_from_this<Timer> 
-    {
-        friend class TimeEvent;
-    public:
-        using ptr = std::shared_ptr<Timer>;
-        class TimerCompare
-        {
-        public:
-            bool operator()(const Timer::ptr &a, const Timer::ptr &b);
-        };
-        Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func);
-        int64_t GetDuringTime();  
-        int64_t GetExpiredTime();
-        int64_t GetRemainTime();
-        inline std::any& GetContext() { return m_context; };
-        void SetDuringTime(int64_t during_time);
-        void Execute();
-        void Cancle();
-        bool Success();
-    private:
-        std::any m_context;
-        int64_t m_expiredTime;
-        int64_t m_duringTime;
-        std::atomic_bool m_cancle;
-        std::atomic_bool m_success;
-        std::function<void(Timer::ptr)> m_rightHandle;
-    };
-    TimeEvent(GHandle handle);
+    TimeEvent(GHandle handle, EventEngine* engine);
     virtual std::string Name() override { return "TimeEvent"; };
     virtual void HandleEvent(EventEngine* engine) override;
-    inline virtual int GetEventType() override { return kEventTypeRead; };
+    inline virtual EventType GetEventType() override { return kEventTypeTimer; };
     inline virtual GHandle GetHandle() override { return m_handle; }
     virtual EventEngine* &BelongEngine() override;
     Timer::ptr AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
@@ -181,21 +132,102 @@ private:
     std::shared_mutex m_mutex;
     std::priority_queue<Timer::ptr> m_timers;
 };
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+
+class TimeEventIDStore
+{
+public:
+    //[0, capacity)
+    TimeEventIDStore(int capacity);
+    bool GetEventId(int& id);
+    bool RecycleEventId(int id);
+    ~TimeEventIDStore();
+private:
+    int *m_temp;
+    int m_capacity;
+    moodycamel::ConcurrentQueue<int> m_eventIds;
+};
+
+#define DEFAULT_TIMEEVENT_ID_CAPACITY 1024
+
+class TimeEvent: public Event
+{
+    static TimeEventIDStore IDStroe; 
+public:
+    using ptr = std::shared_ptr<TimeEvent>;
+
+    static bool CreateHandle(GHandle& handle);
+
+    TimeEvent(GHandle handle, EventEngine* engine);
+    virtual std::string Name() override { return "TimeEvent"; };
+    virtual void HandleEvent(EventEngine* engine) override;
+    inline virtual EventType GetEventType() override { return kEventTypeTimer; };
+    inline virtual GHandle GetHandle() override { return m_handle; }
+    virtual EventEngine*& BelongEngine() override;
+    Timer::ptr AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
+    void ReAddTimer(int64_t during_time, Timer::ptr timer);
+    virtual ~TimeEvent();
+private:
+    GHandle m_handle;
+    EventEngine* m_engine;
+    std::shared_mutex m_mutex;
+    std::priority_queue<Timer::ptr> m_timers;
+};
+#endif
+
+//#if defined(USE_EPOLL) && !defined(USE_AIO)
+
+class TcpWaitEvent;
+class TcpSslWaitEvent;
+
+class ListenEvent: public Event
+{
+public:
+    ListenEvent(EventEngine* engine, async::AsyncTcpSocket* socket, TcpCallbackStore* callback_store);
+    virtual void HandleEvent(EventEngine* engine) override;
+    inline virtual std::string Name() override { return "ListenEvent"; }
+    inline virtual EventType GetEventType() override { return kEventTypeRead; }
+    virtual GHandle GetHandle() override;
+    virtual EventEngine*& BelongEngine() override;
+    virtual ~ListenEvent();
+private:
+    coroutine::Coroutine CreateTcpSocket(EventEngine* engine);
+private:
+    EventEngine* m_engine;
+    async::AsyncTcpSocket* m_socket;
+    TcpCallbackStore* m_callback_store;
+    action::TcpEventAction* m_action;
+};
+
+class SslListenEvent: public Event
+{
+public:
+    SslListenEvent(EventEngine* engine, async::AsyncTcpSslSocket* socket, TcpSslCallbackStore* callback_store);
+    virtual void HandleEvent(EventEngine* engine) override;
+    inline virtual std::string Name() override { return "SslListenEvent"; }
+    inline virtual EventType GetEventType() override { return kEventTypeRead; }
+    virtual GHandle GetHandle() override;
+    virtual EventEngine*& BelongEngine() override;
+    virtual ~SslListenEvent();
+private:
+    coroutine::Coroutine CreateTcpSslSocket(EventEngine* engine);
+private:
+    EventEngine* m_engine;
+    async::AsyncTcpSslSocket* m_socket;
+    TcpSslCallbackStore* m_callback_store;
+    action::TcpSslEventAction* m_action;
+};
+
 
 class WaitEvent: public Event
 {
 public:
-    WaitEvent();
-    virtual std::string Name() = 0;
+    WaitEvent(EventEngine* engine = nullptr);
     /*
         OnWaitPrepare() return false coroutine will not suspend, else suspend
     */
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) = 0;
-    virtual void HandleEvent(EventEngine* engine) = 0;
-    virtual int GetEventType() = 0;
-    
-    virtual GHandle GetHandle() = 0;
-    virtual EventEngine* &BelongEngine() override;
+    virtual EventEngine*& BelongEngine() override;
     virtual ~WaitEvent() = default;
 protected:
     event::EventEngine* m_engine;
@@ -204,6 +236,7 @@ protected:
 
 enum TcpWaitEventType
 {
+    kWaitEventTypeError,
     kWaitEventTypeAccept,
     kWaitEventTypeSslAccept,
     kWaitEventTypeRecv,
@@ -224,7 +257,7 @@ public:
     virtual std::string Name() override;
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
     virtual void HandleEvent(EventEngine* engine) override;
-    virtual int GetEventType() override;
+    virtual EventType GetEventType() override;
     virtual GHandle GetHandle() override;
     inline void ResetNetWaitEventType(TcpWaitEventType type) { m_type = type; }
     inline async::AsyncTcpSocket* GetAsyncTcpSocket() { return m_socket; }
@@ -236,6 +269,7 @@ protected:
     bool OnConnectWaitPrepare(coroutine::Coroutine* co, void* ctx);
     bool OnCloseWaitPrepare(coroutine::Coroutine* co, void* ctx);
 
+    void HandleErrorEvent(EventEngine* engine);
     void HandleAcceptEvent(EventEngine* engine);
     void HandleRecvEvent(EventEngine* engine);
     void HandleSendEvent(EventEngine* engine);
@@ -256,7 +290,7 @@ class TcpSslWaitEvent: public TcpWaitEvent
 public:
     TcpSslWaitEvent(async::AsyncTcpSslSocket* socket);
     virtual std::string Name() override;
-    virtual int GetEventType() override;
+    virtual EventType GetEventType() override;
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
     virtual void HandleEvent(EventEngine* engine) override;
     async::AsyncTcpSslSocket* GetAsyncTcpSocket();
@@ -274,7 +308,7 @@ protected:
     void HandleSslSendEvent(EventEngine* engine);
     void HandleSslCloseEvent(EventEngine* engine);
 
-    int CoverSSLErrorToEventType();
+    EventType CovertSSLErrorToEventType();
     // return recvByte
     int DealRecv();
     // return sendByte
@@ -291,6 +325,13 @@ private:
     sockaddr* m_ToAddr;
     sockaddr* m_FromAddr;
 };
+
+//#elif defined(USE_KQUEUE)
+
+
+
+
+//#endif
     
 }
 #endif

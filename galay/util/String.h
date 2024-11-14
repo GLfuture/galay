@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <cinttypes>
 #if __cplusplus >= 201703L
 #include <string_view>
 #endif

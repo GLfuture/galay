@@ -51,7 +51,8 @@ typedef signed long ssize_t;
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
+    #include <sys/event.h>
     
 #endif
-
+#define GALAY_EXTERN_API __attribute__((visibility("default")))
 #endif

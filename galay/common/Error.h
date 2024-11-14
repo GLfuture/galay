@@ -32,6 +32,7 @@ enum ErrorCode
     Error_InetNtopError,
     Error_EpollCreateError,
     Error_EventWriteError,
+    Error_KqueueCreateError,
 };
 
 /*

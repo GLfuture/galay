@@ -44,7 +44,6 @@ namespace galay::server
         inline bool IsRunning() { return m_is_running; }
         void ReSetNetworkSchedulerNum(int num);
         void ReSetCoroutineSchedulerNum(int num);
-        async::AsyncTcpSocket* GetSocket();
         ~TcpServer();
     private:
         int m_co_sche_num;
@@ -65,7 +64,6 @@ namespace galay::server
         inline bool IsRunning() { return m_is_running; }
         void ReSetNetworkSchedulerNum(int num);
         void ReSetCoroutineSchedulerNum(int num);
-        async::AsyncTcpSslSocket* GetSocket();
         ~TcpSslServer();
     private:
         int m_co_sche_num;

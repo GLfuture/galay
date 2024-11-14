@@ -1,7 +1,7 @@
 #include "BaseDefine.h"
 
 
-const char* galay::html::Html404NotFound = "<!DOCTYPE html>\
+const char* galay::html::Html404NotFound = "<!DOCTYPE html> \
 <html lang=\"en\">\
 <head>\
     <meta charset=\"UTF-8\">\

@@ -7,7 +7,7 @@ namespace galay::util
 ParserManager::ParserManager()
 {
     RegisterExtension<ConfigParser>(".conf");
-    RegisterExtension<JsonParser>(".json");
+    //RegisterExtension<JsonParser>(".json");
 }
 
 
@@ -78,7 +78,7 @@ ConfigParser::GetValue(const std::string &key)
     return it->second;
 }
 
-
+#ifdef INCLUDE_NLOHMANN_JSON_HPP_
 int 
 JsonParser::Parse(const std::string &filename)
 {
@@ -113,4 +113,7 @@ JsonParser::GetValue(const std::string &key)
     }
     return {};
 }
+
+#endif
+
 }

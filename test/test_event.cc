@@ -2,7 +2,6 @@
 #include <thread>
 #include <vector>
 #include <iostream>
-#include <sys/timerfd.h>
 #include <spdlog/spdlog.h>
 
 #define EVENT_SCHEDULER_NUM 4

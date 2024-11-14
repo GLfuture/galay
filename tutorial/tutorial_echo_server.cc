@@ -4,6 +4,7 @@
 
 int main()
 {
+    spdlog::set_level(spdlog::level::debug);
     galay::server::TcpServer server;
     server.ReSetNetworkSchedulerNum(8);
     server.ReSetCoroutineSchedulerNum(8);
@@ -35,9 +36,8 @@ int main()
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";
             std::string respStr = response.EncodePdu();
-            connection->PrepareSendData(data.Data());
+            connection->PrepareSendData(respStr);
             length = co_await connection->WaitForSend();
-            data.Clear();
             bool b = co_await connection->CloseConnection();
         }
         co_return;

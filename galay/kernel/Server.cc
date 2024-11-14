@@ -33,9 +33,7 @@ coroutine::Coroutine TcpServer::Start(TcpCallbackStore* store, int port, int bac
 		option.HandleReusePort();
 		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(handle);
 		socket->BindAndListen(port, backlog);
-		m_listen_events[i] = new event::ListenEvent(socket, store\
-			, GetNetIOScheduler(i), GetCoroutineScheduler(i));
-		GetNetIOScheduler(i)->AddEvent(m_listen_events[i]);
+		m_listen_events[i] = new event::ListenEvent(GetNetIOScheduler(i)->GetEngine(), socket, store);
 	} 
 	co_return;
 }
@@ -108,9 +106,7 @@ coroutine::Coroutine TcpSslServer::Start(TcpSslCallbackStore *store, int port, i
 		async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(handle, ssl);
 		socket->BindAndListen(port, backlog);
 
-		m_listen_events[i] = new event::SslListenEvent(socket, store\
-			, GetNetIOScheduler(i), GetCoroutineScheduler(i));
-		GetNetIOScheduler(i)->AddEvent(m_listen_events[i]);
+		m_listen_events[i] = new event::SslListenEvent(GetNetIOScheduler(i)->GetEngine(), socket, store);
 	} 
 	co_return;
 }

@@ -14,7 +14,6 @@
 namespace galay::event {
     class Event;
     class CallbackEvent;
-    class TimeEvent;
     class EventEngine; 
 };
 
@@ -28,6 +27,7 @@ namespace galay::thread {
 
 namespace galay::scheduler {
 
+
 class EventScheduler
 {
 public:
@@ -36,15 +36,10 @@ public:
     bool Loop(int timeout = -1);
     bool Stop();
     uint32_t GetErrorCode();
-    int AddEvent(event::Event *event);
-    int ModEvent(event::Event *event);
-    int DelEvent(event::Event *event);
-    event::TimeEvent* GetTimeEvent();
     inline event::EventEngine* GetEngine() { return m_engine.get(); }
     virtual ~EventScheduler();
 private:
     std::atomic_bool m_start;
-    event::TimeEvent* m_time_event;
     std::unique_ptr<std::thread> m_thread;
     std::shared_ptr<event::EventEngine> m_engine;
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
