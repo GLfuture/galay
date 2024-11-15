@@ -169,7 +169,7 @@ Awaiter_ptr::Awaiter_ptr(action::WaitAction *action, void* ctx)
     this->m_action = action;
     this->m_coroutine_handle = nullptr;
     this->m_ptr = nullptr;
-    this->m_ctx = m_ctx;
+    this->m_ctx = ctx;
 }
 
 Awaiter_ptr::Awaiter_ptr(void *ptr)

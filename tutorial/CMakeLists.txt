@@ -12,6 +12,8 @@ set(SRC_LIST
     #tutorial_https_server.cc
     #demo.cc
     )
+include_directories(${CMAKE_SOURCE_DIR}/galay)    
+
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})

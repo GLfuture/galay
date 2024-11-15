@@ -1,5 +1,5 @@
-#include "../galay/middleware/Mysql.h"
-#include "../galay/galay.h"
+#include "middleware/Mysql.h"
+#include "galay.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>

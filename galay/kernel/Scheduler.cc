@@ -2,7 +2,7 @@
 #include "Event.h"
 #include "EventEngine.h"
 #include "Coroutine.h"
-#include "../util/Thread.h"
+#include "util/Thread.h"
 #include <spdlog/spdlog.h>
 
 namespace galay::scheduler

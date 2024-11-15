@@ -3,7 +3,7 @@
 #include "Scheduler.h"
 #include "Async.h"
 #include "Operation.h"
-#include "Step.h"
+#include "ExternApi.h"
 #include <openssl/err.h>
 #include "spdlog/spdlog.h"
 
@@ -19,9 +19,9 @@ coroutine::Coroutine TcpServer::Start(TcpCallbackStore* store, int port, int bac
 {
 	
 	DynamicResizeCoroutineSchedulers(m_co_sche_num);
-	DynamicResizeNetIOSchedulers(m_net_sche_num);
+	DynamicResizeEventSchedulers(m_net_sche_num);
 	StartCoroutineSchedulers(m_co_sche_timeout);
-	StartNetIOSchedulers(m_net_sche_timeout);
+	StartEventSchedulers(m_net_sche_timeout);
 	m_is_running = true;
 	m_listen_events.resize(m_net_sche_num);
 	for(int i = 0 ; i < m_net_sche_num; ++i )
@@ -33,7 +33,7 @@ coroutine::Coroutine TcpServer::Start(TcpCallbackStore* store, int port, int bac
 		option.HandleReusePort();
 		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(handle);
 		socket->BindAndListen(port, backlog);
-		m_listen_events[i] = new event::ListenEvent(GetNetIOScheduler(i)->GetEngine(), socket, store);
+		m_listen_events[i] = new event::ListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
 	} 
 	co_return;
 }
@@ -46,7 +46,7 @@ void TcpServer::Stop()
 		delete m_listen_events[i];
 	}
 	StopCoroutineSchedulers();
-	StopNetIOSchedulers();
+	StopEventSchedulers();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -62,7 +62,7 @@ void TcpServer::ReSetCoroutineSchedulerNum(int num)
 void TcpServer::ReSetNetworkSchedulerNum(int num)
 {
 	if(m_is_running)
-		DynamicResizeNetIOSchedulers(num);
+		DynamicResizeEventSchedulers(num);
 	else 
 		m_net_sche_num = num;
 }
@@ -80,9 +80,9 @@ TcpSslServer::TcpSslServer(const char* cert_file, const char* key_file)
 coroutine::Coroutine TcpSslServer::Start(TcpSslCallbackStore *store, int port, int backlog)
 {
     DynamicResizeCoroutineSchedulers(m_co_sche_num);
-	DynamicResizeNetIOSchedulers(m_net_sche_num);
+	DynamicResizeEventSchedulers(m_net_sche_num);
 	StartCoroutineSchedulers(m_co_sche_timeout);
-	StartNetIOSchedulers(m_net_sche_timeout);
+	StartEventSchedulers(m_net_sche_timeout);
 	
 	bool res = InitialSSLServerEnv(m_cert_file, m_key_file);
 	if( !res ) {
@@ -106,7 +106,7 @@ coroutine::Coroutine TcpSslServer::Start(TcpSslCallbackStore *store, int port, i
 		async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(handle, ssl);
 		socket->BindAndListen(port, backlog);
 
-		m_listen_events[i] = new event::SslListenEvent(GetNetIOScheduler(i)->GetEngine(), socket, store);
+		m_listen_events[i] = new event::SslListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
 	} 
 	co_return;
 }
@@ -118,7 +118,7 @@ void TcpSslServer::Stop()
 		delete m_listen_events[i];
 	}
 	StopCoroutineSchedulers();
-	StopNetIOSchedulers();
+	StopEventSchedulers();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -127,7 +127,7 @@ void TcpSslServer::Stop()
 void TcpSslServer::ReSetNetworkSchedulerNum(int num)
 {
 	if(m_is_running)
-		DynamicResizeNetIOSchedulers(num);
+		DynamicResizeEventSchedulers(num);
 	else 
 		m_net_sche_num = num;
 }

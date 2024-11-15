@@ -1,4 +1,4 @@
-#include "../galay/galay.h"
+#include "galay.h"
 #include <iostream>
 #include <thread>
 #include <spdlog/spdlog.h>
@@ -54,8 +54,8 @@ int main(int argc, char* argv[])
     g_port = atoi(argv[1]);
     galay::DynamicResizeCoroutineSchedulers(1);
     galay::StartCoroutineSchedulers();
-    galay::DynamicResizeNetIOSchedulers(1);
-    galay::StartNetIOSchedulers();
+    galay::DynamicResizeEventSchedulers(1);
+    galay::StartEventSchedulers();
     
     std::vector<galay::async::AsyncTcpSocket*> sockets;
     for (size_t i = 0; i < 2048; ++i)
@@ -66,12 +66,12 @@ int main(int argc, char* argv[])
     std::vector<std::thread> ths;
     for( int i = 0 ; i < 8 ; ++i )
     {
-        ths.push_back(std::thread(std::bind(test, galay::GetNetIOScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
+        ths.push_back(std::thread(std::bind(test, galay::GetEventScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
         ths[i].detach();
     }
     getchar();
     galay::StopCoroutineSchedulers();
-    galay::StopNetIOSchedulers();
+    galay::StopEventSchedulers();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     return 0;
 }

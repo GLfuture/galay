@@ -1,6 +1,6 @@
 #include "EventEngine.h"
 #include "Event.h"
-#include "Step.h"
+#include "ExternApi.h"
 #include "../common/Error.h"
 #if defined(__linux__)
     #include <sys/eventfd.h>
@@ -301,7 +301,7 @@ int KqueueEventEngine::AddEvent(Event *event, void* ctx)
         m_error_code = error::Error_NoError;
     }
     event->BelongEngine() = this;
-    return ;
+    return ret;
 }
 
 int KqueueEventEngine::ModEvent(Event *event, void* ctx)
@@ -343,6 +343,8 @@ bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void* c
     ev.fflags = 0;
     switch (event->GetEventType())
     {
+    case kEventTypeError:
+        return false;
     case kEventTypeNone:
         return false;
     case kEventTypeRead:

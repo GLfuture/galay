@@ -1,7 +1,7 @@
 #ifndef __GALAY_EVENT_H__
 #define __GALAY_EVENT_H__
 
-#include "../common/Base.h"
+#include "common/Base.h"
 #include "concurrentqueue/moodycamel/concurrentqueue.h"
 #include <any>
 #include <queue>

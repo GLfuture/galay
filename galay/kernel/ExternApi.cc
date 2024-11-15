@@ -1,4 +1,4 @@
-#include "Step.h"
+#include "ExternApi.h"
 #include "Scheduler.h"
 
 namespace galay
@@ -25,7 +25,7 @@ void DynamicResizeCoroutineSchedulers(int num)
     }
 }
 
-void DynamicResizeNetIOSchedulers(int num)
+void DynamicResizeEventSchedulers(int num)
 {
     int now = g_netio_schedulers.size();
     int sub = num - now;
@@ -48,12 +48,12 @@ int GetCoroutineSchedulerNum()
     return g_coroutine_schedulers.size();
 }
 
-int GetNetIOSchedulerNum()
+int GetEventSchedulerNum()
 {
     return g_netio_schedulers.size();
 }
 
-scheduler::EventScheduler* GetNetIOScheduler(int index)
+scheduler::EventScheduler* GetEventScheduler(int index)
 {
     return g_netio_schedulers[index];
 }
@@ -71,7 +71,7 @@ void StartCoroutineSchedulers(int timeout)
     }
 }
 
-void StartNetIOSchedulers(int timeout)
+void StartEventSchedulers(int timeout)
 {
     for(int i = 0 ; i < g_netio_schedulers.size() ; ++i )
     {
@@ -89,7 +89,7 @@ void StopCoroutineSchedulers()
     g_coroutine_schedulers.clear();
 }
 
-void StopNetIOSchedulers()
+void StopEventSchedulers()
 {
     for(int i = 0 ; i < g_netio_schedulers.size() ; ++i )
     {

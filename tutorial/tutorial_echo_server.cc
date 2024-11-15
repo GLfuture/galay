@@ -1,4 +1,4 @@
-#include "../galay/galay.h"
+#include "galay.h"
 #include <iostream>
 #include <spdlog/spdlog.h>
 

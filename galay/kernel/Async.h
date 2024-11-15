@@ -1,8 +1,8 @@
 #ifndef __GALAY_ASYNC_H__
 #define __GALAY_ASYNC_H__
 
-#include "../common/Base.h"
-#include "../common/Error.h"
+#include "common/Base.h"
+#include "common/Error.h"
 #include "WaitAction.h"
 #include <openssl/ssl.h>
 

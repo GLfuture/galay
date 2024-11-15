@@ -1,5 +1,5 @@
-#include "../galay/middleware/Etcd.h"
-#include "../galay/galay.h"
+#include "middleware/Etcd.h"
+#include "galay.h"
 #include <iostream>
 
 galay::coroutine::Coroutine func()
