@@ -115,6 +115,7 @@ private:
 class TimeEvent: public Event
 {
 public:
+    using ptr = std::shared_ptr<TimeEvent>;
     TimeEvent(GHandle handle, EventEngine* engine);
     virtual std::string Name() override { return "TimeEvent"; };
     virtual void HandleEvent(EventEngine* engine) override;
@@ -218,7 +219,7 @@ private:
     action::TcpSslEventAction* m_action;
 };
 
-
+//靠handle负载给coroutine_schduler
 class WaitEvent: public Event
 {
 public:

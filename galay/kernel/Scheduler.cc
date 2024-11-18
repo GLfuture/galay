@@ -3,6 +3,7 @@
 #include "EventEngine.h"
 #include "Coroutine.h"
 #include "util/Thread.h"
+#include <sys/timerfd.h>
 #include <spdlog/spdlog.h>
 
 namespace galay::scheduler
@@ -89,6 +90,21 @@ bool CoroutineScheduler::Stop()
     }
     m_coroutines_queue.enqueue(nullptr);
     return m_waiter->Wait(5000);
+}
+
+
+
+TimerScheduler::TimerScheduler()
+{
+    GHandle handle{
+        .fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)
+    };
+    m_timer_event = new event::TimeEvent(handle, m_engine.get());
+}
+
+std::shared_ptr<event::Timer> TimerScheduler::AddTimer(int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback)
+{
+    return m_timer_event->AddTimer(ms, std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback));
 }
 
 }

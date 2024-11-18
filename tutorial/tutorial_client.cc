@@ -53,9 +53,9 @@ int main(int argc, char* argv[])
     spdlog::set_level(spdlog::level::debug);
     g_port = atoi(argv[1]);
     galay::DynamicResizeCoroutineSchedulers(1);
-    galay::StartCoroutineSchedulers();
+    galay::StartCoroutineSchedulers(-1);
     galay::DynamicResizeEventSchedulers(1);
-    galay::StartEventSchedulers();
+    galay::StartEventSchedulers(-1);
     
     std::vector<galay::async::AsyncTcpSocket*> sockets;
     for (size_t i = 0; i < 2048; ++i)

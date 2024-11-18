@@ -26,9 +26,6 @@ public:
     virtual bool Stop() = 0;
     virtual int AddEvent(Event* event, void* ctx) = 0;
     virtual int ModEvent(Event* event, void* ctx) = 0;
-    /*
-        DelEvent will move the event from event list, please call Event.Free() to free the event
-    */
     virtual int DelEvent(Event* event, void* ctx) = 0;
     virtual uint32_t GetErrorCode() const = 0;
     virtual GHandle GetHandle() = 0;

@@ -2,15 +2,32 @@
 #define __GALAY_AWAITERACTION_H__
 
 #include "Awaiter.h"
+#include <functional>
 
 namespace galay::event{
     class TcpWaitEvent;
     class TcpSslWaitEvent;
     class UdpWaitEvent;
     class EventEngine;
+    class Timer;
 }
 
 namespace galay::action {
+
+class TimeEventAction: public WaitAction
+{
+public:
+    using ptr = std::shared_ptr<TimeEventAction>;
+    TimeEventAction() = default;
+    void CreateTimer(int64_t ms, std::shared_ptr<event::Timer>* timer, std::function<void(std::shared_ptr<event::Timer>)>&& callback);
+    virtual bool HasEventToDo() override;
+    // Add Timer
+    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
+private:
+    int64_t m_ms;
+    std::shared_ptr<event::Timer>* m_timer;
+    std::function<void(std::shared_ptr<event::Timer>)> m_callback;
+};
 
 /*
     one net event be triggered will resume this coroutine

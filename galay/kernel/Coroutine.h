@@ -20,6 +20,11 @@ namespace galay::scheduler
     class CoroutineScheduler;
 }
 
+namespace galay::event
+{
+    class Timer;
+}
+
 namespace galay::coroutine
 {
 class Coroutine;
@@ -117,8 +122,19 @@ private:
 };
 
 class Awaiter_void;
+class Awaiter_bool;
 
-extern Awaiter_void GetThisCoroutine(Coroutine*& coroutine);
+namespace this_coroutine
+{
+    extern Awaiter_void GetThisCoroutine(Coroutine*& coroutine);
+    /*
+        return false only when TimeScheduler is not running
+        [ms] : ms
+        [timer] : timer
+        [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
+    */
+    extern Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
+}
 
 }
 

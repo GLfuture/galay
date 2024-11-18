@@ -1,7 +1,9 @@
 #include "Coroutine.h"
+#include "Event.h"
 #include "Awaiter.h"
 #include "Scheduler.h"
 #include "WaitAction.h"
+#include "ExternApi.h"
 
 namespace galay::coroutine
 {
@@ -123,12 +125,34 @@ bool CoroutineWaitContext::Done()
     return m_waiters.Decrease();
 }
 
+
+}
+
+namespace galay::coroutine::this_coroutine
+{
+    
 Awaiter_void GetThisCoroutine(Coroutine*& coroutine)
 {
     action::GetCoroutineHandleAction* action = new action::GetCoroutineHandleAction(&coroutine);
     return Awaiter_void(action, nullptr);
 }
 
+static action::TimeEventAction g_time_action;
 
-
+Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
+{
+    if(GetTimeSchedulerNum() == 0) {
+        return Awaiter_bool(false);
+    }
+    g_time_action.CreateTimer(ms, timer, [scheduler](event::Timer::ptr timer){
+        auto co = std::any_cast<coroutine::Coroutine*>(timer->GetContext());
+        co->GetAwaiter()->SetResult(true);
+        if(scheduler == nullptr) {
+            GetCoroutineSchedulerInOrder()->EnqueueCoroutine(co);
+        } else{
+            scheduler->EnqueueCoroutine(co);
+        }
+    });
+    return Awaiter_bool(&g_time_action, nullptr);
+}
 }

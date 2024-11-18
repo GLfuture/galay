@@ -3,6 +3,18 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+galay::coroutine::Coroutine test()
+{
+    galay::event::Timer::ptr timer;
+    bool res = co_await galay::coroutine::this_coroutine::SleepFor(1000, &timer);
+    if(res)
+        std::cout << "sleep success" << std::endl;
+    else
+        std::cout << "sleep failed" << std::endl;
+    co_return;
+}
+
+
 int main()
 {
 #ifdef USE_KQUEUE
@@ -27,4 +39,14 @@ int main()
     getchar(); 
     return 0;
 #endif
+    galay::DynamicResizeTimeSchedulers(1);
+    galay::DynamicResizeCoroutineSchedulers(1);
+    galay::StartCoroutineSchedulers(-1);
+    galay::StartTimerSchedulers(-1);
+    test();
+    std::cout << "main thread wait..." << std::endl;
+    getchar();
+    galay::StopTimerSchedulers();
+    galay::StopCoroutineSchedulers();
+    return 0;
 }

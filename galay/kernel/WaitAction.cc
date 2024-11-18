@@ -2,11 +2,33 @@
 #include "Event.h"
 #include "Async.h"
 #include "EventEngine.h"
+#include "Scheduler.h"
+#include "ExternApi.h"
 #include <spdlog/spdlog.h>
 
 namespace galay::action
 {
+void TimeEventAction::CreateTimer(int64_t ms, std::shared_ptr<event::Timer>* timer, std::function<void(std::shared_ptr<event::Timer>)> &&callback)
+{
+    this->m_ms = ms;
+    m_callback = std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback);
+    m_timer = timer;
+}
 
+bool TimeEventAction::HasEventToDo()
+{
+    return true;
+}
+
+bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
+{
+    if(m_ms <= 0) {
+        return false;
+    } 
+    *m_timer = GetTimerSchedulerInOrder()->AddTimer(m_ms, std::move(m_callback));
+    (*m_timer)->GetContext() = co;
+    return true;
+}
 
 TcpEventAction::TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent *event)
     :m_engine(engine), m_event(event)
