@@ -1,4 +1,4 @@
-#include "../galay/galay.h"
+#include "galay/galay.h"
 #include <gtest/gtest.h>
 
 class Base: public galay::Base, public galay::common::DynamicCreator<galay::Base,Base>

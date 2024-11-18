@@ -1,5 +1,6 @@
 #include <nlohmann/json.hpp>
-#include "../galay/galay.h"
+
+#include "galay/galay.h"
 #include <iostream>
 
 
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
     auto parser = parserManager.CreateParser("init.conf");
     auto confParser = std::dynamic_pointer_cast<galay::util::ConfigParser>(parser);
     std::cout << std::any_cast<std::string>(confParser->GetValue("author")) << std::endl;
+#ifdef INCLUDE_NLOHMANN_JSON_HPP_
     parser = parserManager.CreateParser("init.json");
     auto jsonParser = std::dynamic_pointer_cast<galay::util::JsonParser>(parser);
     auto j = std::any_cast<galay::util::JsonValue>(jsonParser->GetValue("dependencies"));
@@ -19,5 +21,6 @@ int main(int argc, char *argv[])
     }
     std::cout << std::boolalpha << jsonParser->GetValue("num").has_value() << std::endl;
     std::cout << std::boolalpha << std::any_cast<bool>(jsonParser->GetValue("is_student")) << std::endl;
+#endif
     return 0;
 }

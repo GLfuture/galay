@@ -4,6 +4,7 @@ set(SRC_LIST
     tutorial_client.cc
     tutorial_echo_server.cc
     tutorial_ssl_echo_server.cc
+    test_time.cc
     #tutorial_proxy_server.cc
     #tutorial_ratelimiter.cc
     #tutorial_smtp_client.cc
@@ -11,11 +12,13 @@ set(SRC_LIST
     #tutorial_https_server.cc
     #demo.cc
     )
+include_directories(${CMAKE_SOURCE_DIR})    
+
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
     target_link_directories(${EXECUTABLE_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
-    target_link_libraries(${EXECUTABLE_NAME} galay-static jemalloc)
+    target_link_libraries(${EXECUTABLE_NAME} galay-static)
 endforeach()
 
 if(ETCD_FOUND)

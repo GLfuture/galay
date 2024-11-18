@@ -34,6 +34,8 @@ set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security common helper)
 set(STATIC_LIB ${PROJECT_NAME}-static)
 set(SHARED_LIB ${PROJECT_NAME}-shared)
 
+include_directories(${PROJECT_SOURCE_DIR})
+
 #添加子目录
 add_subdirectory(galay)
 

@@ -1,4 +1,4 @@
-#include "../galay/galay.h"
+#include "galay/galay.h"
 #include <spdlog/spdlog.h>
 #include <iostream>
 
@@ -10,8 +10,6 @@ int main(int argc, char** argv)
     }
     spdlog::set_level(spdlog::level::debug);
     galay::server::TcpSslServer server(argv[1], argv[2]);
-    server.ReSetNetworkSchedulerNum(1);
-    server.ReSetCoroutineSchedulerNum(1);
     galay::TcpSslCallbackStore store([](galay::TcpSslOperation op)->galay::coroutine::Coroutine
     {
         auto connection = op.GetConnection();
@@ -25,12 +23,19 @@ int main(int argc, char** argv)
         auto data = connection->FetchRecvData();
         galay::protocol::http::HttpRequest::ptr request = std::make_shared<galay::protocol::http::HttpRequest>();
         int elength = request->DecodePdu(data.Data());
-        if(request->ParseIncomplete()) {
+        if(request->HasError()) {
             if( elength >= 0 ) {
                 data.Erase(elength);
             } 
-            op.GetContext() = request;
-            op.ReExecute(op);
+            if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete || request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
+            {
+                op.GetContext() = request;
+                op.ReExecute(op);
+            } else {
+                data.Clear();
+                bool b = co_await connection->CloseConnection();
+                co_return;
+            }
         }
         else{
             data.Clear();
@@ -46,7 +51,7 @@ int main(int argc, char** argv)
         }
         co_return;
     });
-    server.Start(&store, 2333, 128);
+    server.Start(&store, 2333);
     getchar();
     server.Stop();
     return 0;

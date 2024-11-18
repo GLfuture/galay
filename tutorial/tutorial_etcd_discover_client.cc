@@ -1,5 +1,5 @@
-#include "../galay/middleware/Etcd.h"
-#include "../galay/galay.h"
+#include "galay/middleware/Etcd.h"
+#include "galay/galay.h"
 #include <iostream>
 
 galay::coroutine::Coroutine func()
@@ -23,9 +23,9 @@ galay::coroutine::Coroutine func()
 int main()
 {
     galay::DynamicResizeCoroutineSchedulers(1);
-    galay::StartCoroutineSchedulers();
+    galay::StartAllCoroutineSchedulers();
     func();
     getchar();
-    galay::StopCoroutineSchedulers();
+    galay::StopAllCoroutineSchedulers();
     return 0;
 }

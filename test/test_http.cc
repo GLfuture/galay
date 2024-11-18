@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <map>
-#include "../galay/galay.h"
+#include "galay/galay.h"
 
 using namespace galay::protocol::http;
 
@@ -51,7 +51,7 @@ TEST(HttpRequestHeaderTest, TestFromString) {
     HttpRequestHeader::ptr header = std::make_shared<HttpRequestHeader>();
     std::string input = "GET /index.html?key1=value1&key2=value2 HTTP/1.1\r\nkey1: value1\r\nkey2: value2\r\n\r\n";
     auto code = header->FromString(input);
-    EXPECT_EQ(code, error::HttpErrorCode::kHttpError_NoError);
+    EXPECT_EQ(code, galay::error::HttpErrorCode::kHttpError_NoError);
     EXPECT_EQ("GET", header->Method());
     EXPECT_EQ("/index.html", header->Uri());
     EXPECT_EQ("1.1", header->Version());
@@ -98,7 +98,7 @@ TEST(HttpResponseHeaderTest, TestFromString) {
     HttpResponseHeader::ptr header = std::make_shared<HttpResponseHeader>();
     std::string input = "HTTP/1.1 200 OK\r\nkey1: value1\r\nkey2: value2\r\n\r\n";
     auto code = header->FromString(input);
-    EXPECT_EQ(code, error::HttpErrorCode::kHttpError_NoError);
+    EXPECT_EQ(code, galay::error::HttpErrorCode::kHttpError_NoError);
     EXPECT_EQ("1.1", header->Version());
     EXPECT_EQ(200, header->Code());
 }

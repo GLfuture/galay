@@ -1,13 +1,11 @@
-#include "../galay/galay.h"
+#include "galay/galay.h"
 #include <iostream>
 #include <spdlog/spdlog.h>
 
 int main()
 {
+    spdlog::set_level(spdlog::level::debug);
     galay::server::TcpServer server;
-    server.ReSetNetworkSchedulerNum(8);
-    server.ReSetCoroutineSchedulerNum(8);
-    std::cout << getpid() << '\n';
     galay::TcpCallbackStore store([](galay::TcpOperation op)->galay::coroutine::Coroutine {
         auto connection = op.GetConnection();
         int length = co_await connection->WaitForRecv();
@@ -20,12 +18,19 @@ int main()
         auto data = connection->FetchRecvData();
         galay::protocol::http::HttpRequest::ptr request = std::make_shared<galay::protocol::http::HttpRequest>();
         int elength = request->DecodePdu(data.Data());
-        if(request->ParseIncomplete()) {
+        if(request->HasError()) {
             if( elength >= 0 ) {
                 data.Erase(elength);
             } 
-            op.GetContext() = request;
-            op.ReExecute(op);
+            if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete || request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
+            {
+                op.GetContext() = request;
+                op.ReExecute(op);
+            } else {
+                data.Clear();
+                bool b = co_await connection->CloseConnection();
+                co_return;
+            }
         }
         else{
             data.Clear();
@@ -35,14 +40,13 @@ int main()
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";
             std::string respStr = response.EncodePdu();
-            connection->PrepareSendData(data.Data());
+            connection->PrepareSendData(respStr);
             length = co_await connection->WaitForSend();
-            data.Clear();
             bool b = co_await connection->CloseConnection();
         }
         co_return;
     });
-    server.Start(&store, 8060, 128);
+    server.Start(&store, 8060);
     getchar();
     server.Stop();
     return 0;

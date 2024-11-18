@@ -1,4 +1,4 @@
-#include "../galay/galay.h"
+#include "galay/galay.h"
 #include <gtest/gtest.h>
 
 TEST(Trie, test)
