@@ -4,18 +4,10 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include "../common/Reflection.h"
+#include "galay/common/Reflection.h"
 
 namespace galay::protocol
 {
-
-    enum ProtoParseType
-    {
-        kProtoParseSuccess,
-        kProtoParseIncomplete,
-        kProtoParseIllegal,
-    };
-
     class SRequest{
     public:
         using ptr = std::shared_ptr<SRequest>;
@@ -56,15 +48,11 @@ namespace galay::protocol
         using uptr = std::unique_ptr<Request>;
         virtual int DecodePdu(const std::string_view &buffer) = 0;
         virtual std::string EncodePdu() = 0;
-        virtual bool ParseIncomplete() final;
-        virtual bool ParseIllegal() final;
-        virtual bool ParseSuccess() final;
-    protected:
-        virtual void Incomplete() final;
-        virtual void Illegal() final;
-        virtual void Success() final;
-    private:
-        ProtoParseType m_parseStatus;
+        virtual bool HasError() const = 0;
+        virtual int GetErrorCode() const = 0;
+        virtual std::string GetErrorString() = 0;
+        virtual void Reset() = 0;
+        
     };
 
     class Response: public SResponse, public CResponse
@@ -75,15 +63,10 @@ namespace galay::protocol
         using uptr = std::unique_ptr<Response>;
         virtual int DecodePdu(const std::string_view &buffer) = 0;
         virtual std::string EncodePdu() = 0;
-        virtual bool ParseIncomplete() final;
-        virtual bool ParseIllegal() final;
-        virtual bool ParseSuccess() final;
-    protected:
-        virtual void Incomplete() final;
-        virtual void Illegal() final;
-        virtual void Success() final;
-    private:
-        ProtoParseType m_parseStatus;
+        virtual bool HasError() const = 0;
+        virtual int GetErrorCode() const = 0;
+        virtual std::string GetErrorString() = 0;
+        virtual void Reset() = 0;
     };
     
 }

@@ -27,7 +27,8 @@ const char* g_error_str[] = {
     "SetNoNlock Error",
     "Inet_Ntop Error",
     "EpollCreate Error",
-    "EventWrite Error"
+    "EventWrite Error",
+    "KQueueCreate Error",
 };
 
 uint32_t MakeErrorCode(uint16_t galay_code, uint16_t system_code)

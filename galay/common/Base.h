@@ -29,9 +29,13 @@ typedef signed long ssize_t;
     //#else
         #define USE_EPOLL
     //#endif
-    #define closesocket(x) close(x)
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     #define USE_IOCP
+    #define close(x) closesocket(x)
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+    #define USE_KQUEUE
+#else
+    #error "Unsupported platform"
 #endif
 
 #if defined(USE_EPOLL)
@@ -42,7 +46,13 @@ typedef signed long ssize_t;
 #elif defined(USE_IOURING)
     #include <liburing.h>
 #elif defined(USE_IOCP)
+
+#elif defined(USE_KQUEUE)
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <sys/event.h>
     
 #endif
-
+#define GALAY_EXTERN_API __attribute__((visibility("default")))
 #endif

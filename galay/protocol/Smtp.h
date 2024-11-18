@@ -2,8 +2,31 @@
 #define __GALAY_SMTP_H__
 
 #include "Protocol.h"
-#include "../security/Base64.h"
+#include "galay/security/Base64.h"
 #include <queue>
+
+namespace galay::error
+{
+    enum SmtpErrorCode
+    {
+        kSmtpError_NoError = 0,
+        kSmtpError_Incomplete,
+    };
+
+    class SmtpError
+    {
+    public:
+        using ptr = std::shared_ptr<SmtpError>;
+        using wptr = std::weak_ptr<SmtpError>;
+        using uptr = std::unique_ptr<SmtpError>;
+        bool HasError() const;
+        SmtpErrorCode& Code();
+        void Reset();
+        std::string ToString(SmtpErrorCode code) const;
+    protected:
+        SmtpErrorCode m_code = kSmtpError_NoError;
+    };
+}
 
 namespace galay::protocol::smtp
 {
@@ -38,15 +61,20 @@ namespace galay::protocol::smtp
         using ptr = std::shared_ptr<SmtpRequest>;
         using wpt = std::weak_ptr<SmtpRequest>;
         using uptr = std::unique_ptr<SmtpRequest>;
-        SmtpRequest() = default;
+        SmtpRequest();
         virtual int DecodePdu(const std::string_view &buffer) override;
         virtual std::string EncodePdu() override;
+        virtual bool HasError() const override;
+        virtual int GetErrorCode() const override;
+        virtual std::string GetErrorString() override;
+        virtual void Reset() override;
         std::string& GetContent();
     private:
         //content不带\r\n
         std::string m_content;
         std::string m_frommail;
         std::queue<std::string> m_tomails;
+        error::SmtpError::ptr m_error;
     };
 
     class SmtpResponse: public Response, public common::DynamicCreator<Response,SmtpResponse>
@@ -55,11 +83,16 @@ namespace galay::protocol::smtp
         using ptr = std::shared_ptr<SmtpResponse>;
         using wptr = std::weak_ptr<SmtpResponse>;
         using uptr = std::unique_ptr<SmtpResponse>;
-        SmtpResponse() = default;
+        SmtpResponse();
         virtual int DecodePdu(const std::string_view &buffer) override;
         virtual std::string EncodePdu() override;
+        virtual bool HasError() const override;
+        virtual int GetErrorCode() const override;
+        virtual std::string GetErrorString() override;
+        virtual void Reset() override;
         std::string& GetContent();
     private:
+        error::SmtpError::ptr m_error;
         std::string m_content;
     };
     }

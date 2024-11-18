@@ -1,6 +1,6 @@
 #ifndef __GALAY_EVENTSCHEDULER_H__
 #define __GALAY_EVENTSCHEDULER_H__
-#include "../common/Base.h"
+#include "galay/common/Base.h"
 #include <ctype.h>
 #include <string>
 #include <memory>
@@ -16,20 +16,26 @@ class Event;
 
 class EventEngine
 {
+    static std::atomic_uint32_t gEngineId;
 public:
     using ptr = std::shared_ptr<EventEngine>;
+    EventEngine();
+
+    inline uint32_t GetEngineID() { return m_id.load(); }
     virtual bool Loop(int timeout = -1) = 0;
     virtual bool Stop() = 0;
-    virtual int AddEvent(Event* event) = 0;
-    virtual int ModEvent(Event* event) = 0;
+    virtual int AddEvent(Event* event, void* ctx) = 0;
+    virtual int ModEvent(Event* event, void* ctx) = 0;
     /*
         DelEvent will move the event from event list, please call Event.Free() to free the event
     */
-    virtual int DelEvent(Event* event) = 0;
+    virtual int DelEvent(Event* event, void* ctx) = 0;
     virtual uint32_t GetErrorCode() const = 0;
     virtual GHandle GetHandle() = 0;
     virtual uint32_t GetMaxEventSize() = 0;
     virtual void ResetMaxEventSize(uint32_t size) = 0; 
+protected:
+    std::atomic_uint32_t m_id;
 };
 
 #if defined(USE_EPOLL)
@@ -40,9 +46,9 @@ public:
     EpollEventEngine(uint32_t max_events = DEFAULT_MAX_EVENTS);
     virtual bool Loop(int timeout = -1) override;
     virtual bool Stop() override;
-    virtual int AddEvent(Event* event) override;
-    virtual int ModEvent(Event* event) override;
-    virtual int DelEvent(Event* event) override;
+    virtual int AddEvent(Event* event, void* ctx) override;
+    virtual int ModEvent(Event* event, void* ctx) override;
+    virtual int DelEvent(Event* event, void* ctx) override;
     inline virtual uint32_t GetErrorCode() const override { return m_error_code; }
     inline virtual GHandle GetHandle() override { return m_handle; }
     inline virtual uint32_t GetMaxEventSize() override { return m_event_size; }
@@ -56,7 +62,7 @@ public:
     virtual void ResetMaxEventSize(uint32_t size) override;
     virtual ~EpollEventEngine();
 private:
-    bool ConvertToEpollEvent(struct epoll_event &ev, Event *event);
+    bool ConvertToEpollEvent(struct epoll_event &ev, Event *event, void* ctx);
 private:
     GHandle m_handle;
     uint32_t m_error_code;
@@ -72,7 +78,35 @@ class IoUringEventEngine
 
 #elif defined(USE_SELECT)
 
-#elif defined(__APPLE__)
+#elif defined(USE_KQUEUE)
+
+//default ET 
+class KqueueEventEngine: public EventEngine
+{
+public:
+    KqueueEventEngine(uint32_t max_events = DEFAULT_MAX_EVENTS);
+    virtual bool Loop(int timeout = -1) override;
+    virtual bool Stop() override;
+    virtual int AddEvent(Event* event, void* ctx ) override;
+    virtual int ModEvent(Event* event, void* ctx) override;
+    /*
+        DelEvent will move the event from event list, please call Event.Free() to free the event
+    */
+    virtual int DelEvent(Event* event, void* ctx) override;
+    inline virtual uint32_t GetErrorCode() const override { return m_error_code; }
+    inline virtual GHandle GetHandle() override { return m_handle; }
+    inline virtual uint32_t GetMaxEventSize() override { return m_event_size; }
+    inline virtual void ResetMaxEventSize(uint32_t size) override { m_event_size = size; }
+private:
+    bool ConvertToKEvent(struct kevent &ev, Event *event, void* ctx);
+private:
+    GHandle m_handle;
+    uint32_t m_error_code;
+    std::atomic_bool m_stop;
+    std::atomic_uint32_t m_event_size;
+    std::atomic<struct kevent*> m_events;
+};
+
 #endif
 }
 

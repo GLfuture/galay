@@ -1,7 +1,7 @@
 #ifndef GALAY_HTTP_HELPER_H
 #define GALAY_HTTP_HELPER_H
 
-#include "../protocol/Http.h"
+#include "galay/protocol/Http.h"
 #include <variant>
 
 namespace galay::helper::http

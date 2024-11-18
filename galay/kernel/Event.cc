@@ -3,8 +3,8 @@
 #include "EventEngine.h"
 #include "Scheduler.h"
 #include "Operation.h"
-#include "../util/Time.h"
-#include "Step.h"
+#include "galay/util/Time.h"
+#include "ExternApi.h"
 #include <string.h>
 #if defined(__linux__)
 #include <sys/timerfd.h>
@@ -15,6 +15,27 @@
 
 namespace galay::event
 {
+
+std::string ToString(EventType type)
+{
+    switch (type)
+    {
+    case kEventTypeNone:
+        return "EventTypeNone";
+    case kEventTypeRead:
+        return "EventTypeRead";
+    case kEventTypeWrite:
+        return "EventTypeWrite";
+    case kEventTypeTimer:
+        return "EventTypeTimer";
+    case kEventTypeError:
+        return "EventTypeError";
+    default:
+        break;
+    }
+    return ""; 
+}
+
     
 CallbackEvent::CallbackEvent(GHandle handle, EventType type, std::function<void(Event*, EventEngine*)> callback)
     : m_handle(handle), m_type(type), m_callback(callback), m_engine(nullptr)
@@ -27,25 +48,247 @@ void CallbackEvent::HandleEvent(EventEngine *engine)
     this->m_callback(this, engine);
 }
 
-EventEngine *&CallbackEvent::BelongEngine()
+EventEngine*& CallbackEvent::BelongEngine()
 {
     return m_engine;
 }
 
+
 CallbackEvent::~CallbackEvent()
 {
-    if( m_engine ) m_engine->DelEvent(this);
+    if( m_engine ) m_engine->DelEvent(this, nullptr);
+}
+Timer::Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func)
+{
+    this->m_rightHandle = std::forward<std::function<void(Timer::ptr)>>(func);
+    SetDuringTime(during_time);
 }
 
-ListenEvent::ListenEvent(async::AsyncTcpSocket* socket, TcpCallbackStore* callback_store, scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler)
-    : m_socket(socket), m_callback_store(callback_store), m_net_scheduler(net_scheduler), m_co_scheduler(co_scheduler), m_engine(nullptr), m_net_event(new TcpWaitEvent(socket)), m_action(new action::TcpEventAction(net_scheduler->GetEngine(), m_net_event))
+int64_t 
+Timer::GetDuringTime()
 {
+    return this->m_duringTime;
+}
+
+int64_t 
+Timer::GetExpiredTime()
+{
+    return this->m_expiredTime;
+}
+
+int64_t 
+Timer::GetRemainTime()
+{
+    int64_t time = this->m_expiredTime - time::GetCurrentTime();
+    return time < 0 ? 0 : time;
+}
+
+void 
+Timer::SetDuringTime(int64_t duringTime)
+{
+    this->m_duringTime = duringTime;
+    this->m_expiredTime = time::GetCurrentTime() + duringTime;
+    this->m_success = false;
+}
+
+void 
+Timer::Execute()
+{
+    if ( m_cancle.load() ) return;
+    this->m_rightHandle(shared_from_this());
+    this->m_success = true;
+}
+
+void 
+Timer::Cancle()
+{
+    this->m_cancle = true;
+}
+
+// 是否已经完成
+bool 
+Timer::Success()
+{
+    return this->m_success.load();
+}
+
+bool 
+Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b)
+{
+    if (a->GetExpiredTime() > b->GetExpiredTime())
+    {
+        return true;
+    }
+    return false;
+}
+
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+TimeEventIDStore::TimeEventIDStore(int capacity)
+{
+    m_temp = (int*)malloc(sizeof(int) * capacity);
+    for(int i = 0; i < capacity; i++){
+        m_temp[i] = i;
+    }
+    m_capacity = capacity;
+    m_eventIds.enqueue_bulk(m_temp, capacity);
+}
+
+bool TimeEventIDStore::GetEventId(int& id)
+{
+    return m_eventIds.try_dequeue(id);
+}
+
+bool TimeEventIDStore::RecycleEventId(int id)
+{
+    return m_eventIds.enqueue(id);
+}
+
+TimeEventIDStore::~TimeEventIDStore()
+{
+    free(m_temp);
+}
+
+TimeEventIDStore TimeEvent::IDStroe(DEFAULT_TIMEEVENT_ID_CAPACITY);
+
+bool TimeEvent::CreateHandle(GHandle &handle)
+{
+    return IDStroe.GetEventId(handle.fd);
+}
+
+
+#elif defined(__linux__)
+
+bool TimeEvent::CreateHandle(GHandle& handle)
+{
+    handle.fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+    return handle.fd != -1;
+}
+
+#endif
+
+
+TimeEvent::TimeEvent(GHandle handle, EventEngine* engine)
+    : m_handle(handle), m_engine(engine)
+{
+#if defined(__linux__)
+    m_engine->AddEvent(this, nullptr);
+#endif
+}
+
+void TimeEvent::HandleEvent(EventEngine *engine)
+{
+#if defined(__linux__)
+    std::vector<Timer::ptr> timers;
+    std::unique_lock lock(this->m_mutex);
+    while (! m_timers.empty() && m_timers.top()->GetExpiredTime()  <= time::GetCurrentTime() ) {
+        auto timer = m_timers.top();
+        m_timers.pop();
+        timers.emplace_back(timer);
+    }
+    lock.unlock();
+    for (auto timer : timers)
+    {
+        timer->Execute();
+    }
+    UpdateTimers();
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+    std::unique_lock lock(this->m_mutex);
+    Timer::ptr timer = m_timers.top();
+    m_timers.pop();
+    lock.unlock();
+    timer->Execute();
+#endif
+}
+
+EventEngine*& TimeEvent::BelongEngine()
+{
+    return m_engine;
+}
+
+Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func)
+{
+    auto timer = std::make_shared<Timer>(during_time, std::forward<std::function<void(Timer::ptr)>>(func));
+    std::unique_lock<std::shared_mutex> lock(this->m_mutex);
+    this->m_timers.push(timer);
+    lock.unlock();
+#if defined(__linux__)
+    UpdateTimers();
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+    m_engine->ModEvent(this, timer.get());
+#endif
+    
+    return timer;
+}
+
+void TimeEvent::ReAddTimer(int64_t during_time, Timer::ptr timer)
+{
+    timer->SetDuringTime(during_time);
+    timer->m_cancle.store(false);
+    std::unique_lock lock(this->m_mutex);
+    this->m_timers.push(timer);
+    lock.unlock();
+#if defined(__linux__)
+    UpdateTimers();
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+    m_engine->ModEvent(this, timer.get());
+#endif
+}
+
+TimeEvent::~TimeEvent()
+{
+    m_engine->DelEvent(this, nullptr);
+#if defined(__linux__)
+    close(m_handle.fd);
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+    IDStroe.RecycleEventId(m_handle.fd);
+#endif
+}
+
+#if defined(__linux__)
+void TimeEvent::UpdateTimers()
+{
+    struct timespec abstime;
+    std::shared_lock lock(this->m_mutex);
+    if (m_timers.empty())
+    {
+        abstime.tv_sec = 0;
+        abstime.tv_nsec = 0;
+    }
+    else
+    {
+        auto timer = m_timers.top();
+        lock.unlock();
+        int64_t time = timer->GetRemainTime();
+        if (time != 0)
+        {
+            abstime.tv_sec = time / 1000;
+            abstime.tv_nsec = (time % 1000) * 1000000;
+        }
+        else
+        {
+            abstime.tv_sec = 0;
+            abstime.tv_nsec = 1;
+        }
+    }
+    struct itimerspec its = {
+        .it_interval = {},
+        .it_value = abstime};
+    timerfd_settime(this->m_handle.fd, 0, &its, nullptr);
+}
+#endif
+
+//#if defined(USE_EPOLL) && !defined(USE_AIO)
+
+ListenEvent::ListenEvent(EventEngine* engine, async::AsyncTcpSocket* socket, TcpCallbackStore* callback_store)
+    : m_socket(socket), m_callback_store(callback_store), m_engine(engine), m_action(new action::TcpEventAction(engine, new TcpWaitEvent(socket)))
+{
+    engine->AddEvent(this, nullptr);
 }
 
 void ListenEvent::HandleEvent(EventEngine *engine)
 {
     CreateTcpSocket(engine);
-    engine->ModEvent(this);
+    engine->ModEvent(this, nullptr);
 }
 
 GHandle ListenEvent::GetHandle()
@@ -53,17 +296,15 @@ GHandle ListenEvent::GetHandle()
     return m_socket->GetHandle();
 }
 
-EventEngine *&ListenEvent::BelongEngine()
+EventEngine*& ListenEvent::BelongEngine()
 {
     return m_engine;
 }
 
 ListenEvent::~ListenEvent()
 {
-    if(m_engine) m_engine->DelEvent(this);
-    delete m_net_event;
+    if(m_engine) m_engine->DelEvent(this, nullptr);
     delete m_action;
-    delete m_socket;
 }
 
 coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
@@ -85,27 +326,30 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
         {
-            closesocket(new_handle.fd);
+            close(new_handle.fd);
             spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
         }
         engine->ResetMaxEventSize(new_handle.fd);
-        this->m_callback_store->Execute(socket, m_net_scheduler, m_co_scheduler);
+        TcpWaitEvent* event = new TcpWaitEvent(socket);
+        action::TcpEventAction* action = new action::TcpEventAction(engine, event);
+        this->m_callback_store->Execute(action);
     }
 #endif
     co_return;
 }
 
-SslListenEvent::SslListenEvent(async::AsyncTcpSslSocket *socket, TcpSslCallbackStore *callback_store, scheduler::EventScheduler *net_scheduler, scheduler::CoroutineScheduler *co_scheduler)
-    :m_socket(socket), m_callback_store(callback_store), m_net_scheduler(net_scheduler), m_co_scheduler(co_scheduler), m_engine(nullptr), m_net_event(new TcpSslWaitEvent(socket)), m_action(new action::TcpSslEventAction(net_scheduler->GetEngine(), m_net_event))
+SslListenEvent::SslListenEvent(EventEngine* engine, async::AsyncTcpSslSocket *socket, TcpSslCallbackStore *callback_store)
+    :m_socket(socket), m_callback_store(callback_store), m_engine(engine), m_action(new action::TcpSslEventAction(engine, new TcpSslWaitEvent(socket)))
 {
+    engine->AddEvent(this, nullptr);
 }
 
 void SslListenEvent::HandleEvent(EventEngine *engine)
 {
     CreateTcpSslSocket(engine);
-    engine->ModEvent(this);
+    engine->ModEvent(this, nullptr);
 }
 
 GHandle SslListenEvent::GetHandle()
@@ -113,17 +357,15 @@ GHandle SslListenEvent::GetHandle()
     return m_socket->GetHandle();
 }
 
-EventEngine *&SslListenEvent::BelongEngine()
+EventEngine*& SslListenEvent::BelongEngine()
 {
     return m_engine;
 }
 
 SslListenEvent::~SslListenEvent()
 {
-    if( m_engine ) m_engine->DelEvent(this);
-    delete m_net_event;
+    m_engine->DelEvent(this, nullptr);
     delete m_action;
-    delete m_socket;
 }
 
 coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
@@ -146,7 +388,7 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
         {
-            closesocket(new_handle.fd);
+            close(new_handle.fd);
             spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
@@ -155,179 +397,31 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
         action::TcpSslEventAction* action = new action::TcpSslEventAction(engine, event);
         bool success = co_await socket->SSLAccept(action);
         if( !success ){
-            closesocket(new_handle.fd);
+            close(new_handle.fd);
             spdlog::error("[{}:{}] [[SSLAccept error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
         }
         spdlog::debug("[{}:{}] [[SSL_Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         engine->ResetMaxEventSize(new_handle.fd);
-        this->m_callback_store->Execute(action, m_net_scheduler, m_co_scheduler);
+        this->m_callback_store->Execute(action);
     }
     
 }
 
-TimeEvent::Timer::Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func)
+WaitEvent::WaitEvent(EventEngine* engine)
+    :m_waitco(nullptr), m_engine(engine)
 {
-    this->m_rightHandle = std::forward<std::function<void(Timer::ptr)>>(func);
-    SetDuringTime(during_time);
 }
 
-int64_t 
-TimeEvent::Timer::GetDuringTime()
-{
-    return this->m_duringTime;
-}
-
-int64_t 
-TimeEvent::Timer::GetExpiredTime()
-{
-    return this->m_expiredTime;
-}
-
-int64_t 
-TimeEvent::Timer::GetRemainTime()
-{
-    int64_t time = this->m_expiredTime - time::GetCurrentTime();
-    return time < 0 ? 0 : time;
-}
-
-void 
-TimeEvent::Timer::SetDuringTime(int64_t duringTime)
-{
-    this->m_duringTime = duringTime;
-    this->m_expiredTime = time::GetCurrentTime() + duringTime;
-    this->m_success = false;
-}
-
-void 
-TimeEvent::Timer::Execute()
-{
-    if ( m_cancle.load() ) return;
-    this->m_rightHandle(shared_from_this());
-    this->m_success = true;
-}
-
-void 
-TimeEvent::Timer::Cancle()
-{
-    this->m_cancle = true;
-}
-
-// 是否已经完成
-bool 
-TimeEvent::Timer::Success()
-{
-    return this->m_success.load();
-}
-
-bool 
-TimeEvent::Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b)
-{
-    if (a->GetExpiredTime() > b->GetExpiredTime())
-    {
-        return true;
-    }
-    return false;
-}
-
-TimeEvent::TimeEvent(GHandle handle)
-    : m_handle(handle), m_engine(nullptr)
-{
-    
-}
-
-void TimeEvent::HandleEvent(EventEngine *engine)
-{
-    std::vector<Timer::ptr> timers;
-    std::unique_lock lock(this->m_mutex);
-    while (! m_timers.empty() && m_timers.top()->GetExpiredTime()  <= time::GetCurrentTime() ) {
-        auto timer = m_timers.top();
-        m_timers.pop();
-        timers.emplace_back(timer);
-    }
-    lock.unlock();
-    for (auto timer : timers)
-    {
-        timer->Execute();
-    }
-    UpdateTimers();
-    engine->ModEvent(this);
-}
-
-EventEngine *&TimeEvent::BelongEngine()
+EventEngine*& WaitEvent::BelongEngine()
 {
     return m_engine;
 }
 
-TimeEvent::Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func)
-{
-    auto timer = std::make_shared<Timer>(during_time, std::forward<std::function<void(Timer::ptr)>>(func));
-    std::unique_lock<std::shared_mutex> lock(this->m_mutex);
-    this->m_timers.push(timer);
-    lock.unlock();
-    UpdateTimers();
-    return timer;
-}
-
-void TimeEvent::ReAddTimer(int64_t during_time, Timer::ptr timer)
-{
-    timer->SetDuringTime(during_time);
-    timer->m_cancle.store(false);
-    std::unique_lock lock(this->m_mutex);
-    this->m_timers.push(timer);
-    lock.unlock();
-    UpdateTimers();
-}
-
-TimeEvent::~TimeEvent()
-{
-    if(m_engine) m_engine->DelEvent(this);
-}
-
-void TimeEvent::UpdateTimers()
-{
-    struct timespec abstime;
-    if (m_timers.empty())
-    {
-        abstime.tv_sec = 0;
-        abstime.tv_nsec = 0;
-    }
-    else
-    {
-        std::shared_lock lock(this->m_mutex);
-        auto timer = m_timers.top();
-        lock.unlock();
-        int64_t time = timer->GetRemainTime();
-        if (time != 0)
-        {
-            abstime.tv_sec = time / 1000;
-            abstime.tv_nsec = (time % 1000) * 1000000;
-        }
-        else
-        {
-            abstime.tv_sec = 0;
-            abstime.tv_nsec = 1;
-        }
-    }
-    struct itimerspec its = {
-        .it_interval = {},
-        .it_value = abstime};
-    timerfd_settime(this->m_handle.fd, 0, &its, nullptr);
-}
-
-WaitEvent::WaitEvent()
-    :m_waitco(nullptr), m_engine(nullptr)
-{
-}
-
-EventEngine *&WaitEvent::BelongEngine()
-{
-    return m_engine;
-}
 
 TcpWaitEvent::TcpWaitEvent(async::AsyncTcpSocket *socket)
-    :m_socket(socket)
+    :m_socket(socket), m_type(kWaitEventTypeError)
 {
 }
 
@@ -335,6 +429,8 @@ std::string TcpWaitEvent::Name()
 {
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        return "ErrorEvent";
     case kWaitEventTypeAccept:
         return "AcceptEvent";
     case kWaitEventTypeRecv:
@@ -356,6 +452,8 @@ bool TcpWaitEvent::OnWaitPrepare(coroutine::Coroutine *co, void* ctx)
     this->m_waitco = co;
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        return false;
     case kWaitEventTypeAccept:
         return OnAcceptWaitPrepare(co, ctx);
     case kWaitEventTypeRecv:
@@ -376,6 +474,9 @@ void TcpWaitEvent::HandleEvent(EventEngine *engine)
 {
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        HandleErrorEvent(engine);
+        return;
     case kWaitEventTypeAccept:
         HandleAcceptEvent(engine);
         return;
@@ -391,13 +492,17 @@ void TcpWaitEvent::HandleEvent(EventEngine *engine)
     case kWaitEventTypeClose:
         HandleCloseEvent(engine);
         return;
+    default:
+        return;
     }
 }
 
-int TcpWaitEvent::GetEventType()
+EventType TcpWaitEvent::GetEventType()
 {
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        return kEventTypeError;
     case kWaitEventTypeAccept:
         return kEventTypeRead;
     case kWaitEventTypeRecv:
@@ -407,7 +512,7 @@ int TcpWaitEvent::GetEventType()
     case kWaitEventTypeConnect:
         return kEventTypeWrite;
     case kWaitEventTypeClose:
-        return kEventTypeRead | kEventTypeWrite;
+        return kEventTypeNone;
     default:
         break;
     }
@@ -421,7 +526,8 @@ GHandle TcpWaitEvent::GetHandle()
 
 TcpWaitEvent::~TcpWaitEvent()
 {
-    if( m_engine) m_engine->DelEvent(this);
+    if(m_engine) m_engine->DelEvent(this, nullptr);
+    if(m_socket) delete m_socket;
 }
 
 bool TcpWaitEvent::OnAcceptWaitPrepare(coroutine::Coroutine *co, void *ctx)
@@ -511,13 +617,13 @@ bool TcpWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
     spdlog::debug("TcpWaitEvent::OnCloseWaitPrepare");
     coroutine::Awaiter* awaiter = co->GetAwaiter(); 
     if (m_engine) {
-        if( m_engine->DelEvent(this) != 0 ) {
+        if( m_engine->DelEvent(this, nullptr) != 0 ) {
             awaiter->SetResult(false);
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
             return false;
         }
     }
-    int ret = closesocket(m_socket->GetHandle().fd);
+    int ret = close(m_socket->GetHandle().fd);
     if( ret < 0 ) {
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
         awaiter->SetResult(false);
@@ -525,6 +631,11 @@ bool TcpWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
         awaiter->SetResult(true);
     }
     return false;
+}
+
+void TcpWaitEvent::HandleErrorEvent(EventEngine *engine)
+{
+    spdlog::debug("TcpWaitEvent::HandleErrorEvent");
 }
 
 void TcpWaitEvent::HandleAcceptEvent(EventEngine *engine)
@@ -656,6 +767,8 @@ std::string TcpSslWaitEvent::Name()
 {
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        return "ErrorEvent";
     case kWaitEventTypeAccept:
         return "AcceptEvent";
     case kWaitEventTypeSslAccept:
@@ -682,14 +795,16 @@ std::string TcpSslWaitEvent::Name()
     return "UnknownEvent";
 }
 
-int TcpSslWaitEvent::GetEventType()
+EventType TcpSslWaitEvent::GetEventType()
 {
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        return kEventTypeError;
     case kWaitEventTypeAccept:
         return kEventTypeRead;
     case kWaitEventTypeSslAccept:
-        return CoverSSLErrorToEventType();
+        return CovertSSLErrorToEventType();
     case kWaitEventTypeRecv:
         return kEventTypeRead;
     case kWaitEventTypeSslRecv:
@@ -701,11 +816,11 @@ int TcpSslWaitEvent::GetEventType()
     case kWaitEventTypeConnect:
         return kEventTypeWrite;
     case kWaitEventTypeSslConnect:
-        return CoverSSLErrorToEventType();
+        return CovertSSLErrorToEventType();
     case kWaitEventTypeClose:
-        return kEventTypeRead | kEventTypeWrite;
+        return kEventTypeNone;
     case kWaitEventTypeSslClose:
-        return kEventTypeRead | kEventTypeWrite;
+        return kEventTypeNone;
     default:
         break;
     }
@@ -717,6 +832,8 @@ bool TcpSslWaitEvent::OnWaitPrepare(coroutine::Coroutine *co, void* ctx)
     this->m_waitco = co;
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        return false;
     case kWaitEventTypeAccept:
         return OnAcceptWaitPrepare(co, ctx);
     case kWaitEventTypeSslAccept:
@@ -745,8 +862,15 @@ bool TcpSslWaitEvent::OnWaitPrepare(coroutine::Coroutine *co, void* ctx)
 
 void TcpSslWaitEvent::HandleEvent(EventEngine *engine)
 {
+    if(m_waitco == nullptr) {
+        spdlog::warn("TcpWaitEvent::HandleEvent m_waitco is nullptr");
+        return;
+    }
     switch (m_type)
     {
+    case kWaitEventTypeError:
+        HandleErrorEvent(engine);
+        return;
     case kWaitEventTypeAccept:
         HandleAcceptEvent(engine);
         return;
@@ -787,7 +911,6 @@ async::AsyncTcpSslSocket *TcpSslWaitEvent::GetAsyncTcpSocket()
 
 TcpSslWaitEvent::~TcpSslWaitEvent()
 {
-    if( m_engine ) m_engine->DelEvent(this); 
 }
 
 bool TcpSslWaitEvent::OnSslAcceptWaitPrepare(coroutine::Coroutine *co, void* ctx)
@@ -873,13 +996,13 @@ bool TcpSslWaitEvent::OnSslCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
     spdlog::debug("TcpWaitEvent::OnCloseWaitPrepare");
     coroutine::Awaiter* awaiter = co->GetAwaiter(); 
     if (m_engine) {
-        if( m_engine->DelEvent(this) != 0 ) {
+        if( m_engine->DelEvent(this, nullptr) != 0 ) {
             awaiter->SetResult(false);
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_DelEventError, errno);
             return false;
         }
     }
-    int ret = closesocket(m_socket->GetHandle().fd);
+    int ret = close(m_socket->GetHandle().fd);
     if( ret < 0 ) {
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLCloseError, errno);
         awaiter->SetResult(false);
@@ -907,7 +1030,7 @@ void TcpSslWaitEvent::HandleSslAcceptEvent(EventEngine *engine)
     }
     m_ssl_error = SSL_get_error(ssl, r);
     if( m_ssl_error == SSL_ERROR_WANT_READ || m_ssl_error == SSL_ERROR_WANT_WRITE ){
-        engine->ModEvent(this);
+        engine->ModEvent(this, nullptr);
     } else {
         awaiter->SetResult(false);
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLAcceptError, errno);
@@ -927,7 +1050,7 @@ void TcpSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
     }
     m_ssl_error = SSL_get_error(ssl, r);
     if( m_ssl_error == SSL_ERROR_WANT_READ || m_ssl_error == SSL_ERROR_WANT_WRITE ){
-        engine->ModEvent(this);
+        engine->ModEvent(this, nullptr);
     } else {
         awaiter->SetResult(false);
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLConnectError, errno);
@@ -960,7 +1083,7 @@ void TcpSslWaitEvent::HandleSslCloseEvent(EventEngine *engine)
     //doing nothing
 }
 
-int TcpSslWaitEvent::CoverSSLErrorToEventType()
+EventType TcpSslWaitEvent::CovertSSLErrorToEventType()
 {
     switch (m_ssl_error)
     {
@@ -971,7 +1094,7 @@ int TcpSslWaitEvent::CoverSSLErrorToEventType()
     case SSL_ERROR_WANT_WRITE:
         return kEventTypeWrite;
     }
-    return 0;
+    return kEventTypeNone;
 }
 
 int TcpSslWaitEvent::DealRecv()
@@ -1056,5 +1179,7 @@ int TcpSslWaitEvent::DealSend()
     spdlog::debug("SendEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle().fd, handle.fd, sendBytes, wbuffer.substr(0, sendBytes));
     return sendBytes;
 }
+//#endif
+
 
 }

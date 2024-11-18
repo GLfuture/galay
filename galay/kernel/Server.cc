@@ -3,28 +3,58 @@
 #include "Scheduler.h"
 #include "Async.h"
 #include "Operation.h"
-#include "Step.h"
+#include "ExternApi.h"
+#include "galay/protocol/Http.h"
 #include <openssl/err.h>
 #include "spdlog/spdlog.h"
 
 namespace galay::server
 {
-TcpServer::TcpServer()
-	: m_co_sche_num(DEFAULT_SERVER_CO_SCHEDULER_NUM), m_net_sche_num(DEFAULT_SERVER_NET_SCHEDULER_NUM), m_co_sche_timeout(-1)\
-		, m_net_sche_timeout(-1), m_is_running(false)
+
+	
+TcpServerConfig::TcpServerConfig()
+	: m_backlog(DEFAULT_SERVER_BACKLOG)\
+	, m_coroutine_scheduler_num(DEFAULT_SERVER_CO_SCHEDULER_NUM)\
+	, m_network_scheduler_num(DEFAULT_SERVER_NET_SCHEDULER_NUM), m_network_scheduler_timeout_ms(DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS)\
+	, m_event_scheduler_num(DEFAULT_SERVER_OTHER_SCHEDULER_NUM), m_event_scheduler_timeout_ms(DEFAULT_SERVER_OTHER_SCHEDULER_TIMEOUT_MS)
 {
 }
 
-coroutine::Coroutine TcpServer::Start(TcpCallbackStore* store, int port, int backlog)
+TcpSslServerConfig::TcpSslServerConfig()
+	:m_cert_file(nullptr), m_key_file(nullptr)
+{
+}
+
+TcpServer::TcpServer()
+	: m_is_running(false)
+{
+}
+
+TcpServer::TcpServer(const TcpServerConfig &config)
+{
+	m_config = config;
+}
+
+void TcpServer::Start(TcpCallbackStore* store, int port)
 {
 	
-	DynamicResizeCoroutineSchedulers(m_co_sche_num);
-	DynamicResizeNetIOSchedulers(m_net_sche_num);
-	StartCoroutineSchedulers(m_co_sche_timeout);
-	StartNetIOSchedulers(m_net_sche_timeout);
+	DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
+	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
+	//coroutine scheduler
+	StartAllCoroutineSchedulers();
+	//net scheduler
+	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
+	{
+		GetEventScheduler(i)->Loop(m_config.m_network_scheduler_timeout_ms);
+	}
+	//event scheduler
+	for( int i = m_config.m_network_scheduler_num; i < m_config.m_network_scheduler_num + m_config.m_event_scheduler_num; ++i )
+	{
+		GetEventScheduler(i)->Loop(m_config.m_event_scheduler_timeout_ms);
+	}
 	m_is_running = true;
-	m_listen_events.resize(m_net_sche_num);
-	for(int i = 0 ; i < m_net_sche_num; ++i )
+	m_listen_events.resize(m_config.m_network_scheduler_num);
+	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
 		GHandle handle = async::AsyncTcpSocket::Socket();
 		async::HandleOption option(handle);
@@ -32,69 +62,75 @@ coroutine::Coroutine TcpServer::Start(TcpCallbackStore* store, int port, int bac
 		option.HandleReuseAddr();
 		option.HandleReusePort();
 		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(handle);
-		socket->BindAndListen(port, backlog);
-		m_listen_events[i] = new event::ListenEvent(socket, store\
-			, GetNetIOScheduler(i), GetCoroutineScheduler(i));
-		GetNetIOScheduler(i)->AddEvent(m_listen_events[i]);
+		if(!socket->BindAndListen(port, m_config.m_backlog)) {
+			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
+			delete socket;
+			for(int j = 0; j < i; ++j ){
+				delete m_listen_events[j];
+			}
+			m_listen_events.clear();
+			return;
+		}
+		m_listen_events[i] = new event::ListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
 	} 
-	co_return;
+	return;
 }
 
 void TcpServer::Stop()
 {
 	if(!m_is_running) return;
-	for(int i = 0 ; i < m_net_sche_num; ++i )
-	{
-		delete m_listen_events[i];
-	}
-	StopCoroutineSchedulers();
-	StopNetIOSchedulers();
+	StopAllCoroutineSchedulers();
+	StopAllEventSchedulers();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-void TcpServer::ReSetCoroutineSchedulerNum(int num)
-{
-	if(m_is_running) 
-		DynamicResizeCoroutineSchedulers(num);
-	else
-		m_co_sche_num = num;
-}
-
-void TcpServer::ReSetNetworkSchedulerNum(int num)
-{
-	if(m_is_running)
-		DynamicResizeNetIOSchedulers(num);
-	else 
-		m_net_sche_num = num;
-}
-
 TcpServer::~TcpServer()
 {
+	for(int i = 0 ; i < m_listen_events.size(); ++i )
+	{
+		delete m_listen_events[i];
+	}
 }
 
 TcpSslServer::TcpSslServer(const char* cert_file, const char* key_file)
-	: m_co_sche_num(DEFAULT_SERVER_CO_SCHEDULER_NUM), m_net_sche_num(DEFAULT_SERVER_NET_SCHEDULER_NUM), m_co_sche_timeout(-1)\
-		, m_net_sche_timeout(-1), m_is_running(false), m_cert_file(cert_file), m_key_file(key_file)
+	: m_config(), m_is_running(false)
 {
+	m_config.m_cert_file = cert_file;
+	m_config.m_key_file = key_file;
 }
 
-coroutine::Coroutine TcpSslServer::Start(TcpSslCallbackStore *store, int port, int backlog)
+TcpSslServer::TcpSslServer(const TcpSslServerConfig &config)
 {
-    DynamicResizeCoroutineSchedulers(m_co_sche_num);
-	DynamicResizeNetIOSchedulers(m_net_sche_num);
-	StartCoroutineSchedulers(m_co_sche_timeout);
-	StartNetIOSchedulers(m_net_sche_timeout);
+	m_config = config;
+}
+
+void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
+{
+    DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
+	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
+	//coroutine scheduler
+	StartAllCoroutineSchedulers();
+	//net scheduler
+	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
+	{
+		GetEventScheduler(i)->Loop(m_config.m_network_scheduler_timeout_ms);
+	}
+	//event scheduler
+	for( int i = m_config.m_network_scheduler_num; i < m_config.m_network_scheduler_num + m_config.m_event_scheduler_num; ++i )
+	{
+		GetEventScheduler(i)->Loop(m_config.m_event_scheduler_timeout_ms);
+	}
 	
-	bool res = InitialSSLServerEnv(m_cert_file, m_key_file);
+	bool res = InitialSSLServerEnv(m_config.m_cert_file, m_config.m_key_file);
 	if( !res ) {
 		spdlog::error("InitialSSLServerEnv failed, error:{}", ERR_error_string(ERR_get_error(), nullptr));
-		co_return;
+		return;
 	}
 	m_is_running = true;
 	
-	m_listen_events.resize(m_net_sche_num);
-	for(int i = 0 ; i < m_net_sche_num; ++i )
+	m_listen_events.resize(m_config.m_network_scheduler_num);
+	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
 		GHandle handle = async::AsyncTcpSocket::Socket();
 		async::HandleOption option(handle);
@@ -106,46 +142,91 @@ coroutine::Coroutine TcpSslServer::Start(TcpSslCallbackStore *store, int port, i
 			exit(-1);
 		}
 		async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(handle, ssl);
-		socket->BindAndListen(port, backlog);
-
-		m_listen_events[i] = new event::SslListenEvent(socket, store\
-			, GetNetIOScheduler(i), GetCoroutineScheduler(i));
-		GetNetIOScheduler(i)->AddEvent(m_listen_events[i]);
+		if(!socket->BindAndListen(port, m_config.m_backlog)) {
+			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
+			delete socket;
+			for(int j = 0; j < i; ++j ){
+				delete m_listen_events[j];
+			}
+			m_listen_events.clear();
+			return;
+		}
+		m_listen_events[i] = new event::SslListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
 	} 
-	co_return;
+	return;
 }
 void TcpSslServer::Stop()
 {
 	if(!m_is_running) return;
-	for(int i = 0 ; i < m_net_sche_num; ++i )
-	{
-		delete m_listen_events[i];
-	}
-	StopCoroutineSchedulers();
-	StopNetIOSchedulers();
+	StopAllCoroutineSchedulers();
+	StopAllEventSchedulers();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-void TcpSslServer::ReSetNetworkSchedulerNum(int num)
-{
-	if(m_is_running)
-		DynamicResizeNetIOSchedulers(num);
-	else 
-		m_net_sche_num = num;
-}
-
-void TcpSslServer::ReSetCoroutineSchedulerNum(int num)
-{
-	if(m_is_running) 
-		DynamicResizeCoroutineSchedulers(num);
-	else
-		m_co_sche_num = num;
-}
-
-
 TcpSslServer::~TcpSslServer()
 {
+	for(int i = 0 ; i < m_listen_events.size(); ++i )
+	{
+		delete m_listen_events[i];
+	}
+}
+
+//HttpServer
+
+ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> HttpServer::g_http_proto_store;
+std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine()>>> HttpServer::m_route_map;
+
+HttpServer::HttpServer(uint32_t proto_capacity)
+	: m_store(std::make_unique<TcpCallbackStore>(HttpRoute))
+{
+	g_http_proto_store.Initial(proto_capacity);
+}
+
+void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine()> &&handler)
+{
+	m_route_map["GET"][path] = std::forward<std::function<coroutine::Coroutine()>>(handler);
+}
+
+void HttpServer::Start(int port)
+{
+	
+}
+
+coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
+{
+    auto connection = operation.GetConnection();
+	int length = co_await connection->WaitForRecv();
+	if( length == 0 ) {
+		auto data = connection->FetchRecvData();
+		data.Clear();
+		bool b = co_await connection->CloseConnection();
+		co_return;
+	} else {
+		auto data = connection->FetchRecvData();
+		auto request = g_http_proto_store.GetRequest();
+		int elength = request->DecodePdu(data.Data());
+		if(request->HasError()) {
+			if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete || request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
+			{
+				if( elength >= 0 ) {
+					data.Erase(elength);
+				} 
+				operation.GetContext() = request;
+				operation.ReExecute(operation);
+			} else {
+				data.Clear();
+				bool b = co_await connection->CloseConnection();
+				co_return;
+			}
+		}
+		else{
+			data.Clear();
+			// TODO : handle request
+			// Note: close connection
+		}
+	}
+	co_return;
 }
 }

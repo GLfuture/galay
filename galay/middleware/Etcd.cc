@@ -1,6 +1,6 @@
 #include "Etcd.h"
-#include "../kernel/Scheduler.h"
-#include "../kernel/Step.h"
+#include "galay/kernel/Scheduler.h"
+#include "galay/kernel/ExternApi.h"
 
 bool galay::action::EtcdAction::DoAction(coroutine::Coroutine *co, void *ctx)
 {

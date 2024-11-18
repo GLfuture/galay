@@ -3,7 +3,8 @@
 #include <fstream>
 #include <spdlog/spdlog.h>
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OPenBSD__) || defined(__NetBSD__)
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #endif
@@ -53,7 +54,7 @@ SyncFileStream::WriteFile(const std::string& FileName,const std::string& Content
     out.close();
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 std::string 
 ZeroCopyFile::ReadFile(const std::string &FileName)
 {

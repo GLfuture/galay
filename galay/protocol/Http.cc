@@ -1,10 +1,12 @@
 #include "Http.h"
 #include <spdlog/spdlog.h>
 
-namespace galay::protocol::http
-{
-static const char* g_HttpErrors[] = {
+namespace galay::error{
+
+static const char* HttpErrors[] = {
     "No error",
+    "Header is incomplete",
+    "Body is incomplete",
     "Header is too long",
     "Method is not standard",
     "Uri too long",
@@ -13,17 +15,39 @@ static const char* g_HttpErrors[] = {
     "Header pair exists",
 };
 
+bool 
+HttpError::HasError() const
+{
+    return this->m_code != error::kHttpError_NoError;
+}
+
+HttpErrorCode& 
+HttpError::Code()
+{
+    return this->m_code;
+}
+
+void HttpError::Reset()
+{
+    this->m_code = kHttpError_NoError;
+}
+
+std::string 
+HttpError::ToString(HttpErrorCode code) const
+{
+    return HttpErrors[code];
+}
+
+
+}
+
+namespace galay::protocol::http
+{
 
 std::unordered_set<std::string> 
 g_stdMethods = {
     "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" , "PATCH"
 };
-
-
-HeaderPair::HeaderPair()
-{
-    this->m_error = std::make_shared<error::HttpErrorInner>();
-}
 
 bool
 HeaderPair::HasKey(const std::string& key)
@@ -40,49 +64,46 @@ HeaderPair::GetValue(const std::string& key)
         return "";
 }
 
-error::HttpError::ptr 
+error::HttpErrorCode
 HeaderPair::RemoveHeaderPair(const std::string& key)
 {
-    this->m_error->SetCode(error::kHttpError_NoError);
     if (m_headerPairs.contains(key))
     {
         m_headerPairs.erase(key);
     }
     else
     {
-        this->m_error->SetCode(error::kHttpError_HeaderPairNotExist);
+        return error::kHttpError_HeaderPairNotExist;
     }
-    return this->m_error;
+    return error::kHttpError_NoError;
 }
 
-error::HttpError::ptr 
+error::HttpErrorCode 
 HeaderPair::AddHeaderPair(const std::string& key, const std::string& value)
 {
-    this->m_error->SetCode(error::kHttpError_NoError);
     if (m_headerPairs.contains(key))
     {
-        this->m_error->SetCode(error::kHttpError_HeaderPairExist);
+        return error::kHttpError_HeaderPairExist;
     }
     else
     {
         this->m_headerPairs.emplace(key, value);
     }
-    return this->m_error;
+    return error::kHttpError_NoError;
 }
 
-error::HttpError::ptr 
+error::HttpErrorCode 
 HeaderPair::SetHeaderPair(const std::string& key, const std::string& value)
 {
-    this->m_error->SetCode(error::kHttpError_NoError);
     if (m_headerPairs.contains(key))
     {
         this->m_headerPairs[key] = value;
     }
     else
     {
-        this->m_error->SetCode(error::kHttpError_HeaderPairNotExist);
+        return error::kHttpError_HeaderPairNotExist;
     }
-    return this->m_error;
+    return error::kHttpError_NoError;
 }
 
 std::string 
@@ -96,10 +117,14 @@ HeaderPair::ToString()
     return std::move(res);
 }
 
+void protocol::http::HeaderPair::Clear()
+{
+    m_headerPairs.clear();
+}
+
 void 
 HeaderPair::operator=(const HeaderPair& headerPair)
 {
-    this->m_error = headerPair.m_error;
     this->m_headerPairs = headerPair.m_headerPairs;
 }
 
@@ -270,6 +295,15 @@ HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
     this->m_version = header->m_version;
     this->m_argList = header->m_argList;
     this->m_headerPairs = header->m_headerPairs;
+}
+
+void protocol::http::HttpRequestHeader::Reset()
+{
+    m_version.clear();
+    m_uri.clear();
+    m_method.clear();
+    m_argList.clear();
+    m_headerPairs.Clear();
 }
 
 void 
@@ -519,7 +553,7 @@ HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& v
 int 
 HttpRequest::DecodePdu(const std::string_view& buffer)
 {
-    Success();
+    m_error->Reset();
     size_t n = buffer.length();
     int eLength = 0;
     //header
@@ -529,17 +563,17 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
             {
                 spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                DealProtoError(error::kHttpError_HeaderTooLong);
+                m_error->Code() = error::kHttpError_HeaderTooLong;
                 return -1;
             }
             spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
-            Incomplete();
+            m_error->Code() = error::kHttpError_HeaderInComplete;
             return eLength;
         }
         else if (pos + 4 > HTTP_HEADER_MAX_LEN)
         {
             spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            DealProtoError(error::kHttpError_HeaderTooLong);
+            m_error->Code() = error::kHttpError_HeaderTooLong;
             return -1;
         }
         else{
@@ -548,7 +582,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
             std::string_view header = buffer;
             error::HttpErrorCode errCode = m_header->FromString(header.substr(0,pos + 4));
             if(errCode != error::kHttpError_NoError){
-                DealProtoError(errCode);
+                m_error->Code() = errCode;
                 return -1;
             };
             eLength = pos + 4;
@@ -586,7 +620,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
         default:
             break;
         }
-        if(ParseSuccess()) {
+        if(!m_error->HasError()) {
             this->m_status = kHttpHeader;
         }
     }
@@ -605,6 +639,29 @@ HttpRequest::EncodePdu()
         m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
     return m_header->ToString() + m_body;
+}
+
+int protocol::http::HttpRequest::GetErrorCode() const
+{
+    return m_error->Code();
+}
+
+std::string protocol::http::HttpRequest::GetErrorString()
+{
+    return m_error->ToString(m_error->Code());
+}
+
+void protocol::http::HttpRequest::Reset()
+{
+    m_header->Reset();
+    m_error->Reset();
+    m_body.clear();
+    m_status = kHttpHeader;
+}
+
+bool protocol::http::HttpRequest::HasError() const
+{
+    return m_error->HasError();
 }
 
 bool 
@@ -643,14 +700,9 @@ HttpRequest::EndChunck()
 
 HttpRequest::HttpRequest()
 {
-    this->m_error = std::make_shared<error::HttpErrorInner>();
+    this->m_error = std::make_shared<error::HttpError>();
 }
 
-error::HttpError::ptr 
-HttpRequest::Error()
-{
-    return m_error;
-}
 
 HttpRequestHeader::ptr 
 HttpRequest::Header()
@@ -682,7 +734,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer, int eLength)
             spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
-            Incomplete();
+            m_error->Code() = error::kHttpError_BodyInComplete;
             return eLength;
         }
     }else{
@@ -690,7 +742,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer, int eLength)
         if(pos == std::string::npos){
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
-                Incomplete();
+                m_error->Code() = error::kHttpError_BodyInComplete;
                 return eLength;
             }
         }else{
@@ -698,7 +750,6 @@ HttpRequest::GetHttpBody(const std::string_view &buffer, int eLength)
             eLength = pos + 4;
         }
     }
-    Success();
     return eLength;
 }
 
@@ -717,7 +768,7 @@ HttpRequest::GetChunckBody(const std::string_view& buffer, int eLength)
         catch (const std::exception &e)
         {
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-            DealProtoError(error::kHttpError_ChunckHasError);
+            m_error->Code() = error::kHttpError_ChunckHasError;
             return eLength;
         }
         if(length == 0){
@@ -726,22 +777,15 @@ HttpRequest::GetChunckBody(const std::string_view& buffer, int eLength)
             break;
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
-            Incomplete();
+            m_error->Code() = error::kHttpError_BodyInComplete;
             return eLength;
         }
         this->m_body += buffer.substr(pos+2,length);
         eLength = pos + 4 + length;
     }
-    Success();
     return eLength;
 }
 
-void 
-HttpRequest::DealProtoError(error::HttpErrorCode code)
-{
-    Illegal();
-    this->m_error->SetCode(code);
-}
 
 std::string& 
 HttpResponseHeader::Version()
@@ -1011,14 +1055,9 @@ HttpResponseHeader::CodeMsg(int status)
 
 HttpResponse::HttpResponse()
 {
-    this->m_error = std::make_shared<error::HttpErrorInner>();
+    this->m_error = std::make_shared<error::HttpError>();
 }
 
-error::HttpError::ptr 
-HttpResponse::Error()
-{
-    return m_error;
-}
 
 HttpResponseHeader::ptr 
 HttpResponse::Header()
@@ -1050,7 +1089,7 @@ HttpResponse::EncodePdu()
 int 
 HttpResponse::DecodePdu(const std::string_view& buffer)
 {
-    Success();
+    m_error->Reset();
     size_t n = buffer.length();
     int eLength = 0;
     //header
@@ -1060,17 +1099,17 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
             {
                 spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                DealProtoError(error::kHttpError_HeaderTooLong);
+                m_error->Code() = error::kHttpError_HeaderTooLong;
                 return -1;
             }
             spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
-            Incomplete();
+            m_error->Code() = error::kHttpError_HeaderInComplete;
             return eLength;
         }
         else if (pos + 4 > HTTP_HEADER_MAX_LEN)
         {
             spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            DealProtoError(error::kHttpError_HeaderTooLong);
+            m_error->Code() = error::kHttpError_HeaderTooLong;
             return -1;
         }
         else{
@@ -1078,8 +1117,8 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
             if(m_header == nullptr) m_header = std::make_shared<HttpResponseHeader>();
             std::string_view header = buffer;
             error::HttpErrorCode errCode = m_header->FromString(header.substr(0, pos + 4));
-            if(errCode != error::kHttpError_NoError){
-                DealProtoError(errCode);
+            if(m_error->HasError()){
+                m_error->Code() = errCode;
                 return -1;
             };
             eLength = pos + 4;
@@ -1114,11 +1153,34 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
         default:
             break;
         }
-        if(ParseSuccess()) {
+        if(!m_error->HasError()) {
             this->m_status = kHttpHeader;
         }
     }
     return eLength;
+}
+
+bool protocol::http::HttpResponse::HasError() const
+{
+    return m_error->HasError();
+}
+
+int protocol::http::HttpResponse::GetErrorCode() const
+{
+    return m_error->Code();
+}
+
+std::string protocol::http::HttpResponse::GetErrorString()
+{
+    return m_error->ToString(m_error->Code());
+}
+
+void protocol::http::HttpResponse::Reset()
+{
+    m_error->Reset();
+    m_header.reset();
+    m_body.clear();
+    m_status = kHttpHeader;
 }
 
 bool 
@@ -1173,7 +1235,7 @@ HttpResponse::GetHttpBody(const std::string_view& buffer, int eLength)
             spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
         }else{
             spdlog::warn("[{}:{}] [[body is incomplete] [Body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
-            Incomplete();
+            m_error->Code() = error::kHttpError_BodyInComplete;
             return eLength;
         }
     }else{
@@ -1181,7 +1243,7 @@ HttpResponse::GetHttpBody(const std::string_view& buffer, int eLength)
         if(pos == std::string::npos){
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
-                Incomplete();
+                m_error->Code() = error::kHttpError_BodyInComplete;
                 return eLength;
             }
         }else{
@@ -1189,7 +1251,6 @@ HttpResponse::GetHttpBody(const std::string_view& buffer, int eLength)
             eLength = pos + 4;
         }
     }
-    Success();
     return eLength;
 }
 
@@ -1209,7 +1270,7 @@ HttpResponse::GetChunckBody(const std::string_view& buffer, int eLength)
         catch (const std::exception &e)
         {
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
-            DealProtoError(error::kHttpError_ChunckHasError);
+            m_error->Code() = error::kHttpError_ChunckHasError;
             return -1;
         }
         if(length == 0){
@@ -1218,45 +1279,13 @@ HttpResponse::GetChunckBody(const std::string_view& buffer, int eLength)
             break;
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
-            Incomplete();
+            m_error->Code() = error::kHttpError_BodyInComplete;
             return 0;
         }
         this->m_body += buffer.substr(pos + 2,length);
         eLength = pos + 4 + length;
     }
-    Success();
     return eLength;
-}
-
-void 
-HttpResponse::DealProtoError(error::HttpErrorCode code)
-{
-    Illegal();
-    this->m_error->SetCode(code);
-}
-
-bool 
-error::HttpError::HasError() const
-{
-    return this->m_code != error::kHttpError_NoError;
-}
-
-error::HttpErrorCode 
-error::HttpError::Code() const
-{
-    return this->m_code;
-}
-
-std::string 
-error::HttpError::ToString(HttpErrorCode code) const
-{
-    return g_HttpErrors[code];
-}
-
-void 
-error::HttpErrorInner::SetCode(HttpErrorCode code)
-{
-    this->m_code = code;
 }
 
 //function 

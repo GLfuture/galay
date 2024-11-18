@@ -7,8 +7,8 @@
 #include <coroutine>
 #include <variant>
 #include <string>
-#include "../common/Base.h"
-#include "../util/ThreadSefe.hpp"
+#include "galay/common/Base.h"
+#include "galay/util/ThreadSefe.hpp"
 
 namespace galay::action
 {

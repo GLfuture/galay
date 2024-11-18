@@ -2,21 +2,18 @@
 #define GALAY_H
 
 //common
-#include "common/BaseDefine.h"
+#include "common/Base.h"
 #include "common/SignalHandler.h"
 #include "common/Reflection.h"
 
 //kernel
 #include "kernel/Coroutine.h"
-#include "kernel/Awaiter.h"
 #include "kernel/Async.h"
 #include "kernel/Event.h"
-#include "kernel/EventEngine.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Operation.h"
-#include "kernel/WaitAction.h"
 #include "kernel/Server.h"
-#include "kernel/Step.h"
+#include "kernel/ExternApi.h"
 
 //protocol
 #include "protocol/Http.h"

@@ -20,14 +20,13 @@ class TcpEventAction: public WaitAction
 public:
     using ptr = std::shared_ptr<TcpEventAction>;
 
-    TcpEventAction(event::EventEngine* engine);
     TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent* event);
     virtual bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
     void ResetEvent(event::TcpWaitEvent* event);
     event::TcpWaitEvent* GetBindEvent();
-    virtual ~TcpEventAction() = default;
+    virtual ~TcpEventAction();
 private:
     event::EventEngine* m_engine;
     event::TcpWaitEvent* m_event;

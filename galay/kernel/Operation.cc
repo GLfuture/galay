@@ -4,7 +4,7 @@
 #include "Scheduler.h"
 #include "Coroutine.h"
 #include "WaitAction.h"
-#include "../util/Time.h"
+#include "galay/util/Time.h"
 #include <cstring>
 
 namespace galay
@@ -46,13 +46,10 @@ StringViewWrapper::~StringViewWrapper()
 }
 
 
-TcpConnection::TcpConnection(async::AsyncTcpSocket* socket,\
-    scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler)
-    : m_net_scheduler(net_scheduler), m_co_scheduler(co_scheduler)
+TcpConnection::TcpConnection(action::TcpEventAction* action)
+    :m_event_action(action)
 {
-    this->m_net_event = new event::TcpWaitEvent(socket);
-    this->m_socket = socket;
-    this->m_event_action = new action::TcpEventAction(net_scheduler->GetEngine(), m_net_event);
+    m_socket = static_cast<event::TcpWaitEvent*>(action->GetBindEvent())->GetAsyncTcpSocket();
 }
 
 coroutine::Awaiter_int TcpConnection::WaitForRecv()
@@ -80,26 +77,13 @@ coroutine::Awaiter_bool TcpConnection::CloseConnection()
     return m_socket->Close(m_event_action);
 }
 
-scheduler::EventScheduler *TcpConnection::GetNetScheduler()
-{
-    return m_net_scheduler;
-}
-
-scheduler::CoroutineScheduler *TcpConnection::GetCoScheduler()
-{
-    return m_co_scheduler;
-}
-
 TcpConnection::~TcpConnection()
 {
-    delete this->m_net_event;
     delete this->m_event_action;
-    delete this->m_socket;
 }
 
-TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncTcpSocket* socket, \
-    scheduler::EventScheduler* net_scheduler, scheduler::CoroutineScheduler* co_scheduler)
-    : m_callback(callback), m_connection(std::make_shared<TcpConnection>(socket, net_scheduler, co_scheduler)), m_timer(nullptr)
+TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback,  action::TcpEventAction* action)
+    : m_callback(callback), m_connection(std::make_shared<TcpConnection>(action))
 {
 }
 
@@ -113,12 +97,6 @@ void TcpOperation::ReExecute(TcpOperation operation)
     m_callback(operation);
 }
 
-TcpOperation::Timer::ptr TcpOperation::AddTimer(int64_t during_ms, const std::function<void()> &timer_callback)
-{
-    return m_connection->GetNetScheduler()->GetTimeEvent()->AddTimer(during_ms, [this, timer_callback](event::TimeEvent::Timer::ptr timer){
-            timer_callback();
-        });
-};
 
 std::any &TcpOperation::GetContext()
 {
@@ -129,8 +107,8 @@ TcpOperation::~TcpOperation()
 {
 }
 
-TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, action::TcpSslEventAction *action, scheduler::EventScheduler *net_scheduler, scheduler::CoroutineScheduler *co_scheduler)
-    : m_callback(callback), m_timer(nullptr), m_connection(std::make_shared<TcpSslConnection>(action, net_scheduler, co_scheduler))
+TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, action::TcpSslEventAction *action)
+    : m_callback(callback), m_connection(std::make_shared<TcpSslConnection>(action))
 {
 }
 
@@ -144,12 +122,6 @@ void TcpSslOperation::ReExecute(TcpSslOperation operation)
     m_callback(operation);
 }
 
-TcpSslOperation::Timer::ptr TcpSslOperation::AddTimer(int64_t during_ms, const std::function<void()> &timer_callback)
-{
-    return m_connection->GetNetScheduler()->GetTimeEvent()->AddTimer(during_ms, [this, timer_callback](event::TimeEvent::Timer::ptr timer){
-            timer_callback();
-        });
-}
 
 std::any &TcpSslOperation::GetContext()
 {
@@ -166,18 +138,16 @@ TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpO
 
 }
 
-void TcpCallbackStore::Execute(async::AsyncTcpSocket *socket,
-                     scheduler::EventScheduler *net_scheduler, scheduler::CoroutineScheduler *co_scheduler)
+void TcpCallbackStore::Execute(action::TcpEventAction* action)
 {
-    TcpOperation operaction(m_callback, socket, net_scheduler, co_scheduler);
+    TcpOperation operaction(m_callback, action);
     m_callback(operaction);
 }
 
-TcpSslConnection::TcpSslConnection(action::TcpSslEventAction *action, scheduler::EventScheduler *net_scheduler, scheduler::CoroutineScheduler *co_scheduler)
-    : m_net_scheduler(net_scheduler), m_co_scheduler(co_scheduler), m_event_action(action)
+TcpSslConnection::TcpSslConnection(action::TcpSslEventAction *action)
+    :m_event_action(action)
 {
-    this->m_net_event = static_cast<event::TcpSslWaitEvent*>(action->GetBindEvent());
-    this->m_socket = m_net_event->GetAsyncTcpSocket();
+    this->m_socket = static_cast<event::TcpSslWaitEvent*>(action->GetBindEvent())->GetAsyncTcpSocket();
 }
 
 coroutine::Awaiter_int TcpSslConnection::WaitForSslRecv()
@@ -205,21 +175,9 @@ coroutine::Awaiter_bool TcpSslConnection::CloseConnection()
     return m_socket->SSLClose(m_event_action);
 }
 
-scheduler::EventScheduler *TcpSslConnection::GetNetScheduler()
-{
-    return m_net_scheduler;
-}
-
-scheduler::CoroutineScheduler *TcpSslConnection::GetCoScheduler()
-{
-    return m_co_scheduler;
-}
-
 TcpSslConnection::~TcpSslConnection()
 {
-    delete m_socket;
     delete m_event_action;
-    delete m_net_event;
 }
 
 TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)> &callback)
@@ -227,9 +185,9 @@ TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutin
 {
 }
 
-void TcpSslCallbackStore::Execute(action::TcpSslEventAction *action, scheduler::EventScheduler *net_scheduler, scheduler::CoroutineScheduler *co_scheduler)
+void TcpSslCallbackStore::Execute(action::TcpSslEventAction *action)
 {
-    TcpSslOperation operation(m_callback, action, net_scheduler, co_scheduler);
+    TcpSslOperation operation(m_callback, action);
     m_callback(operation);
 }
 

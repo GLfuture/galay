@@ -10,7 +10,14 @@
 #include <string_view>
 #include <unordered_map>
 #include <functional>
-#include <nlohmann/json.hpp>
+
+#ifdef INCLUDE_NLOHMANN_JSON_HPP_
+    #define USE_NLOHMANN_JSON
+#endif
+
+#ifdef USE_NLOHMANN_JSON
+    #include <nlohmann/json.hpp>
+#endif
 
 namespace galay::util
 {
@@ -68,7 +75,7 @@ namespace galay::util
         std::unordered_map<std::string, std::string> m_fields;
     };
 
-#ifdef INCLUDE_NLOHMANN_JSON_HPP_
+#ifdef USE_NLOHMANN_JSON
 
     using JsonValue = nlohmann::json;
     class JsonParser : public ParserBase

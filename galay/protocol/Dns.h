@@ -3,12 +3,33 @@
 #include "Protocol.h"
 #include <queue>
 #include <string.h>
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
     #include <arpa/inet.h>
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     #include <WinSock2.h>
     #include <ws2tcpip.h>
 #endif // 
+
+namespace galay::error
+{
+    enum DnsErrorCode {
+        kDnsError_NoError = 0,
+    };
+
+    class DnsError
+    {
+    public:
+        using ptr = std::shared_ptr<DnsError>;
+        using wptr = std::weak_ptr<DnsError>;
+        using uptr = std::unique_ptr<DnsError>;
+        bool HasError() const;
+        DnsErrorCode& Code();
+        void Reset();
+        std::string ToString(DnsErrorCode code) const;
+    protected:
+        DnsErrorCode m_code = kDnsError_NoError;
+    };
+}
 
 namespace galay::protocol::dns
 {
@@ -43,12 +64,13 @@ namespace galay::protocol::dns
 
     struct DnsHeader
     {
-        unsigned short m_id;                 // 会话ID
-        DnsFlags m_flags{0};                // flags
-        unsigned short m_questions = 0;      // 问题数
-        unsigned short m_answers_RRs = 0;    // 回答资源记录数
-        unsigned short m_authority_RRs = 0;  // 授权资源记录数
-        unsigned short m_additional_RRs = 0; // 附加资源记录数
+        void Reset();
+        unsigned short m_id;                    // 会话ID
+        DnsFlags m_flags{0};                    // flags
+        unsigned short m_questions = 0;         // 问题数
+        unsigned short m_answers_RRs = 0;       // 回答资源记录数
+        unsigned short m_authority_RRs = 0;     // 授权资源记录数
+        unsigned short m_additional_RRs = 0;    // 附加资源记录数
     };
 
     struct DnsQuestion
@@ -68,11 +90,12 @@ namespace galay::protocol::dns
         std::string m_data;
     };
 
-    #pragma pack()
+    #pragma pack(pop)
 
     class DnsProtocol
     {
     public:
+        DnsProtocol();
         DnsHeader GetHeader();
         void SetHeader(DnsHeader &&header);
         void SetQuestionQueue(std::queue<DnsQuestion> &&questions);
@@ -80,6 +103,7 @@ namespace galay::protocol::dns
 
     protected:
         DnsHeader m_header{0};
+        error::DnsError::ptr m_error;
         std::queue<DnsQuestion> m_questions;
         std::queue<DnsAnswer> m_answers;
     };
@@ -89,8 +113,11 @@ namespace galay::protocol::dns
     public:
         using ptr = std::shared_ptr<DnsRequest>;
         std::string EncodePdu() override;
-        // ignore
         int DecodePdu(const std::string_view &buffer) override;
+        virtual bool HasError() const override;
+        virtual int GetErrorCode() const override;
+        virtual std::string GetErrorString() override;
+        virtual void Reset() override;
     protected:
         std::string ModifyHostname(std::string hostname);
         int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);
@@ -104,6 +131,10 @@ namespace galay::protocol::dns
         int DecodePdu(const std::string_view &buffer) override;
         // ignore
         std::string EncodePdu() override;
+        virtual bool HasError() const override;
+        virtual int GetErrorCode() const override;
+        virtual std::string GetErrorString() override;
+        virtual void Reset() override;
     protected:
         std::string ModifyHostname(std::string hostname);
         static bool IsPointer(int in);

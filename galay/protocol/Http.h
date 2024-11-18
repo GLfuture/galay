@@ -9,11 +9,13 @@
 #include <string_view>
 #include <map>
 
-namespace galay::protocol::http::error
+namespace galay::error
 {
     enum HttpErrorCode
     {
         kHttpError_NoError = 0,
+        kHttpError_HeaderInComplete,
+        kHttpError_BodyInComplete,
         kHttpError_HeaderTooLong,
         kHttpError_MethodNotStandard,
         kHttpError_UriTooLong,
@@ -30,19 +32,11 @@ namespace galay::protocol::http::error
         using wptr = std::weak_ptr<HttpError>;
         using uptr = std::unique_ptr<HttpError>;
         bool HasError() const;
-        HttpErrorCode Code() const;
+        HttpErrorCode& Code();
+        void Reset();
         std::string ToString(HttpErrorCode code) const;
     protected:
         HttpErrorCode m_code = kHttpError_NoError;
-    };
-
-    class HttpErrorInner: public HttpError
-    {
-    public:
-        using ptr = std::shared_ptr<HttpErrorInner>;
-        using wptr = std::weak_ptr<HttpErrorInner>;
-        using uptr = std::unique_ptr<HttpErrorInner>;
-        void SetCode(HttpErrorCode code);
     };
 }
 
@@ -151,16 +145,15 @@ namespace galay::protocol::http
     class HeaderPair
     {
     public:
-        HeaderPair();
         bool HasKey(const std::string& key);
         std::string GetValue(const std::string& key);
-        error::HttpError::ptr RemoveHeaderPair(const std::string& key);
-        error::HttpError::ptr AddHeaderPair(const std::string& key, const std::string& value);
-        error::HttpError::ptr SetHeaderPair(const std::string& key, const std::string& value);
+        error::HttpErrorCode RemoveHeaderPair(const std::string& key);
+        error::HttpErrorCode AddHeaderPair(const std::string& key, const std::string& value);
+        error::HttpErrorCode SetHeaderPair(const std::string& key, const std::string& value);
         std::string ToString();
+        void Clear();
         void operator=(const HeaderPair& headerPair);
     private:
-        error::HttpErrorInner::ptr m_error;
         std::map<std::string, std::string> m_headerPairs;
     };
 
@@ -177,6 +170,7 @@ namespace galay::protocol::http
         std::string ToString();
         error::HttpErrorCode FromString(std::string_view str);
         void CopyFrom(HttpRequestHeader::ptr header);
+        void Reset();
     private:
         void ParseArgs(std::string uri);
         std::string ConvertFromUri(std::string&& url, bool convert_plus_to_space);
@@ -200,11 +194,14 @@ namespace galay::protocol::http
         using uptr = std::unique_ptr<HttpRequest>;
         
         HttpRequest();
-        error::HttpError::ptr Error();
         HttpRequestHeader::ptr Header();
         std::string& Body();
-        int DecodePdu(const std::string_view &buffer) override;
-        std::string EncodePdu() override;
+        virtual int DecodePdu(const std::string_view &buffer) override;
+        virtual std::string EncodePdu() override;
+        virtual bool HasError() const override;
+        virtual int GetErrorCode() const override;
+        virtual std::string GetErrorString() override;
+        virtual void Reset() override;
         //chunck
         bool StartChunck();
         std::string ToChunckData(std::string&& buffer);
@@ -212,12 +209,11 @@ namespace galay::protocol::http
     private:
         int GetHttpBody(const std::string_view& buffer, int elength);
         int GetChunckBody(const std::string_view& buffer, int elength);
-        void DealProtoError(error::HttpErrorCode code);
     private:
         HttpProStatus m_status = kHttpHeader;
         HttpRequestHeader::ptr m_header;
         std::string m_body;
-        error::HttpErrorInner::ptr m_error;
+        error::HttpError::ptr m_error;
     };
 
     class HttpResponseHeader
@@ -244,11 +240,15 @@ namespace galay::protocol::http
         using wptr = std::weak_ptr<HttpResponse>;
         using uptr = std::weak_ptr<HttpResponse>;
         HttpResponse();
-        error::HttpError::ptr Error();
         HttpResponseHeader::ptr Header();
         std::string& Body();
-        std::string EncodePdu() override;
-        int DecodePdu(const std::string_view &buffer) override;
+        virtual std::string EncodePdu() override;
+        virtual int DecodePdu(const std::string_view &buffer) override;
+        virtual bool HasError() const override;
+        virtual int GetErrorCode() const override;
+        virtual std::string GetErrorString() override;
+        virtual void Reset() override;
+        
         //chunck
         bool StartChunck();
         std::string ToChunckData(std::string&& buffer);
@@ -256,12 +256,11 @@ namespace galay::protocol::http
     private:
         int GetHttpBody(const std::string_view& buffer, int eLength);
         int GetChunckBody(const std::string_view& buffer, int eLength);
-        void DealProtoError(error::HttpErrorCode code);
     private:
         HttpProStatus m_status = kHttpHeader;
         HttpResponseHeader::ptr m_header;
         std::string m_body;
-        error::HttpErrorInner::ptr m_error;
+        error::HttpError::ptr m_error;
     };
     
     extern HttpRequest::ptr DefaultHttpRequest();

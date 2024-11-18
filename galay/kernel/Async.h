@@ -1,8 +1,8 @@
 #ifndef __GALAY_ASYNC_H__
 #define __GALAY_ASYNC_H__
 
-#include "../common/Base.h"
-#include "../common/Error.h"
+#include "galay/common/Base.h"
+#include "galay/common/Error.h"
 #include "WaitAction.h"
 #include <openssl/ssl.h>
 
@@ -75,10 +75,10 @@ public:
     AsyncTcpSslSocket();
     AsyncTcpSslSocket(GHandle handle, SSL* ssl);
     static SSL* SSLSocket(GHandle& handle, SSL_CTX* ctx);
+     bool BindAndListen(int port, int backlog);
     coroutine::Awaiter_GHandle Accept(action::TcpSslEventAction* action);
     //
     coroutine::Awaiter_bool SSLAccept(action::TcpSslEventAction* action);
-    coroutine::Awaiter_bool BindAndListen(int port, int backlog);
     coroutine::Awaiter_bool Connect(action::TcpSslEventAction* action, NetAddr* addr);
     //return send length, -1 has error 0 disconnect 
     coroutine::Awaiter_int SSLRecv(action::TcpSslEventAction* action);

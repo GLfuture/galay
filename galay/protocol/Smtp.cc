@@ -1,5 +1,34 @@
 #include "Smtp.h"
 
+namespace galay::error
+{
+
+static const char* SmtpErrors[] = {
+    "NoError",
+    "InComplete",
+};
+    
+bool SmtpError::HasError() const
+{
+    return m_code != kSmtpError_NoError;
+}
+
+SmtpErrorCode &SmtpError::Code()
+{
+    return m_code;
+}
+
+void SmtpError::Reset()
+{
+    m_code = kSmtpError_NoError;
+}
+
+std::string SmtpError::ToString(SmtpErrorCode code) const
+{
+    return SmtpErrors[code];
+}
+}
+
 namespace galay::protocol::smtp
 {
 std::string 
@@ -87,16 +116,21 @@ SmtpHelper::Quit(SmtpRequest& request)
     return request.EncodePdu();
 }
 
+SmtpRequest::SmtpRequest()
+{
+    m_error = std::make_shared<error::SmtpError>();    
+}
+
 int 
 SmtpRequest::DecodePdu(const std::string_view& buffer)
 {
+    m_error->Reset();
     int pos = buffer.find("\r\n");
     if(pos == std::string::npos) {
-        Incomplete();
+        m_error->Code() = error::kSmtpError_Incomplete;
         return 0;
     }
     this->m_content = buffer.substr(0,pos);
-    Success();
     return pos + 2;
 }
 
@@ -106,23 +140,52 @@ SmtpRequest::EncodePdu()
     return this->m_content + "\r\n";
 }
 
+bool SmtpRequest::HasError() const
+{
+    return m_error->HasError();
+}
+
+int protocol::smtp::SmtpRequest::GetErrorCode() const
+{
+    return m_error->Code();
+}
+
+std::string protocol::smtp::SmtpRequest::GetErrorString()
+{
+    return m_error->ToString(m_error->Code());
+}
+
+void protocol::smtp::SmtpRequest::Reset()
+{
+    m_error->Reset();
+    m_content.clear();
+    m_frommail.clear();
+    while(!m_tomails.empty()){
+        m_tomails.pop();
+    }
+}
+
 std::string& 
 SmtpRequest::GetContent()
 {
     return this->m_content;
 }
 
+SmtpResponse::SmtpResponse()
+{
+    m_error = std::make_shared<error::SmtpError>();
+}
 
 int 
 SmtpResponse::DecodePdu(const std::string_view &buffer)
 {
+    m_error->Reset();
     int pos = buffer.find("\r\n");
     if(pos == std::string::npos) {
-        Incomplete();
+        m_error->Code() = error::kSmtpError_Incomplete;
         return 0;
     }
     this->m_content = buffer.substr(0,pos);
-    Success();
     return pos + 2;
 }
 
@@ -133,10 +196,33 @@ SmtpResponse::EncodePdu()
     return this->m_content + "\r\n";
 }
 
+bool protocol::smtp::SmtpResponse::HasError() const
+{
+    return m_error->HasError();
+}
+
+int protocol::smtp::SmtpResponse::GetErrorCode() const
+{
+    return m_error->Code();
+}
+
+std::string protocol::smtp::SmtpResponse::GetErrorString()
+{
+    return m_error->ToString(m_error->Code());
+}
+
+void protocol::smtp::SmtpResponse::Reset()
+{
+    m_error->Reset();
+    m_content.clear();
+}
 
 std::string& 
 SmtpResponse::GetContent()
 {
     return this->m_content;
 }
+
 }
+
+

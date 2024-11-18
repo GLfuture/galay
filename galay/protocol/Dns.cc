@@ -1,10 +1,54 @@
 #include "Dns.h"
-#include "../util/String.h"
+#include "galay/util/String.h"
 #include <cstring>
+namespace galay::error
+{
 
+static const char* DnsErrors[] = {
+    "No Error"
+};
+
+bool DnsError::HasError() const
+{
+    return m_code != kDnsError_NoError;
+}
+
+DnsErrorCode &DnsError::Code()
+{
+    return m_code;
+}
+
+
+void DnsError::Reset()
+{
+    m_code = kDnsError_NoError;
+}
+
+std::string 
+DnsError::ToString(DnsErrorCode code) const
+{
+    return DnsErrors[code];
+}
+}
 
 namespace galay::protocol::dns
 {
+
+void DnsHeader::Reset()
+{
+    m_id = 0;
+    m_flags = {0};
+    m_questions = 0;
+    m_answers_RRs = 0;
+    m_authority_RRs = 0;
+    m_additional_RRs = 0;
+}
+
+DnsProtocol::DnsProtocol()
+{
+    m_error = std::make_shared<galay::error::DnsError>();
+}
+
 DnsHeader
 DnsProtocol::GetHeader()
 {
@@ -138,6 +182,33 @@ DnsRequest::DecodePdu(const std::string_view &buffer)
         m_questions.push(q);
     }
     return buffer.length();
+}
+
+bool DnsRequest::HasError() const
+{
+    return m_error->HasError();
+}
+
+int DnsRequest::GetErrorCode() const
+{
+    return m_error->Code();
+}
+
+std::string DnsRequest::GetErrorString()
+{
+    return m_error->ToString(m_error->Code());    
+}
+
+void DnsRequest::Reset()
+{
+    m_error->Reset();
+    m_header.Reset();
+    while(!m_questions.empty()) {
+        m_questions.pop();
+    }
+    while(!m_answers.empty()){
+        m_answers.pop();
+    }
 }
 
 std::string 
@@ -279,9 +350,7 @@ DnsResponse::DecodePdu(const std::string_view &buffer)
         temp += a.m_data_len;
         m_answers.push(a);
     }
-
     delete[] begin;
-    Success();
     return buffer.length();
 }
 
@@ -289,6 +358,33 @@ std::string
 DnsResponse::EncodePdu()
 {
     return "";
+}
+
+bool DnsResponse::HasError() const
+{
+    return m_error->HasError();
+}
+
+int DnsResponse::GetErrorCode() const
+{
+    return m_error->Code();
+}
+
+std::string DnsResponse::GetErrorString()
+{
+    return m_error->ToString(m_error->Code());
+}
+
+void DnsResponse::Reset()
+{
+    m_error->Reset();
+    m_header.Reset();
+    while(!m_answers.empty()){
+        m_answers.pop();
+    }
+    while(!m_questions.empty()){
+        m_questions.pop();
+    }
 }
 
 std::string 
@@ -380,5 +476,6 @@ DnsResponse::DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string
     }
     return alen + 1;
 }
+
 
 }

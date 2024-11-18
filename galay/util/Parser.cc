@@ -7,7 +7,9 @@ namespace galay::util
 ParserManager::ParserManager()
 {
     RegisterExtension<ConfigParser>(".conf");
+#ifdef USE_NLOHMANN_JSON
     RegisterExtension<JsonParser>(".json");
+#endif
 }
 
 
@@ -78,7 +80,7 @@ ConfigParser::GetValue(const std::string &key)
     return it->second;
 }
 
-
+#ifdef USE_NLOHMANN_JSON
 int 
 JsonParser::Parse(const std::string &filename)
 {
@@ -113,4 +115,7 @@ JsonParser::GetValue(const std::string &key)
     }
     return {};
 }
+
+#endif
+
 }

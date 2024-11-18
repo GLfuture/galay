@@ -7,11 +7,6 @@
 namespace galay::action
 {
 
-TcpEventAction::TcpEventAction(event::EventEngine* engine)
-    :m_engine(engine), m_event(nullptr)
-{
-    
-}
 
 TcpEventAction::TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent *event)
     :m_engine(engine), m_event(event)
@@ -27,22 +22,19 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
     if( !m_event ) return false;
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
-    /*
-        MultiThread environment, EventInEngine may be incorrect, so we need to call ModEvent/AddEvent
-        after AddEvent/ModEvent failed. 
-    */
-    if( !m_event->BelongEngine() ){
-        int ret = m_engine->AddEvent(this->m_event);
-        if(  ret != 0 ) {
-            spdlog::warn("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
-            m_engine->ModEvent(this->m_event);
-            return true;
-        } 
-    } else {
-        int ret = m_engine->ModEvent(this->m_event);
+    if (!m_event->BelongEngine())   {
+        int ret = m_engine->AddEvent(this->m_event, nullptr);
         if( ret != 0 ) {
-            spdlog::warn("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
-            m_engine->AddEvent(this->m_event);
+            spdlog::warn("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_event->BelongEngine()->GetErrorCode()));
+            m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
+            return true;
+        }
+    }
+    else {
+        int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
+        if( ret != 0 ) {
+            spdlog::warn("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_event->BelongEngine()->GetErrorCode()));
+            m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
             return true;
         }
     }
@@ -52,6 +44,11 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
 void TcpEventAction::ResetEvent(event::TcpWaitEvent *event)
 {
     this->m_event = event;
+}
+
+TcpEventAction::~TcpEventAction()
+{
+    delete m_event;
 }
 
 event::TcpWaitEvent *TcpEventAction::GetBindEvent()

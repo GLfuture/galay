@@ -4,6 +4,12 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <atomic>
+#include <string_view>
+#include <functional>
+#include <unordered_map>
+#include "concurrentqueue/moodycamel/concurrentqueue.h"
+#include "galay/protocol/Http.h"
 
 namespace galay::event
 {
@@ -19,6 +25,7 @@ namespace galay::async
 
 namespace galay
 {
+    class TcpOperation;
     class TcpCallbackStore;
     class TcpSslCallbackStore;
 }
@@ -28,54 +35,176 @@ namespace galay::coroutine
     class Coroutine;
 }
 
+
 namespace galay::server 
 {
 
-#define DEFAULT_SERVER_NET_SCHEDULER_NUM 4
-#define DEFAULT_SERVER_CO_SCHEDULER_NUM 4
+#define DEFAULT_SERVER_BACKLOG                          32
+#define DEFAULT_SERVER_NET_SCHEDULER_NUM                4
+#define DEFAULT_SERVER_CO_SCHEDULER_NUM                 4
+#define DEFAULT_SERVER_CO_SCHEDULER_TIMEOUT_MS          -1
+#define DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS         -1
+#define DEFAULT_SERVER_OTHER_SCHEDULER_NUM              0
+#define DEFAULT_SERVER_OTHER_SCHEDULER_TIMEOUT_MS       -1
     
-    class TcpServer
+    struct TcpServerConfig
+    {
+        TcpServerConfig();
+        int m_backlog;                          // 半连接队列长度
+        int m_coroutine_scheduler_num;          // 协程线程个数
+        int m_network_scheduler_num;            // 网络线程个数
+        int m_network_scheduler_timeout_ms;     // EventEngine返回一次的超时
+        int m_event_scheduler_num;              // 其他线程个数
+        int m_event_scheduler_timeout_ms;       // EventEngine返回一次的超时
+    };
+
+    struct TcpSslServerConfig: public TcpServerConfig
+    {
+        TcpSslServerConfig();
+        const char* m_cert_file;    //.crt 文件
+        const char* m_key_file;     //.key 文件
+    };
+
+    class Server
+    {
+    public:
+    };
+
+    class TcpServer: public Server
     {
     public:
         TcpServer();
+        TcpServer(const TcpServerConfig& config);
         //no block
-        coroutine::Coroutine Start(TcpCallbackStore* store, int port, int backlog);
+        void Start(TcpCallbackStore* store, int port);
         void Stop();
         inline bool IsRunning() { return m_is_running; }
-        void ReSetNetworkSchedulerNum(int num);
-        void ReSetCoroutineSchedulerNum(int num);
-        async::AsyncTcpSocket* GetSocket();
-        ~TcpServer();
-    private:
-        int m_co_sche_num;
-        int m_net_sche_num;
-        int m_co_sche_timeout;
-        int m_net_sche_timeout;
-        bool m_is_running;
+        virtual ~TcpServer();
+    protected:
+        TcpServerConfig m_config;
+        std::atomic_bool m_is_running;
         std::vector<event::ListenEvent*> m_listen_events;
     };
 
-    class TcpSslServer
+    class TcpSslServer: public Server
     {
     public:
         TcpSslServer(const char* cert_file, const char* key_file);
+        TcpSslServer(const TcpSslServerConfig& config);
         //no block
-        coroutine::Coroutine Start(TcpSslCallbackStore* store, int port, int backlog);
+        void Start(TcpSslCallbackStore* store, int port);
         void Stop();
         inline bool IsRunning() { return m_is_running; }
-        void ReSetNetworkSchedulerNum(int num);
-        void ReSetCoroutineSchedulerNum(int num);
-        async::AsyncTcpSslSocket* GetSocket();
-        ~TcpSslServer();
-    private:
-        int m_co_sche_num;
-        int m_net_sche_num;
-        int m_co_sche_timeout;
-        int m_net_sche_timeout;
-        bool m_is_running;
-        const char* m_cert_file;
-        const char* m_key_file;
+        virtual ~TcpSslServer();
+    protected:
+        TcpSslServerConfig m_config;
+        std::atomic_bool m_is_running;
         std::vector<event::SslListenEvent*> m_listen_events;
+    };
+    
+    template<typename T>
+    concept ProtoType = std::default_initializable<T> && requires(T t)
+    {
+        {
+            t.DecodePdu(std::declval<const std::string_view>())
+        } -> std::same_as<int>;
+        {
+            t.EncodePdu()
+        }-> std::same_as<std::string>;
+        {
+            t.HasError()
+        } -> std::same_as<bool>;
+        {
+            t.GetErrorCode()
+        } -> std::same_as<int>;
+        {
+            t.GetErrorString()
+        } -> std::same_as<std::string>;
+        {
+            t.Reset()
+        };
+    };
+    
+    //keep protocol's num fixed
+    template<ProtoType Request, ProtoType Response>
+    class ServerProtocolStore
+    {
+    public:
+
+        void Initial(uint32_t capacity)
+        {
+            m_capacity.store(capacity);
+            for(int i = 0; i < capacity; ++i) {
+                m_request_queue.enqueue(new Request());
+            }
+            for(int i = 0; i < capacity; ++i) {
+                m_response_queue.enqueue(new Response());
+            }
+        }
+
+        Request* GetRequest()
+        {
+            Request* request = nullptr;
+            if(m_request_queue.try_dequeue(request)){
+                return request;
+            }
+            return new Request();
+        }
+
+        void ReturnRequest(Request* request)
+        {
+            if(m_request_queue.size_approx() < m_capacity.load()){
+                m_request_queue.enqueue(request);
+            }else{
+                delete request;
+            }
+        }
+
+        Response* GetResponse()
+        {
+            Response* response = nullptr;
+            if(m_response_queue.try_dequeue(response)){
+                return response;
+            }
+            return new Response();
+        }
+
+        void ReturnResponse(Response* response)
+        {
+            if(m_response_queue.size_approx() < m_capacity.load()){
+                m_response_queue.enqueue(response);
+            }else{
+                delete response;
+            }
+        }
+    private:
+        std::atomic_uint32_t m_capacity;
+        moodycamel::ConcurrentQueue<Request*> m_request_queue;
+        moodycamel::ConcurrentQueue<Response*> m_response_queue;
+    };
+
+#define DEFAULT_PROTOCOL_CAPACITY 1024
+
+    class HttpServer: public Server
+    {
+        static ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> g_http_proto_store;
+    public:
+        HttpServer(uint32_t proto_capacity = DEFAULT_PROTOCOL_CAPACITY);
+        //not thread security
+        void Get(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
+        void Post(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
+        void Put(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
+        void Start(int port);
+    private:
+        static coroutine::Coroutine HttpRoute(TcpOperation operation);
+    private:
+        std::unique_ptr<TcpCallbackStore> m_store;
+        static std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine()>>> m_route_map;
+    };
+
+    class HttpspServer
+    {
+    public:
     };
 }
 
