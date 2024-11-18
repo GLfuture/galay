@@ -91,4 +91,18 @@ bool CoroutineScheduler::Stop()
     return m_waiter->Wait(5000);
 }
 
+
+
+TimerScheduler::TimerScheduler()
+{
+    GHandle handle;
+    event::TimeEvent::CreateHandle(handle);
+    m_timer_event = new event::TimeEvent(handle, m_engine.get());
+}
+
+std::shared_ptr<event::Timer> TimerScheduler::AddTimer(int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback)
+{
+    return m_timer_event->AddTimer(ms, std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback));
+}
+
 }

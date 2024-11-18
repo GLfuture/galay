@@ -4,7 +4,6 @@
 #include "Async.h"
 #include "Operation.h"
 #include "ExternApi.h"
-#include "galay/protocol/Http.h"
 #include <openssl/err.h>
 #include "spdlog/spdlog.h"
 
@@ -41,7 +40,7 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 	DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
 	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
 	//coroutine scheduler
-	StartAllCoroutineSchedulers();
+	StartCoroutineSchedulers();
 	//net scheduler
 	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
@@ -79,8 +78,8 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 void TcpServer::Stop()
 {
 	if(!m_is_running) return;
-	StopAllCoroutineSchedulers();
-	StopAllEventSchedulers();
+	StopCoroutineSchedulers();
+	StopEventSchedulers();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -110,7 +109,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
     DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
 	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
 	//coroutine scheduler
-	StartAllCoroutineSchedulers();
+	StartCoroutineSchedulers();
 	//net scheduler
 	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
@@ -158,8 +157,8 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 void TcpSslServer::Stop()
 {
 	if(!m_is_running) return;
-	StopAllCoroutineSchedulers();
-	StopAllEventSchedulers();
+	StopCoroutineSchedulers();
+	StopEventSchedulers();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));

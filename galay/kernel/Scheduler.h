@@ -15,6 +15,8 @@ namespace galay::event {
     class Event;
     class CallbackEvent;
     class EventEngine; 
+    class TimeEvent;
+    class Timer;
 };
 
 namespace galay::coroutine {
@@ -53,11 +55,21 @@ public:
     uint32_t GetErrorCode();
     inline event::EventEngine* GetEngine() { return m_engine.get(); }
     virtual ~EventScheduler();
-private:
+protected:
     std::atomic_bool m_start;
     std::unique_ptr<std::thread> m_thread;
     std::shared_ptr<event::EventEngine> m_engine;
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
+};
+
+class TimerScheduler: public EventScheduler
+{
+public:
+    using ptr = std::shared_ptr<TimerScheduler>;
+    TimerScheduler();
+    std::shared_ptr<event::Timer> AddTimer(int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback);
+private:
+    event::TimeEvent* m_timer_event;
 };
 
 }

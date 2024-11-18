@@ -5,7 +5,8 @@ namespace galay
 {
 
 std::vector<scheduler::CoroutineScheduler*> g_coroutine_schedulers;
-std::vector<scheduler::EventScheduler*> g_netio_schedulers;
+std::vector<scheduler::EventScheduler*> g_event_schedulers;
+std::vector<scheduler::TimerScheduler*> g_timer_schedulers;
 
 void DynamicResizeCoroutineSchedulers(int num)
 {
@@ -27,18 +28,36 @@ void DynamicResizeCoroutineSchedulers(int num)
 
 void DynamicResizeEventSchedulers(int num)
 {
-    int now = g_netio_schedulers.size();
+    int now = g_event_schedulers.size();
     int sub = num - now;
     if(sub > 0) {
         for(int i = 0; i < sub; ++i) {
-            g_netio_schedulers.push_back(new scheduler::EventScheduler);
+            g_event_schedulers.push_back(new scheduler::EventScheduler);
         }
     } else if(sub < 0) {
-        for(int i = g_netio_schedulers.size() - 1 ; i >= -sub ; -- i)
+        for(int i = g_event_schedulers.size() - 1 ; i >= -sub ; -- i)
         {
-            g_netio_schedulers[i]->Stop();
-            delete g_netio_schedulers[i];
-            g_netio_schedulers.erase(std::prev(g_netio_schedulers.end()));
+            g_event_schedulers[i]->Stop();
+            delete g_event_schedulers[i];
+            g_event_schedulers.erase(std::prev(g_event_schedulers.end()));
+        }
+    }
+}
+
+void DynamicResizeTimeSchedulers(int num)
+{
+    int now = g_timer_schedulers.size();
+    int sub = num - now;
+    if(sub > 0) {
+        for(int i = 0; i < sub; ++i) {
+            g_timer_schedulers.push_back(new scheduler::TimerScheduler);
+        }
+    } else if(sub < 0) {
+        for(int i = g_timer_schedulers.size() - 1 ; i >= -sub ; -- i)
+        {
+            g_timer_schedulers[i]->Stop();
+            delete g_timer_schedulers[i];
+            g_timer_schedulers.erase(std::prev(g_timer_schedulers.end()));
         }
     }
 }
@@ -50,20 +69,73 @@ int GetCoroutineSchedulerNum()
 
 int GetEventSchedulerNum()
 {
-    return g_netio_schedulers.size();
+    return g_event_schedulers.size();
+}
+
+int GetTimeSchedulerNum()
+{
+    return g_timer_schedulers.size();
 }
 
 scheduler::EventScheduler* GetEventScheduler(int index)
 {
-    return g_netio_schedulers[index];
+    return g_event_schedulers[index];
 }
 
-scheduler::CoroutineScheduler* GetCoroutineScheduler(int index)
+static std::atomic_uint32_t g_current_coroutine_scheduler_index = 0;
+
+scheduler::CoroutineScheduler *GetCoroutineSchedulerInOrder()
+{
+    uint32_t size = g_coroutine_schedulers.size();
+    uint32_t now = g_current_coroutine_scheduler_index.load();
+    int retries = 0;
+    while(retries < MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES){
+        if( g_current_coroutine_scheduler_index.compare_exchange_strong(now, (now + 1) % size) ){
+            return g_coroutine_schedulers[now];
+        }
+        std::this_thread::yield();
+        now = g_current_coroutine_scheduler_index.load();
+        ++retries;
+    }
+    return nullptr;
+}
+
+scheduler::CoroutineScheduler *GetCoroutineScheduler(int index)
 {
     return g_coroutine_schedulers[index];
 }
 
-void StartAllCoroutineSchedulers()
+static std::atomic_uint32_t g_current_timer_scheduler_index = 0;
+
+scheduler::TimerScheduler *GetTimerSchedulerInOrder()
+{
+    uint32_t size = g_timer_schedulers.size();
+    uint32_t now = g_current_timer_scheduler_index.load();
+    int retries = 0;
+    while(retries < MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES){
+        if( g_current_timer_scheduler_index.compare_exchange_strong(now, (now + 1) % size) ){
+            return g_timer_schedulers[now];
+        }
+        std::this_thread::yield();
+        now = g_current_timer_scheduler_index.load();
+        ++retries;
+    }
+    return nullptr;
+}
+
+scheduler::TimerScheduler *GetTimerScheduler(int index)
+{
+    return g_timer_schedulers[index];
+}
+
+void StartAllSchedulers(int timeout)
+{
+    StartCoroutineSchedulers();
+    StartEventSchedulers(timeout);
+    StartTimerSchedulers(timeout);
+}
+
+void StartCoroutineSchedulers()
 {
     for(int i = 0 ; i < g_coroutine_schedulers.size() ; ++i )
     {
@@ -71,15 +143,30 @@ void StartAllCoroutineSchedulers()
     }
 }
 
-void StartAllEventSchedulers(int timeout)
+void StartEventSchedulers(int timeout)
 {
-    for(int i = 0 ; i < g_netio_schedulers.size() ; ++i )
+    for(int i = 0 ; i < g_event_schedulers.size() ; ++i )
     {
-        g_netio_schedulers[i]->Loop(timeout);
+        g_event_schedulers[i]->Loop(timeout);
     }
 }
 
-void StopAllCoroutineSchedulers()
+void StartTimerSchedulers(int timeout)
+{
+    for(int i = 0 ; i < g_timer_schedulers.size() ; ++i )
+    {
+        g_timer_schedulers[i]->Loop(timeout);
+    }
+}
+
+void StopAllSchedulers()
+{
+    StopCoroutineSchedulers();
+    StopEventSchedulers();
+    StopTimerSchedulers();
+}
+
+void StopCoroutineSchedulers()
 {
     for(int i = 0 ; i < g_coroutine_schedulers.size() ; ++i )
     {
@@ -89,16 +176,25 @@ void StopAllCoroutineSchedulers()
     g_coroutine_schedulers.clear();
 }
 
-void StopAllEventSchedulers()
+void StopEventSchedulers()
 {
-    for(int i = 0 ; i < g_netio_schedulers.size() ; ++i )
+    for(int i = 0 ; i < g_event_schedulers.size() ; ++i )
     {
-        g_netio_schedulers[i]->Stop();
-        delete g_netio_schedulers[i];
+        g_event_schedulers[i]->Stop();
+        delete g_event_schedulers[i];
     }
-    g_netio_schedulers.clear();
+    g_event_schedulers.clear();
 }
 
+void StopTimerSchedulers()
+{
+    for(int i = 0 ; i < g_timer_schedulers.size() ; ++i )
+    {
+        g_timer_schedulers[i]->Stop();
+        delete g_timer_schedulers[i];
+    }
+    g_timer_schedulers.clear();
+}
 
 SSL_CTX* g_ssl_ctx = nullptr;
 

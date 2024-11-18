@@ -23,9 +23,9 @@ galay::coroutine::Coroutine func()
 int main()
 {
     galay::DynamicResizeCoroutineSchedulers(1);
-    galay::StartAllCoroutineSchedulers();
+    galay::StartCoroutineSchedulers();
     func();
     getchar();
-    galay::StopAllCoroutineSchedulers();
+    galay::StopCoroutineSchedulers();
     return 0;
 }
