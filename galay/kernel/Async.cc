@@ -72,7 +72,7 @@ bool HandleOption::HandleReuseAddr()
 
 bool HandleOption::HandleReusePort()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     int option = 1;
     int ret = setsockopt(this->m_handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
     if (ret < 0) {

@@ -281,9 +281,12 @@ bool KqueueEventEngine::Stop()
 
 int KqueueEventEngine::AddEvent(Event *event, void* ctx)
 {
+    spdlog::debug("KqueueEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_ADD;
-    ConvertToKEvent(k_event, event, ctx);
+    if(!ConvertToKEvent(k_event, event, ctx)) {
+        return 0;
+    };
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);
     if(ret != 0){
         m_error_code = error::MakeErrorCode(error::Error_ModEventError, errno);
@@ -297,9 +300,12 @@ int KqueueEventEngine::AddEvent(Event *event, void* ctx)
 
 int KqueueEventEngine::ModEvent(Event *event, void* ctx)
 {
+    spdlog::debug("KqueueEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_ADD;
-    ConvertToKEvent(k_event, event, ctx);
+    if(!ConvertToKEvent(k_event, event, ctx)) {
+        return 0;
+    };
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);
     if(ret != 0){
         m_error_code = error::MakeErrorCode(error::Error_ModEventError, errno);
@@ -312,6 +318,7 @@ int KqueueEventEngine::ModEvent(Event *event, void* ctx)
 
 int KqueueEventEngine::DelEvent(Event *event, void* ctx)
 {
+    spdlog::debug("KqueueEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_DELETE;
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);
@@ -325,7 +332,12 @@ int KqueueEventEngine::DelEvent(Event *event, void* ctx)
     return ret;
 }
 
-bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void* ctx)
+KqueueEventEngine::~KqueueEventEngine()
+{
+    spdlog::info("~KqueueEventEngine");
+}
+
+bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void *ctx)
 {
     ev.ident = event->GetHandle().fd;
     ev.udata = event;

@@ -15,6 +15,8 @@ EventScheduler::EventScheduler()
     m_engine = std::make_shared<event::EpollEventEngine>();
 #elif defined(USE_IOURING)
     m_engine = std::make_shared<IoUringEventEngine>();
+#elif defined(USE_KQUEUE)
+    m_engine = std::make_shared<event::KqueueEventEngine>();
 #endif
     m_waiter = std::make_shared<thread::ThreadWaiters>(1);
 }

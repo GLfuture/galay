@@ -287,8 +287,8 @@ ListenEvent::ListenEvent(EventEngine* engine, async::AsyncTcpSocket* socket, Tcp
 
 void ListenEvent::HandleEvent(EventEngine *engine)
 {
-    CreateTcpSocket(engine);
     engine->ModEvent(this, nullptr);
+    CreateTcpSocket(engine);
 }
 
 GHandle ListenEvent::GetHandle()
@@ -309,8 +309,6 @@ ListenEvent::~ListenEvent()
 
 coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
 {
-    
-#if defined(USE_EPOLL)
     while(1)
     {
         GHandle new_handle = co_await m_socket->Accept(m_action);
@@ -336,7 +334,6 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
         action::TcpEventAction* action = new action::TcpEventAction(engine, event);
         this->m_callback_store->Execute(action);
     }
-#endif
     co_return;
 }
 
@@ -348,8 +345,8 @@ SslListenEvent::SslListenEvent(EventEngine* engine, async::AsyncTcpSslSocket *so
 
 void SslListenEvent::HandleEvent(EventEngine *engine)
 {
-    CreateTcpSslSocket(engine);
     engine->ModEvent(this, nullptr);
+    CreateTcpSslSocket(engine);
 }
 
 GHandle SslListenEvent::GetHandle()

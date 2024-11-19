@@ -81,6 +81,10 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 void TcpServer::Stop()
 {
 	if(!m_is_running) return;
+	for(int i = 0 ; i < m_listen_events.size(); ++i )
+	{
+		delete m_listen_events[i];
+	}
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
 	m_is_running = false;
@@ -89,10 +93,6 @@ void TcpServer::Stop()
 
 TcpServer::~TcpServer()
 {
-	for(int i = 0 ; i < m_listen_events.size(); ++i )
-	{
-		delete m_listen_events[i];
-	}
 }
 
 TcpSslServer::TcpSslServer(const char* cert_file, const char* key_file)
@@ -161,6 +161,10 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 void TcpSslServer::Stop()
 {
 	if(!m_is_running) return;
+	for(int i = 0 ; i < m_listen_events.size(); ++i )
+	{
+		delete m_listen_events[i];
+	}
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
 	m_is_running = false;
@@ -170,10 +174,6 @@ void TcpSslServer::Stop()
 
 TcpSslServer::~TcpSslServer()
 {
-	for(int i = 0 ; i < m_listen_events.size(); ++i )
-	{
-		delete m_listen_events[i];
-	}
 }
 
 //HttpServer
