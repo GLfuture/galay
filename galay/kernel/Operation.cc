@@ -5,6 +5,7 @@
 #include "Coroutine.h"
 #include "WaitAction.h"
 #include "galay/util/Time.h"
+#include <spdlog/spdlog.h>
 #include <cstring>
 
 namespace galay
@@ -79,12 +80,13 @@ coroutine::Awaiter_bool TcpConnection::CloseConnection()
 
 TcpConnection::~TcpConnection()
 {
-    delete this->m_event_action;
+    delete m_event_action;
 }
 
 TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback,  action::TcpEventAction* action)
     : m_callback(callback), m_connection(std::make_shared<TcpConnection>(action))
 {
+    spdlog::info("TcpOperation::TcpOperation");
 }
 
 TcpConnection::ptr TcpOperation::GetConnection()

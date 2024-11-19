@@ -39,7 +39,7 @@ int main()
     getchar(); 
     return 0;
 #endif
-    galay::DynamicResizeTimeSchedulers(1);
+    galay::DynamicResizeTimerSchedulers(1);
     galay::DynamicResizeCoroutineSchedulers(1);
     galay::StartCoroutineSchedulers();
     galay::StartTimerSchedulers(-1);

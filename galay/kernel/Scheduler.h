@@ -68,6 +68,11 @@ public:
     using ptr = std::shared_ptr<TimerScheduler>;
     TimerScheduler();
     std::shared_ptr<event::Timer> AddTimer(int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback);
+    bool Loop(int timeout = -1);
+    bool Stop();
+    uint32_t GetErrorCode();
+    inline event::EventEngine* GetEngine() { return m_engine.get(); }
+    virtual ~TimerScheduler();
 private:
     event::TimeEvent* m_timer_event;
 };

@@ -119,7 +119,7 @@ HeaderPair::ToString()
 
 void protocol::http::HeaderPair::Clear()
 {
-    m_headerPairs.clear();
+    if(!m_headerPairs.empty()) m_headerPairs.clear();
 }
 
 void 
@@ -299,10 +299,10 @@ HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
 
 void protocol::http::HttpRequestHeader::Reset()
 {
-    m_version.clear();
-    m_uri.clear();
-    m_method.clear();
-    m_argList.clear();
+    if(!m_version.empty()) m_version.clear();
+    if(!m_uri.empty()) m_uri.clear();
+    if(!m_method.empty()) m_method.clear();
+    if(!m_argList.empty()) m_argList.clear();
     m_headerPairs.Clear();
 }
 
@@ -655,7 +655,7 @@ void protocol::http::HttpRequest::Reset()
 {
     m_header->Reset();
     m_error->Reset();
-    m_body.clear();
+    if(!m_body.empty()) m_body.clear();
     m_status = kHttpHeader;
 }
 

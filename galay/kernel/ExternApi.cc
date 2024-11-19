@@ -44,7 +44,7 @@ void DynamicResizeEventSchedulers(int num)
     }
 }
 
-void DynamicResizeTimeSchedulers(int num)
+void DynamicResizeTimerSchedulers(int num)
 {
     int now = g_timer_schedulers.size();
     int sub = num - now;
@@ -72,7 +72,7 @@ int GetEventSchedulerNum()
     return g_event_schedulers.size();
 }
 
-int GetTimeSchedulerNum()
+int GetTimerSchedulerNum()
 {
     return g_timer_schedulers.size();
 }

@@ -105,4 +105,23 @@ std::shared_ptr<event::Timer> TimerScheduler::AddTimer(int64_t ms, std::function
     return m_timer_event->AddTimer(ms, std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback));
 }
 
+bool TimerScheduler::Loop(int timeout)
+{
+    return EventScheduler::Loop(timeout);
+}
+
+bool TimerScheduler::Stop()
+{
+    return EventScheduler::Stop();
+}
+
+uint32_t TimerScheduler::GetErrorCode()
+{
+    return EventScheduler::GetErrorCode();
+}
+
+TimerScheduler::~TimerScheduler()
+{
+    delete m_timer_event;
+}
 }

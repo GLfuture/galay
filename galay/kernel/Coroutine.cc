@@ -141,7 +141,7 @@ static action::TimeEventAction g_time_action;
 
 Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
 {
-    if(GetTimeSchedulerNum() == 0) {
+    if(GetTimerSchedulerNum() == 0) {
         return Awaiter_bool(false);
     }
     g_time_action.CreateTimer(ms, timer, [scheduler](event::Timer::ptr timer){

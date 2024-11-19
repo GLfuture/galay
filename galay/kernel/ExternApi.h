@@ -24,11 +24,11 @@ SSL_CTX* GetGlobalSSLCtx();
 
 void DynamicResizeCoroutineSchedulers(int num);
 void DynamicResizeEventSchedulers(int num);
-void DynamicResizeTimeSchedulers(int num);
+void DynamicResizeTimerSchedulers(int num);
 
 int GetCoroutineSchedulerNum();
 int GetEventSchedulerNum();
-int GetTimeSchedulerNum();
+int GetTimerSchedulerNum();
 
 scheduler::EventScheduler* GetEventScheduler(int index);
 scheduler::CoroutineScheduler* GetCoroutineSchedulerInOrder();

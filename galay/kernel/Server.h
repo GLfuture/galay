@@ -41,11 +41,13 @@ namespace galay::server
 
 #define DEFAULT_SERVER_BACKLOG                          32
 #define DEFAULT_SERVER_NET_SCHEDULER_NUM                4
-#define DEFAULT_SERVER_CO_SCHEDULER_NUM                 4
 #define DEFAULT_SERVER_CO_SCHEDULER_TIMEOUT_MS          -1
+#define DEFAULT_SERVER_CO_SCHEDULER_NUM                 4
 #define DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS         -1
 #define DEFAULT_SERVER_OTHER_SCHEDULER_NUM              0
 #define DEFAULT_SERVER_OTHER_SCHEDULER_TIMEOUT_MS       -1
+#define DEFAULT_SERVER_TIMER_SCHEDULER_NUM              1
+#define DEFAULT_SERVER_TIMER_SCHEDULER_TIMEOUT_MS       -1
     
     struct TcpServerConfig
     {
@@ -56,6 +58,8 @@ namespace galay::server
         int m_network_scheduler_timeout_ms;     // EventEngine返回一次的超时
         int m_event_scheduler_num;              // 其他线程个数
         int m_event_scheduler_timeout_ms;       // EventEngine返回一次的超时
+        int m_timer_scheduler_num;              // 定时线程个数
+        int m_timer_scheduler_timeout_ms;       // EventEngine返回一次的超时
     };
 
     struct TcpSslServerConfig: public TcpServerConfig
@@ -153,6 +157,7 @@ namespace galay::server
 
         void ReturnRequest(Request* request)
         {
+            request->Reset();
             if(m_request_queue.size_approx() < m_capacity.load()){
                 m_request_queue.enqueue(request);
             }else{
@@ -171,6 +176,7 @@ namespace galay::server
 
         void ReturnResponse(Response* response)
         {
+            response->Reset();
             if(m_response_queue.size_approx() < m_capacity.load()){
                 m_response_queue.enqueue(response);
             }else{
@@ -185,11 +191,15 @@ namespace galay::server
 
 #define DEFAULT_PROTOCOL_CAPACITY 1024
 
-    class HttpServer: public Server
+    class HttpServer: public TcpServer
     {
         static ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> g_http_proto_store;
     public:
         HttpServer(uint32_t proto_capacity = DEFAULT_PROTOCOL_CAPACITY);
+        static void PrepareMethodNotAllowedData(std::string&& data);
+        static void PrepareUriTooLongData(std::string&& data);
+        static void PrepareNotFoundData(std::string&& data);
+        
         //not thread security
         void Get(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
         void Post(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
@@ -199,6 +209,9 @@ namespace galay::server
         static coroutine::Coroutine HttpRoute(TcpOperation operation);
     private:
         std::unique_ptr<TcpCallbackStore> m_store;
+        static std::string Method_NotAllowed;
+        static std::string UriTooLong;
+        static std::string NotFound;
         static std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine()>>> m_route_map;
     };
 

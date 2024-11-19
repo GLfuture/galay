@@ -8,7 +8,6 @@
     
 #endif
 #include <cstring>
-#include <spdlog/spdlog.h>
 
 
 namespace galay::event
@@ -32,7 +31,6 @@ EpollEventEngine::EpollEventEngine(uint32_t max_events)
     bzero(m_events, sizeof(epoll_event) * max_events);
     this->m_stop = true;
     this->m_handle.fd = epoll_create(1);
-    spdlog::debug("EpollEventEngine::EpollEventEngine [Create Engine: {}]", m_handle.fd);
     if(this->m_handle.fd < 0) {
         m_error_code = error::MakeErrorCode(error::Error_EpollCreateError, errno);
     }
@@ -53,7 +51,6 @@ EpollEventEngine::Loop(int timeout)
             nEvents = epoll_wait(m_handle.fd, m_events, m_event_size, timeout);
         }
         if(nEvents < 0) {
-            spdlog::error("EpollEventEngine::Loop [Engine: {} epoll_wait failed, error: {}]", this->m_handle.fd, strerror(errno));
             continue;
         };
         for(int i = 0; i < nEvents; ++i)
@@ -94,7 +91,6 @@ bool EpollEventEngine::Stop()
 int 
 EpollEventEngine::AddEvent(Event *event, void* ctx)
 {
-    spdlog::debug("EpollEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     epoll_event ev;
     if(!ConvertToEpollEvent(ev, event, ctx))
     {
@@ -116,7 +112,6 @@ EpollEventEngine::AddEvent(Event *event, void* ctx)
 int 
 EpollEventEngine::ModEvent(Event* event, void* ctx)
 {
-    spdlog::debug("EpollEventEngine::ModEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     epoll_event ev;
     ev.data.ptr = event;
     if( !ConvertToEpollEvent(ev, event, ctx) )
@@ -137,7 +132,6 @@ EpollEventEngine::ModEvent(Event* event, void* ctx)
 int 
 EpollEventEngine::DelEvent(Event* event, void* ctx)
 {
-    spdlog::debug("EpollEventEngine::DelEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     GHandle handle = event->GetHandle();
     epoll_event ev;
     ev.data.ptr = event;
@@ -221,7 +215,6 @@ KqueueEventEngine::KqueueEventEngine(uint32_t max_events)
     m_events = (struct kevent*)malloc(sizeof(struct kevent) * max_events);
     bzero(m_events, sizeof(struct kevent) * max_events);
     this->m_stop = true;
-    spdlog::debug("KqueueEventEngine::KqueueEventEngine [Create Engine: {}]", m_handle.fd);
     if(this->m_handle.fd < 0) {
         m_error_code = error::MakeErrorCode(error::Error_EpollCreateError, errno);
     }
@@ -247,9 +240,7 @@ bool KqueueEventEngine::Loop(int timeout)
             if(timeout > 0) nEvents = kevent(m_handle.fd, nullptr, 0, m_events, m_event_size, &ts);
             else nEvents = kevent(m_handle.fd, nullptr, 0, m_events, m_event_size, nullptr);
         }
-        spdlog::debug("KqueueEventEngine::Loop [Engine: {} kevent return: {}]", this->m_handle.fd, nEvents);
         if(nEvents < 0) {
-            spdlog::error("EpollEventEngine::Loop [Engine: {} kevent failed, error: {}]", this->m_handle.fd, strerror(errno));
             continue;
         };
         for(int i = 0; i < nEvents; ++i)
