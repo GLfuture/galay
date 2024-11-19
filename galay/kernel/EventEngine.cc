@@ -334,7 +334,12 @@ int KqueueEventEngine::DelEvent(Event *event, void* ctx)
     return ret;
 }
 
-bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void* ctx)
+KqueueEventEngine::~KqueueEventEngine()
+{
+    spdlog::info("~KqueueEventEngine");
+}
+
+bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void *ctx)
 {
     ev.ident = event->GetHandle().fd;
     ev.udata = event;

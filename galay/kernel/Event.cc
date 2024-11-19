@@ -309,8 +309,6 @@ ListenEvent::~ListenEvent()
 
 coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
 {
-    
-#if defined(USE_EPOLL)
     while(1)
     {
         GHandle new_handle = co_await m_socket->Accept(m_action);
@@ -336,7 +334,6 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
         action::TcpEventAction* action = new action::TcpEventAction(engine, event);
         this->m_callback_store->Execute(action);
     }
-#endif
     co_return;
 }
 

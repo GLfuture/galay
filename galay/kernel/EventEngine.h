@@ -94,6 +94,7 @@ public:
     inline virtual GHandle GetHandle() override { return m_handle; }
     inline virtual uint32_t GetMaxEventSize() override { return m_event_size; }
     inline virtual void ResetMaxEventSize(uint32_t size) override { m_event_size = size; }
+    virtual ~KqueueEventEngine();
 private:
     bool ConvertToKEvent(struct kevent &ev, Event *event, void* ctx);
 private:
