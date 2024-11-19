@@ -179,7 +179,7 @@ TcpSslServer::~TcpSslServer()
 //HttpServer
 
 ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> HttpServer::g_http_proto_store;
-std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine()>>> HttpServer::m_route_map;
+std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> HttpServer::m_route_map;
 std::string HttpServer::Method_NotAllowed;
 std::string HttpServer::UriTooLong;
 std::string HttpServer::NotFound;
@@ -188,6 +188,16 @@ HttpServer::HttpServer(uint32_t proto_capacity)
 	: m_store(std::make_unique<TcpCallbackStore>(HttpRoute))
 {
 	g_http_proto_store.Initial(proto_capacity);
+}
+
+void HttpServer::ReturnResponse(protocol::http::HttpResponse *response)
+{
+	g_http_proto_store.ReturnResponse(response);
+}
+
+void HttpServer::ReturnRequest(protocol::http::HttpRequest *request)
+{
+	g_http_proto_store.ReturnRequest(request);
 }
 
 void HttpServer::PrepareMethodNotAllowedData(std::string&& data)
@@ -205,9 +215,9 @@ void HttpServer::PrepareNotFoundData(std::string&& data)
 	NotFound = std::forward<std::string>(data);
 }
 
-void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine()> &&handler)
+void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine(HttpOperation)> &&handler)
 {
-	m_route_map["GET"][path] = std::forward<std::function<coroutine::Coroutine()>>(handler);
+	m_route_map["GET"][path] = std::forward<std::function<coroutine::Coroutine(HttpOperation)>>(handler);
 }
 
 void HttpServer::Start(int port)
@@ -258,7 +268,12 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 	int length = co_await connection->WaitForRecv();
 	if( length == 0 ) {
 		auto data = connection->FetchRecvData();
+		if(operation.GetContext().has_value()) {
+			auto request = std::any_cast<protocol::http::HttpRequest*>(operation.GetContext());
+			ReturnRequest(request);
+		}
 		data.Clear();
+		co_return;
 	} else {
 		protocol::http::HttpRequest* request = nullptr;
 		if(!operation.GetContext().has_value()) request = g_http_proto_store.GetRequest();
@@ -289,7 +304,10 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					connection->PrepareSendData(str);
 					int ret = co_await connection->WaitForSend();
 				}
+				operation.GetContext().reset();
 				g_http_proto_store.ReturnRequest(request);
+				bool b = co_await connection->CloseConnection();
+				co_return;
 			}
 		}
 		else{
@@ -298,7 +316,9 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 			if( it != m_route_map.end()){
 				auto inner_it = it->second.find(request->Header()->Uri());
 				if (inner_it != it->second.end()) {
-					
+					auto response = g_http_proto_store.GetResponse();
+					HttpOperation httpop(operation, request, response);
+					inner_it->second(httpop);
 				} else {
 					protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
 					response->Header()->Version() = "1.1";
@@ -311,6 +331,9 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					g_http_proto_store.ReturnResponse(response);
 					connection->PrepareSendData(str);
 					int ret = co_await connection->WaitForSend();
+					g_http_proto_store.ReturnRequest(request);
+					bool b = co_await connection->CloseConnection();
+					co_return;
 				}
 			} else {
 				// No Method
@@ -325,13 +348,14 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 				g_http_proto_store.ReturnResponse(response);
 				connection->PrepareSendData(str);
 				int ret = co_await connection->WaitForSend();
+				g_http_proto_store.ReturnRequest(request);
+				bool b = co_await connection->CloseConnection();
+				co_return;
 			}
-			operation.GetContext().reset();
-			g_http_proto_store.ReturnRequest(request);
+			
 		}
 	}
-	bool b = co_await connection->CloseConnection();
-	spdlog::info("CloseConnection .....");
+	
 	co_return;
 }
 }

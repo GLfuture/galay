@@ -8,6 +8,7 @@
     
 #endif
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 
 namespace galay::event
@@ -91,6 +92,7 @@ bool EpollEventEngine::Stop()
 int 
 EpollEventEngine::AddEvent(Event *event, void* ctx)
 {
+    spdlog::debug("EpollEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     epoll_event ev;
     if(!ConvertToEpollEvent(ev, event, ctx))
     {
@@ -112,6 +114,7 @@ EpollEventEngine::AddEvent(Event *event, void* ctx)
 int 
 EpollEventEngine::ModEvent(Event* event, void* ctx)
 {
+    spdlog::debug("EpollEventEngine::ModEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     epoll_event ev;
     ev.data.ptr = event;
     if( !ConvertToEpollEvent(ev, event, ctx) )
@@ -132,6 +135,7 @@ EpollEventEngine::ModEvent(Event* event, void* ctx)
 int 
 EpollEventEngine::DelEvent(Event* event, void* ctx)
 {
+    spdlog::debug("EpollEventEngine::DelEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     GHandle handle = event->GetHandle();
     epoll_event ev;
     ev.data.ptr = event;
@@ -300,7 +304,7 @@ int KqueueEventEngine::AddEvent(Event *event, void* ctx)
 
 int KqueueEventEngine::ModEvent(Event *event, void* ctx)
 {
-    spdlog::debug("KqueueEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    spdlog::debug("KqueueEventEngine::ModEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_ADD;
     if(!ConvertToKEvent(k_event, event, ctx)) {
@@ -318,7 +322,7 @@ int KqueueEventEngine::ModEvent(Event *event, void* ctx)
 
 int KqueueEventEngine::DelEvent(Event *event, void* ctx)
 {
-    spdlog::debug("KqueueEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    spdlog::debug("KqueueEventEngine::DelEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_DELETE;
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);

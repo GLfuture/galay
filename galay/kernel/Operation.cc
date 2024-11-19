@@ -5,8 +5,9 @@
 #include "Coroutine.h"
 #include "WaitAction.h"
 #include "galay/util/Time.h"
-#include <spdlog/spdlog.h>
+#include "Server.h"
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 namespace galay
 {
@@ -86,7 +87,6 @@ TcpConnection::~TcpConnection()
 TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback,  action::TcpEventAction* action)
     : m_callback(callback), m_connection(std::make_shared<TcpConnection>(action))
 {
-    spdlog::info("TcpOperation::TcpOperation");
 }
 
 TcpConnection::ptr TcpOperation::GetConnection()
@@ -191,6 +191,47 @@ void TcpSslCallbackStore::Execute(action::TcpSslEventAction *action)
 {
     TcpSslOperation operation(m_callback, action);
     m_callback(operation);
+}
+
+HttpOperation::HttpProtoStore::~HttpProtoStore()
+{
+    server::HttpServer::ReturnRequest(m_request);
+    server::HttpServer::ReturnResponse(m_response);
+}
+
+HttpOperation::HttpOperation(TcpOperation operation, protocol::http::HttpRequest *request, protocol::http::HttpResponse *response)
+    :m_operation(operation), m_proto_store(std::make_shared<HttpProtoStore>(request, response))
+{
+}
+
+protocol::http::HttpRequest *HttpOperation::GetRequest()
+{
+    return m_proto_store->m_request;
+}
+
+protocol::http::HttpResponse *HttpOperation::GetResponse()
+{
+    return m_proto_store->m_response;
+}
+
+coroutine::Awaiter_int HttpOperation::ReturnResponse(std::string response)
+{
+    m_operation.GetConnection()->PrepareSendData(response);
+    return m_operation.GetConnection()->WaitForSend();
+}
+
+coroutine::Awaiter_bool HttpOperation::CloseConnection()
+{
+    return m_operation.GetConnection()->CloseConnection();
+}
+
+void HttpOperation::Continue()
+{
+    m_operation.ReExecute(m_operation);
+}
+
+HttpOperation::~HttpOperation()
+{
 }
 
 }

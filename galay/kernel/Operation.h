@@ -30,6 +30,12 @@ namespace galay::action
     class TcpEventAction;
 };
 
+namespace galay::protocol::http
+{
+    class HttpRequest;
+    class HttpResponse;
+};
+
 namespace galay
 {
 
@@ -144,6 +150,28 @@ public:
     void Execute(action::TcpSslEventAction* action);
 private:
     std::function<coroutine::Coroutine(TcpSslOperation)> m_callback;
+};
+
+class HttpOperation
+{
+    struct HttpProtoStore
+    {
+        using ptr = std::shared_ptr<HttpProtoStore>;
+        protocol::http::HttpRequest* m_request;
+        protocol::http::HttpResponse* m_response;
+        ~HttpProtoStore();
+    };
+public:
+    HttpOperation(TcpOperation operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
+    protocol::http::HttpRequest* GetRequest();
+    protocol::http::HttpResponse* GetResponse();
+    coroutine::Awaiter_int ReturnResponse(std::string response);
+    coroutine::Awaiter_bool CloseConnection();
+    void Continue();
+    ~HttpOperation();
+private:
+    TcpOperation m_operation;
+    HttpProtoStore::ptr m_proto_store;
 };
 
 }

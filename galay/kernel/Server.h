@@ -28,6 +28,7 @@ namespace galay
     class TcpOperation;
     class TcpCallbackStore;
     class TcpSslCallbackStore;
+    class HttpOperation;
 }
 
 namespace galay::coroutine
@@ -158,7 +159,7 @@ namespace galay::server
         void ReturnRequest(Request* request)
         {
             request->Reset();
-            if(m_request_queue.size_approx() < m_capacity.load()){
+            if(m_request_queue.size_approx() >= m_capacity.load()){
                 m_request_queue.enqueue(request);
             }else{
                 delete request;
@@ -177,9 +178,21 @@ namespace galay::server
         void ReturnResponse(Response* response)
         {
             response->Reset();
-            if(m_response_queue.size_approx() < m_capacity.load()){
+            if(m_response_queue.size_approx() >= m_capacity.load()){
                 m_response_queue.enqueue(response);
             }else{
+                delete response;
+            }
+        }
+
+        ~ServerProtocolStore()
+        {
+            Request* request = nullptr;
+            Response* response = nullptr;
+            while(m_request_queue.try_dequeue(request)){
+                delete request;
+            }
+            while(m_response_queue.try_dequeue(response)){
                 delete response;
             }
         }
@@ -196,14 +209,18 @@ namespace galay::server
         static ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> g_http_proto_store;
     public:
         HttpServer(uint32_t proto_capacity = DEFAULT_PROTOCOL_CAPACITY);
+        
+        static void ReturnResponse(protocol::http::HttpResponse* response);
+        static void ReturnRequest(protocol::http::HttpRequest* request);
+        
         static void PrepareMethodNotAllowedData(std::string&& data);
         static void PrepareUriTooLongData(std::string&& data);
         static void PrepareNotFoundData(std::string&& data);
         
         //not thread security
-        void Get(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
-        void Post(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
-        void Put(const std::string& path, std::function<coroutine::Coroutine()>&& handler);
+        void Get(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
+        void Post(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
+        void Put(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
         void Start(int port);
     private:
         static coroutine::Coroutine HttpRoute(TcpOperation operation);
@@ -212,7 +229,7 @@ namespace galay::server
         static std::string Method_NotAllowed;
         static std::string UriTooLong;
         static std::string NotFound;
-        static std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine()>>> m_route_map;
+        static std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
     };
 
     class HttpspServer
