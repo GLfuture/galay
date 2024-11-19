@@ -49,6 +49,19 @@ int main()
     //server.Start(&store, 8060);
 
     galay::server::HttpServer server;
+    server.Get("/", [](galay::HttpOperation op) ->galay::coroutine::Coroutine {
+        auto resp = op.GetResponse();
+        resp->Header()->Version() = "1.1";
+        resp->Header()->Code() = galay::protocol::http::OK_200;
+        resp->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
+        resp->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
+        resp->Body() = "<h1>Hello World</h1>";
+        std::string response = resp->EncodePdu();
+        int res = co_await op.ReturnResponse(response);
+        bool ret = co_await op.CloseConnection();
+        spdlog::info("Response: {}", res);
+        co_return;
+    });
     server.Start(8060);
     getchar();
     server.Stop();
