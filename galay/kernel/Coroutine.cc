@@ -20,9 +20,7 @@ void CoroutineStore::RemoveCoroutine(Coroutine *co)
     co->GetListNode() = nullptr;
 }
 
-CoroutineStore g_coroutine_store;
-
-CoroutineStore::~CoroutineStore()
+void CoroutineStore::Clear()
 {
     while(!m_coroutines.Empty())
     {
@@ -33,6 +31,8 @@ CoroutineStore::~CoroutineStore()
         }
     }
 }
+
+CoroutineStore g_coroutine_store;
 
 Coroutine::Coroutine(std::coroutine_handle<promise_type> handle) noexcept
 {

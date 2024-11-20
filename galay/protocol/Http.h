@@ -43,7 +43,7 @@ namespace galay::protocol::http
 {
     #define HTTP_HEADER_MAX_LEN         4096    // 头部最大长度4k
     #define HTTP_URI_MAX_LEN            2048    // uri最大长度2k
-    enum HttpProStatus
+    enum class HttpProStatus: int
     {
         kHttpHeader,
         kHttpChunck,
@@ -51,7 +51,7 @@ namespace galay::protocol::http
         kWebsocket,
     };
 
-    enum HttpHeadStatus
+    enum class HttpHeadStatus: int
     {
         kHttpHeadMethod,
         kHttpHeadUri,
@@ -63,7 +63,7 @@ namespace galay::protocol::http
         kHttpHeadEnd,
     };
 
-    enum HttpMethod
+    enum class HttpMethod: int
     {
         Http_Method_Get = 0,
         Http_Method_Post,
@@ -77,7 +77,7 @@ namespace galay::protocol::http
         Http_Method_Unknown,
     };
 
-    enum HttpVersion
+    enum class HttpVersion: int
     {
         Http_Version_1_0,   
         Http_Version_1_1,
@@ -86,7 +86,7 @@ namespace galay::protocol::http
         Http_Version_Unknown,
     };
 
-    enum HttpStatusCode
+    enum class HttpStatusCode: int
     {
         // Information responses
         Continue_100 = 100,
@@ -232,7 +232,7 @@ namespace galay::protocol::http
         HttpRequestHeader::ptr Header();
         std::string& Body();
         virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual std::string EncodePdu() override;
+        virtual std::string EncodePdu() const override;
         virtual bool HasError() const override;
         virtual int GetErrorCode() const override;
         virtual std::string GetErrorString() override;
@@ -245,7 +245,7 @@ namespace galay::protocol::http
         int GetHttpBody(const std::string_view& buffer, int elength);
         int GetChunckBody(const std::string_view& buffer, int elength);
     private:
-        HttpProStatus m_status = kHttpHeader;
+        HttpProStatus m_status = HttpProStatus::kHttpHeader;
         HttpRequestHeader::ptr m_header;
         std::string m_body;
         error::HttpError::ptr m_error;
@@ -275,7 +275,7 @@ namespace galay::protocol::http
         HttpResponse();
         HttpResponseHeader::ptr Header();
         std::string& Body();
-        virtual std::string EncodePdu() override;
+        virtual std::string EncodePdu() const override;
         virtual int DecodePdu(const std::string_view &buffer) override;
         virtual bool HasError() const override;
         virtual int GetErrorCode() const override;
@@ -290,7 +290,7 @@ namespace galay::protocol::http
         int GetHttpBody(const std::string_view& buffer, int eLength);
         int GetChunckBody(const std::string_view& buffer, int eLength);
     private:
-        HttpProStatus m_status = kHttpHeader;
+        HttpProStatus m_status = HttpProStatus::kHttpHeader;
         HttpResponseHeader::ptr m_header;
         std::string m_body;
         error::HttpError::ptr m_error;

@@ -135,7 +135,7 @@ SmtpRequest::DecodePdu(const std::string_view& buffer)
 }
 
 std::string 
-SmtpRequest::EncodePdu()
+SmtpRequest::EncodePdu() const
 {
     return this->m_content + "\r\n";
 }
@@ -191,7 +191,7 @@ SmtpResponse::DecodePdu(const std::string_view &buffer)
 
 
 std::string 
-SmtpResponse::EncodePdu()
+SmtpResponse::EncodePdu() const
 {
     return this->m_content + "\r\n";
 }

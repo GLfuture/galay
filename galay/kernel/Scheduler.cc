@@ -90,6 +90,7 @@ bool CoroutineScheduler::Stop()
         return false;
     }
     m_coroutines_queue.enqueue(nullptr);
+    coroutine::g_coroutine_store.Clear();
     return m_waiter->Wait(5000);
 }
 

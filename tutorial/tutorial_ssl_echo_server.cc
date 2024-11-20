@@ -40,7 +40,7 @@ int main(int argc, char** argv)
         else{
             data.Clear();
             galay::protocol::http::HttpResponse response;
-            response.Header()->Version() = galay::protocol::http::Http_Version_1_1;
+            response.Header()->Version() = galay::protocol::http::HttpVersion::Http_Version_1_1;
             response.Header()->Code() = galay::protocol::http::HttpStatusCode::OK_200;
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";

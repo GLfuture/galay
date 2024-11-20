@@ -108,26 +108,14 @@ namespace galay::server
     };
     
     template<typename T>
-    concept ProtoType = std::default_initializable<T> && requires(T t)
+    concept ProtoType = std::default_initializable<T> && requires(T t, const std::string_view& buffer)
     {
-        {
-            t.DecodePdu(std::declval<const std::string_view>())
-        } -> std::same_as<int>;
-        {
-            t.EncodePdu()
-        }-> std::same_as<std::string>;
-        {
-            t.HasError()
-        } -> std::same_as<bool>;
-        {
-            t.GetErrorCode()
-        } -> std::same_as<int>;
-        {
-            t.GetErrorString()
-        } -> std::same_as<std::string>;
-        {
-            t.Reset()
-        };
+        { t.DecodePdu(buffer) } -> std::same_as<int>;
+        { t.EncodePdu() }-> std::same_as<std::string>;
+        { t.HasError() } -> std::same_as<bool>;
+        { t.GetErrorCode() } -> std::same_as<int>;
+        { t.GetErrorString() } -> std::same_as<std::string>;
+        { t.Reset() } -> std::same_as<void>;
     };
     
     //keep protocol's num fixed
@@ -207,24 +195,25 @@ namespace galay::server
     class HttpServer: public TcpServer
     {
         static ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> g_http_proto_store;
-        static std::string g_method_not_allowed;
-        static std::string g_uri_too_long;
-        static std::string g_not_found;
+        static protocol::http::HttpResponse g_method_not_allowed_resp;
+        static protocol::http::HttpResponse g_uri_too_long_resp;
+        static protocol::http::HttpResponse g_not_found_resp;
     public:
         HttpServer(uint32_t proto_capacity = DEFAULT_PROTOCOL_CAPACITY);
         
         static void ReturnResponse(protocol::http::HttpResponse* response);
         static void ReturnRequest(protocol::http::HttpRequest* request);
-        
-        static void PrepareMethodNotAllowedData(std::string&& data);
-        static void PrepareUriTooLongData(std::string&& data);
-        static void PrepareNotFoundData(std::string&& data);
+
+        static protocol::http::HttpResponse& GetDefaultMethodNotAllowedResponse();
+        static protocol::http::HttpResponse& GetDefaultUriTooLongResponse();
+        static protocol::http::HttpResponse& GetDefaultNotFoundResponse();
         
         //not thread security
         void Get(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
         void Post(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
         void Put(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
         void Start(int port);
+        void Stop();
     private:
         static coroutine::Coroutine HttpRoute(TcpOperation operation);
     private:

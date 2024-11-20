@@ -346,7 +346,7 @@ HttpRequestHeader::FromString(std::string_view str)
         if(status == HttpHeadStatus::kHttpHeadEnd) break;
         switch (status)
         {
-        case kHttpHeadMethod:
+        case HttpHeadStatus::kHttpHeadMethod:
         {
             if(str[i] == ' ')
             {
@@ -356,7 +356,7 @@ HttpRequestHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadUri:
+        case HttpHeadStatus::kHttpHeadUri:
         {
             if (str[i] != ' ')
             {
@@ -376,7 +376,7 @@ HttpRequestHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadVersion:
+        case HttpHeadStatus::kHttpHeadVersion:
         {
             if(str[i] == '\r')
             {
@@ -387,7 +387,7 @@ HttpRequestHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadKey:
+        case HttpHeadStatus::kHttpHeadKey:
         {
             if (str[i] == '\r')
             {
@@ -409,7 +409,7 @@ HttpRequestHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadValue:
+        case HttpHeadStatus::kHttpHeadValue:
         {
             if (str[i] != '\r')
             {
@@ -465,8 +465,8 @@ HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
 
 void protocol::http::HttpRequestHeader::Reset()
 {
-    m_version = Http_Version_Unknown;
-    m_method = Http_Method_Unknown;
+    m_version = HttpVersion::Http_Version_Unknown;
+    m_method = HttpMethod::Http_Method_Unknown;
     if(!m_uri.empty()) m_uri.clear();
     if(!m_argList.empty()) m_argList.clear();
     m_headerPairs.Clear();
@@ -723,7 +723,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
     size_t n = buffer.length();
     int eLength = 0;
     //header
-    if(m_status == kHttpHeader){
+    if(m_status == HttpProStatus::kHttpHeader){
         int pos = buffer.find("\r\n\r\n");
         if(pos == std::string::npos) {
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
@@ -760,10 +760,10 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
     if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
         || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
     {
-        this->m_status = kHttpChunck;
+        this->m_status = HttpProStatus::kHttpChunck;
         hasBody = true;
     }else if(m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length")){
-        this->m_status = kHttpBody;
+        this->m_status = HttpProStatus::kHttpBody;
         hasBody = true;
     }
     
@@ -773,12 +773,12 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
         //根据状态处理
         switch (this->m_status)
         {
-        case kHttpBody:
+        case HttpProStatus::kHttpBody:
         {
             eLength = GetHttpBody(buffer, eLength);
             break;
         }
-        case kHttpChunck:
+        case HttpProStatus::kHttpChunck:
         {
             eLength = GetChunckBody(buffer, eLength);
             break;
@@ -787,7 +787,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
             break;
         }
         if(!m_error->HasError()) {
-            this->m_status = kHttpHeader;
+            this->m_status = HttpProStatus::kHttpHeader;
         }
     }
     
@@ -795,7 +795,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
 }
 
 std::string 
-HttpRequest::EncodePdu()
+HttpRequest::EncodePdu() const
 {
     if((m_header->HeaderPairs().HasKey("Transfer-Encoding") &&  0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") )||
         (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
@@ -822,7 +822,7 @@ void protocol::http::HttpRequest::Reset()
     m_header->Reset();
     m_error->Reset();
     if(!m_body.empty()) m_body.clear();
-    m_status = kHttpHeader;
+    m_status = HttpProStatus::kHttpHeader;
 }
 
 bool protocol::http::HttpRequest::HasError() const
@@ -994,7 +994,7 @@ HttpResponseHeader::FromString(std::string_view str)
             break;
         switch (status)
         {
-        case kHttpHeadVersion:
+        case HttpHeadStatus::kHttpHeadVersion:
         {
             if( str[i] == ' ' )
             {
@@ -1003,7 +1003,7 @@ HttpResponseHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadStatusCode:
+        case HttpHeadStatus::kHttpHeadStatusCode:
         {
             if (str[i] != ' ')
             {
@@ -1026,7 +1026,7 @@ HttpResponseHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadStatusMsg:
+        case HttpHeadStatus::kHttpHeadStatusMsg:
         {
             if (str[i] == '\r')
             {
@@ -1035,7 +1035,7 @@ HttpResponseHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadKey:
+        case HttpHeadStatus::kHttpHeadKey:
         {
             if (str[i] == '\r')
             {
@@ -1057,7 +1057,7 @@ HttpResponseHeader::FromString(std::string_view str)
             }
         }
         break;
-        case kHttpHeadValue:
+        case HttpHeadStatus::kHttpHeadValue:
         {
             if (str[i] != '\r')
             {
@@ -1100,7 +1100,7 @@ HttpResponse::Body()
 }
 
 std::string 
-HttpResponse::EncodePdu()
+HttpResponse::EncodePdu() const
 {
     if((m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
         ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked") )){
@@ -1120,7 +1120,7 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
     size_t n = buffer.length();
     int eLength = 0;
     //header
-    if(m_status == kHttpHeader){
+    if(m_status == HttpProStatus::kHttpHeader){
         int pos = buffer.find("\r\n\r\n");
         if(pos == std::string::npos) {
             if (buffer.length() > HTTP_HEADER_MAX_LEN)
@@ -1155,10 +1155,10 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
     //改变状态
     if((m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
         ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
-        this->m_status = kHttpChunck;
+        this->m_status = HttpProStatus::kHttpChunck;
         hasBody = true;
     }else if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
-        this->m_status = kHttpBody;
+        this->m_status = HttpProStatus::kHttpBody;
         hasBody = true;
     }
 
@@ -1167,12 +1167,12 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
         //根据状态处理
         switch (this->m_status)
         {
-        case kHttpBody:
+        case HttpProStatus::kHttpBody:
         {
             eLength = GetHttpBody(buffer, eLength);
             break;
         }
-        case kHttpChunck:
+        case HttpProStatus::kHttpChunck:
         {
             eLength = GetChunckBody(buffer, eLength);
             break;
@@ -1181,7 +1181,7 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
             break;
         }
         if(!m_error->HasError()) {
-            this->m_status = kHttpHeader;
+            this->m_status = HttpProStatus::kHttpHeader;
         }
     }
     return eLength;
@@ -1207,7 +1207,7 @@ void protocol::http::HttpResponse::Reset()
     m_error->Reset();
     m_header.reset();
     m_body.clear();
-    m_status = kHttpHeader;
+    m_status = HttpProStatus::kHttpHeader;
 }
 
 bool 

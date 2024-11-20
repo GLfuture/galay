@@ -112,14 +112,16 @@ namespace galay::protocol::dns
     {
     public:
         using ptr = std::shared_ptr<DnsRequest>;
-        std::string EncodePdu() override;
+        std::string EncodePdu() const override;
+        //after encode, call this function
+        void PopQuestion();
         int DecodePdu(const std::string_view &buffer) override;
         virtual bool HasError() const override;
         virtual int GetErrorCode() const override;
         virtual std::string GetErrorString() override;
         virtual void Reset() override;
     protected:
-        std::string ModifyHostname(std::string hostname);
+        std::string ModifyHostname(std::string hostname) const;
         int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);
         bool IsPointer(int in);
     };
@@ -130,7 +132,7 @@ namespace galay::protocol::dns
         using ptr = std::shared_ptr<DnsResponse>;
         int DecodePdu(const std::string_view &buffer) override;
         // ignore
-        std::string EncodePdu() override;
+        std::string EncodePdu() const override;
         virtual bool HasError() const override;
         virtual int GetErrorCode() const override;
         virtual std::string GetErrorString() override;

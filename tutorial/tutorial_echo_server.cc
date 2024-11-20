@@ -2,6 +2,7 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+
 int main()
 {
     spdlog::set_level(spdlog::level::debug);
@@ -47,12 +48,11 @@ int main()
     //     co_return;
     // });
     //server.Start(&store, 8060);
-
     galay::server::HttpServer server;
     server.Get("/", [](galay::HttpOperation op) ->galay::coroutine::Coroutine {
         auto resp = op.GetResponse();
-        resp->Header()->Version() = galay::protocol::http::Http_Version_1_1;
-        resp->Header()->Code() = galay::protocol::http::OK_200;
+        resp->Header()->Version() = galay::protocol::http::HttpVersion::Http_Version_1_1;
+        resp->Header()->Code() = galay::protocol::http::HttpStatusCode::OK_200;
         resp->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
         resp->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
         resp->Body() = "<h1>Hello World</h1>";
@@ -65,5 +65,6 @@ int main()
     server.Start(8060);
     getchar();
     server.Stop();
+    getchar();
     return 0;
 }

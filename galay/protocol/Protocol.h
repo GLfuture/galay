@@ -29,7 +29,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<SResponse>;
         using wptr = std::weak_ptr<SResponse>;
         using uptr = std::unique_ptr<SResponse>;
-        virtual std::string EncodePdu() = 0;
+        virtual std::string EncodePdu() const = 0;
     };
     
     class CRequest{
@@ -37,7 +37,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<CRequest>;
         using wptr = std::weak_ptr<CRequest>;
         using uptr = std::unique_ptr<CRequest>;
-        virtual std::string EncodePdu() = 0;
+        virtual std::string EncodePdu() const = 0;
     };
 
     class Request: public SRequest, public CRequest
@@ -47,7 +47,7 @@ namespace galay::protocol
         using wptr = std::weak_ptr<Request>;
         using uptr = std::unique_ptr<Request>;
         virtual int DecodePdu(const std::string_view &buffer) = 0;
-        virtual std::string EncodePdu() = 0;
+        virtual std::string EncodePdu() const = 0;
         virtual bool HasError() const = 0;
         virtual int GetErrorCode() const = 0;
         virtual std::string GetErrorString() = 0;
@@ -62,7 +62,7 @@ namespace galay::protocol
         using wptr = std::weak_ptr<Response>;
         using uptr = std::unique_ptr<Response>;
         virtual int DecodePdu(const std::string_view &buffer) = 0;
-        virtual std::string EncodePdu() = 0;
+        virtual std::string EncodePdu() const = 0;
         virtual bool HasError() const = 0;
         virtual int GetErrorCode() const = 0;
         virtual std::string GetErrorString() = 0;

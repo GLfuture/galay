@@ -40,7 +40,7 @@ class CoroutineStore
 public:
     void AddCoroutine(Coroutine* co);
     void RemoveCoroutine(Coroutine* co);
-    ~CoroutineStore();
+    void Clear();
 private:
     thread::safe::List<Coroutine*> m_coroutines;
 };

@@ -52,9 +52,9 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     ASSERT_EQ(values[3].ToNumber(), 1);
     protocol::http::HttpRequest::ptr request2 = std::make_shared<protocol::http::HttpRequest>();
     helper::http::HttpFormDataHelper::FormDataToString(request2, "--------------------------225416638845415405984661", values);
-    request2->Header()->Method() = "POST";
+    request2->Header()->Method() = protocol::http::HttpMethod::Http_Method_Post;
     request2->Header()->Uri() = "/forms";
-    request2->Header()->Version() = "1.1";
+    request2->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
     request2->Header()->HeaderPairs().AddHeaderPair("Content-Type", "multipart/form-data; boundary=--------------------------225416638845415405984661");
     ASSERT_EQ(request2->EncodePdu(), msg);
 }

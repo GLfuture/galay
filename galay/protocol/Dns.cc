@@ -76,7 +76,7 @@ DnsProtocol::GetAnswerQueue()
 }
 
 std::string 
-DnsRequest::EncodePdu()
+DnsRequest::EncodePdu() const
 {
     unsigned char buffer[MAX_UDP_LENGTH];
     memset(buffer, 0, MAX_UDP_LENGTH);
@@ -96,8 +96,7 @@ DnsRequest::EncodePdu()
     flag = htons(flag);
     memcpy(ptr, &flag, sizeof(unsigned short));
     ptr += sizeof(unsigned short);
-    m_header.m_questions = 1;
-    unsigned short questions = htons(m_header.m_questions);
+    unsigned short questions = htons(1);
     memcpy(ptr, &questions, sizeof(unsigned short));
     ptr += sizeof(unsigned short);
     unsigned short answers_RRs = htons(m_header.m_answers_RRs);
@@ -112,7 +111,6 @@ DnsRequest::EncodePdu()
     int len = sizeof(DnsHeader); // 12
 
     DnsQuestion question = m_questions.front();
-    m_questions.pop();
     std::string qname = ModifyHostname(question.m_qname);
     memcpy(ptr, qname.c_str(), qname.length());
     ptr += qname.length();
@@ -126,8 +124,12 @@ DnsRequest::EncodePdu()
     return std::string(begin, len);
 }
 
-int 
-DnsRequest::DecodePdu(const std::string_view &buffer)
+void protocol::dns::DnsRequest::PopQuestion()
+{
+    m_questions.pop();
+}
+
+int DnsRequest::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
@@ -212,7 +214,7 @@ void DnsRequest::Reset()
 }
 
 std::string 
-DnsRequest::ModifyHostname(std::string hostname)
+DnsRequest::ModifyHostname(std::string hostname) const
 {
     std::vector<std::string> temp = string::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
@@ -355,7 +357,7 @@ DnsResponse::DecodePdu(const std::string_view &buffer)
 }
 
 std::string 
-DnsResponse::EncodePdu()
+DnsResponse::EncodePdu() const
 {
     return "";
 }

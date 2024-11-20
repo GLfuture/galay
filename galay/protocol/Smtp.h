@@ -63,7 +63,7 @@ namespace galay::protocol::smtp
         using uptr = std::unique_ptr<SmtpRequest>;
         SmtpRequest();
         virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual std::string EncodePdu() override;
+        virtual std::string EncodePdu() const override;
         virtual bool HasError() const override;
         virtual int GetErrorCode() const override;
         virtual std::string GetErrorString() override;
@@ -85,7 +85,7 @@ namespace galay::protocol::smtp
         using uptr = std::unique_ptr<SmtpResponse>;
         SmtpResponse();
         virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual std::string EncodePdu() override;
+        virtual std::string EncodePdu() const override;
         virtual bool HasError() const override;
         virtual int GetErrorCode() const override;
         virtual std::string GetErrorString() override;

@@ -9,7 +9,6 @@
     #include <ws2ipdef.h>
     #include <WS2tcpip.h>
 #endif
-#include <spdlog/spdlog.h>
 #include <string.h>
 
 namespace galay::async
@@ -114,7 +113,6 @@ GHandle AsyncTcpSocket::Socket()
 
 coroutine::Awaiter_GHandle AsyncTcpSocket::Accept(action::TcpEventAction *action)
 {
-    spdlog::debug("AsyncTcpSocket::Accept");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeAccept);
     m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_GHandle(action, nullptr);
@@ -142,7 +140,6 @@ bool AsyncTcpSocket::BindAndListen(int port, int backlog)
 
 coroutine::Awaiter_bool AsyncTcpSocket::Connect(action::TcpEventAction* action, NetAddr* addr)
 {
-    spdlog::debug("AsyncTcpSocket::Connect");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeConnect);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_bool(action, addr);
@@ -150,7 +147,6 @@ coroutine::Awaiter_bool AsyncTcpSocket::Connect(action::TcpEventAction* action, 
 
 coroutine::Awaiter_int AsyncTcpSocket::Recv(action::TcpEventAction * action)
 {
-    spdlog::debug("AsyncTcpSocket::Recv");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeRecv);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_int(action, nullptr);
@@ -158,7 +154,6 @@ coroutine::Awaiter_int AsyncTcpSocket::Recv(action::TcpEventAction * action)
 
 coroutine::Awaiter_int AsyncTcpSocket::Send(action::TcpEventAction* action)
 {
-    spdlog::debug("AsyncTcpSocket::Send");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSend);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_int(action, nullptr);
@@ -166,7 +161,6 @@ coroutine::Awaiter_int AsyncTcpSocket::Send(action::TcpEventAction* action)
 
 coroutine::Awaiter_bool AsyncTcpSocket::Close(action::TcpEventAction* action)
 {
-    spdlog::debug("AsyncTcpSocket::Close");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeClose);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_bool(action, nullptr);
@@ -254,7 +248,6 @@ coroutine::Awaiter_GHandle AsyncTcpSslSocket::Accept(action::TcpSslEventAction *
 
 coroutine::Awaiter_bool AsyncTcpSslSocket::SSLAccept(action::TcpSslEventAction *action)
 {
-    spdlog::debug("AsyncTcpSslSocket::SSLAccept");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslAccept);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_bool(action, nullptr);
@@ -272,7 +265,6 @@ coroutine::Awaiter_bool AsyncTcpSslSocket::Connect(action::TcpSslEventAction *ac
 
 coroutine::Awaiter_int AsyncTcpSslSocket::SSLRecv(action::TcpSslEventAction *action)
 {
-    spdlog::debug("AsyncTcpSslSocket::SSLRecv");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslRecv);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_int(action, nullptr);
@@ -280,7 +272,6 @@ coroutine::Awaiter_int AsyncTcpSslSocket::SSLRecv(action::TcpSslEventAction *act
 
 coroutine::Awaiter_int AsyncTcpSslSocket::SSLSend(action::TcpSslEventAction *action)
 {
-    spdlog::debug("AsyncTcpSslSocket::SSLSend");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslSend);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_int(action, nullptr);
@@ -288,7 +279,6 @@ coroutine::Awaiter_int AsyncTcpSslSocket::SSLSend(action::TcpSslEventAction *act
 
 coroutine::Awaiter_bool AsyncTcpSslSocket::SSLClose(action::TcpSslEventAction *action)
 {
-    spdlog::debug("AsyncTcpSslSocket::SSLClose");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslClose);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_bool(action, nullptr);
@@ -296,7 +286,6 @@ coroutine::Awaiter_bool AsyncTcpSslSocket::SSLClose(action::TcpSslEventAction *a
 
 coroutine::Awaiter_bool AsyncTcpSslSocket::SSLConnect(action::TcpSslEventAction *action)
 {
-    spdlog::debug("AsyncTcpSslSocket::SSLConnect");
     action->GetBindEvent()->ResetNetWaitEventType(event::kWaitEventTypeSslConnect);
     this->m_err_code = error::ErrorCode::Error_NoError;
     return coroutine::Awaiter_bool(action, nullptr);

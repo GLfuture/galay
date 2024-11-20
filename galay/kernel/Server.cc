@@ -4,8 +4,9 @@
 #include "Async.h"
 #include "Operation.h"
 #include "ExternApi.h"
+#include "helper/HttpHelper.h"
 #include <openssl/err.h>
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 namespace galay::server
 {
@@ -180,14 +181,17 @@ TcpSslServer::~TcpSslServer()
 
 ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> HttpServer::g_http_proto_store;
 std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> HttpServer::m_route_map;
-std::string HttpServer::g_method_not_allowed;
-std::string HttpServer::g_uri_too_long;
-std::string HttpServer::g_not_found;
+protocol::http::HttpResponse HttpServer::g_method_not_allowed_resp;
+protocol::http::HttpResponse HttpServer::g_uri_too_long_resp;
+protocol::http::HttpResponse HttpServer::g_not_found_resp;
 
 HttpServer::HttpServer(uint32_t proto_capacity)
 	: m_store(std::make_unique<TcpCallbackStore>(HttpRoute))
 {
 	g_http_proto_store.Initial(proto_capacity);
+	helper::http::HttpHelper::DefaultNotFound(&g_not_found_resp);
+	helper::http::HttpHelper::DefaultUriTooLong(&g_uri_too_long_resp);
+	helper::http::HttpHelper::DefaultMethodNotAllowed(&g_method_not_allowed_resp);
 }
 
 void HttpServer::ReturnResponse(protocol::http::HttpResponse *response)
@@ -200,19 +204,19 @@ void HttpServer::ReturnRequest(protocol::http::HttpRequest *request)
 	g_http_proto_store.ReturnRequest(request);
 }
 
-void HttpServer::PrepareMethodNotAllowedData(std::string&& data)
+protocol::http::HttpResponse& HttpServer::GetDefaultMethodNotAllowedResponse()
 {
-	g_method_not_allowed = std::forward<std::string>(data);
+    return g_method_not_allowed_resp;
 }
 
-void HttpServer::PrepareUriTooLongData(std::string&& data)
+protocol::http::HttpResponse &HttpServer::GetDefaultUriTooLongResponse()
 {
-	g_uri_too_long = std::forward<std::string>(data);
+	return g_uri_too_long_resp;
 }
 
-void HttpServer::PrepareNotFoundData(std::string&& data)
+protocol::http::HttpResponse &HttpServer::GetDefaultNotFoundResponse()
 {
-	g_not_found = std::forward<std::string>(data);
+	return g_not_found_resp;
 }
 
 void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine(HttpOperation)> &&handler)
@@ -262,6 +266,11 @@ void HttpServer::Start(int port)
 	return;
 }
 
+void HttpServer::Stop()
+{
+	TcpServer::Stop();
+}
+
 coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 {
     auto connection = operation.GetConnection();
@@ -292,15 +301,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 			} else {
 				data.Clear();
 				if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ){
-					protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
-					response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-					response->Header()->Code() = protocol::http::UriTooLong_414;
-					response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-					response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
-					response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-					response->Body() = g_uri_too_long;
-					std::string str = response->EncodePdu();
-					g_http_proto_store.ReturnResponse(response);
+					std::string str = g_uri_too_long_resp.EncodePdu();
 					connection->PrepareSendData(str);
 					int ret = co_await connection->WaitForSend();
 				}
@@ -320,15 +321,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					HttpOperation httpop(operation, request, response);
 					inner_it->second(httpop);
 				} else {
-					protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
-					response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-					response->Header()->Code() = protocol::http::NotFound_404;
-					response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-					response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
-					response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-					response->Body() = g_not_found;
-					std::string str = response->EncodePdu();
-					g_http_proto_store.ReturnResponse(response);
+					std::string str = g_not_found_resp.EncodePdu();
 					connection->PrepareSendData(str);
 					int ret = co_await connection->WaitForSend();
 					g_http_proto_store.ReturnRequest(request);
@@ -336,16 +329,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					co_return;
 				}
 			} else {
-				// No Method
-				protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
-				response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-				response->Header()->Code() = protocol::http::MethodNotAllowed_405;
-				response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-				response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
-				response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-				response->Body() = g_method_not_allowed;
-				std::string str = response->EncodePdu();
-				g_http_proto_store.ReturnResponse(response);
+				std::string str = g_method_not_allowed_resp.EncodePdu();
 				connection->PrepareSendData(str);
 				int ret = co_await connection->WaitForSend();
 				g_http_proto_store.ReturnRequest(request);
