@@ -180,9 +180,9 @@ TcpSslServer::~TcpSslServer()
 
 ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> HttpServer::g_http_proto_store;
 std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> HttpServer::m_route_map;
-std::string HttpServer::Method_NotAllowed;
-std::string HttpServer::UriTooLong;
-std::string HttpServer::NotFound;
+std::string HttpServer::g_method_not_allowed;
+std::string HttpServer::g_uri_too_long;
+std::string HttpServer::g_not_found;
 
 HttpServer::HttpServer(uint32_t proto_capacity)
 	: m_store(std::make_unique<TcpCallbackStore>(HttpRoute))
@@ -202,17 +202,17 @@ void HttpServer::ReturnRequest(protocol::http::HttpRequest *request)
 
 void HttpServer::PrepareMethodNotAllowedData(std::string&& data)
 {
-	Method_NotAllowed = std::forward<std::string>(data);
+	g_method_not_allowed = std::forward<std::string>(data);
 }
 
 void HttpServer::PrepareUriTooLongData(std::string&& data)
 {
-	UriTooLong = std::forward<std::string>(data);
+	g_uri_too_long = std::forward<std::string>(data);
 }
 
 void HttpServer::PrepareNotFoundData(std::string&& data)
 {
-	NotFound = std::forward<std::string>(data);
+	g_not_found = std::forward<std::string>(data);
 }
 
 void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine(HttpOperation)> &&handler)
@@ -298,7 +298,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
 					response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
 					response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-					response->Body() = UriTooLong;
+					response->Body() = g_uri_too_long;
 					std::string str = response->EncodePdu();
 					g_http_proto_store.ReturnResponse(response);
 					connection->PrepareSendData(str);
@@ -326,7 +326,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
 					response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
 					response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-					response->Body() = NotFound;
+					response->Body() = g_not_found;
 					std::string str = response->EncodePdu();
 					g_http_proto_store.ReturnResponse(response);
 					connection->PrepareSendData(str);
@@ -343,7 +343,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 				response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
 				response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
 				response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-				response->Body() = Method_NotAllowed;
+				response->Body() = g_method_not_allowed;
 				std::string str = response->EncodePdu();
 				g_http_proto_store.ReturnResponse(response);
 				connection->PrepareSendData(str);

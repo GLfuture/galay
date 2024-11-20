@@ -207,6 +207,9 @@ namespace galay::server
     class HttpServer: public TcpServer
     {
         static ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> g_http_proto_store;
+        static std::string g_method_not_allowed;
+        static std::string g_uri_too_long;
+        static std::string g_not_found;
     public:
         HttpServer(uint32_t proto_capacity = DEFAULT_PROTOCOL_CAPACITY);
         
@@ -226,9 +229,6 @@ namespace galay::server
         static coroutine::Coroutine HttpRoute(TcpOperation operation);
     private:
         std::unique_ptr<TcpCallbackStore> m_store;
-        static std::string Method_NotAllowed;
-        static std::string UriTooLong;
-        static std::string NotFound;
         static std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
     };
 

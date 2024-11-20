@@ -47,7 +47,7 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     if (!m_event->BelongEngine())   {
         int ret = m_engine->AddEvent(this->m_event, nullptr);
         if( ret != 0 ) {
-            spdlog::warn("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_event->BelongEngine()->GetErrorCode()));
+            spdlog::warn("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
             m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
             return true;
         }
@@ -55,7 +55,7 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     else {
         int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
         if( ret != 0 ) {
-            spdlog::warn("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_event->BelongEngine()->GetErrorCode()));
+            spdlog::warn("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
             m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
             return true;
         }
