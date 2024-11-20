@@ -6,6 +6,7 @@
 
 namespace galay::helper::http
 {
+
     enum FormsType
     {
         kFormsType_NoFrom,
@@ -81,6 +82,17 @@ namespace galay::helper::http
         static bool ParseFormData(protocol::http::HttpRequest::ptr request, std::vector<FormDataValue>& values);
         static void FormDataToString(protocol::http::HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values);
     };
+
+    class HttpHelper
+    {
+    public:
+        using HttpResponseCode = protocol::http::HttpStatusCode;
+
+        bool Get(protocol::http::HttpRequest* request, const std::string& url, bool keepalive = true);
+        
+        bool Redirect(protocol::http::HttpResponse* response, const std::string& url, HttpResponseCode code);
+    };
+    
 }
 
 #endif

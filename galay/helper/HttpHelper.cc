@@ -289,6 +289,36 @@ HttpFormDataHelper::FormDataToString(protocol::http::HttpRequest::ptr request, c
     request->Body() += "--" + boundary + "--\r\n\r\n";
 }
 
+bool HttpHelper::Get(protocol::http::HttpRequest *request, const std::string &url, bool keepalive)
+{
+    std::regex urlPattern("^(https?://)?([^:/]+)(?::(\\d+))?(/.*)?$");
+    std::smatch match;
 
+    if (!regex_match(url, match, urlPattern)) {
+        return false;
+    }
+    std::string protocol = match[1].matched? match[1].str() : "http://";
+    if( protocol != "http://" || protocol != "https://" ) {
+        return false;
+    }
+    std::string domain = match[2].str();
+    int port = match[3].matched? stoi(match[3].str()) : (protocol == "http://"? 80 : 443);
+    std::string path = match[4].matched? match[4].str() : "/";
+    request->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
+    request->Header()->Method() = protocol::http::HttpMethod::Http_Method_Get;
+    
+    request->Header()->HeaderPairs().AddHeaderPair("Host", domain);
+    if(!keepalive) request->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+    else request->Header()->HeaderPairs().AddHeaderPair("Connection", "keep-alive");
+    return true;
+}
+
+bool HttpHelper::Redirect(protocol::http::HttpResponse *response, const std::string &url, HttpResponseCode code)
+{
+    response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
+    response->Header()->Code() = code;
+    response->Header()->HeaderPairs().AddHeaderPair("Location", url);
+    return true;
+}
 
 }

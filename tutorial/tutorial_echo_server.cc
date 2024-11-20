@@ -51,7 +51,7 @@ int main()
     galay::server::HttpServer server;
     server.Get("/", [](galay::HttpOperation op) ->galay::coroutine::Coroutine {
         auto resp = op.GetResponse();
-        resp->Header()->Version() = "1.1";
+        resp->Header()->Version() = galay::protocol::http::Http_Version_1_1;
         resp->Header()->Code() = galay::protocol::http::OK_200;
         resp->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
         resp->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");

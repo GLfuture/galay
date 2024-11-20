@@ -179,7 +179,7 @@ TcpSslServer::~TcpSslServer()
 //HttpServer
 
 ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> HttpServer::g_http_proto_store;
-std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> HttpServer::m_route_map;
+std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> HttpServer::m_route_map;
 std::string HttpServer::g_method_not_allowed;
 std::string HttpServer::g_uri_too_long;
 std::string HttpServer::g_not_found;
@@ -217,7 +217,7 @@ void HttpServer::PrepareNotFoundData(std::string&& data)
 
 void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine(HttpOperation)> &&handler)
 {
-	m_route_map["GET"][path] = std::forward<std::function<coroutine::Coroutine(HttpOperation)>>(handler);
+	m_route_map[protocol::http::HttpMethod::Http_Method_Get][path] = std::forward<std::function<coroutine::Coroutine(HttpOperation)>>(handler);
 }
 
 void HttpServer::Start(int port)
@@ -293,7 +293,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 				data.Clear();
 				if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ){
 					protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
-					response->Header()->Version() = "1.1";
+					response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
 					response->Header()->Code() = protocol::http::UriTooLong_414;
 					response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
 					response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
@@ -321,7 +321,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 					inner_it->second(httpop);
 				} else {
 					protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
-					response->Header()->Version() = "1.1";
+					response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
 					response->Header()->Code() = protocol::http::NotFound_404;
 					response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
 					response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
@@ -338,7 +338,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 			} else {
 				// No Method
 				protocol::http::HttpResponse* response = g_http_proto_store.GetResponse();
-				response->Header()->Version() = "1.1";
+				response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
 				response->Header()->Code() = protocol::http::MethodNotAllowed_405;
 				response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
 				response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");

@@ -193,6 +193,11 @@ void TcpSslCallbackStore::Execute(action::TcpSslEventAction *action)
     m_callback(operation);
 }
 
+HttpOperation::HttpProtoStore::HttpProtoStore(protocol::http::HttpRequest *request, protocol::http::HttpResponse *response)
+    :m_request(request), m_response(response)
+{
+}
+
 HttpOperation::HttpProtoStore::~HttpProtoStore()
 {
     server::HttpServer::ReturnRequest(m_request);

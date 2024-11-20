@@ -8,7 +8,6 @@ static const char* HttpErrors[] = {
     "Header is incomplete",
     "Body is incomplete",
     "Header is too long",
-    "Method is not standard",
     "Uri too long",
     "Chunck has error",
     "Http code is invalid",
@@ -44,10 +43,185 @@ HttpError::ToString(HttpErrorCode code) const
 namespace galay::protocol::http
 {
 
-std::unordered_set<std::string> 
-g_stdMethods = {
-    "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" , "PATCH"
+std::vector<std::string> 
+g_HttpMethods = {
+    "GET", "POST", "HEAD", "PUT", "DELETE", "TRACE", "OPTIONS", "CONNECT" , "PATCH", "UNKNOWN"
 };
+
+std::vector<std::string> 
+g_HttpVersion = {
+    "HTTP/1.0",
+    "HTTP/1.1",
+    "HTTP/2.0",
+    "HTTP/3.0",
+    "Unknown"
+};
+
+std::string HttpVersionToString(HttpVersion version)
+{
+    return g_HttpVersion[static_cast<int>(version)];
+}
+
+HttpVersion StringToHttpVersion(std::string_view str)
+{
+    for (int i = 0; i < g_HttpMethods.size(); ++i) {
+        if (str == g_HttpMethods[i]) {
+            return static_cast<HttpVersion>(i);
+        }
+    }
+    return HttpVersion::Http_Version_Unknown;
+}
+
+std::string HttpMethodToString(HttpMethod method)
+{
+    return g_HttpMethods[static_cast<int>(method)];
+}
+
+HttpMethod StringToHttpMethod(std::string_view str)
+{
+    for (int i = 0; i < g_HttpMethods.size(); ++i) {
+        if (str == g_HttpMethods[i]) {
+            return static_cast<HttpMethod>(i);
+        }
+    }
+    return static_cast<HttpMethod>(HttpMethod::Http_Method_Unknown);
+}
+
+std::string HttpStatusCodeToString(HttpStatusCode code)
+{
+    switch (code)
+    {
+    case HttpStatusCode::Continue_100:
+        return "Continue";
+    case HttpStatusCode::SwitchingProtocol_101:
+        return "Switching Protocol";
+    case HttpStatusCode::Processing_102:
+        return "Processing";
+    case HttpStatusCode::EarlyHints_103:
+        return "Early Hints";
+    case HttpStatusCode::OK_200:
+        return "OK";
+    case HttpStatusCode::Created_201:
+        return "Created";
+    case HttpStatusCode::Accepted_202:
+        return "Accepted";
+    case HttpStatusCode::NonAuthoritativeInformation_203:
+        return "Non-Authoritative Information";
+    case HttpStatusCode::NoContent_204:
+        return "No Content";
+    case HttpStatusCode::ResetContent_205:
+        return "Reset Content";
+    case HttpStatusCode::PartialContent_206:
+        return "Partial Content";
+    case HttpStatusCode::MultiStatus_207:
+        return "Multi-Status";
+    case HttpStatusCode::AlreadyReported_208:
+        return "Already Reported";
+    case HttpStatusCode::IMUsed_226:
+        return "IM Used";
+    case HttpStatusCode::MultipleChoices_300:
+        return "Multiple Choices";
+    case HttpStatusCode::MovedPermanently_301:
+        return "Moved Permanently";
+    case HttpStatusCode::Found_302:
+        return "Found";
+    case HttpStatusCode::SeeOther_303:
+        return "See Other";
+    case HttpStatusCode::NotModified_304:
+        return "Not Modified";
+    case HttpStatusCode::UseProxy_305:
+        return "Use Proxy";
+    case HttpStatusCode::Unused_306:
+        return "unused";
+    case HttpStatusCode::TemporaryRedirect_307:
+        return "Temporary Redirect";
+    case HttpStatusCode::PermanentRedirect_308:
+        return "Permanent Redirect";
+    case HttpStatusCode::BadRequest_400:
+        return "Bad Request";
+    case HttpStatusCode::Unauthorized_401:
+        return "Unauthorized";
+    case HttpStatusCode::PaymentRequired_402:
+        return "Payment Required";
+    case HttpStatusCode::Forbidden_403:
+        return "Forbidden";
+    case HttpStatusCode::NotFound_404:
+        return "Not Found";
+    case HttpStatusCode::MethodNotAllowed_405:
+        return "Method Not Allowed";
+    case HttpStatusCode::NotAcceptable_406:
+        return "Not Acceptable";
+    case HttpStatusCode::ProxyAuthenticationRequired_407:
+        return "Proxy Authentication Required";
+    case HttpStatusCode::RequestTimeout_408:
+        return "Request Timeout";
+    case HttpStatusCode::Conflict_409:
+        return "Conflict";
+    case HttpStatusCode::Gone_410:
+        return "Gone";
+    case HttpStatusCode::LengthRequired_411:
+        return "Length Required";
+    case HttpStatusCode::PreconditionFailed_412:
+        return "Precondition Failed";
+    case HttpStatusCode::PayloadTooLarge_413:
+        return "Payload Too Large";
+    case HttpStatusCode::UriTooLong_414:
+        return "URI Too Long";
+    case HttpStatusCode::UnsupportedMediaType_415:
+        return "Unsupported Media Type";
+    case HttpStatusCode::RangeNotSatisfiable_416:
+        return "Range Not Satisfiable";
+    case HttpStatusCode::ExpectationFailed_417:
+        return "Expectation Failed";
+    case HttpStatusCode::ImATeapot_418:
+        return "I'm a teapot";
+    case HttpStatusCode::MisdirectedRequest_421:
+        return "Misdirected Request";
+    case HttpStatusCode::UnprocessableContent_422:
+        return "Unprocessable Content";
+    case HttpStatusCode::Locked_423:
+        return "Locked";
+    case HttpStatusCode::FailedDependency_424:
+        return "Failed Dependency";
+    case HttpStatusCode::TooEarly_425:
+        return "Too Early";
+    case HttpStatusCode::UpgradeRequired_426:
+        return "Upgrade Required";
+    case HttpStatusCode::PreconditionRequired_428:
+        return "Precondition Required";
+    case HttpStatusCode::TooManyRequests_429:
+        return "Too Many Requests";
+    case HttpStatusCode::RequestHeaderFieldsTooLarge_431:
+        return "Request Header Fields Too Large";
+    case HttpStatusCode::UnavailableForLegalReasons_451:
+        return "Unavailable For Legal Reasons";
+    case HttpStatusCode::NotImplemented_501:
+        return "Not Implemented";
+    case HttpStatusCode::BadGateway_502:
+        return "Bad Gateway";
+    case HttpStatusCode::ServiceUnavailable_503:
+        return "Service Unavailable";
+    case HttpStatusCode::GatewayTimeout_504:
+        return "Gateway Timeout";
+    case HttpStatusCode::HttpVersionNotSupported_505:
+        return "HTTP Version Not Supported";
+    case HttpStatusCode::VariantAlsoNegotiates_506:
+        return "Variant Also Negotiates";
+    case HttpStatusCode::InsufficientStorage_507:
+        return "Insufficient Storage";
+    case HttpStatusCode::LoopDetected_508:
+        return "Loop Detected";
+    case HttpStatusCode::NotExtended_510:
+        return "Not Extended";
+    case HttpStatusCode::NetworkAuthenticationRequired_511:
+        return "Network Authentication Required";
+    default:
+    case HttpStatusCode::InternalServerError_500:
+        return "Internal Server Error";
+    }
+    return "";
+}
+
 
 bool
 HeaderPair::HasKey(const std::string& key)
@@ -128,7 +302,7 @@ HeaderPair::operator=(const HeaderPair& headerPair)
     this->m_headerPairs = headerPair.m_headerPairs;
 }
 
-std::string& 
+HttpMethod& 
 HttpRequestHeader::Method()
 {
     return this->m_method;
@@ -140,7 +314,7 @@ HttpRequestHeader::Uri()
     return this->m_uri;
 }
 
-std::string& 
+HttpVersion& 
 HttpRequestHeader::Version()
 {
     return this->m_version;
@@ -164,8 +338,9 @@ HttpRequestHeader::FromString(std::string_view str)
 {
     HttpHeadStatus status = HttpHeadStatus::kHttpHeadMethod;
     std::string key, value;
+    std::string_view method, version;
     size_t n = str.size();
-    size_t i;
+    size_t i, version_begin = 0;
     for (i = 0; i < n; ++i)
     {
         if(status == HttpHeadStatus::kHttpHeadEnd) break;
@@ -173,17 +348,10 @@ HttpRequestHeader::FromString(std::string_view str)
         {
         case kHttpHeadMethod:
         {
-            if (str[i] != ' ')
+            if(str[i] == ' ')
             {
-                m_method += str[i];
-            }
-            else
-            {
-                if (!g_stdMethods.contains(m_method))
-                {
-                    spdlog::error("[{}:{}] [[method is not standard] [Method:{}]]", __FILE__, __LINE__, this->m_method);
-                    return error::kHttpError_MethodNotStandard;
-                }
+                method = std::string_view(str.data(), i);
+                this->m_method = StringToHttpMethod(method);
                 status = HttpHeadStatus::kHttpHeadUri;
             }
         }
@@ -204,18 +372,16 @@ HttpRequestHeader::FromString(std::string_view str)
                 this->m_uri = ConvertFromUri(std::move(this->m_uri), false);
                 ParseArgs(this->m_uri);
                 status = HttpHeadStatus::kHttpHeadVersion;
+                version_begin = i + 1;
             }
         }
         break;
         case kHttpHeadVersion:
         {
-            if (str[i] != '\r')
+            if(str[i] == '\r')
             {
-                m_version += str[i];
-            }
-            else
-            {
-                m_version = m_version.substr(m_version.find('/') + 1);
+                version = std::string_view(str.data() + version_begin, i - version_begin);
+                this->m_version = StringToHttpVersion(version);
                 status = HttpHeadStatus::kHttpHeadKey;
                 ++i;
             }
@@ -269,7 +435,7 @@ HttpRequestHeader::FromString(std::string_view str)
 std::string 
 HttpRequestHeader::ToString()
 {
-    std::string res = this->m_method + " ";
+    std::string res = HttpMethodToString(this->m_method) + " ";
     std::string url = this->m_uri;
     if (!m_argList.empty())
     {
@@ -281,7 +447,7 @@ HttpRequestHeader::ToString()
         url.erase(--url.end());
     }
     res += ConvertToUri(std::move(url));
-    res = res + " HTTP/" + this->m_version + "\r\n";
+    res = res + HttpVersionToString(this->m_version) + "\r\n";
     res += m_headerPairs.ToString();
     res += "\r\n";
     return std::move(res);
@@ -299,9 +465,9 @@ HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
 
 void protocol::http::HttpRequestHeader::Reset()
 {
-    if(!m_version.empty()) m_version.clear();
+    m_version = Http_Version_Unknown;
+    m_method = Http_Method_Unknown;
     if(!m_uri.empty()) m_uri.clear();
-    if(!m_method.empty()) m_method.clear();
     if(!m_argList.empty()) m_argList.clear();
     m_headerPairs.Clear();
 }
@@ -635,7 +801,7 @@ HttpRequest::EncodePdu()
         (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
         return m_header->ToString();
     }
-    if(!m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
+    if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
         m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
     return m_header->ToString() + m_body;
@@ -787,13 +953,13 @@ HttpRequest::GetChunckBody(const std::string_view& buffer, int eLength)
 }
 
 
-std::string& 
+HttpVersion& 
 HttpResponseHeader::Version()
 {
     return this->m_version;
 }
 
-int& 
+HttpStatusCode& 
 HttpResponseHeader::Code()
 {
     return this->m_code;
@@ -808,8 +974,7 @@ HttpResponseHeader::HeaderPairs()
 std::string 
 HttpResponseHeader::ToString()
 {
-    std::string res = "HTTP/";
-    res = res + this->m_version + ' ' + std::to_string(this->m_code) + ' ' + CodeMsg(this->m_code) + "\r\n";
+    std::string res =  HttpVersionToString(m_version) + ' ' + std::to_string(static_cast<int>(this->m_code)) + ' ' + HttpStatusCodeToString(m_code) + "\r\n";
     res += m_headerPairs.ToString();
     res += "\r\n";
     return res;
@@ -831,13 +996,9 @@ HttpResponseHeader::FromString(std::string_view str)
         {
         case kHttpHeadVersion:
         {
-            if (str[i] != ' ')
+            if( str[i] == ' ' )
             {
-                m_version += str[i];
-            }
-            else
-            {
-                m_version = m_version.substr(m_version.find('/') + 1);
+                m_version = StringToHttpVersion(std::string_view(str.data(), i));
                 status = HttpHeadStatus::kHttpHeadStatusCode;
             }
         }
@@ -850,15 +1011,17 @@ HttpResponseHeader::FromString(std::string_view str)
             }
             else
             {
+                int code;
                 try
                 {
-                    m_code = std::stoi(status_code);
+                    code = std::stoi(status_code);
                 }
                 catch (std::invalid_argument &e)
                 {
                     spdlog::error("[{}:{}] [Http status code is illegal]",__FILE__,__LINE__);
                     return error::kHttpError_HttpCodeInvalid;
                 }
+                m_code = static_cast<HttpStatusCode>(code);
                 status = HttpHeadStatus::kHttpHeadStatusMsg;
             }
         }
@@ -917,142 +1080,6 @@ HttpResponseHeader::FromString(std::string_view str)
     return error::kHttpError_NoError;
 }
 
-std::string 
-HttpResponseHeader::CodeMsg(int status)
-{
-    switch (status)
-    {
-    case HttpResponseStatus::Continue_100:
-        return "Continue";
-    case HttpResponseStatus::SwitchingProtocol_101:
-        return "Switching Protocol";
-    case HttpResponseStatus::Processing_102:
-        return "Processing";
-    case HttpResponseStatus::EarlyHints_103:
-        return "Early Hints";
-    case HttpResponseStatus::OK_200:
-        return "OK";
-    case HttpResponseStatus::Created_201:
-        return "Created";
-    case HttpResponseStatus::Accepted_202:
-        return "Accepted";
-    case HttpResponseStatus::NonAuthoritativeInformation_203:
-        return "Non-Authoritative Information";
-    case HttpResponseStatus::NoContent_204:
-        return "No Content";
-    case HttpResponseStatus::ResetContent_205:
-        return "Reset Content";
-    case HttpResponseStatus::PartialContent_206:
-        return "Partial Content";
-    case HttpResponseStatus::MultiStatus_207:
-        return "Multi-Status";
-    case HttpResponseStatus::AlreadyReported_208:
-        return "Already Reported";
-    case HttpResponseStatus::IMUsed_226:
-        return "IM Used";
-    case HttpResponseStatus::MultipleChoices_300:
-        return "Multiple Choices";
-    case HttpResponseStatus::MovedPermanently_301:
-        return "Moved Permanently";
-    case HttpResponseStatus::Found_302:
-        return "Found";
-    case HttpResponseStatus::SeeOther_303:
-        return "See Other";
-    case HttpResponseStatus::NotModified_304:
-        return "Not Modified";
-    case HttpResponseStatus::UseProxy_305:
-        return "Use Proxy";
-    case HttpResponseStatus::Unused_306:
-        return "unused";
-    case HttpResponseStatus::TemporaryRedirect_307:
-        return "Temporary Redirect";
-    case HttpResponseStatus::PermanentRedirect_308:
-        return "Permanent Redirect";
-    case HttpResponseStatus::BadRequest_400:
-        return "Bad Request";
-    case HttpResponseStatus::Unauthorized_401:
-        return "Unauthorized";
-    case HttpResponseStatus::PaymentRequired_402:
-        return "Payment Required";
-    case HttpResponseStatus::Forbidden_403:
-        return "Forbidden";
-    case HttpResponseStatus::NotFound_404:
-        return "Not Found";
-    case HttpResponseStatus::MethodNotAllowed_405:
-        return "Method Not Allowed";
-    case HttpResponseStatus::NotAcceptable_406:
-        return "Not Acceptable";
-    case HttpResponseStatus::ProxyAuthenticationRequired_407:
-        return "Proxy Authentication Required";
-    case HttpResponseStatus::RequestTimeout_408:
-        return "Request Timeout";
-    case HttpResponseStatus::Conflict_409:
-        return "Conflict";
-    case HttpResponseStatus::Gone_410:
-        return "Gone";
-    case HttpResponseStatus::LengthRequired_411:
-        return "Length Required";
-    case HttpResponseStatus::PreconditionFailed_412:
-        return "Precondition Failed";
-    case HttpResponseStatus::PayloadTooLarge_413:
-        return "Payload Too Large";
-    case HttpResponseStatus::UriTooLong_414:
-        return "URI Too Long";
-    case HttpResponseStatus::UnsupportedMediaType_415:
-        return "Unsupported Media Type";
-    case HttpResponseStatus::RangeNotSatisfiable_416:
-        return "Range Not Satisfiable";
-    case HttpResponseStatus::ExpectationFailed_417:
-        return "Expectation Failed";
-    case HttpResponseStatus::ImATeapot_418:
-        return "I'm a teapot";
-    case HttpResponseStatus::MisdirectedRequest_421:
-        return "Misdirected Request";
-    case HttpResponseStatus::UnprocessableContent_422:
-        return "Unprocessable Content";
-    case HttpResponseStatus::Locked_423:
-        return "Locked";
-    case HttpResponseStatus::FailedDependency_424:
-        return "Failed Dependency";
-    case HttpResponseStatus::TooEarly_425:
-        return "Too Early";
-    case HttpResponseStatus::UpgradeRequired_426:
-        return "Upgrade Required";
-    case HttpResponseStatus::PreconditionRequired_428:
-        return "Precondition Required";
-    case HttpResponseStatus::TooManyRequests_429:
-        return "Too Many Requests";
-    case HttpResponseStatus::RequestHeaderFieldsTooLarge_431:
-        return "Request Header Fields Too Large";
-    case HttpResponseStatus::UnavailableForLegalReasons_451:
-        return "Unavailable For Legal Reasons";
-    case HttpResponseStatus::NotImplemented_501:
-        return "Not Implemented";
-    case HttpResponseStatus::BadGateway_502:
-        return "Bad Gateway";
-    case HttpResponseStatus::ServiceUnavailable_503:
-        return "Service Unavailable";
-    case HttpResponseStatus::GatewayTimeout_504:
-        return "Gateway Timeout";
-    case HttpResponseStatus::HttpVersionNotSupported_505:
-        return "HTTP Version Not Supported";
-    case HttpResponseStatus::VariantAlsoNegotiates_506:
-        return "Variant Also Negotiates";
-    case HttpResponseStatus::InsufficientStorage_507:
-        return "Insufficient Storage";
-    case HttpResponseStatus::LoopDetected_508:
-        return "Loop Detected";
-    case HttpResponseStatus::NotExtended_510:
-        return "Not Extended";
-    case HttpResponseStatus::NetworkAuthenticationRequired_511:
-        return "Network Authentication Required";
-    default:
-    case HttpResponseStatus::InternalServerError_500:
-        return "Internal Server Error";
-    }
-    return "";
-}
-
 HttpResponse::HttpResponse()
 {
     this->m_error = std::make_shared<error::HttpError>();
@@ -1079,7 +1106,7 @@ HttpResponse::EncodePdu()
         ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked") )){
         return m_header->ToString();
     }
-    if(!m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
+    if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
         m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
     return m_header->ToString() + m_body;
@@ -1290,15 +1317,4 @@ HttpResponse::GetChunckBody(const std::string_view& buffer, int eLength)
 
 //function 
 
-HttpRequest::ptr 
-DefaultHttpRequest()
-{
-    HttpRequest::ptr request = std::make_shared<HttpRequest>();
-    HttpRequestHeader::ptr header = request->Header();
-    header->Version() = "1.1";
-    header->Uri() = "/";
-    header->HeaderPairs().AddHeaderPair("Server-Framwork", "galay");
-    header->HeaderPairs().AddHeaderPair("Connection", "keep-alive"); 
-    return request;
-}
 }

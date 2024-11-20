@@ -229,7 +229,7 @@ namespace galay::server
         static coroutine::Coroutine HttpRoute(TcpOperation operation);
     private:
         std::unique_ptr<TcpCallbackStore> m_store;
-        static std::unordered_map<std::string, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
+        static std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
     };
 
     class HttpspServer

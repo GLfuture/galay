@@ -157,6 +157,7 @@ class HttpOperation
     struct HttpProtoStore
     {
         using ptr = std::shared_ptr<HttpProtoStore>;
+        HttpProtoStore(protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
         protocol::http::HttpRequest* m_request;
         protocol::http::HttpResponse* m_response;
         ~HttpProtoStore();

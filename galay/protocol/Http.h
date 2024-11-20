@@ -17,7 +17,6 @@ namespace galay::error
         kHttpError_HeaderInComplete,
         kHttpError_BodyInComplete,
         kHttpError_HeaderTooLong,
-        kHttpError_MethodNotStandard,
         kHttpError_UriTooLong,
         kHttpError_ChunckHasError,
         kHttpError_HttpCodeInvalid,
@@ -64,7 +63,30 @@ namespace galay::protocol::http
         kHttpHeadEnd,
     };
 
-    enum HttpResponseStatus
+    enum HttpMethod
+    {
+        Http_Method_Get = 0,
+        Http_Method_Post,
+        Http_Method_Head,
+        Http_Method_Put,
+        Http_Method_Delete,
+        Http_Method_Trace,
+        Http_Method_Options,
+        Http_Method_Connect,
+        Http_Method_Patch,
+        Http_Method_Unknown,
+    };
+
+    enum HttpVersion
+    {
+        Http_Version_1_0,   
+        Http_Version_1_1,
+        Http_Version_2_0,
+        Http_Version_3_0,
+        Http_Version_Unknown,
+    };
+
+    enum HttpStatusCode
     {
         // Information responses
         Continue_100 = 100,
@@ -139,8 +161,21 @@ namespace galay::protocol::http
         NotExtended_510 = 510,
         NetworkAuthenticationRequired_511 = 511,
     };
-
-    extern std::unordered_set<std::string> g_stdMethods;
+    
+    extern std::string HttpVersionToString(HttpVersion version);
+    extern HttpVersion StringToHttpVersion(std::string_view str);
+    extern std::string HttpMethodToString(HttpMethod method);
+    extern HttpMethod StringToHttpMethod(std::string_view str);
+    extern std::string HttpStatusCodeToString(HttpStatusCode code);
+    
+    class MimeType
+    {
+    public:
+        
+        static std::string GetMimeType(const std::string& fileName);
+    private:
+        static std::unordered_map<std::string, std::string> g_mimeTypeMap;
+    };
 
     class HeaderPair
     {
@@ -162,9 +197,9 @@ namespace galay::protocol::http
     public:
         using ptr = std::shared_ptr<HttpRequestHeader>;
         HttpRequestHeader() = default;
-        std::string& Method();
+        HttpMethod& Method();
         std::string& Uri();
-        std::string& Version();
+        HttpVersion& Version();
         std::map<std::string,std::string>& Args();
         HeaderPair& HeaderPairs();
         std::string ToString();
@@ -179,9 +214,9 @@ namespace galay::protocol::http
         size_t ToUtf8(int code, char *buff);
         bool FromHexToI(const std::string &s, size_t i, size_t cnt, int &val);
     private:
-        std::string m_method;
+        HttpMethod m_method;
         std::string m_uri;                                          // uri
-        std::string m_version;                                      // 版本号
+        HttpVersion m_version;                                      // 版本号
         std::map<std::string, std::string> m_argList;               // 参数
         HeaderPair m_headerPairs;                                   // 字段
     };
@@ -220,16 +255,14 @@ namespace galay::protocol::http
     {
     public:
         using ptr = std::shared_ptr<HttpResponseHeader>;
-        std::string& Version();
-        int& Code();
+        HttpVersion& Version();
+        HttpStatusCode& Code();
         HeaderPair& HeaderPairs();
         std::string ToString();
         error::HttpErrorCode FromString(std::string_view str);
     private:
-        std::string CodeMsg(int status);
-    private:
-        int m_code;
-        std::string m_version;
+        HttpStatusCode m_code;
+        HttpVersion m_version;
         HeaderPair m_headerPairs;
     };
 
@@ -262,8 +295,6 @@ namespace galay::protocol::http
         std::string m_body;
         error::HttpError::ptr m_error;
     };
-    
-    extern HttpRequest::ptr DefaultHttpRequest();
 }
     
 
