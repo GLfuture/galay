@@ -7,7 +7,17 @@
 
 namespace galay::coroutine
 {
+Coroutine Coroutine::promise_type::get_return_object() noexcept
+{
+    this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this));
+    AddCoroutineToStore(m_coroutine);
+    return *this->m_coroutine;
+}
 
+void Coroutine::promise_type::return_void() noexcept
+{ 
+    RemoveCoroutineFromStore(m_coroutine); 
+}
 void CoroutineStore::AddCoroutine(Coroutine *co)
 {
     auto node = m_coroutines.PushBack(co);
@@ -31,8 +41,6 @@ void CoroutineStore::Clear()
         }
     }
 }
-
-CoroutineStore g_coroutine_store;
 
 Coroutine::Coroutine(std::coroutine_handle<promise_type> handle) noexcept
 {
@@ -72,7 +80,7 @@ Coroutine::operator=(Coroutine&& other) noexcept
 
 void Coroutine::Destroy()
 {
-    g_coroutine_store.RemoveCoroutine(m_handle.promise().GetCoroutine());
+    RemoveCoroutineFromStore(m_handle.promise().GetCoroutine());
     m_handle.destroy();
 }
 
@@ -124,7 +132,6 @@ bool CoroutineWaitContext::Done()
 {
     return m_waiters.Decrease();
 }
-
 
 }
 

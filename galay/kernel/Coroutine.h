@@ -45,8 +45,6 @@ private:
     thread::safe::List<Coroutine*> m_coroutines;
 };
 
-extern CoroutineStore g_coroutine_store;
-
 //如果上一个协程还在执行过程中没有到达暂停点，resume会从第一个暂停点重新执行
 class Coroutine
 {
@@ -58,16 +56,12 @@ public:
     {
     public:
         inline int get_return_object_on_alloaction_failure() noexcept { return -1; }
-        inline Coroutine get_return_object() noexcept {
-            this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this));
-            g_coroutine_store.AddCoroutine(m_coroutine);
-            return *this->m_coroutine;
-        }
+        Coroutine get_return_object() noexcept;
         inline std::suspend_never initial_suspend() noexcept { return {}; }
         inline std::suspend_always yield_value() noexcept { return {}; }
         inline std::suspend_never final_suspend() noexcept { return {};  }
         inline void unhandled_exception() noexcept {}
-        inline void return_void () noexcept { g_coroutine_store.RemoveCoroutine(m_coroutine); }
+        void return_void () noexcept;
         inline Coroutine* GetCoroutine() { return m_coroutine; }
         inline ~promise_type() { delete m_coroutine; }
     private:

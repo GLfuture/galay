@@ -7,7 +7,6 @@
 #include "galay/util/Time.h"
 #include "Server.h"
 #include <cstring>
-#include <spdlog/spdlog.h>
 
 namespace galay
 {
@@ -51,7 +50,6 @@ StringViewWrapper::~StringViewWrapper()
 TcpConnection::TcpConnection(action::TcpEventAction* action)
     :m_event_action(action)
 {
-    spdlog::info("TcpConnection Create");
     m_socket = static_cast<event::TcpWaitEvent*>(action->GetBindEvent())->GetAsyncTcpSocket();
 }
 
@@ -82,7 +80,6 @@ coroutine::Awaiter_bool TcpConnection::CloseConnection()
 
 TcpConnection::~TcpConnection()
 {
-    spdlog::info("TcpConnection Destroy");
     delete m_event_action;
 }
 

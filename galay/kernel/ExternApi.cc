@@ -1,12 +1,71 @@
 #include "ExternApi.h"
 #include "Scheduler.h"
+#include "Coroutine.h"
 
 namespace galay
 {
+thread_local coroutine::CoroutineStore g_coroutine_store;
 
 std::vector<scheduler::CoroutineScheduler*> g_coroutine_schedulers;
 std::vector<scheduler::EventScheduler*> g_event_schedulers;
 std::vector<scheduler::TimerScheduler*> g_timer_schedulers;
+SSL_CTX* g_ssl_ctx = nullptr;
+void AddCoroutineToStore(coroutine::Coroutine *co)
+{
+    g_coroutine_store.AddCoroutine(co);
+}
+
+void RemoveCoroutineFromStore(coroutine::Coroutine *co)
+{
+    g_coroutine_store.RemoveCoroutine(co);
+}
+
+void ClearCoroutineStore()
+{
+    g_coroutine_store.Clear();
+}
+
+bool InitialSSLServerEnv(const char *cert_file, const char *key_file)
+{
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    SSL_load_error_strings();
+    g_ssl_ctx = SSL_CTX_new(TLS_server_method());
+    if (g_ssl_ctx == NULL) {
+        return false;
+    }
+
+    // 加载证书和私钥
+    if (SSL_CTX_use_certificate_file(g_ssl_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
+        return false;
+    }
+    if (SSL_CTX_use_PrivateKey_file(g_ssl_ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
+        return false;
+    }
+    return true;
+}
+
+bool InitialSSLClientEnv()
+{
+    g_ssl_ctx = SSL_CTX_new(TLS_client_method());
+    if (g_ssl_ctx == NULL) {
+        return false;
+    }
+    return true;
+}
+
+bool DestroySSLEnv()
+{
+    SSL_CTX_free(g_ssl_ctx);
+    EVP_cleanup();
+    return true;
+}
+
+SSL_CTX *GetGlobalSSLCtx()
+{
+    return g_ssl_ctx;
+}
+
 
 void DynamicResizeCoroutineSchedulers(int num)
 {
@@ -195,49 +254,5 @@ void StopTimerSchedulers()
     }
     g_timer_schedulers.clear();
 }
-
-SSL_CTX* g_ssl_ctx = nullptr;
-
-bool InitialSSLServerEnv(const char *cert_file, const char *key_file)
-{
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
-    g_ssl_ctx = SSL_CTX_new(TLS_server_method());
-    if (g_ssl_ctx == NULL) {
-        return false;
-    }
-
-    // 加载证书和私钥
-    if (SSL_CTX_use_certificate_file(g_ssl_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
-        return false;
-    }
-    if (SSL_CTX_use_PrivateKey_file(g_ssl_ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
-        return false;
-    }
-    return true;
-}
-
-bool InitialSSLClientEnv()
-{
-    g_ssl_ctx = SSL_CTX_new(TLS_client_method());
-    if (g_ssl_ctx == NULL) {
-        return false;
-    }
-    return true;
-}
-
-bool DestroySSLEnv()
-{
-    SSL_CTX_free(g_ssl_ctx);
-    EVP_cleanup();
-    return true;
-}
-
-SSL_CTX *GetGlobalSSLCtx()
-{
-    return g_ssl_ctx;
-}
-
 
 }

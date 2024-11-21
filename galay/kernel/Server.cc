@@ -88,6 +88,8 @@ void TcpServer::Stop()
 	}
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
+	StopTimerSchedulers();
+	ClearCoroutineStore();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -168,6 +170,8 @@ void TcpSslServer::Stop()
 	}
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
+	StopTimerSchedulers();
+	ClearCoroutineStore();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));

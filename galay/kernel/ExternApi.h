@@ -1,5 +1,5 @@
-#ifndef __GALAY_STEP_H__
-#define __GALAY_STEP_H__
+#ifndef __GALAY_EXTERNAPI_H__
+#define __GALAY_EXTERNAPI_H__
 
 #include <functional>
 #include <openssl/ssl.h>
@@ -11,17 +11,38 @@ namespace galay::scheduler {
     class TimerScheduler;
 }
 
+namespace galay::coroutine {
+    class Coroutine;
+}
+
 namespace galay {
 
 extern "C" {
 
 #define MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES     50
 
+/*
+    Coroutine
+*/
+
+void AddCoroutineToStore(coroutine::Coroutine* co);
+void RemoveCoroutineFromStore(coroutine::Coroutine* co);
+void ClearCoroutineStore();
+
+
+/*
+   OpenSSL 
+*/
+
 bool InitialSSLServerEnv(const char* cert_file, const char* key_file);
 bool InitialSSLClientEnv();
 bool DestroySSLEnv();
 SSL_CTX* GetGlobalSSLCtx();
 
+
+/*
+    Scheduler
+*/
 void DynamicResizeCoroutineSchedulers(int num);
 void DynamicResizeEventSchedulers(int num);
 void DynamicResizeTimerSchedulers(int num);
