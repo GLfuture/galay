@@ -21,6 +21,7 @@ namespace galay::async
 {
     class AsyncTcpSocket;
     class AsyncTcpSslSocket;
+    class IOVec;
 }
 
 namespace galay::action
@@ -37,7 +38,7 @@ namespace galay
 
 namespace galay::event
 {
-#define DEFAULT_READ_BUFFER_SIZE    1024
+#define DEFAULT_READ_BUFFER_SIZE    2048
 
 enum EventType
 {
@@ -179,7 +180,6 @@ private:
     EventEngine* m_engine;
     async::AsyncTcpSocket* m_socket;
     TcpCallbackStore* m_callback_store;
-    action::TcpEventAction* m_action;
 };
 
 class SslListenEvent: public Event
@@ -260,11 +260,12 @@ protected:
     void HandleCloseEvent(EventEngine* engine);
 
     // return recvByte
-    int DealRecv();
+    int DealRecv(async::IOVec* iov);
     // return sendByte
-    int DealSend();
+    int DealSend(async::IOVec* iov);
 protected:
     TcpWaitEventType m_type;
+    void *m_ctx;
     async::AsyncTcpSocket* m_socket;
 };
 
@@ -293,9 +294,9 @@ protected:
 
     EventType CovertSSLErrorToEventType();
     // return recvByte
-    int DealRecv();
+    int DealRecv(async::IOVec* iovc);
     // return sendByte
-    int DealSend();
+    int DealSend(async::IOVec* iovc);
 private:
     int m_ssl_error;
 };

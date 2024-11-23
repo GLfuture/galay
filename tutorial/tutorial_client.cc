@@ -11,25 +11,31 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
     for (i = begin; i < end; ++ i)
     {
         galay::async::AsyncTcpSocket* socket = sockets[i]; 
-        galay::event::TcpWaitEvent* event = new galay::event::TcpWaitEvent(socket);
-        galay::action::TcpEventAction action(engine, event);
         galay::async::NetAddr addr{
             .m_ip = "127.0.0.1",
             .m_port = g_port
         };
-        bool success = co_await socket->Connect(&action, &addr);
+        bool success = co_await galay::async::AsyncConnect(socket, &addr);
         if (!success)
         {
             std::cout << "connect failed" << std::endl;
-            success = co_await socket->Close(&action);
+            bool res = co_await galay::async::AsyncClose(socket);
             break;
         }
-        socket->SetWBuffer("GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
-        int length = co_await socket->Send(&action);
-        length = co_await socket->Recv(&action);
-        if(length > 0) delete[] socket->GetRBuffer().cbegin();
-        socket->SetRBuffer("");
-        bool res = co_await socket->Close(&action);
+        
+        std::string resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
+        galay::async::IOVec iov {
+            .m_buf = resp.data(),
+            .m_len = resp.length()
+        };
+        galay::async::IOVec iov2 {
+            .m_buf = new char[1024],
+            .m_len = 1024
+        };
+        int length = co_await galay::async::AsyncSend(socket, &iov);
+        length = co_await galay::async::AsyncSend(socket, &iov2);
+        delete[] iov2.m_buf;
+        bool res = co_await galay::async::AsyncClose(socket);
     }
     int64_t finish = galay::time::GetCurrentTime();
     std::cout << i - begin << " requests in " << finish - start << " ms" << std::endl;
@@ -38,8 +44,8 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
 
 galay::async::AsyncTcpSocket* initSocket()
 {
-    GHandle handle = galay::async::AsyncTcpSocket::Socket();
-    galay::async::AsyncTcpSocket* socket = new galay::async::AsyncTcpSocket(handle);
+    galay::async::AsyncTcpSocket* socket = new galay::async::AsyncTcpSocket(galay::GetEventScheduler(0)->GetEngine());
+    galay::async::AsyncSocket(socket);
     socket->GetOption().HandleNonBlock();
     return socket;
 }

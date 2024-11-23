@@ -33,6 +33,7 @@ bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
 TcpEventAction::TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent *event)
     :m_engine(engine), m_event(event)
 {
+    event->GetAsyncTcpSocket()->GetAction() = this;
 }
 
 bool TcpEventAction::HasEventToDo()

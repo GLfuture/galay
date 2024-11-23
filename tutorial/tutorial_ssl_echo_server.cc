@@ -13,42 +13,44 @@ int main(int argc, char** argv)
     galay::TcpSslCallbackStore store([](galay::TcpSslOperation op)->galay::coroutine::Coroutine
     {
         auto connection = op.GetConnection();
-        int length = co_await connection->WaitForSslRecv();
-        if( length == 0 ) {
-            auto data = connection->FetchRecvData();
-            data.Clear();
-            bool b = co_await connection->CloseConnection();
-            co_return;
-        }
-        auto data = connection->FetchRecvData();
+        galay::async::AsyncTcpSslSocket* socket = connection->GetSocket();
+        struct galay::async::IOVec iov {
+            .m_buf = new char[1024],
+            .m_len = 1024
+        };
+        int length = co_await galay::async::AsyncSSLRecv(socket, &iov);
         galay::protocol::http::HttpRequest::ptr request = std::make_shared<galay::protocol::http::HttpRequest>();
-        int elength = request->DecodePdu(data.Data());
+        std::string_view data(iov.m_buf, length);
+        int elength = request->DecodePdu(data);
+        if( length == 0 ) {
+            goto end;
+        }
         if(request->HasError()) {
-            if( elength >= 0 ) {
-                data.Erase(elength);
-            } 
             if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete || request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
             {
                 op.GetContext() = request;
                 op.ReExecute(op);
-            } else {
-                data.Clear();
-                bool b = co_await connection->CloseConnection();
                 co_return;
-            }
+            } 
+            goto end;
         }
         else{
-            data.Clear();
             galay::protocol::http::HttpResponse response;
             response.Header()->Version() = galay::protocol::http::HttpVersion::Http_Version_1_1;
             response.Header()->Code() = galay::protocol::http::HttpStatusCode::OK_200;
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";
             std::string respStr = response.EncodePdu();
-            connection->PrepareSendData(respStr);
-            length = co_await connection->WaitForSslSend();
-            bool b = co_await connection->CloseConnection();
+            galay::async::IOVec iov2{
+                .m_buf = respStr.data(),
+                .m_len = respStr.size()
+            };
+            length = co_await galay::async::AsyncSSLSend(socket, &iov2);
+            goto end;
         }
+    end:
+        bool b = co_await galay::async::AsyncSSLClose(socket);
+        delete[] iov.m_buf;
         co_return;
     });
     server.Start(&store, 2333);

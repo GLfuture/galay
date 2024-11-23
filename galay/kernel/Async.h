@@ -11,6 +11,11 @@ namespace galay::event
     class EventEngine;
 }
 
+namespace galay::action
+{
+    class TcpEventAction;
+}
+
 namespace galay::async
 {
 class HandleOption
@@ -33,68 +38,66 @@ struct NetAddr
     uint16_t m_port;
 };
 
+struct IOVec
+{
+    char* m_buf = nullptr;
+    size_t m_len = 0;
+};
+
+class AsyncTcpSocket;
+class AsyncTcpSslSocket;
+
+extern "C" 
+{
+bool AsyncSocket(AsyncTcpSocket* asocket);
+bool BindAndListen(AsyncTcpSocket* asocket, int port, int backlog);
+coroutine::Awaiter_GHandle AsyncAccept(AsyncTcpSocket* asocket, NetAddr* addr);
+coroutine::Awaiter_bool AsyncConnect(AsyncTcpSocket* asocket, NetAddr* addr);
+coroutine::Awaiter_int AsyncRecv(AsyncTcpSocket* asocket, IOVec* iov);
+coroutine::Awaiter_int AsyncSend(AsyncTcpSocket* asocket, IOVec* iov);
+coroutine::Awaiter_bool AsyncClose(AsyncTcpSocket* asocket);
+
+bool AsyncSSLSocket(AsyncTcpSslSocket* asocket, SSL_CTX* ctx);
+/*
+    must be called after AsyncAccept
+*/
+coroutine::Awaiter_bool AsyncSSLAccept(AsyncTcpSslSocket* asocket);
+/*
+    must be called after AsyncConnect
+*/
+coroutine::Awaiter_bool SSLConnect(AsyncTcpSslSocket* asocket);
+coroutine::Awaiter_int AsyncSSLRecv(AsyncTcpSslSocket* asocket, IOVec *iov);
+coroutine::Awaiter_int AsyncSSLSend(AsyncTcpSslSocket* asocket, IOVec *iov);
+coroutine::Awaiter_bool AsyncSSLClose(AsyncTcpSslSocket* asocket);
+
+
+}
 
 class AsyncTcpSocket
 {
 public:
     using ptr = std::shared_ptr<AsyncTcpSocket>;
-    AsyncTcpSocket();
-    AsyncTcpSocket(GHandle handle);
+    AsyncTcpSocket(event::EventEngine* engine);
+
     HandleOption GetOption();
-
-    static GHandle Socket();
-    bool BindAndListen(int port, int backlog);
-    
-
-    coroutine::Awaiter_GHandle Accept(action::TcpEventAction* action);
-    coroutine::Awaiter_bool Connect(action::TcpEventAction* action, NetAddr* addr);
-    //return send length, -1 has error 0 disconnect 
-    coroutine::Awaiter_int Recv(action::TcpEventAction* action);
-    coroutine::Awaiter_int Send(action::TcpEventAction* action);
-    coroutine::Awaiter_bool Close(action::TcpEventAction* action);
-    //获取rbuffer，清空视图，注意内存释放(attention)
-    inline std::string_view& GetRBuffer() { return m_rbuffer; }
-    inline void SetRBuffer(std::string_view view) { m_rbuffer = view; }
-    inline void SetWBuffer(std::string_view view) { m_wbuffer = view; }
-    inline std::string_view& GetWBuffer() { return m_wbuffer; }
     inline GHandle& GetHandle() { return m_handle; }
-    int GetRemotePort();
-    std::string GetRemoteAddr();
+    inline action::TcpEventAction*& GetAction() { return m_action; };
     uint32_t &GetErrorCode();
-    ~AsyncTcpSocket();
+    virtual ~AsyncTcpSocket();
 protected:
     GHandle m_handle;
     uint32_t m_err_code;
-    std::string_view m_rbuffer;
-    std::string_view m_wbuffer;
+    action::TcpEventAction* m_action;
 };
 
 class AsyncTcpSslSocket: public AsyncTcpSocket
 {
 public:
-    AsyncTcpSslSocket();
-    AsyncTcpSslSocket(GHandle handle, SSL* ssl);
-    static SSL* SSLSocket(GHandle& handle, SSL_CTX* ctx);
-     bool BindAndListen(int port, int backlog);
-    coroutine::Awaiter_GHandle Accept(action::TcpSslEventAction* action);
-    //
-    coroutine::Awaiter_bool SSLAccept(action::TcpSslEventAction* action);
-    coroutine::Awaiter_bool Connect(action::TcpSslEventAction* action, NetAddr* addr);
-    //return send length, -1 has error 0 disconnect 
-    coroutine::Awaiter_int SSLRecv(action::TcpSslEventAction* action);
-    coroutine::Awaiter_int SSLSend(action::TcpSslEventAction* action);
-    coroutine::Awaiter_bool SSLClose(action::TcpSslEventAction* action);
-    coroutine::Awaiter_bool SSLConnect(action::TcpSslEventAction* action);
+    AsyncTcpSslSocket(event::EventEngine* engine);
     inline SSL*& GetSSL() { return m_ssl; }
-    ~AsyncTcpSslSocket();
-protected:
-    static GHandle Socket();
-    coroutine::Awaiter_int Recv(action::TcpEventAction* action);
-    coroutine::Awaiter_int Send(action::TcpEventAction* action);
-    coroutine::Awaiter_bool Close(action::TcpEventAction* action);
+    virtual ~AsyncTcpSslSocket();
 private:
-    SSL* m_ssl;
-    AsyncTcpSocket m_socket;
+    SSL* m_ssl = nullptr;
 };
 
 class AsyncUdpSocket

@@ -280,7 +280,7 @@ void TimeEvent::UpdateTimers()
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 
 ListenEvent::ListenEvent(EventEngine* engine, async::AsyncTcpSocket* socket, TcpCallbackStore* callback_store)
-    : m_socket(socket), m_callback_store(callback_store), m_engine(engine), m_action(new action::TcpEventAction(engine, new TcpWaitEvent(socket)))
+    : m_socket(socket), m_callback_store(callback_store), m_engine(engine)
 {
     engine->AddEvent(this, nullptr);
 }
@@ -304,14 +304,15 @@ EventEngine*& ListenEvent::BelongEngine()
 ListenEvent::~ListenEvent()
 {
     if(m_engine) m_engine->DelEvent(this, nullptr);
-    delete m_action;
+    delete m_socket;
 }
 
 coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
 {
+    async::NetAddr addr;
     while(1)
     {
-        GHandle new_handle = co_await m_socket->Accept(m_action);
+        GHandle new_handle = co_await async::AsyncAccept(m_socket, &addr);
         if( new_handle.fd == -1 ){
             uint32_t error = m_socket->GetErrorCode();
             if( error != error::Error_NoError ) {
@@ -319,7 +320,7 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
             }
             co_return;
         }
-        async::AsyncTcpSocket* socket = new async::AsyncTcpSocket();
+        async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(engine);
         socket->GetHandle() = new_handle;
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
@@ -330,9 +331,7 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
             co_return;
         }
         engine->ResetMaxEventSize(new_handle.fd);
-        TcpWaitEvent* event = new TcpWaitEvent(socket);
-        action::TcpEventAction* action = new action::TcpEventAction(engine, event);
-        this->m_callback_store->Execute(action);
+        this->m_callback_store->Execute(socket);
     }
     co_return;
 }
@@ -367,9 +366,10 @@ SslListenEvent::~SslListenEvent()
 
 coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
 {
+    async::NetAddr addr;
     while (true)
     {
-        GHandle new_handle = co_await m_socket->Accept(m_action);
+        GHandle new_handle = co_await async::AsyncAccept(m_socket, &addr);
         if( new_handle.fd == -1 ){
             uint32_t error = m_socket->GetErrorCode();
             if( error != error::Error_NoError ) {
@@ -377,11 +377,12 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
             }
             co_return;
         }
-        SSL* ssl = async::AsyncTcpSslSocket::SSLSocket(new_handle, GetGlobalSSLCtx());
-        if( ssl == nullptr) {
+        async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(engine);
+        bool res = async::AsyncSSLSocket(socket, GetGlobalSSLCtx());
+        if( !res ) {
+            delete socket;
             continue;
         }
-        async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(new_handle, ssl);
         spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         if (!socket->GetOption().HandleNonBlock())
         {
@@ -390,9 +391,7 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
             delete socket;
             co_return;
         }
-        event::TcpSslWaitEvent* event = new event::TcpSslWaitEvent(socket);
-        action::TcpSslEventAction* action = new action::TcpSslEventAction(engine, event);
-        bool success = co_await socket->SSLAccept(action);
+        bool success = co_await async::AsyncSSLAccept(socket);
         if( !success ){
             close(new_handle.fd);
             spdlog::error("[{}:{}] [[SSLAccept error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
@@ -401,7 +400,7 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
         }
         spdlog::debug("[{}:{}] [[SSL_Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
         engine->ResetMaxEventSize(new_handle.fd);
-        this->m_callback_store->Execute(action);
+        this->m_callback_store->Execute(socket);
     }
     
 }
@@ -524,11 +523,11 @@ GHandle TcpWaitEvent::GetHandle()
 TcpWaitEvent::~TcpWaitEvent()
 {
     if(m_engine) m_engine->DelEvent(this, nullptr);
-    if(m_socket) delete m_socket;
 }
 
 bool TcpWaitEvent::OnAcceptWaitPrepare(coroutine::Coroutine *co, void *ctx)
 {
+    m_ctx = ctx;
     sockaddr addr;
     socklen_t addrlen = sizeof(addr);
     GHandle handle {
@@ -548,18 +547,13 @@ bool TcpWaitEvent::OnAcceptWaitPrepare(coroutine::Coroutine *co, void *ctx)
 
 bool TcpWaitEvent::OnRecvWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
-    int recvBytes = DealRecv();
+    m_ctx = ctx;
+    async::IOVec* iov = (async::IOVec*)ctx;
+    int recvBytes = DealRecv(iov);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     spdlog::debug("TcpWaitEvent::OnRecvWaitPrepare recvBytes: {}", recvBytes);
-    if( recvBytes < 0 ) {
-        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
-            return true;
-        }else {
-            recvBytes = -1;
-            awaiter->SetResult(recvBytes);
-            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
-            return false;
-        }
+    if( recvBytes == -1) {
+        return true;
     }
     awaiter->SetResult(recvBytes);
     return false;
@@ -567,18 +561,15 @@ bool TcpWaitEvent::OnRecvWaitPrepare(coroutine::Coroutine *co, void* ctx)
 
 bool TcpWaitEvent::OnSendWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
-    int sendBytes = DealSend();
+    m_ctx = ctx;
+    async::IOVec* iov = (async::IOVec*)ctx;
+    int sendBytes = DealSend(iov);
     spdlog::debug("TcpWaitEvent::OnSendWaitPrepare sendBytes: {}", sendBytes);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     if( sendBytes < 0){
-        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
-        }else{
-            awaiter->SetResult(sendBytes);
-            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
-            return false; 
-        }
+        return false;
     }
-    if (!m_socket->GetWBuffer().empty()){
+    if (sendBytes != iov->m_len){
         return true;
     }
     awaiter->SetResult(sendBytes);
@@ -587,6 +578,7 @@ bool TcpWaitEvent::OnSendWaitPrepare(coroutine::Coroutine *co, void* ctx)
 
 bool TcpWaitEvent::OnConnectWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
+    m_ctx = ctx;
     spdlog::debug("TcpWaitEvent::OnConnectWaitPrepare");
     async::NetAddr* addr = static_cast<async::NetAddr*>(ctx);
     sockaddr_in saddr;
@@ -611,6 +603,7 @@ bool TcpWaitEvent::OnConnectWaitPrepare(coroutine::Coroutine *co, void* ctx)
 
 bool TcpWaitEvent::OnCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
+    m_ctx = ctx;
     spdlog::debug("TcpWaitEvent::OnCloseWaitPrepare");
     coroutine::Awaiter* awaiter = co->GetAwaiter(); 
     if (m_engine) {
@@ -644,7 +637,7 @@ void TcpWaitEvent::HandleAcceptEvent(EventEngine *engine)
 void TcpWaitEvent::HandleRecvEvent(EventEngine *engine)
 {
     spdlog::debug("TcpWaitEvent::HandleRecvEvent");
-    int recvBytes = DealRecv();
+    int recvBytes = DealRecv((async::IOVec*)m_ctx);
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
@@ -654,7 +647,7 @@ void TcpWaitEvent::HandleRecvEvent(EventEngine *engine)
 void TcpWaitEvent::HandleSendEvent(EventEngine *engine)
 {
     spdlog::debug("TcpWaitEvent::HandleSendEvent");
-    int sendBytes = DealSend();
+    int sendBytes = DealSend((async::IOVec*)m_ctx);
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
     GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
@@ -674,13 +667,11 @@ void TcpWaitEvent::HandleCloseEvent(EventEngine *engine)
     //doing nothing
 }
 
-int TcpWaitEvent::DealRecv()
+int TcpWaitEvent::DealRecv(async::IOVec* iovc)
 {
     GHandle handle = this->m_socket->GetHandle();
-    char* result = nullptr;
     char buffer[DEFAULT_READ_BUFFER_SIZE] = {0};
     int recvBytes = 0;
-    bool initial = true;
     do{
         bzero(buffer, sizeof(buffer));
         int ret = recv(handle.fd, buffer, DEFAULT_READ_BUFFER_SIZE, 0);
@@ -692,66 +683,45 @@ int TcpWaitEvent::DealRecv()
             if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
                 if (recvBytes == 0) recvBytes = -1;
             }else {
-                if (recvBytes == 0) recvBytes = -1;
+                if (recvBytes == 0) recvBytes = -2;
                 m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);   
             }
             break;
         } else {
-            if(initial) {
-                result = new char[ret];
-                memset(result, 0, ret);
-                initial = false;
-            }else{
-                result = (char*)realloc(result, ret + recvBytes);
-            }
-            memcpy(result + recvBytes, buffer, ret);
             recvBytes += ret;
+            if(recvBytes > iovc->m_len) {
+                iovc->m_buf = (char*)realloc(iovc->m_buf, recvBytes);
+            } else {
+                memcpy(iovc->m_buf + (recvBytes - ret), buffer, ret);
+            }
+            iovc->m_len = recvBytes;
         }
     } while(1); 
     if( recvBytes > 0){
-        spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", handle.fd, recvBytes, std::string_view(result, recvBytes));   
-        std::string_view origin = m_socket->GetRBuffer();
-        char* new_buffer = nullptr;
-        if(!origin.empty()) {
-            new_buffer = new char[origin.size() + recvBytes];
-            memcpy(new_buffer, origin.data(), origin.size());
-            memcpy(new_buffer + origin.size(), result, recvBytes);
-            delete [] origin.data();
-            delete [] result;
-        }else{
-            new_buffer = result;
-        }
-        m_socket->SetRBuffer(std::string_view(new_buffer, recvBytes + origin.size()));
+        spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", handle.fd, recvBytes, std::string_view(iovc->m_buf + iovc->m_len - recvBytes, recvBytes));   
     }
     return recvBytes;
 }
 
-int TcpWaitEvent::DealSend()
+int TcpWaitEvent::DealSend(async::IOVec* iovc)
 {
     GHandle handle = this->m_socket->GetHandle();
     int sendBytes = 0;
-    std::string_view wbuffer = m_socket->GetWBuffer();
     do {
-        std::string_view view = wbuffer.substr(sendBytes);
-        int ret = send(handle.fd, view.data(), view.size(), 0);
+        int ret = send(handle.fd, iovc->m_buf, iovc->m_len, 0);
         if( ret == -1 ) {
-            if(sendBytes == 0) {
-                if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
-                    
-                }else {
-                    m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
-                }
+            if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
+                m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
                 return -1;
             }
             break;
         }
         sendBytes += ret;
-        if( sendBytes == wbuffer.size() ) {
+        if( sendBytes == iovc->m_len ) {
             break;
         }
     } while (1);
-    m_socket->SetWBuffer(wbuffer.substr(sendBytes));
-    spdlog::debug("SendEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", handle.fd, sendBytes, wbuffer.substr(0, sendBytes));
+    spdlog::debug("SendEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", handle.fd, sendBytes, std::string_view(iovc->m_buf, sendBytes));
     return sendBytes;
 }
 
@@ -912,6 +882,7 @@ TcpSslWaitEvent::~TcpSslWaitEvent()
 
 bool TcpSslWaitEvent::OnSslAcceptWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
+    m_ctx = ctx;
     spdlog::debug("TcpSslWaitEvent::OnSslAcceptWaitPrepare");
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     SSL* ssl = static_cast<async::AsyncTcpSslSocket*>(m_socket)->GetSSL();
@@ -932,6 +903,7 @@ bool TcpSslWaitEvent::OnSslAcceptWaitPrepare(coroutine::Coroutine *co, void* ctx
 
 bool TcpSslWaitEvent::OnSslConnectWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
+    m_ctx = ctx;
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     SSL* ssl = static_cast<async::AsyncTcpSslSocket*>(m_socket)->GetSSL();
     SSL_set_connect_state(ssl);
@@ -951,18 +923,12 @@ bool TcpSslWaitEvent::OnSslConnectWaitPrepare(coroutine::Coroutine *co, void* ct
 
 bool TcpSslWaitEvent::OnSslRecvWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
-    int recvBytes = DealRecv();
+    m_ctx = ctx;
+    int recvBytes = DealRecv((async::IOVec*) ctx);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     spdlog::debug("TcpSslWaitEvent::OnSslRecvWaitPrepare recvBytes: {}", recvBytes);
-    if( recvBytes < 0 ) {
-        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
-            return true;
-        }else {
-            recvBytes = -1;
-            awaiter->SetResult(recvBytes);
-            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
-            return false;
-        }
+    if( recvBytes == -1) {
+        return true;
     }
     awaiter->SetResult(recvBytes);
     return false;
@@ -970,18 +936,15 @@ bool TcpSslWaitEvent::OnSslRecvWaitPrepare(coroutine::Coroutine *co, void* ctx)
 
 bool TcpSslWaitEvent::OnSslSendWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
-    int sendBytes = DealSend();
+    m_ctx = ctx;
+    async::IOVec* iovc = (async::IOVec*) m_ctx;
+    int sendBytes = DealSend(iovc);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     spdlog::debug("TcpSslWaitEvent::OnSslSendWaitPrepare sendBytes: {}", sendBytes);
     if( sendBytes < 0){
-        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
-        }else{
-            awaiter->SetResult(sendBytes);
-            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
-            return false; 
-        }
+        return false;
     }
-    if (!m_socket->GetWBuffer().empty()){
+    if (sendBytes != iovc->m_len){
         return true;
     }
     awaiter->SetResult(sendBytes);
@@ -990,6 +953,7 @@ bool TcpSslWaitEvent::OnSslSendWaitPrepare(coroutine::Coroutine *co, void* ctx)
 
 bool TcpSslWaitEvent::OnSslCloseWaitPrepare(coroutine::Coroutine *co, void* ctx)
 {
+    m_ctx = ctx;
     spdlog::debug("TcpWaitEvent::OnCloseWaitPrepare");
     coroutine::Awaiter* awaiter = co->GetAwaiter(); 
     if (m_engine) {
@@ -1059,7 +1023,7 @@ void TcpSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
 void TcpSslWaitEvent::HandleSslRecvEvent(EventEngine *engine)
 {
     spdlog::debug("TcpSslWaitEvent::HandleSslRecvEvent");
-    int recvBytes = DealRecv();
+    int recvBytes = DealRecv((async::IOVec*) m_ctx);
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
@@ -1069,7 +1033,7 @@ void TcpSslWaitEvent::HandleSslRecvEvent(EventEngine *engine)
 void TcpSslWaitEvent::HandleSslSendEvent(EventEngine *engine)
 {
     spdlog::debug("TcpSslWaitEvent::HandleSslSendEvent");
-    int sendBytes = DealSend();
+    int sendBytes = DealSend((async::IOVec*) m_ctx);
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
     GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
@@ -1094,14 +1058,11 @@ EventType TcpSslWaitEvent::CovertSSLErrorToEventType()
     return kEventTypeNone;
 }
 
-int TcpSslWaitEvent::DealRecv()
+int TcpSslWaitEvent::DealRecv(async::IOVec* iovc)
 {
-    GHandle handle = m_socket->GetHandle();
-    SSL* ssl = static_cast<async::AsyncTcpSslSocket*>(m_socket)->GetSSL();
-    char* result = nullptr;
+    SSL* ssl = GetAsyncTcpSocket()->GetSSL();
     char buffer[DEFAULT_READ_BUFFER_SIZE] = {0};
     int recvBytes = 0;
-    bool initial = true;
     do{
         bzero(buffer, sizeof(buffer));
         int ret = SSL_read(ssl, buffer, DEFAULT_READ_BUFFER_SIZE);
@@ -1113,67 +1074,45 @@ int TcpSslWaitEvent::DealRecv()
             if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ){
                 if (recvBytes == 0) recvBytes = -1;
             }else {
-                if (recvBytes == 0) recvBytes = -1;
+                if (recvBytes == 0) recvBytes = -2;
                 m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);   
             }
             break;
         } else {
-            if(initial) {
-                result = new char[ret];
-                memset(result, 0, ret);
-                initial = false;
-            }else{
-                result = (char*)realloc(result, ret + recvBytes);
-            }
-            memcpy(result + recvBytes, buffer, ret);
             recvBytes += ret;
+            if(recvBytes > iovc->m_len) {
+                iovc->m_buf = (char*)realloc(iovc->m_buf, recvBytes);
+            } else {
+                memcpy(iovc->m_buf + (recvBytes - ret), buffer, ret);
+            }
+            iovc->m_len = recvBytes;
         }
     } while(1); 
     if( recvBytes > 0){
-        spdlog::debug("RecvEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle().fd, handle.fd, recvBytes, std::string_view(result, recvBytes));   
-        std::string_view origin = m_socket->GetRBuffer();
-        char* new_buffer = nullptr;
-        if(!origin.empty()) {
-            new_buffer = new char[origin.size() + recvBytes];
-            memcpy(new_buffer, origin.data(), origin.size());
-            memcpy(new_buffer + origin.size(), result, recvBytes);
-            delete [] origin.data();
-            delete [] result;
-        }else{
-            new_buffer = result;
-        }
-        m_socket->SetRBuffer(std::string_view(new_buffer, recvBytes + origin.size()));
+        spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, recvBytes, std::string_view(iovc->m_buf + iovc->m_len - recvBytes, recvBytes));   
     }
     return recvBytes;
 }
 
-int TcpSslWaitEvent::DealSend()
+int TcpSslWaitEvent::DealSend(async::IOVec* iovc)
 {
-    GHandle handle = this->m_socket->GetHandle();
-    SSL* ssl = static_cast<async::AsyncTcpSslSocket*>(m_socket)->GetSSL();
+    SSL* ssl = GetAsyncTcpSocket()->GetSSL();
     int sendBytes = 0;
-    std::string_view wbuffer = m_socket->GetWBuffer();
     do {
-        std::string_view view = wbuffer.substr(sendBytes);
-        int ret = SSL_write(ssl, view.data(), view.size());
+        int ret = SSL_write(ssl, iovc->m_buf, iovc->m_len);
         if( ret == -1 ) {
-            if(sendBytes == 0) {
-                if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
-                    
-                }else {
-                    m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
-                }
+            if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
+                m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
                 return -1;
             }
             break;
         }
         sendBytes += ret;
-        if( sendBytes == wbuffer.size() ) {
+        if( sendBytes == iovc->m_len ) {
             break;
         }
     } while (1);
-    m_socket->SetWBuffer(wbuffer.substr(sendBytes));
-    spdlog::debug("SendEvent::HandleEvent [Engine: {}] [Handle: {}] [Byte: {}] [Data: {}]", m_engine->GetHandle().fd, handle.fd, sendBytes, wbuffer.substr(0, sendBytes));
+    spdlog::debug("SendEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, sendBytes, std::string_view(iovc->m_buf, sendBytes));
     return sendBytes;
 }
 //#endif

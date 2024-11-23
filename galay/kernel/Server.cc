@@ -59,13 +59,23 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 	m_listen_events.resize(m_config.m_network_scheduler_num);
 	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
-		GHandle handle = async::AsyncTcpSocket::Socket();
-		async::HandleOption option(handle);
+		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(GetEventScheduler(i)->GetEngine());
+		bool res = async::AsyncSocket(socket);
+		if( !res ) {
+			delete socket;
+			for(int j = 0; j < i; ++j ){
+				delete m_listen_events[j];
+			}
+			m_listen_events.clear();
+			spdlog::error("TcpServer::Start AsyncSocket failed");
+			return;
+		}
+		async::HandleOption option(socket->GetHandle());
 		option.HandleNonBlock();
 		option.HandleReuseAddr();
 		option.HandleReusePort();
-		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(handle);
-		if(!socket->BindAndListen(port, m_config.m_backlog)) {
+		
+		if(!async::BindAndListen(socket, port, m_config.m_backlog)) {
 			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
 			delete socket;
 			for(int j = 0; j < i; ++j ){
@@ -138,17 +148,33 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 	m_listen_events.resize(m_config.m_network_scheduler_num);
 	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
-		GHandle handle = async::AsyncTcpSocket::Socket();
-		async::HandleOption option(handle);
+		async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(GetEventScheduler(i)->GetEngine());
+		bool res = async::AsyncSocket(socket);
+		if( !res ) {
+			delete socket;
+			for(int j = 0; j < i; ++j ){
+				delete m_listen_events[j];
+			}
+			m_listen_events.clear();
+			spdlog::error("TcpSslServer::Start AsyncSocket failed");
+			return;
+		}
+		async::HandleOption option(socket->GetHandle());
 		option.HandleNonBlock();
 		option.HandleReuseAddr();
 		option.HandleReusePort();
-		SSL* ssl = async::AsyncTcpSslSocket::SSLSocket(handle, GetGlobalSSLCtx());
-		if(ssl == nullptr) {
-			exit(-1);
+		res = async::AsyncSSLSocket(socket, GetGlobalSSLCtx());
+		if( !res ) {
+			delete socket;
+			for(int j = 0; j < i; ++j ){
+				delete m_listen_events[j];
+			}
+			m_listen_events.clear();
+			spdlog::error("TcpSslServer::Start AsyncSSLSocket failed");
+			return;
 		}
-		async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(handle, ssl);
-		if(!socket->BindAndListen(port, m_config.m_backlog)) {
+		
+		if(!async::BindAndListen(socket, port, m_config.m_backlog)) {
 			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
 			delete socket;
 			for(int j = 0; j < i; ++j ){
@@ -230,43 +256,7 @@ void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine
 
 void HttpServer::Start(int port)
 {
-	DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
-	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
-	DynamicResizeTimerSchedulers(m_config.m_timer_scheduler_num);
-	//coroutine scheduler
-	StartCoroutineSchedulers();
-	//net scheduler
-	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
-	{
-		GetEventScheduler(i)->Loop(m_config.m_network_scheduler_timeout_ms);
-	}
-	//event scheduler
-	for( int i = m_config.m_network_scheduler_num; i < m_config.m_network_scheduler_num + m_config.m_event_scheduler_num; ++i )
-	{
-		GetEventScheduler(i)->Loop(m_config.m_event_scheduler_timeout_ms);
-	}
-	StartTimerSchedulers(m_config.m_timer_scheduler_timeout_ms);
-	m_is_running = true;
-	m_listen_events.resize(m_config.m_network_scheduler_num);
-	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
-	{
-		GHandle handle = async::AsyncTcpSocket::Socket();
-		async::HandleOption option(handle);
-		option.HandleNonBlock();
-		option.HandleReuseAddr();
-		option.HandleReusePort();
-		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(handle);
-		if(!socket->BindAndListen(port, m_config.m_backlog)) {
-			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
-			delete socket;
-			for(int j = 0; j < i; ++j ){
-				delete m_listen_events[j];
-			}
-			m_listen_events.clear();
-			return;
-		}
-		m_listen_events[i] = new event::ListenEvent(GetEventScheduler(i)->GetEngine(), socket, m_store.get());
-	} 
+	TcpServer::Start(m_store.get(), port);
 	return;
 }
 
@@ -277,73 +267,77 @@ void HttpServer::Stop()
 
 coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 {
-    auto connection = operation.GetConnection();
-	int length = co_await connection->WaitForRecv();
-	if( length == 0 ) {
-		auto data = connection->FetchRecvData();
-		if(operation.GetContext().has_value()) {
-			auto request = std::any_cast<protocol::http::HttpRequest*>(operation.GetContext());
-			ReturnRequest(request);
-		}
-		data.Clear();
-		co_return;
-	} else {
-		protocol::http::HttpRequest* request = nullptr;
-		if(!operation.GetContext().has_value()) request = g_http_proto_store.GetRequest();
-		else request = std::any_cast<protocol::http::HttpRequest*>(operation.GetContext());
-		auto data = connection->FetchRecvData();
-		int elength = request->DecodePdu(data.Data());
-		if(request->HasError()) {
-			if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete || request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
-			{
-				if( elength >= 0 ) {
-					data.Erase(elength);
-				} 
-				operation.GetContext() = request;
-				operation.ReExecute(operation);
-				co_return;
-			} else {
-				data.Clear();
-				if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ){
-					std::string str = g_uri_too_long_resp.EncodePdu();
-					connection->PrepareSendData(str);
-					int ret = co_await connection->WaitForSend();
-				}
-				operation.GetContext().reset();
-				g_http_proto_store.ReturnRequest(request);
-				bool b = co_await connection->CloseConnection();
-				co_return;
-			}
-		}
-		else{
-			data.Clear();
-			auto it = m_route_map.find(request->Header()->Method());
-			if( it != m_route_map.end()){
-				auto inner_it = it->second.find(request->Header()->Uri());
-				if (inner_it != it->second.end()) {
-					auto response = g_http_proto_store.GetResponse();
-					HttpOperation httpop(operation, request, response);
-					inner_it->second(httpop);
-				} else {
-					std::string str = g_not_found_resp.EncodePdu();
-					connection->PrepareSendData(str);
-					int ret = co_await connection->WaitForSend();
-					g_http_proto_store.ReturnRequest(request);
-					bool b = co_await connection->CloseConnection();
-					co_return;
-				}
-			} else {
-				std::string str = g_method_not_allowed_resp.EncodePdu();
-				connection->PrepareSendData(str);
-				int ret = co_await connection->WaitForSend();
-				g_http_proto_store.ReturnRequest(request);
-				bool b = co_await connection->CloseConnection();
-				co_return;
-			}
+//     auto connection = operation.GetConnection();
+// 	async::IOVec iovec {
+// 		.m_buf = new char[DEFAULT_READ_BUFFER_SIZE],
+// 		.m_len = DEFAULT_READ_BUFFER_SIZE
+// 	};
+// 	int length = co_await async::AsyncRecv(connection->GetSocket(), &iovec);
+// 	if( length == 0 ) {
+// 		if(operation.GetContext().has_value()) {
+// 			auto request = std::any_cast<protocol::http::HttpRequest*>(operation.GetContext());
+// 			ReturnRequest(request);
+// 		}
+// 		co_return;
+// 	} else {
+// 		protocol::http::HttpRequest* request = nullptr;
+// 		if(!operation.GetContext().has_value()) request = g_http_proto_store.GetRequest();
+// 		else request = std::any_cast<protocol::http::HttpRequest*>(operation.GetContext());
+// 		auto data = connection->FetchRecvData();
+// 		int elength = request->DecodePdu(data.Data());
+// 		if(request->HasError()) {
+// 			if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete || request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
+// 			{
+// 				if( elength >= 0 ) {
+// 					data.Erase(elength);
+// 				} 
+// 				operation.GetContext() = request;
+// 				operation.ReExecute(operation);
+// 				co_return;
+// 			} else {
+// 				data.Clear();
+// 				if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ){
+// 					std::string str = g_uri_too_long_resp.EncodePdu();
+// 					connection->PrepareSendData(str);
+// 					int ret = co_await connection->WaitForSend();
+// 				}
+// 				operation.GetContext().reset();
+// 				g_http_proto_store.ReturnRequest(request);
+// 				bool b = co_await connection->CloseConnection();
+// 				co_return;
+// 			}
+// 		}
+// 		else{
+// 			data.Clear();
+// 			auto it = m_route_map.find(request->Header()->Method());
+// 			if( it != m_route_map.end()){
+// 				auto inner_it = it->second.find(request->Header()->Uri());
+// 				if (inner_it != it->second.end()) {
+// 					auto response = g_http_proto_store.GetResponse();
+// 					HttpOperation httpop(operation, request, response);
+// 					inner_it->second(httpop);
+// 				} else {
+// 					std::string str = g_not_found_resp.EncodePdu();
+// 					connection->PrepareSendData(str);
+// 					int ret = co_await connection->WaitForSend();
+// 					g_http_proto_store.ReturnRequest(request);
+// 					bool b = co_await connection->CloseConnection();
+// 					co_return;
+// 				}
+// 			} else {
+// 				std::string str = g_method_not_allowed_resp.EncodePdu();
+// 				connection->PrepareSendData(str);
+// 				int ret = co_await connection->WaitForSend();
+// 				g_http_proto_store.ReturnRequest(request);
+// 				bool b = co_await connection->CloseConnection();
+// 				co_return;
+// 			}
 			
-		}
-	}
+// 		}
+// 	}
 	
-	co_return;
+// 	co_return;
 }
+
+
 }

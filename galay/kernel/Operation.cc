@@ -47,44 +47,18 @@ StringViewWrapper::~StringViewWrapper()
 }
 
 
-TcpConnection::TcpConnection(action::TcpEventAction* action)
-    :m_event_action(action)
+TcpConnection::TcpConnection(async::AsyncTcpSocket* socket)
+    :m_socket(socket)
 {
-    m_socket = static_cast<event::TcpWaitEvent*>(action->GetBindEvent())->GetAsyncTcpSocket();
-}
-
-coroutine::Awaiter_int TcpConnection::WaitForRecv()
-{
-    return m_socket->Recv(m_event_action);
-}
-
-StringViewWrapper TcpConnection::FetchRecvData()
-{
-    return StringViewWrapper(m_socket->GetRBuffer());
-}
-
-void TcpConnection::PrepareSendData(std::string_view data)
-{
-    m_socket->SetWBuffer(data);
-}
-
-coroutine::Awaiter_int TcpConnection::WaitForSend()
-{
-    return m_socket->Send(m_event_action);
-}
-
-coroutine::Awaiter_bool TcpConnection::CloseConnection()
-{
-    return m_socket->Close(m_event_action);
 }
 
 TcpConnection::~TcpConnection()
 {
-    delete m_event_action;
+    delete m_socket;
 }
 
-TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback,  action::TcpEventAction* action)
-    : m_callback(callback), m_connection(std::make_shared<TcpConnection>(action))
+TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncTcpSocket* socket)
+    : m_callback(callback), m_connection(std::make_shared<TcpConnection>(socket))
 {
 }
 
@@ -108,8 +82,8 @@ TcpOperation::~TcpOperation()
 {
 }
 
-TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, action::TcpSslEventAction *action)
-    : m_callback(callback), m_connection(std::make_shared<TcpSslConnection>(action))
+TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, async::AsyncTcpSslSocket* socket)
+    : m_callback(callback), m_connection(std::make_shared<TcpSslConnection>(socket))
 {
 }
 
@@ -139,46 +113,20 @@ TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpO
 
 }
 
-void TcpCallbackStore::Execute(action::TcpEventAction* action)
+void TcpCallbackStore::Execute(async::AsyncTcpSocket* socket)
 {
-    TcpOperation operaction(m_callback, action);
+    TcpOperation operaction(m_callback, socket);
     m_callback(operaction);
 }
 
-TcpSslConnection::TcpSslConnection(action::TcpSslEventAction *action)
-    :m_event_action(action)
+TcpSslConnection::TcpSslConnection(async::AsyncTcpSslSocket* socket)
+    :m_socket(socket)
 {
-    this->m_socket = static_cast<event::TcpSslWaitEvent*>(action->GetBindEvent())->GetAsyncTcpSocket();
-}
-
-coroutine::Awaiter_int TcpSslConnection::WaitForSslRecv()
-{
-    return m_socket->SSLRecv(m_event_action);
-}
-
-StringViewWrapper TcpSslConnection::FetchRecvData()
-{
-    return StringViewWrapper(m_socket->GetRBuffer());
-}
-
-void TcpSslConnection::PrepareSendData(std::string_view data)
-{
-    m_socket->SetWBuffer(data);
-}
-
-coroutine::Awaiter_int TcpSslConnection::WaitForSslSend()
-{
-    return m_socket->SSLSend(m_event_action);
-}
-
-coroutine::Awaiter_bool TcpSslConnection::CloseConnection()
-{
-    return m_socket->SSLClose(m_event_action);
 }
 
 TcpSslConnection::~TcpSslConnection()
 {
-    delete m_event_action;
+    delete m_socket;
 }
 
 TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)> &callback)
@@ -186,9 +134,9 @@ TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutin
 {
 }
 
-void TcpSslCallbackStore::Execute(action::TcpSslEventAction *action)
+void TcpSslCallbackStore::Execute(async::AsyncTcpSslSocket* socket)
 {
-    TcpSslOperation operation(m_callback, action);
+    TcpSslOperation operation(m_callback, socket);
     m_callback(operation);
 }
 
@@ -216,17 +164,6 @@ protocol::http::HttpRequest *HttpOperation::GetRequest()
 protocol::http::HttpResponse *HttpOperation::GetResponse()
 {
     return m_proto_store->m_response;
-}
-
-coroutine::Awaiter_int HttpOperation::ReturnResponse(std::string response)
-{
-    m_operation.GetConnection()->PrepareSendData(response);
-    return m_operation.GetConnection()->WaitForSend();
-}
-
-coroutine::Awaiter_bool HttpOperation::CloseConnection()
-{
-    return m_operation.GetConnection()->CloseConnection();
 }
 
 void HttpOperation::Continue()
