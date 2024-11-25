@@ -1,4 +1,5 @@
 #include "Awaiter.h"
+#include <spdlog/spdlog.h>
 
 namespace galay::coroutine
 {
@@ -26,16 +27,12 @@ bool Awaiter_void::await_suspend(std::coroutine_handle<Coroutine::promise_type> 
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    co->SetAwaiter(this);
+    
     return this->m_action->DoAction(co, m_ctx);
 }
 
 void Awaiter_void::await_resume() const noexcept
 {
-    if( m_coroutine_handle ) {
-        coroutine::Coroutine* co = m_coroutine_handle.promise().GetCoroutine();
-        co->SetAwaiter(nullptr);
-    }
 }
 
 void Awaiter_void::SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle> &result)
@@ -79,15 +76,18 @@ bool Awaiter_int::await_suspend(std::coroutine_handle<Coroutine::promise_type> h
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    co->SetAwaiter(this);
+    while(!co->SetAwaiter(this)){
+        spdlog::warn("Awaiter_int::await_suspend: set awaiter failed");
+    }
     return this->m_action->DoAction(co, m_ctx);
 }
 
 int Awaiter_int::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        coroutine::Coroutine* co = m_coroutine_handle.promise().GetCoroutine();
-        co->SetAwaiter(nullptr);
+        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+            spdlog::warn("Awaiter_int::await_suspend: set awaiter failed");
+        }
     }
     return m_result;
 }
@@ -107,6 +107,11 @@ Coroutine *Awaiter_int::GetCoroutine()
         return m_coroutine_handle.promise().GetCoroutine();
     }
     return nullptr;
+}
+
+Awaiter_int::~Awaiter_int()
+{
+    spdlog::info("Awaiter_int::~Awaiter_int: {}", (void*)this);
 }
 
 Awaiter_bool::Awaiter_bool(action::WaitAction* action, void* ctx)
@@ -134,15 +139,18 @@ bool Awaiter_bool::await_suspend(std::coroutine_handle<Coroutine::promise_type> 
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    co->SetAwaiter(this);
+    while(!co->SetAwaiter(this)){
+        spdlog::warn("Awaiter_bool::await_suspend: set awaiter failed");
+    }
     return m_action->DoAction(co, m_ctx);
 }
 
 bool Awaiter_bool::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        coroutine::Coroutine* co = m_coroutine_handle.promise().GetCoroutine();
-        co->SetAwaiter(nullptr);
+        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+            spdlog::warn("Awaiter_bool::await_suspend: set awaiter failed");
+        }
     }
     return m_result;
 }
@@ -189,15 +197,18 @@ bool Awaiter_ptr::await_suspend(std::coroutine_handle<Coroutine::promise_type> h
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    co->SetAwaiter(this);
+    while(!co->SetAwaiter(this)){
+        spdlog::warn("Awaiter_ptr::await_suspend: set awaiter failed");
+    }
     return this->m_action->DoAction(co, m_ctx);
 }
 
 void *Awaiter_ptr::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        coroutine::Coroutine* co = m_coroutine_handle.promise().GetCoroutine();
-        co->SetAwaiter(nullptr);
+        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+            spdlog::warn("Awaiter_ptr::await_suspend: set awaiter failed");
+        }
     }
     return m_ptr;
 }
@@ -243,15 +254,18 @@ bool Awaiter_string::await_suspend(std::coroutine_handle<Coroutine::promise_type
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    co->SetAwaiter(this);
+    while(!co->SetAwaiter(this)){
+        spdlog::warn("Awaiter_string::await_suspend: set awaiter failed");
+    }
     return this->m_action->DoAction(co, m_ctx);
 }
 
 std::string Awaiter_string::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        coroutine::Coroutine* co = m_coroutine_handle.promise().GetCoroutine();
-        co->SetAwaiter(nullptr);
+        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+            spdlog::warn("Awaiter_string::await_suspend: set awaiter failed");
+        }
     }
     return m_result;
 }
@@ -302,15 +316,18 @@ bool Awaiter_GHandle::await_suspend(std::coroutine_handle<Coroutine::promise_typ
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    co->SetAwaiter(this);
+    while(!co->SetAwaiter(this)){
+        spdlog::warn("Awaiter_GHandle::await_suspend: set awaiter failed");
+    }
     return this->m_action->DoAction(co, m_ctx);
 }
 
 GHandle Awaiter_GHandle::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        coroutine::Coroutine* co = m_coroutine_handle.promise().GetCoroutine();
-        co->SetAwaiter(nullptr);
+        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+            spdlog::warn("Awaiter_GHandle::await_suspend: set awaiter failed");
+        }
     }
     return m_result;
 }

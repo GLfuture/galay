@@ -19,8 +19,8 @@ namespace galay::event
 
 namespace galay::async
 {
-    class AsyncTcpSocket;
-    class AsyncTcpSslSocket;
+    class AsyncNetIo;
+    class AsyncSslNetIo;
 }
 
 namespace galay

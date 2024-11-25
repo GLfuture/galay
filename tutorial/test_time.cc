@@ -6,7 +6,7 @@
 galay::coroutine::Coroutine test()
 {
     galay::event::Timer::ptr timer;
-    bool res = co_await galay::coroutine::this_coroutine::SleepFor(1000, &timer);
+    bool res = co_await galay::this_coroutine::SleepFor(1000, &timer);
     if(res)
         std::cout << "sleep success" << std::endl;
     else
@@ -48,5 +48,6 @@ int main()
     getchar();
     galay::StopTimerSchedulers();
     galay::StopCoroutineSchedulers();
+    galay::GetThisThreadCoroutineStore()->Clear();
     return 0;
 }

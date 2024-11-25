@@ -17,7 +17,7 @@ namespace galay::coroutine
 
 namespace galay::async
 {
-    class AsyncTcpSocket;
+    class AsyncNetIo;
 };
 
 namespace galay::event
@@ -27,7 +27,7 @@ namespace galay::event
 
 namespace galay::action
 {
-    class TcpEventAction;
+    class NetEventAction;
 };
 
 namespace galay::protocol::http
@@ -58,19 +58,19 @@ class TcpConnection
 {
 public:
     using ptr = std::shared_ptr<TcpConnection>;
-    TcpConnection(async::AsyncTcpSocket* socket);
-    inline async::AsyncTcpSocket* GetSocket() { return m_socket; }
+    TcpConnection(async::AsyncNetIo* socket);
+    inline async::AsyncNetIo* GetSocket() { return m_socket; }
     
     ~TcpConnection();
 private:
-    async::AsyncTcpSocket* m_socket;
+    async::AsyncNetIo* m_socket;
 };
 
 class TcpOperation
 {
     using Timer = event::Timer;
 public:
-    TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncTcpSocket* action);
+    TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncNetIo* action);
     TcpConnection::ptr GetConnection();
 
     /*
@@ -89,18 +89,18 @@ class TcpSslConnection
 {
 public:
     using ptr = std::shared_ptr<TcpSslConnection>;
-    TcpSslConnection(async::AsyncTcpSslSocket* socket);
-    inline async::AsyncTcpSslSocket* GetSocket() { return m_socket; } 
+    TcpSslConnection(async::AsyncSslNetIo* socket);
+    inline async::AsyncSslNetIo* GetSocket() { return m_socket; } 
     ~TcpSslConnection();
 private:
-    async::AsyncTcpSslSocket* m_socket;
+    async::AsyncSslNetIo* m_socket;
 };
 
 class TcpSslOperation
 {
     using Timer = event::Timer;
 public:
-    TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)>& callback, async::AsyncTcpSslSocket* socket);
+    TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)>& callback, async::AsyncSslNetIo* socket);
     TcpSslConnection::ptr GetConnection();
     /*
         ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
@@ -118,7 +118,7 @@ class TcpCallbackStore
 {
 public:
     TcpCallbackStore(const std::function<coroutine::Coroutine(TcpOperation)>& callback);
-    void Execute(async::AsyncTcpSocket* socket);
+    void Execute(async::AsyncNetIo* socket);
 private:
     std::function<coroutine::Coroutine(TcpOperation)> m_callback;
 };
@@ -127,7 +127,7 @@ class TcpSslCallbackStore
 {
 public:
     TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)>& callback);
-    void Execute(async::AsyncTcpSslSocket* socket);
+    void Execute(async::AsyncSslNetIo* socket);
 private:
     std::function<coroutine::Coroutine(TcpSslOperation)> m_callback;
 };

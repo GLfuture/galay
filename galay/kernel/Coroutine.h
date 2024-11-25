@@ -28,6 +28,8 @@ namespace galay::event
 namespace galay::coroutine
 {
 class Coroutine;
+class Awaiter_void;
+class Awaiter_bool; 
 
 class Awaiter
 {
@@ -63,8 +65,10 @@ public:
         inline void unhandled_exception() noexcept {}
         void return_void () noexcept;
         inline Coroutine* GetCoroutine() { return m_coroutine; }
+        inline CoroutineStore* GetStore() { return m_store; }
         inline ~promise_type() { delete m_coroutine; }
     private:
+        CoroutineStore* m_store;
         Coroutine* m_coroutine;
     };
     Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
@@ -76,12 +80,12 @@ public:
     void Destroy();
     inline bool Done() { return m_handle.done(); }
     inline void Resume() { return m_handle.resume(); }
-    inline void SetAwaiter(Awaiter* awaiter) { m_awaiter = awaiter; }
-    inline Awaiter* GetAwaiter() { return m_awaiter.load(); }
+    bool SetAwaiter(Awaiter* awaiter);
+    Awaiter* GetAwaiter();
     inline thread::safe::ListNode<Coroutine*>*& GetListNode() { return m_node; }
     ~Coroutine() = default;
 private:
-    std::atomic<Awaiter*> m_awaiter;
+    std::atomic<Awaiter*> m_awaiter = nullptr;
     thread::safe::ListNode<Coroutine*>* m_node;
     std::coroutine_handle<promise_type> m_handle;
 };
@@ -115,21 +119,20 @@ private:
     CoroutineWaiters& m_waiters;
 };
 
-class Awaiter_void;
-class Awaiter_bool;
 
-namespace this_coroutine
+}
+
+
+namespace galay::this_coroutine
 {
-    extern Awaiter_void GetThisCoroutine(Coroutine*& coroutine);
+    extern coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine);
     /*
         return false only when TimeScheduler is not running
         [ms] : ms
         [timer] : timer
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
-    extern Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
-}
-
+    extern coroutine::Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
 }
 
 #endif

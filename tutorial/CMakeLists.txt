@@ -5,6 +5,7 @@ set(SRC_LIST
     tutorial_echo_server.cc
     tutorial_ssl_echo_server.cc
     test_time.cc
+    test_fileio.cc
     #tutorial_proxy_server.cc
     #tutorial_ratelimiter.cc
     #tutorial_smtp_client.cc
@@ -18,7 +19,7 @@ foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
     target_link_directories(${EXECUTABLE_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
-    target_link_libraries(${EXECUTABLE_NAME} galay-static)
+    target_link_libraries(${EXECUTABLE_NAME} galay-static aio)
 endforeach()
 
 if(ETCD_FOUND)

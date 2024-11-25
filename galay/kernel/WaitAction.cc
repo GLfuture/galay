@@ -8,7 +8,12 @@
 
 namespace galay::action
 {
-void TimeEventAction::CreateTimer(int64_t ms, std::shared_ptr<event::Timer>* timer, std::function<void(std::shared_ptr<event::Timer>)> &&callback)
+
+TimeEventAction::TimeEventAction()
+{
+}
+
+void TimeEventAction::CreateTimer(int64_t ms, std::shared_ptr<event::Timer> *timer, std::function<void(std::shared_ptr<event::Timer>)> &&callback)
 {
     this->m_ms = ms;
     m_callback = std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback);
@@ -20,6 +25,7 @@ bool TimeEventAction::HasEventToDo()
     return true;
 }
 
+
 bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
 {
     if(m_ms <= 0) {
@@ -30,25 +36,29 @@ bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
     return true;
 }
 
-TcpEventAction::TcpEventAction(event::EventEngine* engine, event::TcpWaitEvent *event)
+TimeEventAction::~TimeEventAction()
+{
+}
+
+NetEventAction::NetEventAction(event::EventEngine* engine, event::NetWaitEvent *event)
     :m_engine(engine), m_event(event)
 {
     event->GetAsyncTcpSocket()->GetAction() = this;
 }
 
-bool TcpEventAction::HasEventToDo()
+bool NetEventAction::HasEventToDo()
 {
     return m_event != nullptr;
 }
 
-bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
+bool NetEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
     if( !m_event ) return false;
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
     if (!m_event->BelongEngine())   {
         int ret = m_engine->AddEvent(this->m_event, nullptr);
         if( ret != 0 ) {
-            spdlog::warn("TcpEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
+            spdlog::warn("NetEventAction::DoAction.AddEvent(handle: {}) failed, {}, engine:{}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()), (void*)m_event->BelongEngine());
             m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
             return true;
         }
@@ -56,7 +66,7 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     else {
         int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
         if( ret != 0 ) {
-            spdlog::warn("TcpEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
+            spdlog::warn("NetEventAction::DoAction.ModEvent(handle: {}) failed, {}, engine:{}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()), (void*)m_event->BelongEngine());
             m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
             return true;
         }
@@ -64,24 +74,58 @@ bool TcpEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     return true;
 }
 
-void TcpEventAction::ResetEvent(event::TcpWaitEvent *event)
+void NetEventAction::ResetEvent(event::NetWaitEvent *event)
 {
     this->m_event = event;
 }
 
-TcpEventAction::~TcpEventAction()
+NetEventAction::~NetEventAction()
 {
     delete m_event;
 }
 
-event::TcpWaitEvent *TcpEventAction::GetBindEvent()
+SslNetEventAction::SslNetEventAction(event::EventEngine* engine, event::TcpSslWaitEvent * event)
+    :NetEventAction(engine, event)
 {
-    return m_event;
 }
 
-TcpSslEventAction::TcpSslEventAction(event::EventEngine* engine, event::TcpSslWaitEvent * event)
-    :TcpEventAction(engine, event)
+
+FileIoEventAction::FileIoEventAction(event::EventEngine *engine, event::FileIoWaitEvent *event)
+    :m_engine(engine), m_event(event)
 {
+}
+
+bool FileIoEventAction::HasEventToDo()
+{
+    return m_event != nullptr;
+}
+
+bool FileIoEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
+{
+    if( !m_event ) return false;
+    if (m_event->OnWaitPrepare(co, ctx) == false) return false;
+    if (!m_event->BelongEngine())   {
+        int ret = m_engine->AddEvent(this->m_event, nullptr);
+        if( ret != 0 ) {
+            spdlog::warn("NetEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
+            m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
+            return true;
+        }
+    }
+    else {
+        int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
+        if( ret != 0 ) {
+            spdlog::warn("NetEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
+            m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
+            return true;
+        }
+    }
+    return true;
+}
+
+FileIoEventAction::~FileIoEventAction()
+{
+    if(m_event) delete m_event;
 }
 
 CoroutineWaitAction::CoroutineWaitAction()
@@ -116,5 +160,6 @@ bool GetCoroutineHandleAction::DoAction(coroutine::Coroutine *co, void* ctx)
     delete this;
     return false;
 }
+
 
 }

@@ -13,8 +13,8 @@ int main(int argc, char** argv)
     galay::TcpSslCallbackStore store([](galay::TcpSslOperation op)->galay::coroutine::Coroutine
     {
         auto connection = op.GetConnection();
-        galay::async::AsyncTcpSslSocket* socket = connection->GetSocket();
-        struct galay::async::IOVec iov {
+        galay::async::AsyncSslNetIo* socket = connection->GetSocket();
+        struct galay::async::NetIOVec iov {
             .m_buf = new char[1024],
             .m_len = 1024
         };
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";
             std::string respStr = response.EncodePdu();
-            galay::async::IOVec iov2{
+            galay::async::NetIOVec iov2{
                 .m_buf = respStr.data(),
                 .m_len = respStr.size()
             };

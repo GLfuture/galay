@@ -47,7 +47,7 @@ StringViewWrapper::~StringViewWrapper()
 }
 
 
-TcpConnection::TcpConnection(async::AsyncTcpSocket* socket)
+TcpConnection::TcpConnection(async::AsyncNetIo* socket)
     :m_socket(socket)
 {
 }
@@ -57,7 +57,7 @@ TcpConnection::~TcpConnection()
     delete m_socket;
 }
 
-TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncTcpSocket* socket)
+TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncNetIo* socket)
     : m_callback(callback), m_connection(std::make_shared<TcpConnection>(socket))
 {
 }
@@ -82,7 +82,7 @@ TcpOperation::~TcpOperation()
 {
 }
 
-TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, async::AsyncTcpSslSocket* socket)
+TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, async::AsyncSslNetIo* socket)
     : m_callback(callback), m_connection(std::make_shared<TcpSslConnection>(socket))
 {
 }
@@ -113,13 +113,13 @@ TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpO
 
 }
 
-void TcpCallbackStore::Execute(async::AsyncTcpSocket* socket)
+void TcpCallbackStore::Execute(async::AsyncNetIo* socket)
 {
     TcpOperation operaction(m_callback, socket);
     m_callback(operaction);
 }
 
-TcpSslConnection::TcpSslConnection(async::AsyncTcpSslSocket* socket)
+TcpSslConnection::TcpSslConnection(async::AsyncSslNetIo* socket)
     :m_socket(socket)
 {
 }
@@ -134,7 +134,7 @@ TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutin
 {
 }
 
-void TcpSslCallbackStore::Execute(async::AsyncTcpSslSocket* socket)
+void TcpSslCallbackStore::Execute(async::AsyncSslNetIo* socket)
 {
     TcpSslOperation operation(m_callback, socket);
     m_callback(operation);

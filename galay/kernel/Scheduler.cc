@@ -2,6 +2,7 @@
 #include "Event.h"
 #include "EventEngine.h"
 #include "Coroutine.h"
+#include "ExternApi.h"
 #include "galay/util/Thread.h"
 #include <spdlog/spdlog.h>
 
@@ -25,7 +26,7 @@ bool EventScheduler::Loop(int timeout)
 {
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
-        spdlog::info("EventScheduler::Loop exit");
+        spdlog::info("{} exit successfully!", Name());
         m_waiter->Decrease();
     });
     this->m_thread->detach();
@@ -39,6 +40,7 @@ bool EventScheduler::Stop()
         return false;
     }
     m_engine->Stop();
+    GetThisThreadCoroutineStore()->Clear();
     return m_waiter->Wait(5000);
 }
 
@@ -76,7 +78,7 @@ bool CoroutineScheduler::Loop()
                 break;
             }
         }
-        spdlog::info("CoroutineScheduler::Loop exit");
+        spdlog::info("{} exit successfully!", Name());
         m_waiter->Decrease();
     });
     this->m_thread->detach();
@@ -90,6 +92,7 @@ bool CoroutineScheduler::Stop()
         return false;
     }
     m_coroutines_queue.enqueue(nullptr);
+    GetThisThreadCoroutineStore()->Clear(); 
     return m_waiter->Wait(5000);
 }
 

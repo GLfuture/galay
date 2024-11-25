@@ -10,19 +10,11 @@ std::vector<scheduler::CoroutineScheduler*> g_coroutine_schedulers;
 std::vector<scheduler::EventScheduler*> g_event_schedulers;
 std::vector<scheduler::TimerScheduler*> g_timer_schedulers;
 SSL_CTX* g_ssl_ctx = nullptr;
-void AddCoroutineToStore(coroutine::Coroutine *co)
-{
-    g_coroutine_store.AddCoroutine(co);
-}
 
-void RemoveCoroutineFromStore(coroutine::Coroutine *co)
-{
-    g_coroutine_store.RemoveCoroutine(co);
-}
 
-void ClearCoroutineStore()
+coroutine::CoroutineStore* GetThisThreadCoroutineStore()
 {
-    g_coroutine_store.Clear();
+    return &g_coroutine_store;
 }
 
 bool InitialSSLServerEnv(const char *cert_file, const char *key_file)

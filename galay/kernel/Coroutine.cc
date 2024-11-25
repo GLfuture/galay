@@ -4,20 +4,23 @@
 #include "Scheduler.h"
 #include "WaitAction.h"
 #include "ExternApi.h"
+#include <spdlog/spdlog.h>
 
 namespace galay::coroutine
 {
 Coroutine Coroutine::promise_type::get_return_object() noexcept
 {
+    this->m_store = GetThisThreadCoroutineStore();
     this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this));
-    AddCoroutineToStore(m_coroutine);
+    this->m_store->AddCoroutine(m_coroutine);
     return *this->m_coroutine;
 }
 
 void Coroutine::promise_type::return_void() noexcept
 { 
-    RemoveCoroutineFromStore(m_coroutine); 
+    this->m_store->RemoveCoroutine(m_coroutine); 
 }
+
 void CoroutineStore::AddCoroutine(Coroutine *co)
 {
     auto node = m_coroutines.PushBack(co);
@@ -80,8 +83,25 @@ Coroutine::operator=(Coroutine&& other) noexcept
 
 void Coroutine::Destroy()
 {
-    RemoveCoroutineFromStore(m_handle.promise().GetCoroutine());
+    m_handle.promise().GetStore()->RemoveCoroutine(this);
     m_handle.destroy();
+}
+
+bool Coroutine::SetAwaiter(Awaiter *awaiter)
+{
+    spdlog::info("SetAwaiter begin: {}", (void*)awaiter);
+    Awaiter* t = m_awaiter.load();
+    if(!m_awaiter.compare_exchange_strong(t, awaiter)) {
+        return false;
+    }
+    spdlog::info("SetAwaiter after: {}", (void*)m_awaiter.load());
+    return true;
+}
+
+Awaiter *Coroutine::GetAwaiter()
+{
+    spdlog::info("GetAwaiter: {}", (void*)m_awaiter.load());
+    return m_awaiter.load();
 }
 
 CoroutineWaiters::CoroutineWaiters(int num, scheduler::CoroutineScheduler* scheduler)
@@ -135,21 +155,21 @@ bool CoroutineWaitContext::Done()
 
 }
 
-namespace galay::coroutine::this_coroutine
+namespace galay::this_coroutine
 {
     
-Awaiter_void GetThisCoroutine(Coroutine*& coroutine)
+coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine)
 {
     action::GetCoroutineHandleAction* action = new action::GetCoroutineHandleAction(&coroutine);
-    return Awaiter_void(action, nullptr);
+    return coroutine::Awaiter_void(action, nullptr);
 }
 
-static action::TimeEventAction g_time_action;
+static thread_local action::TimeEventAction g_time_action;
 
-Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
+coroutine::Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
 {
     if(GetTimerSchedulerNum() == 0) {
-        return Awaiter_bool(false);
+        return coroutine::Awaiter_bool(false);
     }
     g_time_action.CreateTimer(ms, timer, [scheduler](event::Timer::ptr timer){
         auto co = std::any_cast<coroutine::Coroutine*>(timer->GetContext());
@@ -160,6 +180,6 @@ Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, schedule
             scheduler->EnqueueCoroutine(co);
         }
     });
-    return Awaiter_bool(&g_time_action, nullptr);
+    return coroutine::Awaiter_bool(&g_time_action , nullptr);
 }
 }

@@ -33,6 +33,8 @@ enum ErrorCode
     Error_EpollCreateError,
     Error_EventWriteError,
     Error_KqueueCreateError,
+    Error_LinuxAioSetupError,
+    Error_LinuxAioSubmitError,
 };
 
 /*

@@ -9,9 +9,9 @@ int main()
     galay::server::TcpServer server;
     galay::TcpCallbackStore store([](galay::TcpOperation op)->galay::coroutine::Coroutine {
         auto connection = op.GetConnection();
-        galay::async::AsyncTcpSocket* socket = connection->GetSocket();
-        struct galay::async::IOVec iov {
-            .m_buf = new char[1024],
+        galay::async::AsyncNetIo* socket = connection->GetSocket();
+        struct galay::async::NetIOVec iov {
+            .m_buf = (char*)malloc(1024),
             .m_len = 1024
         };
         int length = co_await galay::async::AsyncRecv(socket, &iov);
@@ -37,7 +37,7 @@ int main()
             response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
             response.Body() = "Hello World";
             std::string respStr = response.EncodePdu();
-            galay::async::IOVec iov2{
+            galay::async::NetIOVec iov2{
                 .m_buf = respStr.data(),
                 .m_len = respStr.size()
             };
@@ -46,7 +46,7 @@ int main()
         }
     end:
         bool b = co_await galay::async::AsyncClose(socket);
-        delete[] iov.m_buf;
+        free(iov.m_buf);
         co_return;
     });
     server.Start(&store, 8060);

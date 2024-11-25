@@ -55,4 +55,5 @@ typedef signed long ssize_t;
     
 #endif
 #define GALAY_EXTERN_API __attribute__((visibility("default")))
+
 #endif

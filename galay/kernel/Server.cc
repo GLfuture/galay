@@ -59,7 +59,7 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 	m_listen_events.resize(m_config.m_network_scheduler_num);
 	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
-		async::AsyncTcpSocket* socket = new async::AsyncTcpSocket(GetEventScheduler(i)->GetEngine());
+		async::AsyncNetIo* socket = new async::AsyncTcpSocket(GetEventScheduler(i)->GetEngine());
 		bool res = async::AsyncSocket(socket);
 		if( !res ) {
 			delete socket;
@@ -99,7 +99,6 @@ void TcpServer::Stop()
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
 	StopTimerSchedulers();
-	ClearCoroutineStore();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -148,7 +147,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 	m_listen_events.resize(m_config.m_network_scheduler_num);
 	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
 	{
-		async::AsyncTcpSslSocket* socket = new async::AsyncTcpSslSocket(GetEventScheduler(i)->GetEngine());
+		async::AsyncSslNetIo* socket = new async::AsyncSslTcpSocket(GetEventScheduler(i)->GetEngine());
 		bool res = async::AsyncSocket(socket);
 		if( !res ) {
 			delete socket;
@@ -197,7 +196,6 @@ void TcpSslServer::Stop()
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
 	StopTimerSchedulers();
-	ClearCoroutineStore();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -268,7 +266,7 @@ void HttpServer::Stop()
 coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 {
 //     auto connection = operation.GetConnection();
-// 	async::IOVec iovec {
+// 	async::NetIOVec iovec {
 // 		.m_buf = new char[DEFAULT_READ_BUFFER_SIZE],
 // 		.m_len = DEFAULT_READ_BUFFER_SIZE
 // 	};

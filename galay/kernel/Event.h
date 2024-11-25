@@ -19,15 +19,16 @@ namespace galay::coroutine
 
 namespace galay::async
 {
-    class AsyncTcpSocket;
-    class AsyncTcpSslSocket;
-    class IOVec;
+    class AsyncNetIo;
+    class AsyncSslNetIo;
+    class NetIOVec;
+    class AsyncFileIo; 
 }
 
 namespace galay::action
 {
-    class TcpEventAction;
-    class TcpSslEventAction;
+    class NetEventAction;
+    class SslNetEventAction;
 }
 
 namespace galay
@@ -39,6 +40,7 @@ namespace galay
 namespace galay::event
 {
 #define DEFAULT_READ_BUFFER_SIZE    2048
+#define DEFAULT_IO_EVENTS_SIZE      1024
 
 enum EventType
 {
@@ -62,7 +64,8 @@ public:
     virtual void HandleEvent(EventEngine* engine) = 0;
     virtual EventType GetEventType() = 0;
     virtual GHandle GetHandle() = 0;
-    virtual EventEngine*& BelongEngine() = 0;
+    virtual bool SetEventEngine(EventEngine* engine) = 0;
+    virtual EventEngine* BelongEngine() = 0;
 };
 
 class CallbackEvent: public Event
@@ -73,12 +76,13 @@ public:
     inline virtual std::string Name() override { return "CallbackEvent"; }
     inline virtual EventType GetEventType() override { return m_type; }
     inline virtual GHandle GetHandle() override { return m_handle; }
-    virtual EventEngine*& BelongEngine() override;
+    virtual bool SetEventEngine(EventEngine* engine);
+    virtual EventEngine* BelongEngine() override;
     virtual ~CallbackEvent();
 private:
     EventType m_type;
     GHandle m_handle;
-    EventEngine* m_engine;
+    std::atomic<EventEngine*> m_engine;
     std::function<void(Event*, EventEngine*)> m_callback;
 };
 /*
@@ -119,11 +123,11 @@ private:
 class TimeEventIDStore
 {
 public:
+    using ptr = std::shared_ptr<TimeEventIDStore>;
     //[0, capacity)
     TimeEventIDStore(int capacity);
     bool GetEventId(int& id);
     bool RecycleEventId(int id);
-    ~TimeEventIDStore();
 private:
     int *m_temp;
     int m_capacity;
@@ -134,7 +138,7 @@ private:
 class TimeEvent: public Event
 {
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-    static TimeEventIDStore IDStroe; 
+    static TimeEventIDStore g_idStore; 
 #endif
 public:
     using ptr = std::shared_ptr<TimeEvent>;
@@ -145,7 +149,8 @@ public:
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual EventType GetEventType() override { return kEventTypeTimer; };
     inline virtual GHandle GetHandle() override { return m_handle; }
-    virtual EventEngine* &BelongEngine() override;
+    virtual bool SetEventEngine(EventEngine* engine);
+    virtual EventEngine* BelongEngine() override;
     Timer::ptr AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
     void ReAddTimer(int64_t during_time, Timer::ptr timer);
     virtual ~TimeEvent();
@@ -155,96 +160,99 @@ private:
 #endif
 private:
     GHandle m_handle;
-    EventEngine* m_engine;
+    std::atomic<EventEngine*> m_engine;
     std::shared_mutex m_mutex;
     std::priority_queue<Timer::ptr> m_timers;
 };
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 
-class TcpWaitEvent;
+class NetWaitEvent;
 class TcpSslWaitEvent;
 
 class ListenEvent: public Event
 {
 public:
-    ListenEvent(EventEngine* engine, async::AsyncTcpSocket* socket, TcpCallbackStore* callback_store);
+    ListenEvent(EventEngine* engine, async::AsyncNetIo* socket, TcpCallbackStore* callback_store);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "ListenEvent"; }
     inline virtual EventType GetEventType() override { return kEventTypeRead; }
     virtual GHandle GetHandle() override;
-    virtual EventEngine*& BelongEngine() override;
+    virtual bool SetEventEngine(EventEngine* engine);
+    virtual EventEngine* BelongEngine() override;
     virtual ~ListenEvent();
 private:
     coroutine::Coroutine CreateTcpSocket(EventEngine* engine);
 private:
-    EventEngine* m_engine;
-    async::AsyncTcpSocket* m_socket;
+    std::atomic<EventEngine*> m_engine;
+    async::AsyncNetIo* m_socket;
     TcpCallbackStore* m_callback_store;
 };
 
 class SslListenEvent: public Event
 {
 public:
-    SslListenEvent(EventEngine* engine, async::AsyncTcpSslSocket* socket, TcpSslCallbackStore* callback_store);
+    SslListenEvent(EventEngine* engine, async::AsyncSslNetIo* socket, TcpSslCallbackStore* callback_store);
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual std::string Name() override { return "SslListenEvent"; }
     inline virtual EventType GetEventType() override { return kEventTypeRead; }
     virtual GHandle GetHandle() override;
-    virtual EventEngine*& BelongEngine() override;
+    virtual bool SetEventEngine(EventEngine* engine);
+    virtual EventEngine* BelongEngine() override;
     virtual ~SslListenEvent();
 private:
     coroutine::Coroutine CreateTcpSslSocket(EventEngine* engine);
 private:
-    EventEngine* m_engine;
-    async::AsyncTcpSslSocket* m_socket;
+    std::atomic<EventEngine*> m_engine;
+    async::AsyncSslNetIo* m_socket;
     TcpSslCallbackStore* m_callback_store;
-    action::TcpSslEventAction* m_action;
+    action::SslNetEventAction* m_action;
 };
 
 
 class WaitEvent: public Event
 {
 public:
-    WaitEvent(EventEngine* engine = nullptr);
+    WaitEvent();
     /*
         OnWaitPrepare() return false coroutine will not suspend, else suspend
     */
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) = 0;
-    virtual EventEngine*& BelongEngine() override;
+    virtual bool SetEventEngine(EventEngine* engine) override;
+    virtual EventEngine* BelongEngine() override;
     virtual ~WaitEvent() = default;
 protected:
-    event::EventEngine* m_engine;
+    std::atomic<EventEngine*> m_engine;
     coroutine::Coroutine* m_waitco;
 };
 
-enum TcpWaitEventType
+enum NetWaitEventType
 {
-    kWaitEventTypeError,
-    kWaitEventTypeAccept,
-    kWaitEventTypeSslAccept,
-    kWaitEventTypeRecv,
-    kWaitEventTypeSslRecv,
-    kWaitEventTypeSend,
-    kWaitEventTypeSslSend,
-    kWaitEventTypeConnect,
-    kWaitEventTypeSslConnect,
-    kWaitEventTypeClose,
-    kWaitEventTypeSslClose,
+    kTcpWaitEventTypeError,
+    kTcpWaitEventTypeAccept,
+    kTcpWaitEventTypeSslAccept,
+    kTcpWaitEventTypeRecv,
+    kTcpWaitEventTypeSslRecv,
+    kTcpWaitEventTypeSend,
+    kTcpWaitEventTypeSslSend,
+    kTcpWaitEventTypeConnect,
+    kTcpWaitEventTypeSslConnect,
+    kTcpWaitEventTypeClose,
+    kTcpWaitEventTypeSslClose,
 };
 
-class TcpWaitEvent: public WaitEvent
+class NetWaitEvent: public WaitEvent
 {
 public:
-    TcpWaitEvent(async::AsyncTcpSocket* socket);
+    NetWaitEvent(async::AsyncNetIo* socket);
     
     virtual std::string Name() override;
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
     virtual void HandleEvent(EventEngine* engine) override;
     virtual EventType GetEventType() override;
     virtual GHandle GetHandle() override;
-    inline void ResetNetWaitEventType(TcpWaitEventType type) { m_type = type; }
-    inline async::AsyncTcpSocket* GetAsyncTcpSocket() { return m_socket; }
-    virtual ~TcpWaitEvent();
+    inline void ResetNetWaitEventType(NetWaitEventType type) { m_type = type; }
+    inline async::AsyncNetIo* GetAsyncTcpSocket() { return m_socket; }
+    virtual ~NetWaitEvent();
 protected:
     bool OnAcceptWaitPrepare(coroutine::Coroutine* co, void* ctx);
     bool OnRecvWaitPrepare(coroutine::Coroutine* co, void* ctx);
@@ -260,24 +268,24 @@ protected:
     void HandleCloseEvent(EventEngine* engine);
 
     // return recvByte
-    int DealRecv(async::IOVec* iov);
+    int DealRecv(async::NetIOVec* iov);
     // return sendByte
-    int DealSend(async::IOVec* iov);
+    int DealSend(async::NetIOVec* iov);
 protected:
-    TcpWaitEventType m_type;
+    NetWaitEventType m_type;
     void *m_ctx;
-    async::AsyncTcpSocket* m_socket;
+    async::AsyncNetIo* m_socket;
 };
 
-class TcpSslWaitEvent: public TcpWaitEvent
+class TcpSslWaitEvent: public NetWaitEvent
 {
 public:
-    TcpSslWaitEvent(async::AsyncTcpSslSocket* socket);
+    TcpSslWaitEvent(async::AsyncSslNetIo* socket);
     virtual std::string Name() override;
     virtual EventType GetEventType() override;
     virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
     virtual void HandleEvent(EventEngine* engine) override;
-    async::AsyncTcpSslSocket* GetAsyncTcpSocket();
+    async::AsyncSslNetIo* GetAsyncTcpSocket();
     virtual ~TcpSslWaitEvent();
 protected:
     bool OnSslAcceptWaitPrepare(coroutine::Coroutine* co, void* ctx);
@@ -294,9 +302,9 @@ protected:
 
     EventType CovertSSLErrorToEventType();
     // return recvByte
-    int DealRecv(async::IOVec* iovc);
+    int DealRecv(async::NetIOVec* iovc);
     // return sendByte
-    int DealSend(async::IOVec* iovc);
+    int DealSend(async::NetIOVec* iovc);
 private:
     int m_ssl_error;
 };
@@ -308,6 +316,37 @@ public:
 private:
     sockaddr* m_ToAddr;
     sockaddr* m_FromAddr;
+};
+
+enum FileIoWaitEventType
+{
+    kFileIoWaitEventTypeError,
+    kFileIoWaitEventTypeLinuxAio,
+    kFileIoWaitEventTypeRead,
+    kFileIoWaitEventTypeWrite,
+};
+
+class FileIoWaitEvent: public WaitEvent
+{
+public:
+    FileIoWaitEvent(async::AsyncFileIo* fileio);
+    virtual std::string Name() override;
+    virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
+    virtual void HandleEvent(EventEngine* engine) override;
+    virtual EventType GetEventType() override;
+    virtual GHandle GetHandle() override;
+    inline void ResetFileIoWaitEventType(FileIoWaitEventType type) { m_type = type; }
+    inline async::AsyncFileIo* GetAsyncTcpSocket() { return m_fileio; }
+    virtual ~FileIoWaitEvent();
+private:
+#ifdef __linux__
+    bool OnFileIoAioPrepare(coroutine::Coroutine* co, void* ctx);
+    void OnFileIoAioHandle(EventEngine* engine);
+#endif
+private:
+    void *m_ctx;
+    async::AsyncFileIo* m_fileio;
+    FileIoWaitEventType m_type;
 };
 
 //#elif defined(USE_KQUEUE)

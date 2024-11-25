@@ -29,6 +29,8 @@ const char* g_error_str[] = {
     "EpollCreate Error",
     "EventWrite Error",
     "KQueueCreate Error",
+    "LinuxAioSetup Error",
+    "LinuxAioSubmit Error",
 };
 
 uint32_t MakeErrorCode(uint16_t galay_code, uint16_t system_code)

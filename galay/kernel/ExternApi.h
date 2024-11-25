@@ -13,6 +13,7 @@ namespace galay::scheduler {
 
 namespace galay::coroutine {
     class Coroutine;
+    class CoroutineStore;
 }
 
 namespace galay {
@@ -24,11 +25,7 @@ extern "C" {
 /*
     Coroutine
 */
-
-void AddCoroutineToStore(coroutine::Coroutine* co);
-void RemoveCoroutineFromStore(coroutine::Coroutine* co);
-void ClearCoroutineStore();
-
+coroutine::CoroutineStore* GetThisThreadCoroutineStore();
 
 /*
    OpenSSL 
