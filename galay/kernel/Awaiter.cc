@@ -109,11 +109,6 @@ Coroutine *Awaiter_int::GetCoroutine()
     return nullptr;
 }
 
-Awaiter_int::~Awaiter_int()
-{
-    spdlog::info("Awaiter_int::~Awaiter_int: {}", (void*)this);
-}
-
 Awaiter_bool::Awaiter_bool(action::WaitAction* action, void* ctx)
 {
     this->m_action = action;

@@ -9,7 +9,10 @@ int main(int argc, char** argv)
         return -1;
     }
     spdlog::set_level(spdlog::level::debug);
-    galay::server::TcpSslServer server(argv[1], argv[2]);
+    galay::server::TcpSslServerConfig::ptr config = std::make_shared<galay::server::TcpSslServerConfig>();
+    config->m_cert_file = argv[1];
+    config->m_key_file = argv[2];
+    galay::server::TcpSslServer server(config);
     galay::TcpSslCallbackStore store([](galay::TcpSslOperation op)->galay::coroutine::Coroutine
     {
         auto connection = op.GetConnection();

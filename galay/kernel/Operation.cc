@@ -166,6 +166,11 @@ protocol::http::HttpResponse *HttpOperation::GetResponse()
     return m_proto_store->m_response;
 }
 
+TcpConnection::ptr HttpOperation::GetConnection()
+{
+    return m_operation.GetConnection();
+}
+
 void HttpOperation::Continue()
 {
     m_operation.ReExecute(m_operation);

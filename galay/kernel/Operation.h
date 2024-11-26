@@ -146,6 +146,7 @@ public:
     HttpOperation(TcpOperation operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
     protocol::http::HttpRequest* GetRequest();
     protocol::http::HttpResponse* GetResponse();
+    TcpConnection::ptr GetConnection();
     void Continue();
     ~HttpOperation();
 private:

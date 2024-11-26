@@ -26,12 +26,13 @@ TcpSslServerConfig::TcpSslServerConfig()
 {
 }
 
-TcpServer::TcpServer()
-	: m_is_running(false)
+HttpServerConfig::HttpServerConfig()
+	:m_max_header_size(DEFAULT_HTTP_MAX_HEADER_SIZE)
 {
 }
 
-TcpServer::TcpServer(const TcpServerConfig &config)
+
+TcpServer::TcpServer(TcpServerConfig::ptr config)
 {
 	m_config = config;
 }
@@ -39,25 +40,25 @@ TcpServer::TcpServer(const TcpServerConfig &config)
 void TcpServer::Start(TcpCallbackStore* store, int port)
 {
 	
-	DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
-	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
-	DynamicResizeTimerSchedulers(m_config.m_timer_scheduler_num);
+	DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
+	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num + m_config->m_event_scheduler_num);
+	DynamicResizeTimerSchedulers(m_config->m_timer_scheduler_num);
 	//coroutine scheduler
 	StartCoroutineSchedulers();
 	//net scheduler
-	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
+	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
 	{
-		GetEventScheduler(i)->Loop(m_config.m_network_scheduler_timeout_ms);
+		GetEventScheduler(i)->Loop(m_config->m_network_scheduler_timeout_ms);
 	}
 	//event scheduler
-	for( int i = m_config.m_network_scheduler_num; i < m_config.m_network_scheduler_num + m_config.m_event_scheduler_num; ++i )
+	for( int i = m_config->m_network_scheduler_num; i < m_config->m_network_scheduler_num + m_config->m_event_scheduler_num; ++i )
 	{
-		GetEventScheduler(i)->Loop(m_config.m_event_scheduler_timeout_ms);
+		GetEventScheduler(i)->Loop(m_config->m_event_scheduler_timeout_ms);
 	}
-	StartTimerSchedulers(m_config.m_timer_scheduler_timeout_ms);
+	StartTimerSchedulers(m_config->m_timer_scheduler_timeout_ms);
 	m_is_running = true;
-	m_listen_events.resize(m_config.m_network_scheduler_num);
-	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
+	m_listen_events.resize(m_config->m_network_scheduler_num);
+	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
 	{
 		async::AsyncNetIo* socket = new async::AsyncTcpSocket(GetEventScheduler(i)->GetEngine());
 		bool res = async::AsyncSocket(socket);
@@ -75,7 +76,7 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 		option.HandleReuseAddr();
 		option.HandleReusePort();
 		
-		if(!async::BindAndListen(socket, port, m_config.m_backlog)) {
+		if(!async::BindAndListen(socket, port, m_config->m_backlog)) {
 			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
 			delete socket;
 			for(int j = 0; j < i; ++j ){
@@ -99,6 +100,7 @@ void TcpServer::Stop()
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
 	StopTimerSchedulers();
+	GetThisThreadCoroutineStore()->Clear();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -107,45 +109,38 @@ TcpServer::~TcpServer()
 {
 }
 
-TcpSslServer::TcpSslServer(const char* cert_file, const char* key_file)
-	: m_config(), m_is_running(false)
-{
-	m_config.m_cert_file = cert_file;
-	m_config.m_key_file = key_file;
-}
-
-TcpSslServer::TcpSslServer(const TcpSslServerConfig &config)
+TcpSslServer::TcpSslServer(TcpSslServerConfig::ptr config)
 {
 	m_config = config;
 }
 
 void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 {
-    DynamicResizeCoroutineSchedulers(m_config.m_coroutine_scheduler_num);
-	DynamicResizeEventSchedulers(m_config.m_network_scheduler_num + m_config.m_event_scheduler_num);
-	DynamicResizeTimerSchedulers(m_config.m_timer_scheduler_num);
+    DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
+	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num + m_config->m_event_scheduler_num);
+	DynamicResizeTimerSchedulers(m_config->m_timer_scheduler_num);
 	//coroutine scheduler
 	StartCoroutineSchedulers();
 	//net scheduler
-	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
+	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
 	{
-		GetEventScheduler(i)->Loop(m_config.m_network_scheduler_timeout_ms);
+		GetEventScheduler(i)->Loop(m_config->m_network_scheduler_timeout_ms);
 	}
 	//event scheduler
-	for( int i = m_config.m_network_scheduler_num; i < m_config.m_network_scheduler_num + m_config.m_event_scheduler_num; ++i )
+	for( int i = m_config->m_network_scheduler_num; i < m_config->m_network_scheduler_num + m_config->m_event_scheduler_num; ++i )
 	{
-		GetEventScheduler(i)->Loop(m_config.m_event_scheduler_timeout_ms);
+		GetEventScheduler(i)->Loop(m_config->m_event_scheduler_timeout_ms);
 	}
-	StartTimerSchedulers(m_config.m_timer_scheduler_timeout_ms);
-	bool res = InitialSSLServerEnv(m_config.m_cert_file, m_config.m_key_file);
+	StartTimerSchedulers(m_config->m_timer_scheduler_timeout_ms);
+	bool res = InitialSSLServerEnv(m_config->m_cert_file, m_config->m_key_file);
 	if( !res ) {
 		spdlog::error("InitialSSLServerEnv failed, error:{}", ERR_error_string(ERR_get_error(), nullptr));
 		return;
 	}
 	m_is_running = true;
 	
-	m_listen_events.resize(m_config.m_network_scheduler_num);
-	for(int i = 0 ; i < m_config.m_network_scheduler_num; ++i )
+	m_listen_events.resize(m_config->m_network_scheduler_num);
+	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
 	{
 		async::AsyncSslNetIo* socket = new async::AsyncSslTcpSocket(GetEventScheduler(i)->GetEngine());
 		bool res = async::AsyncSocket(socket);
@@ -173,7 +168,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 			return;
 		}
 		
-		if(!async::BindAndListen(socket, port, m_config.m_backlog)) {
+		if(!async::BindAndListen(socket, port, m_config->m_backlog)) {
 			spdlog::error("BindAndListen failed, error:{}", error::GetErrorString(socket->GetErrorCode()));
 			delete socket;
 			for(int j = 0; j < i; ++j ){
@@ -196,6 +191,7 @@ void TcpSslServer::Stop()
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
 	StopTimerSchedulers();
+	GetThisThreadCoroutineStore()->Clear();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -208,15 +204,16 @@ TcpSslServer::~TcpSslServer()
 //HttpServer
 
 ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> HttpServer::g_http_proto_store;
-std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> HttpServer::m_route_map;
 protocol::http::HttpResponse HttpServer::g_method_not_allowed_resp;
 protocol::http::HttpResponse HttpServer::g_uri_too_long_resp;
 protocol::http::HttpResponse HttpServer::g_not_found_resp;
 
-HttpServer::HttpServer(uint32_t proto_capacity)
-	: m_store(std::make_unique<TcpCallbackStore>(HttpRoute))
+HttpServer::HttpServer(HttpServerConfig::ptr config)
+	: TcpServer(config), m_store(std::make_unique<TcpCallbackStore>([this](TcpOperation operation)->coroutine::Coroutine {
+		return HttpRoute(operation);
+	}))
 {
-	g_http_proto_store.Initial(proto_capacity);
+	g_http_proto_store.Initial(config->m_proto_capacity);
 	helper::http::HttpHelper::DefaultNotFound(&g_not_found_resp);
 	helper::http::HttpHelper::DefaultUriTooLong(&g_uri_too_long_resp);
 	helper::http::HttpHelper::DefaultMethodNotAllowed(&g_method_not_allowed_resp);
@@ -265,18 +262,102 @@ void HttpServer::Stop()
 
 coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 {
-//     auto connection = operation.GetConnection();
-// 	async::NetIOVec iovec {
-// 		.m_buf = new char[DEFAULT_READ_BUFFER_SIZE],
-// 		.m_len = DEFAULT_READ_BUFFER_SIZE
-// 	};
-// 	int length = co_await async::AsyncRecv(connection->GetSocket(), &iovec);
-// 	if( length == 0 ) {
-// 		if(operation.GetContext().has_value()) {
-// 			auto request = std::any_cast<protocol::http::HttpRequest*>(operation.GetContext());
-// 			ReturnRequest(request);
-// 		}
-// 		co_return;
+    auto connection = operation.GetConnection();
+	auto request = g_http_proto_store.GetRequest();
+	auto response = g_http_proto_store.GetResponse();
+	HttpOperation httpop(operation, request, response);
+	size_t max_header_len = std::dynamic_pointer_cast<HttpServerConfig>(m_config)->m_max_header_size;
+	char* buffer = (char*)malloc(max_header_len);
+	int total_length;
+	async::NetIOVec iovec {
+		.m_buf = buffer,
+		.m_len = max_header_len
+	};
+	int elength = 0;
+	while(1) {
+		int length = co_await async::AsyncRecv(connection->GetSocket(), &iovec);
+		if( length == 0 ) {
+			break;
+		} else {
+			total_length += length;
+			int ret = request->DecodePdu(std::string_view(buffer + elength, total_length - elength));
+			if( ret > 0) elength += ret;
+			if(request->HasError()) {
+				if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete && ret >= max_header_len) 
+				{
+					//header too long
+					
+				}
+				else if(request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
+				{
+					int body_len = 0;
+					try
+					{
+						do{
+							std::string temp = request->Header()->HeaderPairs().GetValue("Content-Length");
+							if(!temp.empty()) {
+								body_len = std::stoi(temp);
+								break;
+							}
+							temp = request->Header()->HeaderPairs().GetValue("Content-Length");
+							if(!temp.empty()) {
+								body_len = std::stoi(temp);
+								break;
+							}
+							body_len = DEFAULT_READ_BUFFER_SIZE;
+						}while(0);
+					}
+					catch(const std::exception& e)
+					{
+						spdlog::error("{}", e.what());
+						break;
+					}
+					buffer = (char*)realloc(buffer, elength + body_len);
+					iovec.m_buf = buffer + elength;
+					iovec.m_len = body_len;
+				}
+				else if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ) {
+					auto resp = g_uri_too_long_resp.EncodePdu();
+					async::NetIOVec wiov {
+						.m_buf = resp.data(),
+						.m_len = resp.length()
+					};
+					int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
+					break;
+				}else{
+					break;
+				}
+			}else{
+				auto it = m_route_map.find(request->Header()->Method());
+				if( it != m_route_map.end()){
+					auto inner_it = it->second.find(request->Header()->Uri());
+					if (inner_it != it->second.end()) {
+						inner_it->second(httpop);
+					} else {
+						auto resp = g_not_found_resp.EncodePdu();
+						async::NetIOVec wiov {
+							.m_buf = resp.data(),
+							.m_len = resp.length()
+						};
+						int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
+						break;
+					}
+				} else {
+					auto resp = g_method_not_allowed_resp.EncodePdu();
+					async::NetIOVec wiov {
+						.m_buf = resp.data(),
+						.m_len = resp.length()
+					};
+					int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
+					break;
+				}
+
+			}
+		}
+		free(iovec.m_buf);
+		co_await async::AsyncClose(connection->GetSocket());
+		co_return;
+	}
 // 	} else {
 // 		protocol::http::HttpRequest* request = nullptr;
 // 		if(!operation.GetContext().has_value()) request = g_http_proto_store.GetRequest();

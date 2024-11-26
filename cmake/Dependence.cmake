@@ -38,3 +38,35 @@ if(SPDLOG_INCLUDE_DIR AND SPDLOG_LIBRARY)
 else()
     message(FATAL_ERROR "spdlog not found")
 endif()
+
+#libaio
+
+find_path(  LIBAIO_INCLUDE_DIR 
+            NAMES libaio.h 
+            PATHS
+                /usr/local/include
+                /usr/include
+                ${CMAKE_PREFIX_PATH}/include
+                $ENV{LIBAIO_ROOT}/include
+                ${LIBAIO_ROOT}/include
+            DOC "The directory where libaio headers reside"
+        )
+
+find_library(   LIBAIO_LIBRARY 
+                NAMES aio
+                PATHS
+                    /usr/local/lib
+                    /usr/lib
+                    ${CMAKE_PREFIX_PATH}/lib
+                    $ENV{LIBAIO_ROOT}/lib
+                    ${LIBAIO_ROOT}/lib
+                DOC "The libaio library"
+            )
+
+if(LIBAIO_INCLUDE_DIR AND LIBAIO_LIBRARY)
+    message(STATUS "libaio found")
+    include_directories(${LIBAIO_INCLUDE_DIR})
+    set(LIBAIO_FOUND TRUE)
+else()
+    message(FATAL_ERROR "libaio not found")
+endif()

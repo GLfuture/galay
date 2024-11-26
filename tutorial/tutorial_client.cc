@@ -36,10 +36,19 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
         length = co_await galay::async::AsyncRecv(socket, &iov2);
         delete[] iov2.m_buf;
         bool res = co_await galay::async::AsyncClose(socket);
+        if (!res)
+        {
+            std::cout << "close failed" << std::endl;
+        }
     }
     int64_t finish = galay::time::GetCurrentTime();
     std::cout << i - begin << " requests in " << finish - start << " ms" << std::endl;
     co_return;
+}
+
+void pack(galay::event::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
+{
+    test(engine, sockets, begin, end);
 }
 
 galay::async::AsyncNetIo* initSocket()
@@ -56,13 +65,12 @@ int main(int argc, char* argv[])
         std::cout << "./tutorial_client [port]\n";
         return -1;
     }
-    spdlog::set_level(spdlog::level::debug);
     g_port = atoi(argv[1]);
     galay::DynamicResizeCoroutineSchedulers(1);
     galay::StartCoroutineSchedulers();
     galay::DynamicResizeEventSchedulers(1);
     galay::StartEventSchedulers(-1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     std::vector<galay::async::AsyncNetIo*> sockets;
     for (size_t i = 0; i < 2048; ++i)
     {
@@ -72,7 +80,7 @@ int main(int argc, char* argv[])
     std::vector<std::thread> ths;
     for( int i = 0 ; i < 8 ; ++i )
     {
-        ths.push_back(std::thread(std::bind(test, galay::GetEventScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
+        ths.push_back(std::thread(std::bind(pack, galay::GetEventScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
         ths[i].detach();
     }
     getchar();

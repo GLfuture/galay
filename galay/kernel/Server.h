@@ -49,9 +49,13 @@ namespace galay::server
 #define DEFAULT_SERVER_OTHER_SCHEDULER_TIMEOUT_MS       -1
 #define DEFAULT_SERVER_TIMER_SCHEDULER_NUM              1
 #define DEFAULT_SERVER_TIMER_SCHEDULER_TIMEOUT_MS       -1
+
+
+#define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
     
     struct TcpServerConfig
     {
+        using ptr = std::shared_ptr<TcpServerConfig>;
         TcpServerConfig();
         int m_backlog;                          // 半连接队列长度
         int m_coroutine_scheduler_num;          // 协程线程个数
@@ -61,13 +65,26 @@ namespace galay::server
         int m_event_scheduler_timeout_ms;       // EventEngine返回一次的超时
         int m_timer_scheduler_num;              // 定时线程个数
         int m_timer_scheduler_timeout_ms;       // EventEngine返回一次的超时
+        virtual ~TcpServerConfig() = default;
     };
 
     struct TcpSslServerConfig: public TcpServerConfig
     {
+        using ptr = std::shared_ptr<TcpSslServerConfig>;
         TcpSslServerConfig();
         const char* m_cert_file;    //.crt 文件
         const char* m_key_file;     //.key 文件
+        virtual ~TcpSslServerConfig() = default;
+    };
+
+    struct HttpServerConfig: public TcpServerConfig
+    {
+        using ptr = std::shared_ptr<HttpServerConfig>;
+        HttpServerConfig();
+        uint32_t m_proto_capacity;          // 协议对象池容量
+        uint32_t m_max_header_size;
+
+        virtual ~HttpServerConfig() = default;
     };
 
     class Server
@@ -78,15 +95,14 @@ namespace galay::server
     class TcpServer: public Server
     {
     public:
-        TcpServer();
-        TcpServer(const TcpServerConfig& config);
+        TcpServer(TcpServerConfig::ptr config);
         //no block
         void Start(TcpCallbackStore* store, int port);
         void Stop();
         inline bool IsRunning() { return m_is_running; }
         virtual ~TcpServer();
     protected:
-        TcpServerConfig m_config;
+        TcpServerConfig::ptr m_config;
         std::atomic_bool m_is_running;
         std::vector<event::ListenEvent*> m_listen_events;
     };
@@ -94,15 +110,14 @@ namespace galay::server
     class TcpSslServer: public Server
     {
     public:
-        TcpSslServer(const char* cert_file, const char* key_file);
-        TcpSslServer(const TcpSslServerConfig& config);
+        TcpSslServer(TcpSslServerConfig::ptr config);
         //no block
         void Start(TcpSslCallbackStore* store, int port);
         void Stop();
         inline bool IsRunning() { return m_is_running; }
         virtual ~TcpSslServer();
     protected:
-        TcpSslServerConfig m_config;
+        TcpSslServerConfig::ptr m_config;
         std::atomic_bool m_is_running;
         std::vector<event::SslListenEvent*> m_listen_events;
     };
@@ -199,7 +214,7 @@ namespace galay::server
         static protocol::http::HttpResponse g_uri_too_long_resp;
         static protocol::http::HttpResponse g_not_found_resp;
     public:
-        HttpServer(uint32_t proto_capacity = DEFAULT_PROTOCOL_CAPACITY);
+        HttpServer(HttpServerConfig::ptr config);
         
         static void ReturnResponse(protocol::http::HttpResponse* response);
         static void ReturnRequest(protocol::http::HttpRequest* request);
@@ -215,10 +230,10 @@ namespace galay::server
         void Start(int port);
         void Stop();
     private:
-        static coroutine::Coroutine HttpRoute(TcpOperation operation);
+        coroutine::Coroutine HttpRoute(TcpOperation operation);
     private:
         std::unique_ptr<TcpCallbackStore> m_store;
-        static std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
+        std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
     };
 
     class HttpspServer

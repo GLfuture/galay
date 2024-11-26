@@ -51,7 +51,6 @@ public:
     int await_resume() const noexcept;
     virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
     Coroutine* GetCoroutine();
-    ~Awaiter_int();
 private:
     void* m_ctx;
     int m_result;

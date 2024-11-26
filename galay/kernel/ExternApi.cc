@@ -4,7 +4,7 @@
 
 namespace galay
 {
-thread_local coroutine::CoroutineStore g_coroutine_store;
+coroutine::CoroutineStore g_coroutine_store;
 
 std::vector<scheduler::CoroutineScheduler*> g_coroutine_schedulers;
 std::vector<scheduler::EventScheduler*> g_event_schedulers;

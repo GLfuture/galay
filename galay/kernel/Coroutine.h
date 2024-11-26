@@ -6,9 +6,11 @@
 #include <atomic>
 #include <coroutine>
 #include <variant>
+#include <mutex>
+#include <list>
 #include <string>
+#include <optional>
 #include "galay/common/Base.h"
-#include "galay/util/ThreadSefe.hpp"
 
 namespace galay::action
 {
@@ -44,7 +46,8 @@ public:
     void RemoveCoroutine(Coroutine* co);
     void Clear();
 private:
-    thread::safe::List<Coroutine*> m_coroutines;
+    std::mutex m_mutex;
+    std::list<Coroutine*> m_coroutines;
 };
 
 //如果上一个协程还在执行过程中没有到达暂停点，resume会从第一个暂停点重新执行
@@ -82,11 +85,11 @@ public:
     inline void Resume() { return m_handle.resume(); }
     bool SetAwaiter(Awaiter* awaiter);
     Awaiter* GetAwaiter();
-    inline thread::safe::ListNode<Coroutine*>*& GetListNode() { return m_node; }
+    inline std::optional<std::list<Coroutine*>::iterator>& GetListNode() { return m_node; }
     ~Coroutine() = default;
 private:
     std::atomic<Awaiter*> m_awaiter = nullptr;
-    thread::safe::ListNode<Coroutine*>* m_node;
+    std::optional<std::list<Coroutine*>::iterator> m_node;
     std::coroutine_handle<promise_type> m_handle;
 };
 

@@ -1,6 +1,5 @@
 #include "galay/galay.h"
 #include "galay/util/Io.h"
-#include <spdlog/spdlog.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
@@ -14,7 +13,9 @@ Coroutine test(int fd)
     galay::async::AsyncFileNativeAio fileio((int)128, galay::GetEventScheduler(0)->GetEngine());
     void* buffer;
     posix_memalign(&buffer, PEER_SIZE, PEER_SIZE * 10);
-    memset(buffer, 1, PEER_SIZE * 10);
+    for(int i = 0; i < PEER_SIZE * 10; ++i) {
+        ((char*)buffer)[i] = 'a';
+    }
     fileio.PrepareWrite(GHandle{fd}, (char*)buffer, PEER_SIZE * 10, 0);
     int ret = co_await fileio.Commit();
     printf("ret: %d\n", ret);
@@ -40,12 +41,11 @@ Coroutine test(int fd)
 
 int main()
 {
-    spdlog::set_level(spdlog::level::debug);
     galay::DynamicResizeEventSchedulers(1);
     galay::DynamicResizeCoroutineSchedulers(1);
     galay::StartEventSchedulers(-1);
     galay::StartCoroutineSchedulers();
-    int fd = open("test.txt", O_RDWR | O_CREAT | O_DIRECT);
+    int fd = open("test.txt", O_RDWR | O_CREAT | O_DIRECT, 0666);
     if (fd < 0) {
         printf("open file failed\n");
         std::cout << strerror(errno) << std::endl;
@@ -56,6 +56,7 @@ int main()
     getchar();
     galay::StopCoroutineSchedulers();
     galay::StopEventSchedulers();
+    remove("test.txt");
     return 0;
 }
 

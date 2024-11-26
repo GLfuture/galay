@@ -1,5 +1,5 @@
 project(tutorial)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 set(SRC_LIST 
     tutorial_client.cc
     tutorial_echo_server.cc
@@ -19,7 +19,7 @@ foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
     target_link_directories(${EXECUTABLE_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/build/galay)
-    target_link_libraries(${EXECUTABLE_NAME} galay-static aio)
+    target_link_libraries(${EXECUTABLE_NAME} galay-static)
 endforeach()
 
 if(ETCD_FOUND)

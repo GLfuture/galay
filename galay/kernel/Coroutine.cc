@@ -4,7 +4,6 @@
 #include "Scheduler.h"
 #include "WaitAction.h"
 #include "ExternApi.h"
-#include <spdlog/spdlog.h>
 
 namespace galay::coroutine
 {
@@ -23,24 +22,28 @@ void Coroutine::promise_type::return_void() noexcept
 
 void CoroutineStore::AddCoroutine(Coroutine *co)
 {
-    auto node = m_coroutines.PushBack(co);
-    co->GetListNode() = node;
+    std::lock_guard lk(m_mutex);
+    m_coroutines.push_back(co);
+    co->GetListNode() = std::prev(m_coroutines.end());
 }
 
 void CoroutineStore::RemoveCoroutine(Coroutine *co)
 {
-    m_coroutines.Remove(co->GetListNode());
-    co->GetListNode() = nullptr;
+    if(!co->GetListNode().has_value()) return;
+    std::lock_guard lk(m_mutex);
+    m_coroutines.erase(co->GetListNode().value());
+    co->GetListNode().reset();
 }
 
 void CoroutineStore::Clear()
 {
-    while(!m_coroutines.Empty())
+    std::lock_guard lk(m_mutex);
+    while(!m_coroutines.empty())
     {
-        auto node = m_coroutines.PopFront();
+        auto node = m_coroutines.front();
+        m_coroutines.pop_front();
         if(node){
-            node->m_data->Destroy();
-            delete node;
+            node->Destroy();
         }
     }
 }
@@ -48,7 +51,6 @@ void CoroutineStore::Clear()
 Coroutine::Coroutine(std::coroutine_handle<promise_type> handle) noexcept
 {
     this->m_handle = handle;
-    this->m_node = nullptr;
     this->m_awaiter = nullptr;
 }
 
@@ -57,7 +59,7 @@ Coroutine::Coroutine(Coroutine&& other) noexcept
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
     this->m_node = other.m_node;
-    other.m_node = nullptr;
+    other.m_node.reset();
     this->m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
 }
@@ -75,7 +77,7 @@ Coroutine::operator=(Coroutine&& other) noexcept
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
     this->m_node = other.m_node;
-    other.m_node = nullptr;
+    other.m_node.reset();
     this->m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
     return *this;
@@ -89,18 +91,15 @@ void Coroutine::Destroy()
 
 bool Coroutine::SetAwaiter(Awaiter *awaiter)
 {
-    spdlog::info("SetAwaiter begin: {}", (void*)awaiter);
     Awaiter* t = m_awaiter.load();
     if(!m_awaiter.compare_exchange_strong(t, awaiter)) {
         return false;
     }
-    spdlog::info("SetAwaiter after: {}", (void*)m_awaiter.load());
     return true;
 }
 
 Awaiter *Coroutine::GetAwaiter()
 {
-    spdlog::info("GetAwaiter: {}", (void*)m_awaiter.load());
     return m_awaiter.load();
 }
 
