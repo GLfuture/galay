@@ -229,9 +229,8 @@ Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(Timer::pt
 #if defined(__linux__)
     UpdateTimers();
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-    m_engine->ModEvent(this, timer.get());
+    m_engine.load()->ModEvent(this, timer.get());
 #endif
-    
     return timer;
 }
 
@@ -245,7 +244,7 @@ void TimeEvent::ReAddTimer(int64_t during_time, Timer::ptr timer)
 #if defined(__linux__)
     UpdateTimers();
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-    m_engine->ModEvent(this, timer.get());
+    m_engine.load()->ModEvent(this, timer.get());
 #endif
 }
 
@@ -1171,20 +1170,18 @@ bool FileIoWaitEvent::OnWaitPrepare(coroutine::Coroutine *co, void *ctx)
     this->m_ctx = ctx;
     switch (m_type)
     {
-    #ifdef __linux__
-        case kFileIoWaitEventTypeLinuxAio:
-            return OnFileIoAioPrepare(co, ctx);
-    #endif
-        case kFileIoWaitEventTypeRead:
-            break;
-        case kFileIoWaitEventTypeWrite:
-            
-            break;
-        default:
-            break;
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return OnAioWaitPrepare(co, ctx);
+#endif
+    case kFileIoWaitEventTypeRead:
+        return OnReadWaitPrepare(co, ctx);
+    case kFileIoWaitEventTypeWrite:
+        return OnWriteWaitPrepare(co, ctx);
+    default:
+        break;
     }
-
-    return true;
+    return false;
 }
 
 void FileIoWaitEvent::HandleEvent(EventEngine *engine)
@@ -1193,9 +1190,15 @@ void FileIoWaitEvent::HandleEvent(EventEngine *engine)
     {
 #ifdef __linux__
     case kFileIoWaitEventTypeLinuxAio:
-        OnFileIoAioHandle(engine);
+        HandleAioEvent(engine);
         break;
 #endif
+    case kFileIoWaitEventTypeRead:
+        HandleReadEvent(engine);
+        break;
+    case kFileIoWaitEventTypeWrite:
+        HandleWriteEvent(engine);
+        break;
     default:
         break;
     }
@@ -1205,12 +1208,16 @@ EventType FileIoWaitEvent::GetEventType()
 {
     switch (m_type)
     {
+#ifdef __linux__
     case kFileIoWaitEventTypeLinuxAio:
         return kEventTypeRead;
-    default:
-        break;
+#endif
+    case kFileIoWaitEventTypeRead:
+        return kEventTypeRead;
+    case kFileIoWaitEventTypeWrite:
+        return kEventTypeWrite;
     }
-    return kEventTypeRead;
+    return kEventTypeNone;
 }
 
 GHandle FileIoWaitEvent::GetHandle()
@@ -1226,13 +1233,13 @@ FileIoWaitEvent::~FileIoWaitEvent()
 }
 
 #ifdef __linux__
-bool FileIoWaitEvent::OnFileIoAioPrepare(coroutine::Coroutine *co, void *ctx)
+bool FileIoWaitEvent::OnAioWaitPrepare(coroutine::Coroutine *co, void *ctx)
 {
     return true;
 }
 
 
-void FileIoWaitEvent::OnFileIoAioHandle(EventEngine* engine)
+void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
 {
     uint64_t finish_nums = 0;
     read(m_fileio->GetHandle().fd, &finish_nums, sizeof(uint64_t));
@@ -1251,6 +1258,112 @@ void FileIoWaitEvent::OnFileIoAioHandle(EventEngine* engine)
         GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
     }
 }
-
 #endif
+
+bool FileIoWaitEvent::OnReadWaitPrepare(coroutine::Coroutine *co, void *ctx)
+{
+    async::FileIOVec* vec = (async::FileIOVec*)ctx;
+    int elength = 0;
+    do{
+        int ret =  read(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
+        spdlog::debug("read ret:{}, offset: {}, length: {}, elength: {}", ret, vec->m_offset, vec->m_length, elength);
+        if(ret < 0){
+            if(elength == 0 ){
+                if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+                    return true;
+                }else {
+                    elength = -1;
+                    m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        elength += ret;
+    }while (elength < vec->m_length);
+    co->GetAwaiter()->SetResult(elength);
+    return false;
+}
+
+void FileIoWaitEvent::HandleReadEvent(EventEngine *engine)
+{
+    async::FileIOVec* vec = (async::FileIOVec*)m_ctx;
+    int elength = 0;
+    do{
+        int ret =  read(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
+        spdlog::debug("read ret:{}", ret);
+        if(ret < 0){
+            if(elength == 0 ){
+                if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+                    break;
+                }else {
+                    elength = -1;
+                    m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        elength += ret;
+    }while (elength < vec->m_length);
+    engine->DelEvent(this, nullptr);
+    m_waitco->GetAwaiter()->SetResult(elength);
+    GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+}
+
+bool FileIoWaitEvent::OnWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
+{
+    async::FileIOVec* vec = (async::FileIOVec*)ctx;
+    int elength = 0;
+    do{
+        int ret =  write(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
+        spdlog::debug("write ret:{}", ret);
+        if(ret < 0){
+            if(elength == 0 ){
+                if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+                    return true;
+                }else {
+                    elength = -1;
+                    m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        elength += ret;
+    } while (elength < vec->m_length);
+    co->GetAwaiter()->SetResult(elength);
+    return false;
+}
+
+void FileIoWaitEvent::HandleWriteEvent(EventEngine *engine)
+{
+    async::FileIOVec* vec = (async::FileIOVec*)m_ctx;
+    int elength = 0;
+    do{
+        int ret =  write(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
+        spdlog::debug("write ret:{}", ret);
+        if(ret < 0){
+            if(elength == 0 ){
+                if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+                    break;
+                }else {
+                    elength = -1;
+                    m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        elength += ret;
+    }while (elength < vec->m_length);
+    engine->DelEvent(this, nullptr);
+    m_waitco->GetAwaiter()->SetResult(elength);
+    GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+}
+
 }

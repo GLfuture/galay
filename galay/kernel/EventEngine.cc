@@ -252,6 +252,7 @@ bool KqueueEventEngine::Loop(int timeout)
         if(nEvents < 0) {
             continue;
         };
+        spdlog::debug("kevent return {}", nEvents);
         for(int i = 0; i < nEvents; ++i)
         {
             Event* event = (Event*)m_events[i].udata;
@@ -347,7 +348,6 @@ int KqueueEventEngine::DelEvent(Event *event, void* ctx)
 
 KqueueEventEngine::~KqueueEventEngine()
 {
-    spdlog::info("~KqueueEventEngine");
 }
 
 bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void *ctx)

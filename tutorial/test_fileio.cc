@@ -3,13 +3,16 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 #define PEER_SIZE 512
 
 using galay::coroutine::Coroutine;
 
+#ifdef __linux__
 Coroutine test(int fd)
 {
+    GHandle handle = co_await galay::async::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, 0644);
     galay::async::AsyncFileNativeAio fileio((int)128, galay::GetEventScheduler(0)->GetEngine());
     void* buffer;
     posix_memalign(&buffer, PEER_SIZE, PEER_SIZE * 10);
@@ -37,22 +40,96 @@ Coroutine test(int fd)
     close(fd);
     co_return;
 }
+#else
+galay::coroutine::Coroutine test()
+{
+    GHandle handle = co_await galay::async::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    galay::async::AsyncFileDiscreptor fileio(galay::GetEventScheduler(0)->GetEngine());
+    fileio.GetHandle() = handle;
+    galay::async::FileIOVec vec{
+        .m_buf = (char*) malloc( 10 * 1024 * 1024),
+        .m_length = 10 * 1024 * 1024,
+        .m_offset = 0
+    };
+    for(int i = 0; i < 10 * 1024 * 1024; ++i) {
+        if( i % 128 == 0) {
+            vec.m_buf[i] = '\n';
+        } else {
+            vec.m_buf[i] = 'a';
+        }
+    }
+    printf("write file\n");
+    int length = 10 * 1024 * 1024;
+    while(true){
+        int size = co_await galay::async::AsyncFileWrite(&fileio, &vec);
+        printf("write size: %d\n", size);
+        if(size < 0) {
+            printf("write error: %s\n", galay::error::GetErrorString(fileio.GetErrorCode()).c_str());
+            break;
+        }
+        length -= size;
+        vec.m_offset += size;
+        vec.m_length -= size;
+        if(length <= 0) {
+            break;
+        }
+    }
+    getchar();
+    free(vec.m_buf);
+    fflush(NULL);
+
+    // 再次读取
+    lseek(handle.fd, 0, SEEK_SET);  // 将文件指针移回文件开头
+    galay::async::FileIOVec vec2 {
+        .m_buf = (char*) malloc( 10 * 1024 * 1024),
+        .m_length = 10 * 1024 * 1024,
+        .m_offset = 0
+    };
+    length = 10 * 1024 * 1024;
+    while(true)
+    {
+        int size = co_await galay::async::AsyncFileRead(&fileio, &vec2);
+        printf("read size %d\n", size);
+        if(size <= 0) {
+            printf("write error: %s\n", galay::error::GetErrorString(fileio.GetErrorCode()).c_str());
+            break;
+        }
+        length -= size;
+        vec.m_offset += size;
+        vec.m_length -= size;
+        if(length <= 0) {
+            break;
+        }
+    }
+    for(int i = 0; i < 10 * 1024 * 1024; ++i) {
+        if( i % 128 == 0) {
+            if(vec2.m_buf[i] != '\n') {
+                printf("error\n");
+            }
+        } else {
+            if(vec2.m_buf[i] != 'a'){
+                printf("error\n");
+            }
+        }
+    }
+    printf("success\n");
+    free(vec2.m_buf);
+    close(handle.fd);
+}
+
+#endif
+
 
 
 int main()
 {
+    spdlog::set_level(spdlog::level::debug);
     galay::DynamicResizeEventSchedulers(1);
     galay::DynamicResizeCoroutineSchedulers(1);
     galay::StartEventSchedulers(-1);
     galay::StartCoroutineSchedulers();
-    int fd = open("test.txt", O_RDWR | O_CREAT | O_DIRECT, 0666);
-    if (fd < 0) {
-        printf("open file failed\n");
-        std::cout << strerror(errno) << std::endl;
-        return -1;
-    }
-    std::cout << fd << std::endl;
-    test(fd);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    test();
     getchar();
     galay::StopCoroutineSchedulers();
     galay::StopEventSchedulers();

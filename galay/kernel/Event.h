@@ -76,7 +76,7 @@ public:
     inline virtual std::string Name() override { return "CallbackEvent"; }
     inline virtual EventType GetEventType() override { return m_type; }
     inline virtual GHandle GetHandle() override { return m_handle; }
-    virtual bool SetEventEngine(EventEngine* engine);
+    virtual bool SetEventEngine(EventEngine* engine) override;
     virtual EventEngine* BelongEngine() override;
     virtual ~CallbackEvent();
 private:
@@ -149,7 +149,7 @@ public:
     virtual void HandleEvent(EventEngine* engine) override;
     inline virtual EventType GetEventType() override { return kEventTypeTimer; };
     inline virtual GHandle GetHandle() override { return m_handle; }
-    virtual bool SetEventEngine(EventEngine* engine);
+    virtual bool SetEventEngine(EventEngine* engine) override;
     virtual EventEngine* BelongEngine() override;
     Timer::ptr AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
     void ReAddTimer(int64_t during_time, Timer::ptr timer);
@@ -177,7 +177,7 @@ public:
     inline virtual std::string Name() override { return "ListenEvent"; }
     inline virtual EventType GetEventType() override { return kEventTypeRead; }
     virtual GHandle GetHandle() override;
-    virtual bool SetEventEngine(EventEngine* engine);
+    virtual bool SetEventEngine(EventEngine* engine) override;
     virtual EventEngine* BelongEngine() override;
     virtual ~ListenEvent();
 private:
@@ -196,7 +196,7 @@ public:
     inline virtual std::string Name() override { return "SslListenEvent"; }
     inline virtual EventType GetEventType() override { return kEventTypeRead; }
     virtual GHandle GetHandle() override;
-    virtual bool SetEventEngine(EventEngine* engine);
+    virtual bool SetEventEngine(EventEngine* engine) override;
     virtual EventEngine* BelongEngine() override;
     virtual ~SslListenEvent();
 private:
@@ -321,7 +321,9 @@ private:
 enum FileIoWaitEventType
 {
     kFileIoWaitEventTypeError,
+#ifdef __linux__
     kFileIoWaitEventTypeLinuxAio,
+#endif
     kFileIoWaitEventTypeRead,
     kFileIoWaitEventTypeWrite,
 };
@@ -340,9 +342,13 @@ public:
     virtual ~FileIoWaitEvent();
 private:
 #ifdef __linux__
-    bool OnFileIoAioPrepare(coroutine::Coroutine* co, void* ctx);
-    void OnFileIoAioHandle(EventEngine* engine);
+    bool OnAioWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    void HandleAioEvent(EventEngine* engine);
 #endif
+    bool OnReadWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    void HandleReadEvent(EventEngine* engine);
+    bool OnWriteWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    void HandleWriteEvent(EventEngine* engine);
 private:
     void *m_ctx;
     async::AsyncFileIo* m_fileio;

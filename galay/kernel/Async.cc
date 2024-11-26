@@ -211,6 +211,9 @@ coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, int flags, mode_t mod
 #if defined(__linux__) || defined(__APPLE__) 
     int fd = open(path, flags);
 #endif
+    GHandle handle = GHandle{fd};
+    HandleOption option(handle);
+    option.HandleNonBlock();
     return coroutine::Awaiter_GHandle(GHandle{fd});
 }
 
@@ -287,6 +290,11 @@ AsyncFileIo::AsyncFileIo(event::EventEngine* engine)
 {
     event::FileIoWaitEvent* event = new event::FileIoWaitEvent(this);
     m_action = new action::FileIoEventAction(engine, event);
+}
+
+HandleOption AsyncFileIo::GetOption()
+{
+    return HandleOption(m_handle);
 }
 
 AsyncFileIo::~AsyncFileIo()
@@ -381,5 +389,10 @@ AsyncFileNativeAio::~AsyncFileNativeAio()
 }
 
 #endif
+
+AsyncFileDiscreptor::AsyncFileDiscreptor(event::EventEngine *engine)
+    :AsyncFileIo(engine)
+{
+}
 
 }

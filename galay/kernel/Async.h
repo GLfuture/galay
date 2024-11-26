@@ -98,6 +98,8 @@ coroutine::Awaiter_bool AsyncSSLClose(AsyncSslNetIo* asocket);
     ****************************
 */
 coroutine::Awaiter_GHandle AsyncFileOpen(const char* path, int flags, mode_t mode);
+coroutine::Awaiter_int AsyncFileRead(AsyncFileIo* afile, FileIOVec* iov);
+coroutine::Awaiter_int AsyncFileWrite(AsyncFileIo* afile, FileIOVec* iov);
 
 }
 
@@ -151,16 +153,12 @@ private:
     uint32_t m_error_code;
 };
 
-enum class FileIoType: int
-{
-    kFileIOLinuxNativeAio,
-};
-
 class AsyncFileIo
 {
 public:
     using ptr = std::shared_ptr<AsyncFileIo>;
     AsyncFileIo(event::EventEngine* engine);
+    HandleOption GetOption();
     inline action::FileIoEventAction*& GetAction() { return m_action; };
     inline GHandle& GetHandle() { return m_handle; }
     inline uint32_t& GetErrorCode() { return m_error_code; }
@@ -172,6 +170,12 @@ private:
     action::FileIoEventAction* m_action;
 };
 
+class AsyncFileDiscreptor: public AsyncFileIo
+{
+public:
+    using ptr = std::shared_ptr<AsyncFileDiscreptor>;
+    AsyncFileDiscreptor(event::EventEngine* engine);
+};
 
 #ifdef  __linux__
 

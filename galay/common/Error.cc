@@ -18,6 +18,8 @@ const char* g_error_str[] = {
     "SSLAccept Error",
     "SSLConnect Error",
     "SSLClose Error",
+    "FileRead Error",
+    "FileWrite Error",
     "AddEvent Error",
     "ModEvent Error",
     "DelEvent Error",

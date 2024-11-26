@@ -22,6 +22,8 @@ enum ErrorCode
     Error_SSLAcceptError,
     Error_SSLConnectError,
     Error_SSLCloseError,
+    Error_FileReadError,
+    Error_FileWriteError,
     Error_AddEventError,
     Error_ModEventError,
     Error_DelEventError,
