@@ -10,7 +10,7 @@
 using galay::coroutine::Coroutine;
 
 #ifdef __linux__
-Coroutine test(int fd)
+Coroutine test()
 {
     GHandle handle = co_await galay::async::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, 0644);
     galay::async::AsyncFileNativeAio fileio((int)128, galay::GetEventScheduler(0)->GetEngine());
@@ -19,7 +19,7 @@ Coroutine test(int fd)
     for(int i = 0; i < PEER_SIZE * 10; ++i) {
         ((char*)buffer)[i] = 'a';
     }
-    fileio.PrepareWrite(GHandle{fd}, (char*)buffer, PEER_SIZE * 10, 0);
+    fileio.PrepareWrite(handle, (char*)buffer, PEER_SIZE * 10, 0);
     int ret = co_await fileio.Commit();
     printf("ret: %d\n", ret);
     printf("error is %s\n", galay::error::GetErrorString(fileio.GetErrorCode()).c_str());
@@ -27,7 +27,7 @@ Coroutine test(int fd)
     void* after = nullptr;
     posix_memalign(&after, PEER_SIZE, PEER_SIZE * 10);
     memset(after, 0, PEER_SIZE * 10);
-    fileio.PrepareRead(GHandle{fd}, (char*)after, PEER_SIZE * 10, 0);
+    fileio.PrepareRead(handle, (char*)after, PEER_SIZE * 10, 0);
     ret = co_await fileio.Commit();
     printf("ret: %d\n", ret);
     if(strcmp((char*)buffer, (char*)after) == 0) {
@@ -37,7 +37,7 @@ Coroutine test(int fd)
     }
     free(after);
     free(buffer);
-    close(fd);
+    close(handle.fd);
     co_return;
 }
 #else

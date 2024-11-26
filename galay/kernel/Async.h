@@ -193,11 +193,11 @@ public:
     /*
         return false at m_current_index == maxevents or m_current_index atomic operation;
     */
-    bool PrepareRead(GHandle handle, char* buf, size_t len, long long offset);
-    bool PrepareWrite(GHandle handle, char* buf, size_t len, long long offset);
+    bool PrepareRead(GHandle handle, char* buf, size_t len, long long offset, AioCallback* callback = nullptr);
+    bool PrepareWrite(GHandle handle, char* buf, size_t len, long long offset, AioCallback* callback = nullptr);
 
-    bool PrepareReadV(GHandle handle, iovec* iov, int count, long long offset);
-    bool PrepareWriteV(GHandle handle, iovec* iov, int count, long long offset);
+    bool PrepareReadV(GHandle handle, iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
+    bool PrepareWriteV(GHandle handle, iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
 
     coroutine::Awaiter_int Commit();
     

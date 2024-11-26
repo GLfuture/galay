@@ -5,6 +5,10 @@ file(GLOB SRC_LIST "*.cc")
 
 set(DEPEND_LIBS ssl crypto)
 
+if (LIBAIO_FOUND)
+    set(DEPEND_LIBS ${DEPEND_LIBS} aio)
+endif ()
+
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
 target_link_libraries(${PROJECT_NAME} ${DEPEND_LIBS})
 

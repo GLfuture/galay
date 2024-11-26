@@ -1265,8 +1265,7 @@ bool FileIoWaitEvent::OnReadWaitPrepare(coroutine::Coroutine *co, void *ctx)
     async::FileIOVec* vec = (async::FileIOVec*)ctx;
     int elength = 0;
     do{
-        int ret =  read(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
-        spdlog::debug("read ret:{}, offset: {}, length: {}, elength: {}", ret, vec->m_offset, vec->m_length, elength);
+        int ret = read(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
         if(ret < 0){
             if(elength == 0 ){
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
@@ -1291,8 +1290,7 @@ void FileIoWaitEvent::HandleReadEvent(EventEngine *engine)
     async::FileIOVec* vec = (async::FileIOVec*)m_ctx;
     int elength = 0;
     do{
-        int ret =  read(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
-        spdlog::debug("read ret:{}", ret);
+        int ret = read(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
         if(ret < 0){
             if(elength == 0 ){
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
@@ -1319,7 +1317,6 @@ bool FileIoWaitEvent::OnWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
     int elength = 0;
     do{
         int ret =  write(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
-        spdlog::debug("write ret:{}", ret);
         if(ret < 0){
             if(elength == 0 ){
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
@@ -1345,7 +1342,6 @@ void FileIoWaitEvent::HandleWriteEvent(EventEngine *engine)
     int elength = 0;
     do{
         int ret =  write(m_fileio->GetHandle().fd, vec->m_buf + vec->m_offset + elength, vec->m_length - elength);
-        spdlog::debug("write ret:{}", ret);
         if(ret < 0){
             if(elength == 0 ){
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {

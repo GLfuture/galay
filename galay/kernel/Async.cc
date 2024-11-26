@@ -320,7 +320,7 @@ AsyncFileNativeAio::AsyncFileNativeAio(int maxevents, event::EventEngine *engine
     }                                                                                                                                                                                                                                                                                                               
 }
 
-bool AsyncFileNativeAio::PrepareRead(GHandle handle, char *buf, size_t len, long long offset)
+bool AsyncFileNativeAio::PrepareRead(GHandle handle, char *buf, size_t len, long long offset, AioCallback* callback)
 {
     uint32_t num = m_current_index.load();
     if(num >= m_iocbs.size()) return false;
@@ -328,10 +328,11 @@ bool AsyncFileNativeAio::PrepareRead(GHandle handle, char *buf, size_t len, long
     if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
     io_prep_pread(m_iocb_ptrs[num], handle.fd, buf, len, offset);
     io_set_eventfd(m_iocb_ptrs[num], GetHandle().fd);
+    m_iocb_ptrs[num]->data = callback;
     return true;
 }
 
-bool AsyncFileNativeAio::PrepareWrite(GHandle handle, char *buf, size_t len, long long offset)
+bool AsyncFileNativeAio::PrepareWrite(GHandle handle, char *buf, size_t len, long long offset, AioCallback* callback)
 {
     uint32_t num = m_current_index.load();
     if(num >= m_iocbs.size()) return false;
@@ -339,10 +340,11 @@ bool AsyncFileNativeAio::PrepareWrite(GHandle handle, char *buf, size_t len, lon
     if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
     io_prep_pwrite(m_iocb_ptrs[num], handle.fd, buf, len, offset);
     io_set_eventfd(m_iocb_ptrs[num], GetHandle().fd);
+    m_iocb_ptrs[num]->data = this;
     return true;
 }
 
-bool AsyncFileNativeAio::PrepareReadV(GHandle handle, iovec* iov, int count, long long offset)
+bool AsyncFileNativeAio::PrepareReadV(GHandle handle, iovec* iov, int count, long long offset, AioCallback* callback)
 {
     uint32_t num = m_current_index.load();
     if(num >= m_iocbs.size()) return false;
@@ -350,10 +352,11 @@ bool AsyncFileNativeAio::PrepareReadV(GHandle handle, iovec* iov, int count, lon
     if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
     io_prep_preadv(m_iocb_ptrs[num], handle.fd, iov, count, offset);
     io_set_eventfd(m_iocb_ptrs[num], GetHandle().fd);
+    m_iocb_ptrs[num]->data = callback;
     return true;
 }
 
-bool AsyncFileNativeAio::PrepareWriteV(GHandle handle, iovec* iov, int count, long long offset)
+bool AsyncFileNativeAio::PrepareWriteV(GHandle handle, iovec* iov, int count, long long offset, AioCallback* callback)
 {
     uint32_t num = m_current_index.load();
     if(num >= m_iocbs.size()) return false;
@@ -361,6 +364,7 @@ bool AsyncFileNativeAio::PrepareWriteV(GHandle handle, iovec* iov, int count, lo
     if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
     io_prep_pwritev(m_iocb_ptrs[num], handle.fd, iov, count, offset);
     io_set_eventfd(m_iocb_ptrs[num], GetHandle().fd);
+    m_iocb_ptrs[num]->data = callback;
     return true;
 }
 
