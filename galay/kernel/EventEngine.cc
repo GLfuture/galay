@@ -7,7 +7,6 @@
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
     
 #endif
-#include <cstring>
 #include <spdlog/spdlog.h>
 
 
@@ -217,11 +216,11 @@ EpollEventEngine::ConvertToEpollEvent(epoll_event &ev, Event *event, void* ctx)
 
 #elif defined(USE_KQUEUE)
 
-KqueueEventEngine::KqueueEventEngine(uint32_t max_events)
+KqueueEventEngine::KqueueEventEngine(const uint32_t max_events)
 {
     m_handle.fd = kqueue();
     m_event_size = max_events;
-    m_events = (struct kevent*)malloc(sizeof(struct kevent) * max_events);
+    m_events = static_cast<struct kevent*>(malloc(sizeof(struct kevent) * max_events));
     bzero(m_events, sizeof(struct kevent) * max_events);
     this->m_stop = true;
     if(this->m_handle.fd < 0) {
@@ -232,7 +231,7 @@ KqueueEventEngine::KqueueEventEngine(uint32_t max_events)
 bool KqueueEventEngine::Loop(int timeout)
 {
     bool initial = true;
-    timespec ts;
+    timespec ts{};
     if(timeout > 0) {
         ts.tv_sec = timeout / 1000;
         ts.tv_nsec = (timeout % 1000) * 1000000;

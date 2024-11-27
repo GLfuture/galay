@@ -43,11 +43,11 @@ Coroutine test()
 #else
 galay::coroutine::Coroutine test()
 {
-    GHandle handle = co_await galay::async::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    galay::async::AsyncFileDiscreptor fileio(galay::GetEventScheduler(0)->GetEngine());
+    const GHandle handle = co_await galay::async::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    galay::async::AsyncFileDescriptor fileio(galay::GetEventScheduler(0)->GetEngine());
     fileio.GetHandle() = handle;
     galay::async::FileIOVec vec{
-        .m_buf = (char*) malloc( 10 * 1024 * 1024),
+        .m_buf = static_cast<char*>(malloc(10 * 1024 * 1024)),
         .m_length = 10 * 1024 * 1024,
         .m_offset = 0
     };
@@ -76,12 +76,12 @@ galay::coroutine::Coroutine test()
     }
     getchar();
     free(vec.m_buf);
-    fflush(NULL);
+    fflush(nullptr);
 
     // 再次读取
     lseek(handle.fd, 0, SEEK_SET);  // 将文件指针移回文件开头
     galay::async::FileIOVec vec2 {
-        .m_buf = (char*) malloc( 10 * 1024 * 1024),
+        .m_buf = static_cast<char*>(malloc(10 * 1024 * 1024)),
         .m_length = 10 * 1024 * 1024,
         .m_offset = 0
     };

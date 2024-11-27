@@ -5,17 +5,15 @@ namespace galay::coroutine
 {
 
 Awaiter_void::Awaiter_void(action::WaitAction *action, void* ctx)
+    : m_ctx(ctx), m_action(action), m_coroutine_handle(nullptr)
 {
-    this->m_action = action;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = ctx;
+
 }
 
 Awaiter_void::Awaiter_void()
+    : m_ctx(nullptr), m_action(nullptr), m_coroutine_handle(nullptr)
 {
-    this->m_action = nullptr;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = nullptr;
+
 }
 
 bool Awaiter_void::await_ready() const noexcept
@@ -23,11 +21,10 @@ bool Awaiter_void::await_ready() const noexcept
     return this->m_action == nullptr || !this->m_action->HasEventToDo();
 }
 
-bool Awaiter_void::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
+bool Awaiter_void::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     this->m_coroutine_handle = handle;
-    coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    
+    Coroutine* co = handle.promise().GetCoroutine();
     return this->m_action->DoAction(co, m_ctx);
 }
 
@@ -39,11 +36,10 @@ void Awaiter_void::SetResult(const std::variant<std::monostate, int, bool, void*
 {
     if(! std::holds_alternative<std::monostate>(result) ) {
         throw std::runtime_error("Awaiter_void::SetResult: result is not monostate");
-        return;
     }
 }
 
-Coroutine *Awaiter_void::GetCoroutine()
+Coroutine *Awaiter_void::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
@@ -52,14 +48,12 @@ Coroutine *Awaiter_void::GetCoroutine()
 }
 
 Awaiter_int::Awaiter_int(action::WaitAction* action, void* ctx)
+    : m_ctx(ctx), m_result(0), m_action(action), m_coroutine_handle(nullptr)
 {
-    this->m_action = action;
-    this->m_result = 0;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = ctx;
+
 }
 
-Awaiter_int::Awaiter_int(int result)
+Awaiter_int::Awaiter_int(const int result)
 {
     this->m_action = nullptr;
     this->m_result = result;
@@ -72,7 +66,7 @@ bool Awaiter_int::await_ready() const noexcept
     return this->m_action == nullptr || !this->m_action->HasEventToDo();
 }
 
-bool Awaiter_int::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
+bool Awaiter_int::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
@@ -96,12 +90,11 @@ void Awaiter_int::SetResult(const std::variant<std::monostate, int, bool, void*,
 {
     if(! std::holds_alternative<int>(result)){
         throw std::runtime_error("Awaiter_int::SetResult: result is not int");
-        return;
     }
     m_result = std::get<int>(result);
 }
 
-Coroutine *Awaiter_int::GetCoroutine()
+Coroutine *Awaiter_int::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
@@ -117,7 +110,7 @@ Awaiter_bool::Awaiter_bool(action::WaitAction* action, void* ctx)
     this->m_ctx = ctx;
 }
 
-Awaiter_bool::Awaiter_bool(bool result)
+Awaiter_bool::Awaiter_bool(const bool result)
 {
     this->m_action = nullptr;
     this->m_result = result;
@@ -130,7 +123,7 @@ bool Awaiter_bool::await_ready() const noexcept
     return this->m_action == nullptr || !this->m_action->HasEventToDo();
 }
 
-bool Awaiter_bool::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
+bool Awaiter_bool::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
@@ -154,12 +147,11 @@ void Awaiter_bool::SetResult(const std::variant<std::monostate, int, bool, void*
 {
     if(! std::holds_alternative<bool>(result)){
         throw std::runtime_error("Awaiter_bool::SetResult: result is not bool");
-        return;
     }
     m_result = std::get<bool>(result);
 }
 
-Coroutine* Awaiter_bool::GetCoroutine()
+Coroutine* Awaiter_bool::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
@@ -188,7 +180,7 @@ bool Awaiter_ptr::await_ready() const noexcept
     return this->m_action == nullptr || !this->m_action->HasEventToDo();
 }
 
-bool Awaiter_ptr::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
+bool Awaiter_ptr::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     this->m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
@@ -212,12 +204,11 @@ void Awaiter_ptr::SetResult(const std::variant<std::monostate, int, bool, void*,
 {
     if(! std::holds_alternative<void*>(result)){
         throw std::runtime_error("Awaiter_ptr::SetResult: result is not ptr");
-        return;
     }
     m_ptr = std::get<void*>(result);
 }
 
-Coroutine *Awaiter_ptr::GetCoroutine()
+Coroutine *Awaiter_ptr::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
@@ -233,7 +224,7 @@ Awaiter_string::Awaiter_string(action::WaitAction *action, void* ctx)
     this->m_coroutine_handle = nullptr;
 }
 
-Awaiter_string::Awaiter_string(std::string result)
+Awaiter_string::Awaiter_string(const std::string& result)
 {
     this->m_action = nullptr;
     this->m_result = result;
@@ -270,12 +261,11 @@ void Awaiter_string::SetResult(const std::variant<std::monostate, int, bool, voi
 {
     if(! std::holds_alternative<std::string>(result)){
         throw std::runtime_error("Awaiter_string::SetResult: result is not string");
-        return;
     }
     m_result = std::get<std::string>(result);
 }
 
-Coroutine *Awaiter_string::GetCoroutine()
+Coroutine *Awaiter_string::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
@@ -288,19 +278,15 @@ Coroutine *Awaiter_string::GetCoroutine()
 //GHandle
 
 Awaiter_GHandle::Awaiter_GHandle(action::WaitAction *action, void* ctx)
+    : m_ctx(ctx), m_result({-1}), m_action(action), m_coroutine_handle(nullptr)
 {
-    this->m_action = action;
-    this->m_coroutine_handle = nullptr;
-    this->m_result.fd = -1;
-    this->m_ctx = ctx;
+
 }
 
-Awaiter_GHandle::Awaiter_GHandle(GHandle result)
+Awaiter_GHandle::Awaiter_GHandle(GHandle handle)
+    : m_ctx(nullptr), m_result(handle), m_action(nullptr), m_coroutine_handle(nullptr)
 {
-    this->m_action = nullptr;
-    this->m_result = result;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = nullptr;
+
 }
 
 bool Awaiter_GHandle::await_ready() const noexcept
@@ -332,12 +318,11 @@ void Awaiter_GHandle::SetResult(const std::variant<std::monostate, int, bool, vo
 {
     if(! std::holds_alternative<GHandle>(result)){
         throw std::runtime_error("Awaiter_string::SetResult: result is not string");
-        return;
     }
     m_result = std::get<GHandle>(result);
 }
 
-Coroutine *Awaiter_GHandle::GetCoroutine()
+Coroutine *Awaiter_GHandle::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();

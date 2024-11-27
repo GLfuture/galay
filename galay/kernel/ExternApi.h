@@ -1,9 +1,7 @@
-#ifndef __GALAY_EXTERNAPI_H__
-#define __GALAY_EXTERNAPI_H__
+#ifndef GALAY_EXTERNAPI_H
+#define GALAY_EXTERNAPI_H
 
-#include <functional>
 #include <openssl/ssl.h>
-#include "galay/common/Base.h"
 
 namespace galay::scheduler {
     class EventScheduler;

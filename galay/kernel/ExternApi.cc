@@ -23,7 +23,7 @@ bool InitialSSLServerEnv(const char *cert_file, const char *key_file)
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
     g_ssl_ctx = SSL_CTX_new(TLS_server_method());
-    if (g_ssl_ctx == NULL) {
+    if (g_ssl_ctx == nullptr) {
         return false;
     }
 
@@ -40,7 +40,7 @@ bool InitialSSLServerEnv(const char *cert_file, const char *key_file)
 bool InitialSSLClientEnv()
 {
     g_ssl_ctx = SSL_CTX_new(TLS_client_method());
-    if (g_ssl_ctx == NULL) {
+    if (g_ssl_ctx == nullptr) {
         return false;
     }
     return true;
@@ -59,16 +59,15 @@ SSL_CTX *GetGlobalSSLCtx()
 }
 
 
-void DynamicResizeCoroutineSchedulers(int num)
+void DynamicResizeCoroutineSchedulers(const int num)
 {
-    int now = g_coroutine_schedulers.size();
-    int sub = num - now;
-    if(sub > 0) {
+    const int now = static_cast<int>(g_coroutine_schedulers.size());
+    if(const int sub = num - now; sub > 0) {
         for(int i = 0; i < sub; ++i) {
             g_coroutine_schedulers.push_back(new scheduler::CoroutineScheduler);
         }
     }else if(sub < 0) {
-        for(int i = g_coroutine_schedulers.size() - 1 ; i >= -sub ; -- i)
+        for(int i = now - 1 ; i >= -sub ; -- i)
         {
             g_coroutine_schedulers[i]->Stop();
             delete g_coroutine_schedulers[i];
@@ -77,16 +76,15 @@ void DynamicResizeCoroutineSchedulers(int num)
     }
 }
 
-void DynamicResizeEventSchedulers(int num)
+void DynamicResizeEventSchedulers(const int num)
 {
-    int now = g_event_schedulers.size();
-    int sub = num - now;
-    if(sub > 0) {
+    const int now = static_cast<int>(g_event_schedulers.size());
+    if(const int sub = num - now; sub > 0) {
         for(int i = 0; i < sub; ++i) {
             g_event_schedulers.push_back(new scheduler::EventScheduler);
         }
     } else if(sub < 0) {
-        for(int i = g_event_schedulers.size() - 1 ; i >= -sub ; -- i)
+        for(int i = now - 1 ; i >= -sub ; -- i)
         {
             g_event_schedulers[i]->Stop();
             delete g_event_schedulers[i];
@@ -95,11 +93,10 @@ void DynamicResizeEventSchedulers(int num)
     }
 }
 
-void DynamicResizeTimerSchedulers(int num)
+void DynamicResizeTimerSchedulers(const int num)
 {
-    int now = g_timer_schedulers.size();
-    int sub = num - now;
-    if(sub > 0) {
+    const int now = static_cast<int>(g_timer_schedulers.size());
+    if(const int sub = num - now; sub > 0) {
         for(int i = 0; i < sub; ++i) {
             g_timer_schedulers.push_back(new scheduler::TimerScheduler);
         }
@@ -137,7 +134,7 @@ static std::atomic_uint32_t g_current_coroutine_scheduler_index = 0;
 
 scheduler::CoroutineScheduler *GetCoroutineSchedulerInOrder()
 {
-    uint32_t size = g_coroutine_schedulers.size();
+    const uint32_t size = g_coroutine_schedulers.size();
     uint32_t now = g_current_coroutine_scheduler_index.load();
     int retries = 0;
     while(retries < MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES){
@@ -160,7 +157,7 @@ static std::atomic_uint32_t g_current_timer_scheduler_index = 0;
 
 scheduler::TimerScheduler *GetTimerSchedulerInOrder()
 {
-    uint32_t size = g_timer_schedulers.size();
+    const uint32_t size = g_timer_schedulers.size();
     uint32_t now = g_current_timer_scheduler_index.load();
     int retries = 0;
     while(retries < MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES){
@@ -188,25 +185,25 @@ void StartAllSchedulers(int timeout)
 
 void StartCoroutineSchedulers()
 {
-    for(int i = 0 ; i < g_coroutine_schedulers.size() ; ++i )
+    for(const auto & g_coroutine_scheduler : g_coroutine_schedulers)
     {
-        g_coroutine_schedulers[i]->Loop();
+        g_coroutine_scheduler->Loop();
     }
 }
 
 void StartEventSchedulers(int timeout)
 {
-    for(int i = 0 ; i < g_event_schedulers.size() ; ++i )
+    for(const auto & g_event_scheduler : g_event_schedulers)
     {
-        g_event_schedulers[i]->Loop(timeout);
+        g_event_scheduler->Loop(timeout);
     }
 }
 
-void StartTimerSchedulers(int timeout)
+void StartTimerSchedulers(const int timeout)
 {
-    for(int i = 0 ; i < g_timer_schedulers.size() ; ++i )
+    for(const auto & g_timer_scheduler : g_timer_schedulers)
     {
-        g_timer_schedulers[i]->Loop(timeout);
+        g_timer_scheduler->Loop(timeout);
     }
 }
 
@@ -219,20 +216,20 @@ void StopAllSchedulers()
 
 void StopCoroutineSchedulers()
 {
-    for(int i = 0 ; i < g_coroutine_schedulers.size() ; ++i )
+    for(const auto & g_coroutine_scheduler : g_coroutine_schedulers)
     {
-        g_coroutine_schedulers[i]->Stop();
-        delete g_coroutine_schedulers[i];
+        g_coroutine_scheduler->Stop();
+        delete g_coroutine_scheduler;
     }
     g_coroutine_schedulers.clear();
 }
 
 void StopEventSchedulers()
 {
-    for(int i = 0 ; i < g_event_schedulers.size() ; ++i )
+    for(const auto & g_event_scheduler : g_event_schedulers)
     {
-        g_event_schedulers[i]->Stop();
-        delete g_event_schedulers[i];
+        g_event_scheduler->Stop();
+        delete g_event_scheduler;
     }
     g_event_schedulers.clear();
 }

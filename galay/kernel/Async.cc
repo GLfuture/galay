@@ -1,6 +1,5 @@
 #include "Async.h"
 #include "Event.h"
-#include "EventEngine.h"
 #include "WaitAction.h"
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     #include <sys/socket.h>
@@ -13,14 +12,14 @@
     #include <ws2ipdef.h>
     #include <WS2tcpip.h>
 #endif
-#include <string.h>
 
 namespace galay::async
 {
 
-HandleOption::HandleOption(GHandle handle)
+HandleOption::HandleOption(const GHandle handle)
+    : m_handle(handle), m_error_code(0)
 {
-    this->m_handle = handle;
+    
 }
 
 bool HandleOption::HandleBlock()
@@ -76,9 +75,8 @@ bool HandleOption::HandleReuseAddr()
 bool HandleOption::HandleReusePort()
 {
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    int option = 1;
-    int ret = setsockopt(this->m_handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option));
-    if (ret < 0) {
+    constexpr int option = 1;
+    if (const int ret = setsockopt(this->m_handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option)); ret < 0) {
         m_error_code = error::MakeErrorCode(error::ErrorCode::Error_SetSockOptError, errno);
         return false;
     }
@@ -107,11 +105,11 @@ bool AsyncSocket(AsyncNetIo *asocket)
 bool BindAndListen(AsyncNetIo *asocket, int port, int backlog)
 {
     asocket->GetErrorCode() = error::ErrorCode::Error_NoError;
-    sockaddr_in addr;
+    sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
-    if( bind(asocket->GetHandle().fd, (sockaddr*)&addr, sizeof(addr)) )
+    if( bind(asocket->GetHandle().fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) )
     {
         asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_BindError, errno);
         return false;
@@ -128,35 +126,35 @@ coroutine::Awaiter_GHandle AsyncAccept(AsyncNetIo *asocket, NetAddr* addr)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeAccept);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_GHandle(asocket->GetAction(), addr);  
+    return {asocket->GetAction(), addr};
 }
 
 coroutine::Awaiter_bool AsyncConnect(AsyncNetIo *asocket, NetAddr* addr)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeConnect);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_bool(asocket->GetAction(), addr);
+    return {asocket->GetAction(), addr};
 }
 
 coroutine::Awaiter_int AsyncRecv(AsyncNetIo *asocket, NetIOVec* iov)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_int(asocket->GetAction(), iov);
+    return {asocket->GetAction(), iov};
 }
 
 coroutine::Awaiter_int AsyncSend(AsyncNetIo *asocket, NetIOVec *iov)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_int(asocket->GetAction(), iov);
+    return {asocket->GetAction(), iov};
 }
 
 coroutine::Awaiter_bool AsyncClose(AsyncNetIo *asocket)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeClose);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_bool(asocket->GetAction(), nullptr);
+    return {asocket->GetAction(), nullptr};
 }
 
 bool AsyncSSLSocket(AsyncSslNetIo* asocket, SSL_CTX *ctx)
@@ -175,43 +173,43 @@ coroutine::Awaiter_bool AsyncSSLAccept(AsyncSslNetIo *asocket)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeSslAccept);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_bool(asocket->GetAction(), nullptr);
+    return {asocket->GetAction(), nullptr};
 }
 
 coroutine::Awaiter_bool SSLConnect(AsyncSslNetIo *asocket)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeSslConnect);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_bool(asocket->GetAction(), nullptr);
+    return {asocket->GetAction(), nullptr};
 }
 
 coroutine::Awaiter_int AsyncSSLRecv(AsyncSslNetIo *asocket, NetIOVec *iov)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeSslRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_int(asocket->GetAction(), iov);
+    return {asocket->GetAction(), iov};
 }
 
 coroutine::Awaiter_int AsyncSSLSend(AsyncSslNetIo *asocket, NetIOVec *iov)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeSslSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_int(asocket->GetAction(), iov);
+    return {asocket->GetAction(), iov};
 }
 
 coroutine::Awaiter_bool AsyncSSLClose(AsyncSslNetIo *asocket)
 {
     asocket->GetAction()->GetBindEvent()->ResetNetWaitEventType(event::kTcpWaitEventTypeSslClose);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_bool(asocket->GetAction(), nullptr);
+    return {asocket->GetAction(), nullptr};
 }
 
-coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, int flags, mode_t mode)
+coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, const int flags, mode_t mode)
 {
 #if defined(__linux__) || defined(__APPLE__) 
-    int fd = open(path, flags);
+    const int fd = open(path, flags);
 #endif
-    GHandle handle = GHandle{fd};
+    const auto handle = GHandle{fd};
     HandleOption option(handle);
     option.HandleNonBlock();
     return coroutine::Awaiter_GHandle(GHandle{fd});
@@ -221,24 +219,23 @@ coroutine::Awaiter_int AsyncFileRead(AsyncFileIo *afileio, FileIOVec *iov)
 {
     afileio->GetAction()->GetBindEvent()->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeRead);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_int(afileio->GetAction(), iov);
+    return {afileio->GetAction(), iov};
 }
 
 coroutine::Awaiter_int AsyncFileWrite(AsyncFileIo *afileio, FileIOVec *iov)
 {
     afileio->GetAction()->GetBindEvent()->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeWrite);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return coroutine::Awaiter_int(afileio->GetAction(), iov);
+    return {afileio->GetAction(), iov};
 }
 
 AsyncNetIo::AsyncNetIo(event::EventEngine* engine)
+    : m_handle({}), m_err_code(0), m_action(new action::NetEventAction(engine, new event::NetWaitEvent(this)))
 {
-    event::NetWaitEvent* event = new event::NetWaitEvent(this);
-    this->m_action = new action::NetEventAction(engine, event);
 }
 
 HandleOption
-AsyncNetIo::GetOption()
+AsyncNetIo::GetOption() const
 {
     return HandleOption(this->m_handle);
 }
@@ -278,21 +275,20 @@ AsyncSslTcpSocket::AsyncSslTcpSocket(event::EventEngine *engine)
 }
 
 AsyncUdpSocket::AsyncUdpSocket(event::EventEngine *engine)
-    :AsyncNetIo(engine)
+    :AsyncNetIo(engine), m_handle({}), m_error_code(0)
 {
 }
 
 AsyncUdpSocket::~AsyncUdpSocket()
-{
-}
+= default;
 
 AsyncFileIo::AsyncFileIo(event::EventEngine* engine)
+    :m_handle({}), m_error_code(0), m_action(new action::FileIoEventAction(engine, new event::FileIoWaitEvent(this)))
 {
-    event::FileIoWaitEvent* event = new event::FileIoWaitEvent(this);
-    m_action = new action::FileIoEventAction(engine, event);
+
 }
 
-HandleOption AsyncFileIo::GetOption()
+HandleOption AsyncFileIo::GetOption() const
 {
     return HandleOption(m_handle);
 }
@@ -394,7 +390,7 @@ AsyncFileNativeAio::~AsyncFileNativeAio()
 
 #endif
 
-AsyncFileDiscreptor::AsyncFileDiscreptor(event::EventEngine *engine)
+AsyncFileDescriptor::AsyncFileDescriptor(event::EventEngine *engine)
     :AsyncFileIo(engine)
 {
 }

@@ -20,7 +20,7 @@ int main()
 #ifdef USE_KQUEUE
     spdlog::set_level(spdlog::level::debug);
     galay::event::KqueueEventEngine::ptr engine = std::make_shared<galay::event::KqueueEventEngine>();
-    GHandle handle;
+    GHandle handle{};
     galay::event::TimeEvent::CreateHandle(handle);
     
     galay::event::TimeEvent::ptr event = std::make_shared<galay::event::TimeEvent>(handle, engine.get());
@@ -31,7 +31,7 @@ int main()
     });
     
     std::thread th([engine](){
-        engine->Loop();
+        engine->Loop(-1);
     });
     th.detach();
     getchar();

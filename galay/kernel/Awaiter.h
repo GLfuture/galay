@@ -15,6 +15,7 @@ namespace galay::action
 class WaitAction
 {
 public:
+    virtual ~WaitAction() = default;
     virtual bool HasEventToDo() = 0;
     virtual bool DoAction(coroutine::Coroutine* co, void* ctx) = 0;
 };
@@ -23,34 +24,34 @@ public:
 namespace galay::coroutine
 {
 
-class Awaiter_void: public Awaiter
+class Awaiter_void final : public Awaiter
 {
 public:
     Awaiter_void(action::WaitAction* action, void* ctx);
     Awaiter_void();
-    bool await_ready() const noexcept;
+    [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     void await_resume() const noexcept;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    Coroutine* GetCoroutine();
+    void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
     action::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_int: public Awaiter
+class Awaiter_int final : public Awaiter
 {
 public:
     Awaiter_int(action::WaitAction* action, void* ctx);
-    Awaiter_int(int result);
-    bool await_ready() const noexcept;
+    explicit Awaiter_int(int result);
+    [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
-    int await_resume() const noexcept;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    Coroutine* GetCoroutine();
+    [[nodiscard]] int await_resume() const noexcept;
+    void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
     int m_result;
@@ -58,17 +59,17 @@ private:
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_bool: public Awaiter
+class Awaiter_bool final : public Awaiter
 {
 public:
     Awaiter_bool(action::WaitAction* action, void* ctx);
-    Awaiter_bool(bool result);
-    bool await_ready() const noexcept;
+    explicit Awaiter_bool(bool result);
+    [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
-    bool await_resume() const noexcept;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    Coroutine* GetCoroutine();
+    [[nodiscard]] bool await_resume() const noexcept;
+    void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
     bool m_result;
@@ -76,17 +77,17 @@ private:
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_ptr: public Awaiter
+class Awaiter_ptr final : public Awaiter
 {
 public:
     Awaiter_ptr(action::WaitAction* action, void* ctx);
-    Awaiter_ptr(void* ptr);
-    bool await_ready() const noexcept;
+    explicit Awaiter_ptr(void* ptr);
+    [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
-    void* await_resume() const noexcept;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    Coroutine* GetCoroutine();
+    [[nodiscard]] void* await_resume() const noexcept;
+    void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
     void* m_ptr;
@@ -95,17 +96,17 @@ private:
 };
 
 
-class Awaiter_string: public Awaiter
+class Awaiter_string final : public Awaiter
 {
 public:
     Awaiter_string(action::WaitAction* action, void* ctx);
-    Awaiter_string(std::string result);
-    bool await_ready() const noexcept;
+    explicit Awaiter_string(const std::string& result);
+    [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
-    std::string await_resume() const noexcept;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    Coroutine* GetCoroutine();
+    [[nodiscard]] std::string await_resume() const noexcept;
+    void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
     std::string m_result;
@@ -113,17 +114,17 @@ private:
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
-class Awaiter_GHandle: public Awaiter
+class Awaiter_GHandle final : public Awaiter
 {
 public:
     Awaiter_GHandle(action::WaitAction* action, void* ctx);
-    Awaiter_GHandle(GHandle handle);
-    bool await_ready() const noexcept;
+    explicit Awaiter_GHandle(GHandle handle);
+    [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
-    GHandle await_resume() const noexcept;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    Coroutine* GetCoroutine();
+    [[nodiscard]] GHandle await_resume() const noexcept;
+    void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
+    [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
     GHandle m_result;

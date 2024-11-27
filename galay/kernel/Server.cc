@@ -8,6 +8,8 @@
 #include <openssl/err.h>
 #include <spdlog/spdlog.h>
 
+#include <utility>
+
 namespace galay::server
 {
 
@@ -34,10 +36,10 @@ HttpServerConfig::HttpServerConfig()
 
 TcpServer::TcpServer(TcpServerConfig::ptr config)
 {
-	m_config = config;
+	m_config = std::move(config);
 }
 
-void TcpServer::Start(TcpCallbackStore* store, int port)
+void TcpServer::Start(TcpCallbackStore* store, const int port)
 {
 	
 	DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
@@ -61,8 +63,7 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
 	{
 		async::AsyncNetIo* socket = new async::AsyncTcpSocket(GetEventScheduler(i)->GetEngine());
-		bool res = async::AsyncSocket(socket);
-		if( !res ) {
+		if(const bool res = async::AsyncSocket(socket); !res ) {
 			delete socket;
 			for(int j = 0; j < i; ++j ){
 				delete m_listen_events[j];
@@ -87,15 +88,14 @@ void TcpServer::Start(TcpCallbackStore* store, int port)
 		}
 		m_listen_events[i] = new event::ListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
 	} 
-	return;
 }
 
 void TcpServer::Stop()
 {
 	if(!m_is_running) return;
-	for(int i = 0 ; i < m_listen_events.size(); ++i )
+	for(const auto & m_listen_event : m_listen_events)
 	{
-		delete m_listen_events[i];
+		delete m_listen_event;
 	}
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
@@ -106,15 +106,14 @@ void TcpServer::Stop()
 }
 
 TcpServer::~TcpServer()
-{
-}
+= default;
 
-TcpSslServer::TcpSslServer(TcpSslServerConfig::ptr config)
+TcpSslServer::TcpSslServer(const TcpSslServerConfig::ptr& config)
 {
 	m_config = config;
 }
 
-void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
+void TcpSslServer::Start(TcpSslCallbackStore *store, const int port)
 {
     DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
 	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num + m_config->m_event_scheduler_num);
@@ -132,8 +131,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 		GetEventScheduler(i)->Loop(m_config->m_event_scheduler_timeout_ms);
 	}
 	StartTimerSchedulers(m_config->m_timer_scheduler_timeout_ms);
-	bool res = InitialSSLServerEnv(m_config->m_cert_file, m_config->m_key_file);
-	if( !res ) {
+    if(const bool res = InitialSSLServerEnv(m_config->m_cert_file, m_config->m_key_file); !res ) {
 		spdlog::error("InitialSSLServerEnv failed, error:{}", ERR_error_string(ERR_get_error(), nullptr));
 		return;
 	}
@@ -179,14 +177,14 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, int port)
 		}
 		m_listen_events[i] = new event::SslListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
 	} 
-	return;
 }
+
 void TcpSslServer::Stop()
 {
 	if(!m_is_running) return;
-	for(int i = 0 ; i < m_listen_events.size(); ++i )
+	for(const auto & m_listen_event : m_listen_events)
 	{
-		delete m_listen_events[i];
+		delete m_listen_event;
 	}
 	StopCoroutineSchedulers();
 	StopEventSchedulers();
@@ -198,8 +196,7 @@ void TcpSslServer::Stop()
 }
 
 TcpSslServer::~TcpSslServer()
-{
-}
+= default;
 
 //HttpServer
 
@@ -208,8 +205,8 @@ protocol::http::HttpResponse HttpServer::g_method_not_allowed_resp;
 protocol::http::HttpResponse HttpServer::g_uri_too_long_resp;
 protocol::http::HttpResponse HttpServer::g_not_found_resp;
 
-HttpServer::HttpServer(HttpServerConfig::ptr config)
-	: TcpServer(config), m_store(std::make_unique<TcpCallbackStore>([this](TcpOperation operation)->coroutine::Coroutine {
+HttpServer::HttpServer(const HttpServerConfig::ptr& config)
+	: TcpServer(config), m_store(std::make_unique<TcpCallbackStore>([this](const TcpOperation& operation)->coroutine::Coroutine {
 		return HttpRoute(operation);
 	}))
 {

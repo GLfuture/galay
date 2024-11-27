@@ -36,6 +36,7 @@ class Awaiter_bool;
 class Awaiter
 {
 public:
+    virtual ~Awaiter() = default;
     virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) = 0;
 };
 
@@ -60,32 +61,32 @@ public:
     class promise_type
     {
     public:
-        inline int get_return_object_on_alloaction_failure() noexcept { return -1; }
+        static int get_return_object_on_alloaction_failure() noexcept { return -1; }
         Coroutine get_return_object() noexcept;
-        inline std::suspend_never initial_suspend() noexcept { return {}; }
-        inline std::suspend_always yield_value() noexcept { return {}; }
-        inline std::suspend_never final_suspend() noexcept { return {};  }
-        inline void unhandled_exception() noexcept {}
-        void return_void () noexcept;
-        inline Coroutine* GetCoroutine() { return m_coroutine; }
-        inline CoroutineStore* GetStore() { return m_store; }
-        inline ~promise_type() { delete m_coroutine; }
+        static std::suspend_never initial_suspend() noexcept { return {}; }
+        static std::suspend_always yield_value() noexcept { return {}; }
+        static std::suspend_never final_suspend() noexcept { return {};  }
+        static void unhandled_exception() noexcept {}
+        void return_void () const noexcept;
+        [[nodiscard]] Coroutine* GetCoroutine() const { return m_coroutine; }
+        [[nodiscard]] CoroutineStore* GetStore() const { return m_store; }
+        ~promise_type() { delete m_coroutine; }
     private:
-        CoroutineStore* m_store;
-        Coroutine* m_coroutine;
+        CoroutineStore* m_store = nullptr ;
+        Coroutine* m_coroutine = nullptr;
     };
-    Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
+    explicit Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
     Coroutine(Coroutine&& other) noexcept;
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
     
-    inline std::coroutine_handle<promise_type> GetHandle() { return this->m_handle; }
+    std::coroutine_handle<promise_type> GetHandle() { return this->m_handle; }
     void Destroy();
-    inline bool Done() { return m_handle.done(); }
-    inline void Resume() { return m_handle.resume(); }
+    bool Done() const { return m_handle.done(); }
+    void Resume() const { return m_handle.resume(); }
     bool SetAwaiter(Awaiter* awaiter);
-    Awaiter* GetAwaiter();
-    inline std::optional<std::list<Coroutine*>::iterator>& GetListNode() { return m_node; }
+    Awaiter* GetAwaiter() const;
+    std::optional<std::list<Coroutine*>::iterator>& GetListNode() { return m_node; }
     ~Coroutine() = default;
 private:
     std::atomic<Awaiter*> m_awaiter = nullptr;
@@ -101,8 +102,8 @@ public:
     using ptr = std::shared_ptr<CoroutineWaiters>;
     CoroutineWaiters(int num, scheduler::CoroutineScheduler* scheduler);
     Awaiter_bool Wait(int timeout = -1); //ms
-    inline int GetRemainNum() const { return m_num.load(); };
-    inline void AddCoroutineTaskNum(int num) { this->m_num.fetch_add(num); }
+    int GetRemainNum() const { return m_num.load(); };
+    void AddCoroutineTaskNum(int num) { this->m_num.fetch_add(num); }
     bool Decrease();
     ~CoroutineWaiters();
 private:
@@ -114,10 +115,10 @@ private:
 class CoroutineWaitContext
 {
 public:
-    CoroutineWaitContext(CoroutineWaiters& waiters);
-    void AddWaitCoroutineNum(int num);
-    inline int GetRemainWaitCoroutine() const { return m_waiters.GetRemainNum(); };
-    bool Done();
+    explicit CoroutineWaitContext(CoroutineWaiters& waiters);
+    void AddWaitCoroutineNum(int num) const;
+    [[nodiscard]] int GetRemainWaitCoroutine() const { return m_waiters.GetRemainNum(); };
+    [[nodiscard]] bool Done() const;
 private:
     CoroutineWaiters& m_waiters;
 };

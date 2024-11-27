@@ -32,7 +32,7 @@ include_directories(thirdparty)
 
 set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security common helper)
 set(STATIC_LIB ${PROJECT_NAME}-static)
-set(SHARED_LIB ${PROJECT_NAME}-shared)
+set(SHARED_LIB ${PROJECT_NAME})
 
 include_directories(${PROJECT_SOURCE_DIR})
 

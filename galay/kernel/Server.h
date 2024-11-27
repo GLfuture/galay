@@ -1,8 +1,7 @@
-#ifndef __GALAY_SERVER_H__
-#define __GALAY_SERVER_H__
+#ifndef GALAY_SERVER_H
+#define GALAY_SERVER_H
 
 #include <string>
-#include <memory>
 #include <vector>
 #include <atomic>
 #include <string_view>
@@ -42,13 +41,13 @@ namespace galay::server
 
 #define DEFAULT_SERVER_BACKLOG                          32
 #define DEFAULT_SERVER_NET_SCHEDULER_NUM                4
-#define DEFAULT_SERVER_CO_SCHEDULER_TIMEOUT_MS          -1
+#define DEFAULT_SERVER_CO_SCHEDULER_TIMEOUT_MS          (-1)
 #define DEFAULT_SERVER_CO_SCHEDULER_NUM                 4
-#define DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS         -1
+#define DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS         (-1)
 #define DEFAULT_SERVER_OTHER_SCHEDULER_NUM              0
-#define DEFAULT_SERVER_OTHER_SCHEDULER_TIMEOUT_MS       -1
+#define DEFAULT_SERVER_OTHER_SCHEDULER_TIMEOUT_MS       (-1)
 #define DEFAULT_SERVER_TIMER_SCHEDULER_NUM              1
-#define DEFAULT_SERVER_TIMER_SCHEDULER_TIMEOUT_MS       -1
+#define DEFAULT_SERVER_TIMER_SCHEDULER_TIMEOUT_MS       (-1)
 
 
 #define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
@@ -68,23 +67,23 @@ namespace galay::server
         virtual ~TcpServerConfig() = default;
     };
 
-    struct TcpSslServerConfig: public TcpServerConfig
+    struct TcpSslServerConfig final : public TcpServerConfig
     {
         using ptr = std::shared_ptr<TcpSslServerConfig>;
         TcpSslServerConfig();
         const char* m_cert_file;    //.crt 文件
         const char* m_key_file;     //.key 文件
-        virtual ~TcpSslServerConfig() = default;
+        ~TcpSslServerConfig() override = default;
     };
 
     struct HttpServerConfig: public TcpServerConfig
     {
         using ptr = std::shared_ptr<HttpServerConfig>;
         HttpServerConfig();
-        uint32_t m_proto_capacity;          // 协议对象池容量
+        uint32_t m_proto_capacity{};          // 协议对象池容量
         uint32_t m_max_header_size;
 
-        virtual ~HttpServerConfig() = default;
+        ~HttpServerConfig() override = default;
     };
 
     class Server
@@ -95,10 +94,10 @@ namespace galay::server
     class TcpServer: public Server
     {
     public:
-        TcpServer(TcpServerConfig::ptr config);
+        explicit TcpServer(TcpServerConfig::ptr config);
         //no block
         void Start(TcpCallbackStore* store, int port);
-        void Stop();
+        virtual void Stop();
         inline bool IsRunning() { return m_is_running; }
         virtual ~TcpServer();
     protected:
@@ -107,15 +106,15 @@ namespace galay::server
         std::vector<event::ListenEvent*> m_listen_events;
     };
 
-    class TcpSslServer: public Server
+    class TcpSslServer final : public Server
     {
     public:
-        TcpSslServer(TcpSslServerConfig::ptr config);
+        explicit TcpSslServer(const TcpSslServerConfig::ptr& config);
         //no block
         void Start(TcpSslCallbackStore* store, int port);
         void Stop();
-        inline bool IsRunning() { return m_is_running; }
-        virtual ~TcpSslServer();
+        bool IsRunning() { return m_is_running; }
+        ~TcpSslServer();
     protected:
         TcpSslServerConfig::ptr m_config;
         std::atomic_bool m_is_running;
@@ -139,7 +138,7 @@ namespace galay::server
     {
     public:
 
-        void Initial(uint32_t capacity)
+        void Initial(const uint32_t capacity)
         {
             m_capacity.store(capacity);
             for(int i = 0; i < capacity; ++i) {
@@ -152,8 +151,7 @@ namespace galay::server
 
         Request* GetRequest()
         {
-            Request* request = nullptr;
-            if(m_request_queue.try_dequeue(request)){
+            if(Request* request = nullptr; m_request_queue.try_dequeue(request)){
                 return request;
             }
             return new Request();
@@ -171,8 +169,7 @@ namespace galay::server
 
         Response* GetResponse()
         {
-            Response* response = nullptr;
-            if(m_response_queue.try_dequeue(response)){
+            if(Response* response = nullptr; m_response_queue.try_dequeue(response)){
                 return response;
             }
             return new Response();
@@ -207,14 +204,14 @@ namespace galay::server
 
 #define DEFAULT_PROTOCOL_CAPACITY 1024
 
-    class HttpServer: public TcpServer
+    class HttpServer final : public TcpServer
     {
         static ServerProtocolStore<protocol::http::HttpRequest, protocol::http::HttpResponse> g_http_proto_store;
         static protocol::http::HttpResponse g_method_not_allowed_resp;
         static protocol::http::HttpResponse g_uri_too_long_resp;
         static protocol::http::HttpResponse g_not_found_resp;
     public:
-        HttpServer(HttpServerConfig::ptr config);
+        explicit HttpServer(const HttpServerConfig::ptr& config);
         
         static void ReturnResponse(protocol::http::HttpResponse* response);
         static void ReturnRequest(protocol::http::HttpRequest* request);
@@ -228,7 +225,7 @@ namespace galay::server
         void Post(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
         void Put(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
         void Start(int port);
-        void Stop();
+        void Stop() override;
     private:
         coroutine::Coroutine HttpRoute(TcpOperation operation);
     private:

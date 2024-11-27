@@ -1,5 +1,5 @@
-#ifndef __GALAY_ASYNC_H__
-#define __GALAY_ASYNC_H__
+#ifndef GALAY_ASYNC_H
+#define GALAY_ASYNC_H
 
 #include "galay/common/Base.h"
 #include "galay/common/Error.h"
@@ -26,7 +26,7 @@ namespace galay::async
 class HandleOption
 {
 public:
-    HandleOption(GHandle handle);
+    explicit HandleOption(GHandle handle);
     bool HandleBlock();
     bool HandleNonBlock();
     bool HandleReuseAddr();
@@ -51,10 +51,10 @@ struct NetIOVec
 
 struct FileIOVec
 {
-    GHandle m_handle;
+    GHandle m_handle{};
     char* m_buf = nullptr;
-    size_t m_length;
-    long long m_offset;
+    size_t m_length{};
+    long long m_offset{};
 };
 
 class AsyncNetIo;
@@ -74,7 +74,7 @@ bool AsyncSocket(AsyncNetIo* asocket);
 bool BindAndListen(AsyncNetIo* asocket, int port, int backlog);
 
 coroutine::Awaiter_GHandle AsyncAccept(AsyncNetIo* asocket, NetAddr* addr);
-coroutine::Awaiter_bool AsyncConnect(AsyncNetIo* asocket, NetAddr* addr);
+coroutine::Awaiter_bool AsyncConnect(AsyncNetIo* async_socket, NetAddr* addr);
 coroutine::Awaiter_int AsyncRecv(AsyncNetIo* asocket, NetIOVec* iov);
 coroutine::Awaiter_int AsyncSend(AsyncNetIo* asocket, NetIOVec* iov);
 coroutine::Awaiter_bool AsyncClose(AsyncNetIo* asocket);
@@ -107,11 +107,11 @@ class AsyncNetIo
 {
 public:
     using ptr = std::shared_ptr<AsyncNetIo>;
-    AsyncNetIo(event::EventEngine* engine);
+    explicit AsyncNetIo(event::EventEngine* engine);
 
-    HandleOption GetOption();
-    inline GHandle& GetHandle() { return m_handle; }
-    inline action::NetEventAction*& GetAction() { return m_action; };
+    HandleOption GetOption() const;
+    GHandle& GetHandle() { return m_handle; }
+    action::NetEventAction*& GetAction() { return m_action; };
     uint32_t &GetErrorCode();
     virtual ~AsyncNetIo();
 protected:
@@ -123,15 +123,15 @@ protected:
 class AsyncTcpSocket: public AsyncNetIo
 {
 public:
-    AsyncTcpSocket(event::EventEngine* engine);
+    explicit AsyncTcpSocket(event::EventEngine* engine);
 };
 
 class AsyncSslNetIo: public AsyncNetIo
 {
 public:
-    AsyncSslNetIo(event::EventEngine* engine);
-    inline SSL*& GetSSL() { return m_ssl; }
-    virtual ~AsyncSslNetIo();
+    explicit AsyncSslNetIo(event::EventEngine* engine);
+    SSL*& GetSSL() { return m_ssl; }
+    ~AsyncSslNetIo() override;
 private:
     SSL* m_ssl = nullptr;
 };
@@ -139,15 +139,15 @@ private:
 class AsyncSslTcpSocket: public AsyncSslNetIo
 {
 public:
-    AsyncSslTcpSocket(event::EventEngine* engine);
+    explicit AsyncSslTcpSocket(event::EventEngine* engine);
 };
 
 class AsyncUdpSocket: public AsyncNetIo
 {
 public:
     using ptr = std::shared_ptr<AsyncUdpSocket>;
-    AsyncUdpSocket(event::EventEngine* engine);
-    ~AsyncUdpSocket();
+    explicit AsyncUdpSocket(event::EventEngine* engine);
+    ~AsyncUdpSocket() override;
 private:
     GHandle m_handle;
     uint32_t m_error_code;
@@ -157,11 +157,11 @@ class AsyncFileIo
 {
 public:
     using ptr = std::shared_ptr<AsyncFileIo>;
-    AsyncFileIo(event::EventEngine* engine);
-    HandleOption GetOption();
-    inline action::FileIoEventAction*& GetAction() { return m_action; };
-    inline GHandle& GetHandle() { return m_handle; }
-    inline uint32_t& GetErrorCode() { return m_error_code; }
+    explicit AsyncFileIo(event::EventEngine* engine);
+    [[nodiscard]] HandleOption GetOption() const;
+    action::FileIoEventAction*& GetAction() { return m_action; };
+    GHandle& GetHandle() { return m_handle; }
+    uint32_t& GetErrorCode() { return m_error_code; }
     virtual ~AsyncFileIo();
 private:
     // eventfd
@@ -170,11 +170,11 @@ private:
     action::FileIoEventAction* m_action;
 };
 
-class AsyncFileDiscreptor: public AsyncFileIo
+class AsyncFileDescriptor final : public AsyncFileIo
 {
 public:
-    using ptr = std::shared_ptr<AsyncFileDiscreptor>;
-    AsyncFileDiscreptor(event::EventEngine* engine);
+    using ptr = std::shared_ptr<AsyncFileDescriptor>;
+    explicit AsyncFileDescriptor(event::EventEngine* engine);
 };
 
 #ifdef  __linux__

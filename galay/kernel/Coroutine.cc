@@ -15,7 +15,7 @@ Coroutine Coroutine::promise_type::get_return_object() noexcept
     return *this->m_coroutine;
 }
 
-void Coroutine::promise_type::return_void() noexcept
+void Coroutine::promise_type::return_void() const noexcept
 { 
     this->m_store->RemoveCoroutine(m_coroutine); 
 }
@@ -48,7 +48,7 @@ void CoroutineStore::Clear()
     }
 }
 
-Coroutine::Coroutine(std::coroutine_handle<promise_type> handle) noexcept
+Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
 {
     this->m_handle = handle;
     this->m_awaiter = nullptr;
@@ -91,14 +91,13 @@ void Coroutine::Destroy()
 
 bool Coroutine::SetAwaiter(Awaiter *awaiter)
 {
-    Awaiter* t = m_awaiter.load();
-    if(!m_awaiter.compare_exchange_strong(t, awaiter)) {
+    if(Awaiter* t = m_awaiter.load(); !m_awaiter.compare_exchange_strong(t, awaiter)) {
         return false;
     }
     return true;
 }
 
-Awaiter *Coroutine::GetAwaiter()
+Awaiter *Coroutine::GetAwaiter() const
 {
     return m_awaiter.load();
 }
@@ -116,7 +115,7 @@ Awaiter_bool CoroutineWaiters::Wait(int timeout)
         return Awaiter_bool(true);
     }
     if( !m_action ) m_action = new action::CoroutineWaitAction();
-    return Awaiter_bool(m_action, nullptr);
+    return {m_action, nullptr};
 }
 
 bool CoroutineWaiters::Decrease()
@@ -142,12 +141,12 @@ CoroutineWaitContext::CoroutineWaitContext(CoroutineWaiters& waiters)
 {
 }
 
-void CoroutineWaitContext::AddWaitCoroutineNum(int num)
+void CoroutineWaitContext::AddWaitCoroutineNum(const int num) const
 {
     m_waiters.AddCoroutineTaskNum(num);
 }
 
-bool CoroutineWaitContext::Done()
+bool CoroutineWaitContext::Done() const
 {
     return m_waiters.Decrease();
 }
@@ -159,8 +158,8 @@ namespace galay::this_coroutine
     
 coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine)
 {
-    action::GetCoroutineHandleAction* action = new action::GetCoroutineHandleAction(&coroutine);
-    return coroutine::Awaiter_void(action, nullptr);
+    auto* action = new action::GetCoroutineHandleAction(&coroutine);
+    return {action, nullptr};
 }
 
 static thread_local action::TimeEventAction g_time_action;
@@ -170,8 +169,8 @@ coroutine::Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* time
     if(GetTimerSchedulerNum() == 0) {
         return coroutine::Awaiter_bool(false);
     }
-    g_time_action.CreateTimer(ms, timer, [scheduler](event::Timer::ptr timer){
-        auto co = std::any_cast<coroutine::Coroutine*>(timer->GetContext());
+    g_time_action.CreateTimer(ms, timer, [scheduler](const event::Timer::ptr& use_timer){
+        const auto co = std::any_cast<coroutine::Coroutine*>(use_timer->GetContext());
         co->GetAwaiter()->SetResult(true);
         if(scheduler == nullptr) {
             GetCoroutineSchedulerInOrder()->EnqueueCoroutine(co);
@@ -179,6 +178,6 @@ coroutine::Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* time
             scheduler->EnqueueCoroutine(co);
         }
     });
-    return coroutine::Awaiter_bool(&g_time_action , nullptr);
+    return {&g_time_action , nullptr};
 }
 }

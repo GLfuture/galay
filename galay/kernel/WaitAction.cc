@@ -10,13 +10,12 @@ namespace galay::action
 {
 
 TimeEventAction::TimeEventAction()
-{
-}
+= default;
 
-void TimeEventAction::CreateTimer(int64_t ms, std::shared_ptr<event::Timer> *timer, std::function<void(std::shared_ptr<event::Timer>)> &&callback)
+void TimeEventAction::CreateTimer(const int64_t ms, std::shared_ptr<event::Timer> *timer, std::function<void(const std::shared_ptr<event::Timer>&)> &&callback)
 {
     this->m_ms = ms;
-    m_callback = std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback);
+    m_callback = std::forward<std::function<void(const std::shared_ptr<event::Timer>&)>>(callback);
     m_timer = timer;
 }
 
@@ -37,8 +36,7 @@ bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
 }
 
 TimeEventAction::~TimeEventAction()
-{
-}
+= default;
 
 NetEventAction::NetEventAction(event::EventEngine* engine, event::NetWaitEvent *event)
     :m_engine(engine), m_event(event)
@@ -56,16 +54,14 @@ bool NetEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     if( !m_event ) return false;
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
     if (!m_event->BelongEngine())   {
-        int ret = m_engine->AddEvent(this->m_event, nullptr);
-        if( ret != 0 ) {
+        if(const int ret = m_engine->AddEvent(this->m_event, nullptr); ret != 0 ) {
             spdlog::warn("NetEventAction::DoAction.AddEvent(handle: {}) failed, {}, engine:{}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()), (void*)m_event->BelongEngine());
             m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
             return true;
         }
     }
     else {
-        int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
-        if( ret != 0 ) {
+        if(const int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr); ret != 0 ) {
             spdlog::warn("NetEventAction::DoAction.ModEvent(handle: {}) failed, {}, engine:{}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()), (void*)m_event->BelongEngine());
             m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
             return true;
@@ -84,14 +80,14 @@ NetEventAction::~NetEventAction()
     delete m_event;
 }
 
-SslNetEventAction::SslNetEventAction(event::EventEngine* engine, event::TcpSslWaitEvent * event)
+SslNetEventAction::SslNetEventAction(event::EventEngine* engine, event::NetSslWaitEvent * event)
     :NetEventAction(engine, event)
 {
 }
 
 
 FileIoEventAction::FileIoEventAction(event::EventEngine *engine, event::FileIoWaitEvent *event)
-    :m_engine(engine), m_event(event)
+    :m_event(event), m_engine(engine)
 {
 }
 
@@ -105,16 +101,14 @@ bool FileIoEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
     if( !m_event ) return false;
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
     if (!m_event->BelongEngine())   {
-        int ret = m_engine->AddEvent(this->m_event, nullptr);
-        if( ret != 0 ) {
+        if(const int ret = m_engine->AddEvent(this->m_event, nullptr); ret != 0 ) {
             spdlog::warn("NetEventAction::DoAction.AddEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
             m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
             return true;
         }
     }
     else {
-        int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
-        if( ret != 0 ) {
+        if(const int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr); ret != 0 ) {
             spdlog::warn("NetEventAction::DoAction.ModEvent(handle: {}) failed, {}", m_event->GetAsyncTcpSocket()->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()));
             m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
             return true;
@@ -125,7 +119,7 @@ bool FileIoEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
 
 FileIoEventAction::~FileIoEventAction()
 {
-    if(m_event) delete m_event;
+    delete m_event;
 }
 
 CoroutineWaitAction::CoroutineWaitAction()

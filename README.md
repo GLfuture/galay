@@ -8,14 +8,13 @@
 
 ## 简介
 
-> galay网络框架是一个轻量级的网络框架，拥有较少的依赖，快速搭建server/client，支持自定义协议server/client
+> galay框架，异步协程框架
 
 ## 安装
 
-1. 下载必要依赖openssl，g++(version > 9)，cmake spdlog
-    > linux
+1. 下载必要依赖openssl，g++(version > 9)，cmake，spdlog，libaio（linux下）
     >```shell
-    > sudo apt-get install libssl-dev g++ cmake
+    > sudo apt-get install libssl-dev g++ cmake libaio 
     > git clone https://github.com/gabime/spdlog.git
     > cd spdlog
     > mkdir build

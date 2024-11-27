@@ -1,10 +1,7 @@
-#ifndef __GALAY_OPERATION_H__
-#define __GALAY_OPERATION_H__
+#ifndef GALAY_OPERATION_H
+#define GALAY_OPERATION_H
 
 #include <any>
-#include <atomic>
-#include <memory>
-#include <string_view>
 #include <functional>
 #include "Event.h"
 
@@ -39,27 +36,27 @@ namespace galay::protocol::http
 namespace galay
 {
 
-#define DEFAULT_CHECK_TIME_MS       10 * 1000           //10s
-#define DEFAULT_TCP_TIMEOUT_MS      10 * 60 * 1000      //10min
+#define DEFAULT_CHECK_TIME_MS       (10 * 1000)           //10s
+#define DEFAULT_TCP_TIMEOUT_MS      (10 * 60 * 1000)      //10min
 
-class StringViewWrapper
-{
-public:
-    StringViewWrapper(std::string_view& origin_view);
-    std::string_view Data();
-    void Erase(int length);
-    void Clear();
-    ~StringViewWrapper();
-private:
-    std::string_view& m_origin_view;
-};
+// class StringViewWrapper
+// {
+// public:
+//     explicit StringViewWrapper(std::string_view& origin_view);
+//     std::string_view Data() const;
+//     void Erase(int length) const;
+//     void Clear() const;
+//     ~StringViewWrapper();
+// private:
+//     std::string_view& m_origin_view;
+// };
 
 class TcpConnection
 {
 public:
     using ptr = std::shared_ptr<TcpConnection>;
-    TcpConnection(async::AsyncNetIo* socket);
-    inline async::AsyncNetIo* GetSocket() { return m_socket; }
+    explicit TcpConnection(async::AsyncNetIo* socket);
+    [[nodiscard]] async::AsyncNetIo* GetSocket() const { return m_socket; }
     
     ~TcpConnection();
 private:
@@ -76,7 +73,7 @@ public:
     /*
         ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
     */
-    void ReExecute(TcpOperation operation);
+    void ReExecute(const TcpOperation& operation) const;
     std::any& GetContext();
     ~TcpOperation();
 private:
@@ -89,8 +86,8 @@ class TcpSslConnection
 {
 public:
     using ptr = std::shared_ptr<TcpSslConnection>;
-    TcpSslConnection(async::AsyncSslNetIo* socket);
-    inline async::AsyncSslNetIo* GetSocket() { return m_socket; } 
+    explicit TcpSslConnection(async::AsyncSslNetIo* socket);
+    [[nodiscard]] async::AsyncSslNetIo* GetSocket() const { return m_socket; }
     ~TcpSslConnection();
 private:
     async::AsyncSslNetIo* m_socket;
@@ -105,7 +102,7 @@ public:
     /*
         ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
     */
-    void ReExecute(TcpSslOperation operation);
+    void ReExecute(const TcpSslOperation& operation) const;
     std::any& GetContext();
     ~TcpSslOperation();
 private:
@@ -117,7 +114,7 @@ private:
 class TcpCallbackStore
 {
 public:
-    TcpCallbackStore(const std::function<coroutine::Coroutine(TcpOperation)>& callback);
+    explicit TcpCallbackStore(const std::function<coroutine::Coroutine(TcpOperation)>& callback);
     void Execute(async::AsyncNetIo* socket);
 private:
     std::function<coroutine::Coroutine(TcpOperation)> m_callback;
@@ -126,7 +123,7 @@ private:
 class TcpSslCallbackStore
 {
 public:
-    TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)>& callback);
+    explicit TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)>& callback);
     void Execute(async::AsyncSslNetIo* socket);
 private:
     std::function<coroutine::Coroutine(TcpSslOperation)> m_callback;
@@ -143,11 +140,11 @@ class HttpOperation
         ~HttpProtoStore();
     };
 public:
-    HttpOperation(TcpOperation operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
-    protocol::http::HttpRequest* GetRequest();
-    protocol::http::HttpResponse* GetResponse();
+    HttpOperation(const TcpOperation& operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
+    protocol::http::HttpRequest* GetRequest() const;
+    protocol::http::HttpResponse* GetResponse() const;
     TcpConnection::ptr GetConnection();
-    void Continue();
+    void Continue() const;
     ~HttpOperation();
 private:
     TcpOperation m_operation;

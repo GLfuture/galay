@@ -34,7 +34,7 @@ bool EventScheduler::Loop(int timeout)
     return true;
 }
 
-bool EventScheduler::Stop()
+bool EventScheduler::Stop() const
 {
     if(!m_start) {
         return false;
@@ -44,14 +44,13 @@ bool EventScheduler::Stop()
     return m_waiter->Wait(5000);
 }
 
-uint32_t EventScheduler::GetErrorCode()
+uint32_t EventScheduler::GetErrorCode() const
 {
     return m_engine->GetErrorCode();
 }
 
 EventScheduler::~EventScheduler()
-{
-}
+= default;
 
 CoroutineScheduler::CoroutineScheduler()
 {
@@ -62,14 +61,14 @@ CoroutineScheduler::CoroutineScheduler()
 void 
 CoroutineScheduler::EnqueueCoroutine(coroutine::Coroutine *coroutine)
 {
-    m_coroutines_queue.enqueue(std::move(coroutine));
+    m_coroutines_queue.enqueue(coroutine);
 }
 
 bool CoroutineScheduler::Loop()
 {
     this->m_thread = std::make_unique<std::thread>([this](){
         coroutine::Coroutine* co = nullptr;
-        while(1)
+        while(true)
         {
             m_coroutines_queue.wait_dequeue(co);
             if(co) {
@@ -100,27 +99,27 @@ bool CoroutineScheduler::Stop()
 
 TimerScheduler::TimerScheduler()
 {
-    GHandle handle;
+    GHandle handle{};
     event::TimeEvent::CreateHandle(handle);
     m_timer_event = new event::TimeEvent(handle, m_engine.get());
 }
 
-std::shared_ptr<event::Timer> TimerScheduler::AddTimer(int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback)
+std::shared_ptr<event::Timer> TimerScheduler::AddTimer(const int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback) const
 {
     return m_timer_event->AddTimer(ms, std::forward<std::function<void(std::shared_ptr<event::Timer>)>>(callback));
 }
 
-bool TimerScheduler::Loop(int timeout)
+bool TimerScheduler::Loop(const int timeout)
 {
     return EventScheduler::Loop(timeout);
 }
 
-bool TimerScheduler::Stop()
+bool TimerScheduler::Stop() const
 {
     return EventScheduler::Stop();
 }
 
-uint32_t TimerScheduler::GetErrorCode()
+uint32_t TimerScheduler::GetErrorCode() const
 {
     return EventScheduler::GetErrorCode();
 }
