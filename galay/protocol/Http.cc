@@ -12,6 +12,8 @@ static const char* HttpErrors[] = {
     "Chunck has error",
     "Http code is invalid",
     "Header pair exists",
+    "Header pair not exist",
+    "Bad Request",
 };
 
 bool 
@@ -334,29 +336,28 @@ HttpRequestHeader::HeaderPairs()
 }
 
 error::HttpErrorCode 
-HttpRequestHeader::FromString(std::string_view str)
+HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index)
 {
-    HttpHeadStatus status = HttpHeadStatus::kHttpHeadMethod;
-    std::string key, value;
-    std::string_view method, version;
+    std::string_view method, version, key, value;
     size_t n = str.size();
-    size_t i, version_begin = 0;
-    for (i = 0; i < n; ++i)
+    size_t i = next_index, version_begin = 0, key_begin = 0, value_begin = 0;
+    for (; i < n; ++i)
     {
-        if(status == HttpHeadStatus::kHttpHeadEnd) break;
+        if(status == HttpDecodeStatus::kHttpHeadEnd) break;
         switch (status)
         {
-        case HttpHeadStatus::kHttpHeadMethod:
+        case HttpDecodeStatus::kHttpHeadMethod:
         {
             if(str[i] == ' ')
             {
                 method = std::string_view(str.data(), i);
                 this->m_method = StringToHttpMethod(method);
-                status = HttpHeadStatus::kHttpHeadUri;
+                status = HttpDecodeStatus::kHttpHeadUri;
+                next_index = i + 1;
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadUri:
+        case HttpDecodeStatus::kHttpHeadUri:
         {
             if (str[i] != ' ')
             {
@@ -371,60 +372,61 @@ HttpRequestHeader::FromString(std::string_view str)
                 }
                 this->m_uri = ConvertFromUri(std::move(this->m_uri), false);
                 ParseArgs(this->m_uri);
-                status = HttpHeadStatus::kHttpHeadVersion;
-                version_begin = i + 1;
+                status = HttpDecodeStatus::kHttpHeadVersion;
+                next_index = i + 1;
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadVersion:
+        case HttpDecodeStatus::kHttpHeadVersion:
         {
-            if(str[i] == '\r')
+            if(version_begin == 0) version_begin = i;
+            if(str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
                 version = std::string_view(str.data() + version_begin, i - version_begin);
                 this->m_version = StringToHttpVersion(version);
-                status = HttpHeadStatus::kHttpHeadKey;
                 ++i;
+                status = HttpDecodeStatus::kHttpHeadKey;
+                next_index = i + 1;
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadKey:
+        case HttpDecodeStatus::kHttpHeadKey:
         {
-            if (str[i] == '\r')
+            if (key_begin == 0) key_begin = i;
+            if (str[i] == '\r' && i < n - 3)
             {
-                ++i;
-                status = HttpHeadStatus::kHttpHeadEnd;
+                next_index = i + 2;
+                status = HttpDecodeStatus::kHttpHeadEnd;
             }
             else
             {
-                if (str[i] != ':')
+                if(str[i] == ':')
                 {
-                    key += str[i];
-                }
-                else
-                {
+                    key = std::string_view(str.data() + key_begin, i - key_begin);
+                    key_begin = 0;
                     if (i + 1 < n && str[i + 1] == ' ')
                         ++i;
-                    status = HttpHeadStatus::kHttpHeadValue;
+                    status = HttpDecodeStatus::kHttpHeadValue;
+                    next_index = i + 1;
                 }
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadValue:
+        case HttpDecodeStatus::kHttpHeadValue:
         {
-            if (str[i] != '\r')
+            if (value_begin == 0) value_begin = i;
+            if(str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
-                value += str[i];
-            }
-            else
-            {
-                m_headerPairs.AddHeaderPair(key, value);
-                key.clear();
-                value.clear();
+                value = std::string_view(str.data() + value_begin, i - value_begin);
+                value_begin = 0;
+                m_headerPairs.AddHeaderPair(std::string(key), std::string(value));
                 ++i;
-                status = HttpHeadStatus::kHttpHeadKey;
+                status = HttpDecodeStatus::kHttpHeadKey;
+                next_index = i + 1;
             }
         }
         break;
+
         default:
             break;
         }
@@ -447,7 +449,7 @@ HttpRequestHeader::ToString()
         url.erase(--url.end());
     }
     res += ConvertToUri(std::move(url));
-    res = res + HttpVersionToString(this->m_version) + "\r\n";
+    res = res + " " + HttpVersionToString(this->m_version) + "\r\n";
     res += m_headerPairs.ToString();
     res += "\r\n";
     return std::move(res);
@@ -716,82 +718,53 @@ HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& v
 }
 
 
-int 
+std::pair<bool,int> 
 HttpRequest::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
     size_t n = buffer.length();
-    int eLength = 0;
     //header
-    if(m_status == HttpProStatus::kHttpHeader){
-        int pos = buffer.find("\r\n\r\n");
-        if(pos == std::string::npos) {
-            if (buffer.length() > HTTP_HEADER_MAX_LEN)
-            {
-                spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                m_error->Code() = error::kHttpError_HeaderTooLong;
-                return -1;
-            }
-            spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
-            m_error->Code() = error::kHttpError_HeaderInComplete;
-            return eLength;
+    if(m_status < HttpDecodeStatus::kHttpHeadEnd) 
+    {
+        error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
+        if( errCode != error::kHttpError_NoError ) {
+            m_error->Code() = errCode;
+            return {false, 0};
         }
-        else if (pos + 4 > HTTP_HEADER_MAX_LEN)
-        {
-            spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
+        if( m_next_index > HTTP_HEADER_MAX_LEN ) {
+            spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
             m_error->Code() = error::kHttpError_HeaderTooLong;
-            return -1;
+            return {false, 0};
+        } 
+        if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
+            m_error->Code() = error::kHttpError_HeaderInComplete;
+            return {false, 0};
         }
-        else{
-            spdlog::debug("[{}:{}] [[Header complete] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            if(m_header == nullptr) m_header = std::make_shared<HttpRequestHeader>();
-            std::string_view header = buffer;
-            error::HttpErrorCode errCode = m_header->FromString(header.substr(0,pos + 4));
-            if(errCode != error::kHttpError_NoError){
-                m_error->Code() = errCode;
-                return -1;
-            };
-            eLength = pos + 4;
-        }
-    }
-    
-    bool hasBody = false;
-    //改变状态
-    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
-        || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
+    } 
+
+    if(m_status >= HttpDecodeStatus::kHttpHeadEnd) 
     {
-        this->m_status = HttpProStatus::kHttpChunck;
-        hasBody = true;
-    }else if(m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length")){
-        this->m_status = HttpProStatus::kHttpBody;
-        hasBody = true;
-    }
-    
-    //hasBody
-    if(hasBody) 
-    {
-        //根据状态处理
-        switch (this->m_status)
+        if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
+            || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
         {
-        case HttpProStatus::kHttpBody:
+            if(GetChunckBody(buffer)){
+                m_status = HttpDecodeStatus::kHttpBody;
+                return {true, m_next_index};
+            }  else {
+                return {false, 0};
+            }
+        }
+        else if (m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length"))
         {
-            eLength = GetHttpBody(buffer, eLength);
-            break;
-        }
-        case HttpProStatus::kHttpChunck:
-        {
-            eLength = GetChunckBody(buffer, eLength);
-            break;
-        }
-        default:
-            break;
-        }
-        if(!m_error->HasError()) {
-            this->m_status = HttpProStatus::kHttpHeader;
+            if(GetHttpBody(buffer)) {
+                m_status = HttpDecodeStatus::kHttpBody;
+                return {true, m_next_index};
+            } else {
+                return {false, 0};
+            }
         }
     }
-    
-    return eLength;
+    return {true, m_next_index};
 }
 
 std::string 
@@ -822,7 +795,8 @@ void protocol::http::HttpRequest::Reset()
     m_header->Reset();
     m_error->Reset();
     if(!m_body.empty()) m_body.clear();
-    m_status = HttpProStatus::kHttpHeader;
+    m_status = HttpDecodeStatus::kHttpHeadMethod;
+    m_next_index = 0;
 }
 
 bool protocol::http::HttpRequest::HasError() const
@@ -867,6 +841,7 @@ HttpRequest::EndChunck()
 HttpRequest::HttpRequest()
 {
     this->m_error = std::make_shared<error::HttpError>();
+    this->m_header = std::make_shared<HttpRequestHeader>();
 }
 
 
@@ -883,49 +858,60 @@ HttpRequest::Body()
     return this->m_body;
 }
 
-int 
-HttpRequest::GetHttpBody(const std::string_view &buffer, int eLength)
+bool 
+HttpRequest::GetHttpBody(const std::string_view &buffer)
 {
     size_t n = buffer.length();
     if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
         std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
         if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        size_t length = std::stoul(contentLength);
-        if(length <= n) {
-            m_body = buffer.substr(eLength, length);
-            eLength += length;
-            if(buffer.substr(eLength,4).compare("\r\n\r\n") == 0) {
-                eLength += 4;
+        size_t length;
+        try
+        {
+            length = std::stoul(contentLength);
+        }
+        catch(const std::exception& e)
+        {
+            spdlog::error("[{}:{}] [[content-length is not a number] [content-length:{}]]", __FILE__, __LINE__, contentLength);
+            m_error->Code() = error::kHttpError_BadRequest;
+
+        }
+        
+        if(length + m_next_index <= n) {
+            m_body = buffer.substr(m_next_index, length);
+            m_next_index += length;
+            if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
+                m_next_index += 4;
             }  
             spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
         }else{
-            spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
+            spdlog::warn("[{}:{}] [[body is incomplete] [Body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
             m_error->Code() = error::kHttpError_BodyInComplete;
-            return eLength;
+            return false;
         }
     }else{
-        size_t pos = buffer.find("\r\n\r\n", eLength);
+        size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
                 m_error->Code() = error::kHttpError_BodyInComplete;
-                return eLength;
+                return false;
             }
         }else{
-            m_body = buffer.substr(eLength, pos - eLength);
-            eLength = pos + 4;
+            m_body = buffer.substr(m_next_index, pos - m_next_index);
+            m_next_index = pos + 4;
         }
     }
-    return eLength;
+    return true;
 }
 
-int 
-HttpRequest::GetChunckBody(const std::string_view& buffer, int eLength)
+bool 
+HttpRequest::GetChunckBody(const std::string_view& buffer)
 {
     while (!buffer.empty())
     {
-        int pos = buffer.find("\r\n", eLength);
-        std::string_view temp = buffer.substr(eLength, pos - eLength);
+        int pos = buffer.find("\r\n", m_next_index);
+        std::string_view temp = buffer.substr(m_next_index, pos - m_next_index);
         int length;
         try
         {
@@ -935,21 +921,21 @@ HttpRequest::GetChunckBody(const std::string_view& buffer, int eLength)
         {
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
             m_error->Code() = error::kHttpError_ChunckHasError;
-            return eLength;
+            return false;
         }
         if(length == 0){
-            eLength = pos + 4;
+            m_next_index = pos + 4;
             spdlog::debug("[{}:{}] [[Chunck is finished] [Chunck Len:{} Bytes]]",__FILE__,__LINE__,pos+4);
             break;
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
             m_error->Code() = error::kHttpError_BodyInComplete;
-            return eLength;
+            return false;
         }
         this->m_body += buffer.substr(pos+2,length);
-        eLength = pos + 4 + length;
+        m_next_index = pos + 4 + length;
     }
-    return eLength;
+    return true;
 }
 
 
@@ -981,40 +967,36 @@ HttpResponseHeader::ToString()
 }
 
 error::HttpErrorCode 
-HttpResponseHeader::FromString(std::string_view str)
+HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index)
 {
     size_t n = str.length();
-    HttpHeadStatus status = HttpHeadStatus::kHttpHeadVersion;
-    std::string status_code;
-    std::string key,value;
-    size_t i;
-    for (i = 0; i < n; ++i)
+    std::string_view code,key,value;
+    size_t i = next_index, code_begin = 0, key_begin = 0, value_begin = 0;
+    for (; i < n; ++i)
     {
-        if (status == HttpHeadStatus::kHttpHeadEnd)
+        if (status == HttpDecodeStatus::kHttpHeadEnd)
             break;
         switch (status)
         {
-        case HttpHeadStatus::kHttpHeadVersion:
+        case HttpDecodeStatus::kHttpHeadVersion:
         {
             if( str[i] == ' ' )
             {
                 m_version = StringToHttpVersion(std::string_view(str.data(), i));
-                status = HttpHeadStatus::kHttpHeadStatusCode;
+                status = HttpDecodeStatus::kHttpHeadStatusCode;
+                next_index = i + 1;
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadStatusCode:
+        case HttpDecodeStatus::kHttpHeadStatusCode:
         {
-            if (str[i] != ' ')
-            {
-                status_code += str[i];
-            }
-            else
+            if ( code_begin == 0 ) code_begin = i;
+            if( str[i] == ' ' )
             {
                 int code;
                 try
                 {
-                    code = std::stoi(status_code);
+                    code = std::stoi(std::string(str.data() + code_begin, i - code_begin));
                 }
                 catch (std::invalid_argument &e)
                 {
@@ -1022,54 +1004,54 @@ HttpResponseHeader::FromString(std::string_view str)
                     return error::kHttpError_HttpCodeInvalid;
                 }
                 m_code = static_cast<HttpStatusCode>(code);
-                status = HttpHeadStatus::kHttpHeadStatusMsg;
+                status = HttpDecodeStatus::kHttpHeadStatusMsg;
+                next_index = i + 1;
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadStatusMsg:
+        case HttpDecodeStatus::kHttpHeadStatusMsg:
         {
-            if (str[i] == '\r')
+            if (str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
-                status = HttpHeadStatus::kHttpHeadKey;
+                status = HttpDecodeStatus::kHttpHeadKey;
                 ++i;
+                next_index = i + 1;
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadKey:
+        case HttpDecodeStatus::kHttpHeadKey:
         {
-            if (str[i] == '\r')
+            if (key_begin == 0) key_begin = i;
+            if (str[i] == '\r' && i < n - 3)
             {
-                ++i;
-                status = HttpHeadStatus::kHttpHeadEnd;
+                next_index = i + 2;
+                status = HttpDecodeStatus::kHttpHeadEnd;
             }
             else
             {
-                if (str[i] != ':')
+                if(str[i] == ':')
                 {
-                    key += str[i];
-                }
-                else
-                {
+                    key = std::string_view(str.data() + key_begin, i - key_begin);
+                    key_begin = 0;
                     if (i + 1 < n && str[i + 1] == ' ')
                         ++i;
-                    status = HttpHeadStatus::kHttpHeadValue;
+                    status = HttpDecodeStatus::kHttpHeadValue;
+                    next_index = i + 1;
                 }
             }
         }
         break;
-        case HttpHeadStatus::kHttpHeadValue:
+        case HttpDecodeStatus::kHttpHeadValue:
         {
-            if (str[i] != '\r')
+            if (value_begin == 0) value_begin = i;
+            if(str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
-                value += str[i];
-            }
-            else
-            {
-                m_headerPairs.AddHeaderPair(key, value);
-                key.clear();
-                value.clear();
+                value = std::string_view(str.data() + value_begin, i - value_begin);
+                value_begin = 0;
+                m_headerPairs.AddHeaderPair(std::string(key), std::string(value));
                 ++i;
-                status = HttpHeadStatus::kHttpHeadKey;
+                status = HttpDecodeStatus::kHttpHeadKey;
+                next_index = i + 1;
             }
         }
         break;
@@ -1083,6 +1065,7 @@ HttpResponseHeader::FromString(std::string_view str)
 HttpResponse::HttpResponse()
 {
     this->m_error = std::make_shared<error::HttpError>();
+    this->m_header = std::make_shared<HttpResponseHeader>();
 }
 
 
@@ -1113,78 +1096,53 @@ HttpResponse::EncodePdu() const
 }
 
 
-int 
+std::pair<bool,int> 
 HttpResponse::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
     size_t n = buffer.length();
-    int eLength = 0;
     //header
-    if(m_status == HttpProStatus::kHttpHeader){
-        int pos = buffer.find("\r\n\r\n");
-        if(pos == std::string::npos) {
-            if (buffer.length() > HTTP_HEADER_MAX_LEN)
-            {
-                spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
-                m_error->Code() = error::kHttpError_HeaderTooLong;
-                return -1;
-            }
-            spdlog::debug("[{}:{}] [[Header is incomplete] [Now Rbuffer Len:{} Bytes]]", __FILE__, __LINE__, buffer.length());
-            m_error->Code() = error::kHttpError_HeaderInComplete;
-            return eLength;
-        }
-        else if (pos + 4 > HTTP_HEADER_MAX_LEN)
-        {
-            spdlog::error("[{}:{}] [[Header is too long] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            m_error->Code() = error::kHttpError_HeaderTooLong;
-            return -1;
-        }
-        else{
-            spdlog::debug("[{}:{}] [[Header complete] [Header Len:{} Bytes]]", __FILE__, __LINE__, pos + 4);
-            if(m_header == nullptr) m_header = std::make_shared<HttpResponseHeader>();
-            std::string_view header = buffer;
-            error::HttpErrorCode errCode = m_header->FromString(header.substr(0, pos + 4));
-            if(m_error->HasError()){
-                m_error->Code() = errCode;
-                return -1;
-            };
-            eLength = pos + 4;
-        }
-    }
-    bool hasBody = false;
-    //改变状态
-    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
-        ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
-        this->m_status = HttpProStatus::kHttpChunck;
-        hasBody = true;
-    }else if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
-        this->m_status = HttpProStatus::kHttpBody;
-        hasBody = true;
-    }
-
-    if(hasBody) 
+    if(m_status < HttpDecodeStatus::kHttpHeadEnd) 
     {
-        //根据状态处理
-        switch (this->m_status)
-        {
-        case HttpProStatus::kHttpBody:
-        {
-            eLength = GetHttpBody(buffer, eLength);
-            break;
+        error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
+        if( errCode != error::kHttpError_NoError ) {
+            m_error->Code() = errCode;
+            return {false, 0};
         }
-        case HttpProStatus::kHttpChunck:
+        if( m_next_index > HTTP_HEADER_MAX_LEN ) {
+            spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
+            m_error->Code() = error::kHttpError_HeaderTooLong;
+            return {false, 0};
+        } 
+        if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
+            m_error->Code() = error::kHttpError_HeaderInComplete;
+            return {false, 0};
+        }
+    } 
+
+    if(m_status >= HttpDecodeStatus::kHttpHeadEnd) 
+    {
+        if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
+            || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
         {
-            eLength = GetChunckBody(buffer, eLength);
-            break;
+            if(GetChunckBody(buffer)){
+                m_status = HttpDecodeStatus::kHttpBody;
+                return {true, m_next_index};
+            }  else {
+                return {false, 0};
+            }
         }
-        default:
-            break;
-        }
-        if(!m_error->HasError()) {
-            this->m_status = HttpProStatus::kHttpHeader;
+        else if (m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length"))
+        {
+            if(GetHttpBody(buffer)) {
+                m_status = HttpDecodeStatus::kHttpBody;
+                return {true, m_next_index};
+            } else {
+                return {false, 0};
+            }
         }
     }
-    return eLength;
+    return {true, m_next_index};
 }
 
 bool protocol::http::HttpResponse::HasError() const
@@ -1207,7 +1165,7 @@ void protocol::http::HttpResponse::Reset()
     m_error->Reset();
     m_header.reset();
     m_body.clear();
-    m_status = HttpProStatus::kHttpHeader;
+    m_status = HttpDecodeStatus::kHttpHeadVersion;
 }
 
 bool 
@@ -1245,50 +1203,61 @@ HttpResponse::EndChunck()
 }
 
 
-int 
-HttpResponse::GetHttpBody(const std::string_view& buffer, int eLength)
+bool 
+HttpResponse::GetHttpBody(const std::string_view& buffer)
 {
     size_t n = buffer.length();
     if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
-        std::string contentLength = m_header->HeaderPairs().GetValue("content-length");
-        if(contentLength.empty()) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        size_t length = std::stoul(contentLength);
-        if(length <= n) {
-            m_body = buffer.substr(eLength, length);
-            eLength += length;
-            if(buffer.substr(eLength,4).compare("\r\n\r\n") == 0) {
-                eLength += 4;
+        std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+        if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+        size_t length;
+        try
+        {
+            length = std::stoul(contentLength);
+        }
+        catch(const std::exception& e)
+        {
+            spdlog::error("[{}:{}] [[content-length is not a number] [content-length:{}]]", __FILE__, __LINE__, contentLength);
+            m_error->Code() = error::kHttpError_BadRequest;
+
+        }
+        
+        if(length + m_next_index <= n) {
+            m_body = buffer.substr(m_next_index, length);
+            m_next_index += length;
+            if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
+                m_next_index += 4;
             }  
             spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
         }else{
-            spdlog::warn("[{}:{}] [[body is incomplete] [Body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
+            spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
             m_error->Code() = error::kHttpError_BodyInComplete;
-            return eLength;
+            return false;
         }
     }else{
-        size_t pos = buffer.find("\r\n\r\n", eLength);
+        size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
                 spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
                 m_error->Code() = error::kHttpError_BodyInComplete;
-                return eLength;
+                return false;
             }
         }else{
-            m_body = buffer.substr(eLength, pos - eLength);
-            eLength = pos + 4;
+            m_body = buffer.substr(m_next_index, pos - m_next_index);
+            m_next_index = pos + 4;
         }
     }
-    return eLength;
+    return true;
 }
 
 
-int 
-HttpResponse::GetChunckBody(const std::string_view& buffer, int eLength)
+bool 
+HttpResponse::GetChunckBody(const std::string_view& buffer)
 {
     while (!buffer.empty())
     {
-        int pos = buffer.find("\r\n", eLength);
-        std::string_view temp = buffer.substr(eLength, pos - eLength);
+        int pos = buffer.find("\r\n", m_next_index);
+        std::string_view temp = buffer.substr(m_next_index, pos - m_next_index);
         int length;
         try
         {
@@ -1298,21 +1267,21 @@ HttpResponse::GetChunckBody(const std::string_view& buffer, int eLength)
         {
             spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
             m_error->Code() = error::kHttpError_ChunckHasError;
-            return -1;
+            return false;
         }
         if(length == 0){
-            eLength = pos + 4;
+            m_next_index = pos + 4;
             spdlog::debug("[{}:{}] [[Chunck is finished] [Chunck Len:{} Bytes]]",__FILE__,__LINE__,pos+4);
             break;
         }else if(length + 4 + pos > buffer.length()){
             spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
             m_error->Code() = error::kHttpError_BodyInComplete;
-            return 0;
+            return false;
         }
-        this->m_body += buffer.substr(pos + 2,length);
-        eLength = pos + 4 + length;
+        this->m_body += buffer.substr(pos+2,length);
+        m_next_index = pos + 4 + length;
     }
-    return eLength;
+    return true;
 }
 
 //function 

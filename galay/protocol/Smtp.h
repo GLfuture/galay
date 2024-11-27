@@ -62,15 +62,16 @@ namespace galay::protocol::smtp
         using wpt = std::weak_ptr<SmtpRequest>;
         using uptr = std::unique_ptr<SmtpRequest>;
         SmtpRequest();
-        virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual std::string EncodePdu() const override;
-        virtual bool HasError() const override;
-        virtual int GetErrorCode() const override;
-        virtual std::string GetErrorString() override;
-        virtual void Reset() override;
+        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::string EncodePdu() const override;
+        bool HasError() const override;
+        int GetErrorCode() const override;
+        std::string GetErrorString() override;
+        void Reset() override;
         std::string& GetContent();
     private:
         //content不带\r\n
+        uint32_t m_next_index;
         std::string m_content;
         std::string m_frommail;
         std::queue<std::string> m_tomails;
@@ -84,14 +85,15 @@ namespace galay::protocol::smtp
         using wptr = std::weak_ptr<SmtpResponse>;
         using uptr = std::unique_ptr<SmtpResponse>;
         SmtpResponse();
-        virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual std::string EncodePdu() const override;
-        virtual bool HasError() const override;
-        virtual int GetErrorCode() const override;
-        virtual std::string GetErrorString() override;
-        virtual void Reset() override;
+        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::string EncodePdu() const override;
+        bool HasError() const override;
+        int GetErrorCode() const override;
+        std::string GetErrorString() override;
+        void Reset() override;
         std::string& GetContent();
     private:
+        uint32_t m_next_index;
         error::SmtpError::ptr m_error;
         std::string m_content;
     };

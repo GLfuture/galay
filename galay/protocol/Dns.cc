@@ -129,7 +129,7 @@ void protocol::dns::DnsRequest::PopQuestion()
     m_questions.pop();
 }
 
-int DnsRequest::DecodePdu(const std::string_view &buffer)
+std::pair<bool,int> DnsRequest::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
@@ -183,7 +183,7 @@ int DnsRequest::DecodePdu(const std::string_view &buffer)
         q.m_class = ntohs(qclass);
         m_questions.push(q);
     }
-    return buffer.length();
+    return {true, buffer.length()};
 }
 
 bool DnsRequest::HasError() const
@@ -270,7 +270,7 @@ DnsRequest::IsPointer(int in)
 }
 
 
-int 
+std::pair<bool,int> 
 DnsResponse::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];
@@ -353,7 +353,7 @@ DnsResponse::DecodePdu(const std::string_view &buffer)
         m_answers.push(a);
     }
     delete[] begin;
-    return buffer.length();
+    return {true, buffer.length()};
 }
 
 std::string 

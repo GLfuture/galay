@@ -259,101 +259,101 @@ void HttpServer::Stop()
 
 coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 {
-    auto connection = operation.GetConnection();
-	auto request = g_http_proto_store.GetRequest();
-	auto response = g_http_proto_store.GetResponse();
-	HttpOperation httpop(operation, request, response);
-	size_t max_header_len = std::dynamic_pointer_cast<HttpServerConfig>(m_config)->m_max_header_size;
-	char* buffer = (char*)malloc(max_header_len);
-	int total_length;
-	async::NetIOVec iovec {
-		.m_buf = buffer,
-		.m_len = max_header_len
-	};
-	int elength = 0;
-	while(1) {
-		int length = co_await async::AsyncRecv(connection->GetSocket(), &iovec);
-		if( length == 0 ) {
-			break;
-		} else {
-			total_length += length;
-			int ret = request->DecodePdu(std::string_view(buffer + elength, total_length - elength));
-			if( ret > 0) elength += ret;
-			if(request->HasError()) {
-				if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete && ret >= max_header_len) 
-				{
-					//header too long
+    // auto connection = operation.GetConnection();
+	// auto request = g_http_proto_store.GetRequest();
+	// auto response = g_http_proto_store.GetResponse();
+	// HttpOperation httpop(operation, request, response);
+	// size_t max_header_len = std::dynamic_pointer_cast<HttpServerConfig>(m_config)->m_max_header_size;
+	// char* buffer = (char*)malloc(max_header_len);
+	// int total_length = 0;
+	// async::NetIOVec iovec {
+	// 	.m_buf = buffer,
+	// 	.m_len = max_header_len
+	// };
+	// int elength = 0;
+	// while(1) {
+	// 	int length = co_await async::AsyncRecv(connection->GetSocket(), &iovec);
+	// 	if( length == 0 ) {
+	// 		break;
+	// 	} else {
+	// 		total_length += length;
+	// 		// int ret = request->DecodePdu(std::string_view(buffer + elength, total_length - elength));
+	// 		if( ret > 0) elength += ret;
+	// 		if(request->HasError()) {
+	// 			if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_HeaderInComplete && ret >= max_header_len) 
+	// 			{
+	// 				//header too long
 					
-				}
-				else if(request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
-				{
-					int body_len = 0;
-					try
-					{
-						do{
-							std::string temp = request->Header()->HeaderPairs().GetValue("Content-Length");
-							if(!temp.empty()) {
-								body_len = std::stoi(temp);
-								break;
-							}
-							temp = request->Header()->HeaderPairs().GetValue("Content-Length");
-							if(!temp.empty()) {
-								body_len = std::stoi(temp);
-								break;
-							}
-							body_len = DEFAULT_READ_BUFFER_SIZE;
-						}while(0);
-					}
-					catch(const std::exception& e)
-					{
-						spdlog::error("{}", e.what());
-						break;
-					}
-					buffer = (char*)realloc(buffer, elength + body_len);
-					iovec.m_buf = buffer + elength;
-					iovec.m_len = body_len;
-				}
-				else if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ) {
-					auto resp = g_uri_too_long_resp.EncodePdu();
-					async::NetIOVec wiov {
-						.m_buf = resp.data(),
-						.m_len = resp.length()
-					};
-					int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
-					break;
-				}else{
-					break;
-				}
-			}else{
-				auto it = m_route_map.find(request->Header()->Method());
-				if( it != m_route_map.end()){
-					auto inner_it = it->second.find(request->Header()->Uri());
-					if (inner_it != it->second.end()) {
-						inner_it->second(httpop);
-					} else {
-						auto resp = g_not_found_resp.EncodePdu();
-						async::NetIOVec wiov {
-							.m_buf = resp.data(),
-							.m_len = resp.length()
-						};
-						int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
-						break;
-					}
-				} else {
-					auto resp = g_method_not_allowed_resp.EncodePdu();
-					async::NetIOVec wiov {
-						.m_buf = resp.data(),
-						.m_len = resp.length()
-					};
-					int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
-					break;
-				}
+	// 			}
+	// 			else if(request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_BodyInComplete)
+	// 			{
+	// 				int body_len = 0;
+	// 				try
+	// 				{
+	// 					do{
+	// 						std::string temp = request->Header()->HeaderPairs().GetValue("Content-Length");
+	// 						if(!temp.empty()) {
+	// 							body_len = std::stoi(temp);
+	// 							break;
+	// 						}
+	// 						temp = request->Header()->HeaderPairs().GetValue("Content-Length");
+	// 						if(!temp.empty()) {
+	// 							body_len = std::stoi(temp);
+	// 							break;
+	// 						}
+	// 						body_len = DEFAULT_READ_BUFFER_SIZE;
+	// 					}while(0);
+	// 				}
+	// 				catch(const std::exception& e)
+	// 				{
+	// 					spdlog::error("{}", e.what());
+	// 					break;
+	// 				}
+	// 				buffer = (char*)realloc(buffer, elength + body_len);
+	// 				iovec.m_buf = buffer + elength;
+	// 				iovec.m_len = body_len;
+	// 			}
+	// 			else if( request->GetErrorCode() == galay::error::HttpErrorCode::kHttpError_UriTooLong ) {
+	// 				auto resp = g_uri_too_long_resp.EncodePdu();
+	// 				async::NetIOVec wiov {
+	// 					.m_buf = resp.data(),
+	// 					.m_len = resp.length()
+	// 				};
+	// 				int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
+	// 				break;
+	// 			}else{
+	// 				break;
+	// 			}
+	// 		}else{
+	// 			auto it = m_route_map.find(request->Header()->Method());
+	// 			if( it != m_route_map.end()){
+	// 				auto inner_it = it->second.find(request->Header()->Uri());
+	// 				if (inner_it != it->second.end()) {
+	// 					inner_it->second(httpop);
+	// 				} else {
+	// 					auto resp = g_not_found_resp.EncodePdu();
+	// 					async::NetIOVec wiov {
+	// 						.m_buf = resp.data(),
+	// 						.m_len = resp.length()
+	// 					};
+	// 					int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
+	// 					break;
+	// 				}
+	// 			} else {
+	// 				auto resp = g_method_not_allowed_resp.EncodePdu();
+	// 				async::NetIOVec wiov {
+	// 					.m_buf = resp.data(),
+	// 					.m_len = resp.length()
+	// 				};
+	// 				int sendlen = co_await async::AsyncSend(connection->GetSocket(), &wiov);
+	// 				break;
+	// 			}
 
-			}
-		}
-		free(iovec.m_buf);
-		co_await async::AsyncClose(connection->GetSocket());
-		co_return;
+	// 		}
+	// 	}
+	// 	free(iovec.m_buf);
+	// 	co_await async::AsyncClose(connection->GetSocket());
+	// 	co_return;
 	}
 // 	} else {
 // 		protocol::http::HttpRequest* request = nullptr;
@@ -413,7 +413,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
 // 	}
 	
 // 	co_return;
-}
+//}
 
 
 }

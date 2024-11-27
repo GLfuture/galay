@@ -124,7 +124,7 @@ namespace galay::server
     template<typename T>
     concept ProtoType = std::default_initializable<T> && requires(T t, const std::string_view& buffer)
     {
-        { t.DecodePdu(buffer) } -> std::same_as<int>;
+        { t.DecodePdu(buffer) } -> std::same_as<std::pair<bool, int>>;
         { t.EncodePdu() }-> std::same_as<std::string>;
         { t.HasError() } -> std::same_as<bool>;
         { t.GetErrorCode() } -> std::same_as<int>;

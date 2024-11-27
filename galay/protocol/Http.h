@@ -22,6 +22,7 @@ namespace galay::error
         kHttpError_HttpCodeInvalid,
         kHttpError_HeaderPairExist,
         kHttpError_HeaderPairNotExist,
+        kHttpError_BadRequest,
     };
 
     class HttpError
@@ -43,15 +44,8 @@ namespace galay::protocol::http
 {
     #define HTTP_HEADER_MAX_LEN         4096    // 头部最大长度4k
     #define HTTP_URI_MAX_LEN            2048    // uri最大长度2k
-    enum class HttpProStatus: int
-    {
-        kHttpHeader,
-        kHttpChunck,
-        kHttpBody,
-        kWebsocket,
-    };
 
-    enum class HttpHeadStatus: int
+    enum class HttpDecodeStatus: int
     {
         kHttpHeadMethod,
         kHttpHeadUri,
@@ -61,6 +55,7 @@ namespace galay::protocol::http
         kHttpHeadStatusCode,
         kHttpHeadStatusMsg,
         kHttpHeadEnd,
+        kHttpBody,
     };
 
     enum class HttpMethod: int
@@ -203,7 +198,7 @@ namespace galay::protocol::http
         std::map<std::string,std::string>& Args();
         HeaderPair& HeaderPairs();
         std::string ToString();
-        error::HttpErrorCode FromString(std::string_view str);
+        error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index);
         void CopyFrom(HttpRequestHeader::ptr header);
         void Reset();
     private:
@@ -231,22 +226,23 @@ namespace galay::protocol::http
         HttpRequest();
         HttpRequestHeader::ptr Header();
         std::string& Body();
-        virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual std::string EncodePdu() const override;
-        virtual bool HasError() const override;
-        virtual int GetErrorCode() const override;
-        virtual std::string GetErrorString() override;
-        virtual void Reset() override;
+        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::string EncodePdu() const override;
+        bool HasError() const override;
+        int GetErrorCode() const override;
+        std::string GetErrorString() override;
+        void Reset() override;
         //chunck
         bool StartChunck();
         std::string ToChunckData(std::string&& buffer);
         std::string EndChunck();
     private:
-        int GetHttpBody(const std::string_view& buffer, int elength);
-        int GetChunckBody(const std::string_view& buffer, int elength);
+        bool GetHttpBody(const std::string_view& buffer);
+        bool GetChunckBody(const std::string_view& buffer);
     private:
-        HttpProStatus m_status = HttpProStatus::kHttpHeader;
+        HttpDecodeStatus m_status = HttpDecodeStatus::kHttpHeadMethod;
         HttpRequestHeader::ptr m_header;
+        uint32_t m_next_index;
         std::string m_body;
         error::HttpError::ptr m_error;
     };
@@ -259,7 +255,7 @@ namespace galay::protocol::http
         HttpStatusCode& Code();
         HeaderPair& HeaderPairs();
         std::string ToString();
-        error::HttpErrorCode FromString(std::string_view str);
+        error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index);
     private:
         HttpStatusCode m_code;
         HttpVersion m_version;
@@ -275,24 +271,25 @@ namespace galay::protocol::http
         HttpResponse();
         HttpResponseHeader::ptr Header();
         std::string& Body();
-        virtual std::string EncodePdu() const override;
-        virtual int DecodePdu(const std::string_view &buffer) override;
-        virtual bool HasError() const override;
-        virtual int GetErrorCode() const override;
-        virtual std::string GetErrorString() override;
-        virtual void Reset() override;
+        std::string EncodePdu() const override;
+        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        bool HasError() const override;
+        int GetErrorCode() const override;
+        std::string GetErrorString() override;
+        void Reset() override;
         
         //chunck
         bool StartChunck();
         std::string ToChunckData(std::string&& buffer);
         std::string EndChunck();
     private:
-        int GetHttpBody(const std::string_view& buffer, int eLength);
-        int GetChunckBody(const std::string_view& buffer, int eLength);
+        bool GetHttpBody(const std::string_view& buffer);
+        bool GetChunckBody(const std::string_view& buffer);
     private:
-        HttpProStatus m_status = HttpProStatus::kHttpHeader;
+        HttpDecodeStatus m_status = HttpDecodeStatus::kHttpHeadVersion;
         HttpResponseHeader::ptr m_header;
         std::string m_body;
+        uint32_t m_next_index;
         error::HttpError::ptr m_error;
     };
 }

@@ -117,21 +117,24 @@ SmtpHelper::Quit(SmtpRequest& request)
 }
 
 SmtpRequest::SmtpRequest()
+    : m_next_index(0)
 {
     m_error = std::make_shared<error::SmtpError>();    
 }
 
-int 
+std::pair<bool,int> 
 SmtpRequest::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
-    int pos = buffer.find("\r\n");
+    int pos = buffer.find("\r\n", m_next_index);
     if(pos == std::string::npos) {
         m_error->Code() = error::kSmtpError_Incomplete;
-        return 0;
+        m_next_index = buffer.length();
+        return {false, 0};
     }
     this->m_content = buffer.substr(0,pos);
-    return pos + 2;
+    m_next_index = 0;
+    return {true, pos + 2};
 }
 
 std::string 
@@ -172,21 +175,24 @@ SmtpRequest::GetContent()
 }
 
 SmtpResponse::SmtpResponse()
+    : m_next_index(0)
 {
     m_error = std::make_shared<error::SmtpError>();
 }
 
-int 
+std::pair<bool,int> 
 SmtpResponse::DecodePdu(const std::string_view &buffer)
 {
     m_error->Reset();
-    int pos = buffer.find("\r\n");
+    int pos = buffer.find("\r\n", m_next_index);
     if(pos == std::string::npos) {
         m_error->Code() = error::kSmtpError_Incomplete;
-        return 0;
+        m_next_index = buffer.length();
+        return {false, 0};
     }
     this->m_content = buffer.substr(0,pos);
-    return pos + 2;
+    m_next_index = 0;
+    return {true, pos + 2};
 }
 
 

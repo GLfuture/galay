@@ -24,7 +24,7 @@ int main(int argc, char** argv)
         int length = co_await galay::async::AsyncSSLRecv(socket, &iov);
         galay::protocol::http::HttpRequest::ptr request = std::make_shared<galay::protocol::http::HttpRequest>();
         std::string_view data(iov.m_buf, length);
-        int elength = request->DecodePdu(data);
+        auto res = request->DecodePdu(data);
         if( length == 0 ) {
             goto end;
         }

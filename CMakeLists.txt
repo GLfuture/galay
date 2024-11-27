@@ -116,7 +116,8 @@ install(DIRECTORY ${HEADER_SRC_DIR}
         DESTINATION ${HEADER_DST_DIR}
         COMPONENT devel
         FILES_MATCHING
-        PATTERN "*.h*"
+        PATTERN "*.h"
+        PATTERN "*.hpp"
         PATTERN "*.inl"
 )
 

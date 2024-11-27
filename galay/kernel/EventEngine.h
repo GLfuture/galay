@@ -4,6 +4,7 @@
 #include <string>
 #include <atomic>
 #include <vector>
+#include <memory>
 
 namespace galay::event
 {

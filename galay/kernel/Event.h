@@ -6,6 +6,7 @@
 #include <any>
 #include <queue>
 #include <atomic>
+#include <memory>
 #include <functional>
 #include <shared_mutex>
 
