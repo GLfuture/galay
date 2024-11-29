@@ -48,6 +48,6 @@ int main()
     getchar();
     galay::StopTimerSchedulers();
     galay::StopCoroutineSchedulers();
-    galay::GetThisThreadCoroutineStore()->Clear();
+    galay::Global_GetCoroutineStore()->Clear();
     return 0;
 }

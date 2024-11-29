@@ -175,14 +175,14 @@ namespace galay::protocol::http
     class HeaderPair
     {
     public:
-        bool HasKey(const std::string& key);
+        bool HasKey(const std::string& key) const;
         std::string GetValue(const std::string& key);
         error::HttpErrorCode RemoveHeaderPair(const std::string& key);
         error::HttpErrorCode AddHeaderPair(const std::string& key, const std::string& value);
         error::HttpErrorCode SetHeaderPair(const std::string& key, const std::string& value);
         std::string ToString();
         void Clear();
-        void operator=(const HeaderPair& headerPair);
+        HeaderPair& operator=(const HeaderPair& headerPair);
     private:
         std::map<std::string, std::string> m_headerPairs;
     };
@@ -199,10 +199,10 @@ namespace galay::protocol::http
         HeaderPair& HeaderPairs();
         std::string ToString();
         error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index);
-        void CopyFrom(HttpRequestHeader::ptr header);
+        void CopyFrom(const HttpRequestHeader::ptr& header);
         void Reset();
     private:
-        void ParseArgs(std::string uri);
+        void ParseArgs(const std::string& uri);
         std::string ConvertFromUri(std::string&& url, bool convert_plus_to_space);
         std::string ConvertToUri(std::string&& url);
         bool IsHex(char c, int &v);
@@ -216,7 +216,7 @@ namespace galay::protocol::http
         HeaderPair m_headerPairs;                                   // 字段
     };
 
-    class HttpRequest : public Request, public galay::common::DynamicCreator<Request,HttpRequest>
+    class HttpRequest final : public Request, public galay::common::DynamicCreator<Request,HttpRequest>
     {
     public:
         using ptr = std::shared_ptr<HttpRequest>;
@@ -227,18 +227,18 @@ namespace galay::protocol::http
         HttpRequestHeader::ptr Header();
         std::string& Body();
         std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
-        std::string EncodePdu() const override;
-        bool HasError() const override;
-        int GetErrorCode() const override;
+        [[nodiscard]] std::string EncodePdu() const override;
+        [[nodiscard]] bool HasError() const override;
+        [[nodiscard]] int GetErrorCode() const override;
         std::string GetErrorString() override;
         void Reset() override;
-        //chunck
-        bool StartChunck();
-        std::string ToChunckData(std::string&& buffer);
-        std::string EndChunck();
+        //chunk
+        bool StartChunk();
+        std::string ToChunkData(std::string&& buffer);
+        std::string EndChunk();
     private:
         bool GetHttpBody(const std::string_view& buffer);
-        bool GetChunckBody(const std::string_view& buffer);
+        bool GetChunkBody(const std::string_view& buffer);
     private:
         HttpDecodeStatus m_status = HttpDecodeStatus::kHttpHeadMethod;
         HttpRequestHeader::ptr m_header;

@@ -3,9 +3,9 @@
 
 using namespace galay;
 
-TEST(HttpFormParser, Parser)
+TEST(HttpFormParser, RequestParser)
 {
-    protocol::http::HttpRequest::ptr request = std::make_shared<protocol::http::HttpRequest>();
+    auto request = std::make_shared<protocol::http::HttpRequest>();
     std::string msg = "POST /forms HTTP/1.1\r\n\
 Content-Length: 624\r\n\
 Content-Type: multipart/form-data; boundary=--------------------------225416638845415405984661\r\n\
@@ -31,7 +31,9 @@ Content-Disposition: form-data; name=\"status\"\r\n\
 \r\n\
 1\r\n\
 ----------------------------225416638845415405984661--\r\n\r\n";
-    request->DecodePdu(msg);
+    auto result = request->DecodePdu(msg);
+    ASSERT_TRUE(result.first);
+    ASSERT_EQ(result.second, (int)msg.length());
     ASSERT_TRUE(helper::http::HttpFormDataHelper::IsFormData(request));
     std::vector<helper::http::FormDataValue> values;
     helper::http::HttpFormDataHelper::ParseFormData(request, values);
@@ -57,6 +59,43 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     request2->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
     request2->Header()->HeaderPairs().AddHeaderPair("Content-Type", "multipart/form-data; boundary=--------------------------225416638845415405984661");
     ASSERT_EQ(request2->EncodePdu(), msg);
+}
+
+TEST(HttpFormParser, ResponseParser)
+{
+    auto response = std::make_shared<protocol::http::HttpResponse>();
+    std::string msg = "HTTP/1.1 200 OK\r\n\
+Content-Length: 624\r\n\
+Content-Type: multipart/form-data; boundary=--------------------------225416638845415405984661\r\n\
+\r\n\
+----------------------------225416638845415405984661\r\n\
+Content-Disposition: form-data; name=\"name\"\r\n\
+\r\n\
+adsdas\r\n\
+----------------------------225416638845415405984661\r\n\
+Content-Disposition: form-data; name=\"category\"; filename=\"token.proto\"\r\n\
+Content-Type: application/octet-stream\r\n\
+\r\n\
+syntax = \"proto3\";\r\n\
+option go_package = \"./token\";\r\n\
+message TokenReq {\r\n\
+}\r\n\
+----------------------------225416638845415405984661\r\n\
+Content-Disposition: form-data; name=\"id\"\r\n\
+\r\n\
+1.1231\r\n\
+----------------------------225416638845415405984661\r\n\
+Content-Disposition: form-data; name=\"status\"\r\n\
+\r\n\
+1\r\n\
+----------------------------225416638845415405984661--\r\n\r\n";
+
+    auto result = response->DecodePdu(msg);
+    ASSERT_TRUE(result.first);
+    ASSERT_EQ(result.second, (int)msg.length());
+    ASSERT_EQ(response->Header()->HeaderPairs().GetValue("Content-Length"), std::string("624"));
+    ASSERT_EQ(response->Header()->Version(), protocol::http::HttpVersion::Http_Version_1_1);
+    ASSERT_EQ(msg, response->EncodePdu());
 }
 
 

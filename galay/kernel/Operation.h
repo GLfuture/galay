@@ -24,7 +24,7 @@ namespace galay::event
 
 namespace galay::action
 {
-    class NetEventAction;
+    class IOEventAction;
 };
 
 namespace galay::protocol::http

@@ -1,7 +1,9 @@
 #ifndef GALAY_EXTERNAPI_H
 #define GALAY_EXTERNAPI_H
 
+#include "Awaiter.h"
 #include <openssl/ssl.h>
+
 
 namespace galay::scheduler {
     class EventScheduler;
@@ -9,21 +11,102 @@ namespace galay::scheduler {
     class TimerScheduler;
 }
 
-namespace galay::coroutine {
-    class Coroutine;
-    class CoroutineStore;
+namespace galay::async {
+    class AsyncNetIo;
+    class AsyncSslNetIo;
+    class AsyncFileIo;
 }
 
 namespace galay {
 
+struct IOVec
+{
+    char* m_buffer = nullptr;
+    long long m_offset = 0;
+    size_t m_length = 0;
+};
+
+struct FileIOVec
+{
+    GHandle m_handle{};
+    IOVec m_iovec;
+};
+
+struct NetAddr
+{
+    std::string m_ip;
+    uint16_t m_port;
+};
+
+
 extern "C" {
+
+/*
+    ****************************
+            Vec Help
+    ****************************
+*/
+IOVec VecDeepCopy(const IOVec* src);
+bool VecMalloc(IOVec* src, size_t size);
+bool VecRealloc(IOVec* src, size_t size);
+bool VecFree(IOVec* src);
+
+
+/*
+    ****************************
+                net
+    ****************************
+*/
+
+bool AsyncSocket(async::AsyncNetIo* asocket);
+bool BindAndListen(async::AsyncNetIo* asocket, int port, int backlog);
+
+coroutine::Awaiter_GHandle AsyncAccept(async::AsyncNetIo* asocket, NetAddr* addr);
+coroutine::Awaiter_bool AsyncConnect(async::AsyncNetIo* async_socket, NetAddr* addr);
+/*
+    return: 
+        >0   bytes read
+        0   close connection
+        <0  error
+*/
+coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo* asocket, IOVec* iov);
+/*
+    return: 
+        >0   bytes send
+        <0  error
+*/
+coroutine::Awaiter_int AsyncSend(async::AsyncNetIo* asocket, IOVec* iov);
+coroutine::Awaiter_bool AsyncClose(async::AsyncNetIo* asocket);
+
+bool AsyncSSLSocket(async::AsyncSslNetIo* asocket, SSL_CTX* ctx);
+/*
+    must be called after AsyncAccept
+*/
+coroutine::Awaiter_bool AsyncSSLAccept(async::AsyncSslNetIo* asocket);
+/*
+    must be called after AsyncConnect
+*/
+coroutine::Awaiter_bool SSLConnect(async::AsyncSslNetIo* asocket);
+coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo* asocket, IOVec *iov);
+coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo* asocket, IOVec *iov);
+coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo* asocket);
+
+/*
+    ****************************
+                file 
+    ****************************
+*/
+coroutine::Awaiter_GHandle AsyncFileOpen(const char* path, int flags, mode_t mode);
+coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, FileIOVec* iov);
+coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, FileIOVec* iov);
+
 
 #define MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES     50
 
 /*
     Coroutine
 */
-coroutine::CoroutineStore* GetThisThreadCoroutineStore();
+coroutine::CoroutineStore* Global_GetCoroutineStore();
 
 /*
    OpenSSL 

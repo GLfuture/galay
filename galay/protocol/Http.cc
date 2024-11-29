@@ -34,7 +34,7 @@ void HttpError::Reset()
 }
 
 std::string 
-HttpError::ToString(HttpErrorCode code) const
+HttpError::ToString(const HttpErrorCode code) const
 {
     return HttpErrors[code];
 }
@@ -66,8 +66,8 @@ std::string HttpVersionToString(HttpVersion version)
 
 HttpVersion StringToHttpVersion(std::string_view str)
 {
-    for (int i = 0; i < g_HttpMethods.size(); ++i) {
-        if (str == g_HttpMethods[i]) {
+    for (int i = 0; i < g_HttpVersion.size(); ++i) {
+        if (str == g_HttpVersion[i]) {
             return static_cast<HttpVersion>(i);
         }
     }
@@ -86,7 +86,7 @@ HttpMethod StringToHttpMethod(std::string_view str)
             return static_cast<HttpMethod>(i);
         }
     }
-    return static_cast<HttpMethod>(HttpMethod::Http_Method_Unknown);
+    return HttpMethod::Http_Method_Unknown;
 }
 
 std::string HttpStatusCodeToString(HttpStatusCode code)
@@ -226,7 +226,7 @@ std::string HttpStatusCodeToString(HttpStatusCode code)
 
 
 bool
-HeaderPair::HasKey(const std::string& key)
+HeaderPair::HasKey(const std::string& key) const
 {
     return m_headerPairs.contains(key);
 }
@@ -236,8 +236,7 @@ HeaderPair::GetValue(const std::string& key)
 {
     if (m_headerPairs.contains(key))
         return m_headerPairs[key];
-    else
-        return "";
+    return "";
 }
 
 error::HttpErrorCode
@@ -261,10 +260,7 @@ HeaderPair::AddHeaderPair(const std::string& key, const std::string& value)
     {
         return error::kHttpError_HeaderPairExist;
     }
-    else
-    {
-        this->m_headerPairs.emplace(key, value);
-    }
+    this->m_headerPairs.emplace(key, value);
     return error::kHttpError_NoError;
 }
 
@@ -293,16 +289,15 @@ HeaderPair::ToString()
     return std::move(res);
 }
 
-void protocol::http::HeaderPair::Clear()
+void HeaderPair::Clear()
 {
     if(!m_headerPairs.empty()) m_headerPairs.clear();
 }
 
-void 
+
+HeaderPair&
 HeaderPair::operator=(const HeaderPair& headerPair)
-{
-    this->m_headerPairs = headerPair.m_headerPairs;
-}
+= default;
 
 HttpMethod& 
 HttpRequestHeader::Method()
@@ -456,7 +451,7 @@ HttpRequestHeader::ToString()
 }
 
 void 
-HttpRequestHeader::CopyFrom(HttpRequestHeader::ptr header)
+HttpRequestHeader::CopyFrom(const HttpRequestHeader::ptr& header)
 {
     this->m_method = header->m_method;
     this->m_uri = header->m_uri;
@@ -475,15 +470,15 @@ void protocol::http::HttpRequestHeader::Reset()
 }
 
 void 
-HttpRequestHeader::ParseArgs(std::string uri)
+HttpRequestHeader::ParseArgs(const std::string& uri)
 {
-    int argindx = uri.find('?');
+    size_t argindx = uri.find('?');
     if (argindx != std::string::npos)
     {
         int cur = 0;
         this->m_uri = uri.substr(cur, argindx - cur);
-        std::string args = uri.substr(argindx + 1);
-        std::string key = "", value = "";
+        const std::string args = uri.substr(argindx + 1);
+        std::string key, value;
         int status = 0;
         for (int i = 0; i < args.length(); i++)
         {
@@ -626,7 +621,7 @@ HttpRequestHeader::ConvertToUri(std::string&& url)
 }
 
 bool 
-HttpRequestHeader::IsHex(char c, int& v)
+HttpRequestHeader::IsHex(const char c, int& v)
 {
     if (0x20 <= c && isdigit(c))
     {
@@ -647,7 +642,7 @@ HttpRequestHeader::IsHex(char c, int& v)
 }
 
 size_t 
-HttpRequestHeader::ToUtf8(int code, char* buff)
+HttpRequestHeader::ToUtf8(const int code, char* buff)
 {
     if (code < 0x0080)
     {
@@ -747,7 +742,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
         if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
             || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
         {
-            if(GetChunckBody(buffer)){
+            if(GetChunkBody(buffer)){
                 m_status = HttpDecodeStatus::kHttpBody;
                 return {true, m_next_index};
             }  else {
@@ -770,8 +765,8 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
 std::string 
 HttpRequest::EncodePdu() const
 {
-    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") &&  0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") )||
-        (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked"))){
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") &&  "chunked" == m_header->HeaderPairs().GetValue("Transfer-Encoding") )||
+        (m_header->HeaderPairs().HasKey("transfer-encoding") && "chunked" == m_header->HeaderPairs().GetValue("transfer-encoding"))){
         return m_header->ToString();
     }
     if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
@@ -780,17 +775,17 @@ HttpRequest::EncodePdu() const
     return m_header->ToString() + m_body;
 }
 
-int protocol::http::HttpRequest::GetErrorCode() const
+int HttpRequest::GetErrorCode() const
 {
     return m_error->Code();
 }
 
-std::string protocol::http::HttpRequest::GetErrorString()
+std::string HttpRequest::GetErrorString()
 {
     return m_error->ToString(m_error->Code());
 }
 
-void protocol::http::HttpRequest::Reset()
+void HttpRequest::Reset()
 {
     m_header->Reset();
     m_error->Reset();
@@ -799,16 +794,16 @@ void protocol::http::HttpRequest::Reset()
     m_next_index = 0;
 }
 
-bool protocol::http::HttpRequest::HasError() const
+bool HttpRequest::HasError() const
 {
     return m_error->HasError();
 }
 
 bool 
-HttpRequest::StartChunck()
+HttpRequest::StartChunk()
 {
     if((m_header->HeaderPairs().HasKey("transfer-encoding") || m_header->HeaderPairs().HasKey("Transfer-Encoding")) && 
-        (0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))){
+        ("chunked" == m_header->HeaderPairs().GetValue("transfer-encoding") || "chunked" == m_header->HeaderPairs().GetValue("Transfer-Encoding"))){
         return true;
     }
     if(m_header->HeaderPairs().HasKey("content-length")){
@@ -822,7 +817,7 @@ HttpRequest::StartChunck()
 }
 
 std::string 
-HttpRequest::ToChunckData(std::string&& buffer)
+HttpRequest::ToChunkData(std::string&& buffer)
 {
     size_t length = buffer.length();
     std::string res = std::to_string(length);
@@ -833,7 +828,7 @@ HttpRequest::ToChunckData(std::string&& buffer)
 }
 
 std::string 
-HttpRequest::EndChunck()
+HttpRequest::EndChunk()
 {
     return "0\r\n\r\n";
 }
@@ -865,7 +860,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
     if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
         std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
         if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        size_t length;
+        size_t length = 0;
         try
         {
             length = std::stoul(contentLength);
@@ -880,7 +875,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
         if(length + m_next_index <= n) {
             m_body = buffer.substr(m_next_index, length);
             m_next_index += length;
-            if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
+            if(m_next_index + 4 < n && buffer.substr(m_next_index,4) == "\r\n\r\n") {
                 m_next_index += 4;
             }  
             spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
@@ -893,7 +888,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
         size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
-                spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
+                spdlog::warn(R"([{}:{}] [[body is incomplete] [not end with '\r\n\r\n']])",__FILE__,__LINE__);
                 m_error->Code() = error::kHttpError_BodyInComplete;
                 return false;
             }
@@ -906,7 +901,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
 }
 
 bool 
-HttpRequest::GetChunckBody(const std::string_view& buffer)
+HttpRequest::GetChunkBody(const std::string_view& buffer)
 {
     while (!buffer.empty())
     {
@@ -970,7 +965,7 @@ error::HttpErrorCode
 HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index)
 {
     size_t n = str.length();
-    std::string_view code,key,value;
+    std::string_view key;
     size_t i = next_index, code_begin = 0, key_begin = 0, value_begin = 0;
     for (; i < n; ++i)
     {
@@ -1046,7 +1041,7 @@ HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, u
             if (value_begin == 0) value_begin = i;
             if(str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
-                value = std::string_view(str.data() + value_begin, i - value_begin);
+                std::string_view value = std::string_view(str.data() + value_begin, i - value_begin);
                 value_begin = 0;
                 m_headerPairs.AddHeaderPair(std::string(key), std::string(value));
                 ++i;
@@ -1100,11 +1095,10 @@ std::pair<bool,int>
 HttpResponse::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
-    size_t n = buffer.length();
     //header
     if(m_status < HttpDecodeStatus::kHttpHeadEnd) 
     {
-        error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
+        const error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
         if( errCode != error::kHttpError_NoError ) {
             m_error->Code() = errCode;
             return {false, 0};
@@ -1145,22 +1139,22 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
     return {true, m_next_index};
 }
 
-bool protocol::http::HttpResponse::HasError() const
+bool HttpResponse::HasError() const
 {
     return m_error->HasError();
 }
 
-int protocol::http::HttpResponse::GetErrorCode() const
+int HttpResponse::GetErrorCode() const
 {
     return m_error->Code();
 }
 
-std::string protocol::http::HttpResponse::GetErrorString()
+std::string HttpResponse::GetErrorString()
 {
     return m_error->ToString(m_error->Code());
 }
 
-void protocol::http::HttpResponse::Reset()
+void HttpResponse::Reset()
 {
     m_error->Reset();
     m_header.reset();

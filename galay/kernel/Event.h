@@ -19,20 +19,19 @@ namespace galay::async
 {
     class AsyncNetIo;
     class AsyncSslNetIo;
-    class NetIOVec;
     class AsyncFileIo; 
 }
 
 namespace galay::action
 {
-    class NetEventAction;
-    class SslNetEventAction;
+    class IOEventAction;
 }
 
 namespace galay
 {
     class TcpCallbackStore;
     class TcpSslCallbackStore;
+    class IOVec;
 }
 
 namespace galay::event
@@ -165,8 +164,6 @@ private:
 };
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 
-class NetWaitEvent;
-class NetSslWaitEvent;
 
 class ListenEvent final : public Event
 {
@@ -204,7 +201,7 @@ private:
     std::atomic<EventEngine*> m_engine;
     async::AsyncSslNetIo* m_socket;
     TcpSslCallbackStore* m_callback_store;
-    action::SslNetEventAction* m_action;
+    action::IOEventAction* m_action;
 };
 
 
@@ -239,6 +236,13 @@ enum NetWaitEventType
     kTcpWaitEventTypeSslClose,
 };
 
+enum CommonFailedType
+{
+    eCommonOtherFailed = -2,
+    eCommonNonBlocking = -1,
+    eCommonDisConnect = 0,
+};
+
 class NetWaitEvent: public WaitEvent
 {
 public:
@@ -267,9 +271,9 @@ protected:
     void HandleCloseEvent(EventEngine* engine);
 
     // return recvByte
-    virtual int DealRecv(async::NetIOVec* iov);
+    virtual int DealRecv(IOVec* iov);
     // return sendByte
-    virtual int DealSend(async::NetIOVec* iov);
+    virtual int DealSend(IOVec* iov);
 protected:
     NetWaitEventType m_type;
     void *m_ctx{};
@@ -301,9 +305,9 @@ protected:
 
     EventType CovertSSLErrorToEventType() const;
     // return recvByte
-    int DealRecv(async::NetIOVec* iovc) override;
+    int DealRecv(IOVec* iovc) override;
     // return sendByte
-    int DealSend(async::NetIOVec* iovc) override;
+    int DealSend(IOVec* iovc) override;
 private:
     int m_ssl_error{};
 };
@@ -344,10 +348,10 @@ private:
     bool OnAioWaitPrepare(coroutine::Coroutine* co, void* ctx);
     void HandleAioEvent(EventEngine* engine);
 #endif
-    bool OnReadWaitPrepare(coroutine::Coroutine* co, void* ctx);
-    void HandleReadEvent(EventEngine* engine);
-    bool OnWriteWaitPrepare(coroutine::Coroutine* co, void* ctx);
-    void HandleWriteEvent(EventEngine* engine);
+    bool OnKReadWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    void HandleKReadEvent(EventEngine* engine);
+    bool OnKWriteWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    void HandleKWriteEvent(EventEngine* engine);
 private:
     void *m_ctx{};
     async::AsyncFileIo* m_fileio;

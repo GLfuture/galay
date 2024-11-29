@@ -12,7 +12,7 @@ namespace galay::event
 namespace galay::action
 {
 
-class WaitAction
+class   WaitAction
 {
 public:
     virtual ~WaitAction() = default;

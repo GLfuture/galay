@@ -37,42 +37,21 @@ private:
 /*
     one net event be triggered will resume this coroutine
 */
-class NetEventAction: public WaitAction
+class IOEventAction: public WaitAction
 {
 public:
-    using ptr = std::shared_ptr<NetEventAction>;
+    using ptr = std::shared_ptr<IOEventAction>;
 
-    NetEventAction(event::EventEngine* engine, event::NetWaitEvent* event);
+    IOEventAction(event::EventEngine* engine, event::WaitEvent* event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     bool DoAction(coroutine::Coroutine* co, void* ctx) override;
-    void ResetEvent(event::NetWaitEvent* event);
-    [[nodiscard]] event::NetWaitEvent* GetBindEvent() const { return m_event; };
-    ~NetEventAction() override;
+    void ResetEvent(event::WaitEvent* event);
+    [[nodiscard]] event::WaitEvent* GetBindEvent() const { return m_event; };
+    ~IOEventAction() override;
 private:
     event::EventEngine* m_engine;
-    event::NetWaitEvent* m_event;
-};
-
-class SslNetEventAction: public NetEventAction
-{
-public:
-    using ptr = std::shared_ptr<SslNetEventAction>;
-    SslNetEventAction(event::EventEngine* engine, event::NetSslWaitEvent* event);
-};
-
-
-class FileIoEventAction: public WaitAction
-{
-public:
-    FileIoEventAction(event::EventEngine* engine, event::FileIoWaitEvent* event);
-    virtual bool HasEventToDo() override;
-    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
-    inline event::FileIoWaitEvent* GetBindEvent() { return m_event; };
-    virtual ~FileIoEventAction();
-private:
-    event::FileIoWaitEvent* m_event;
-    event::EventEngine* m_engine;
+    event::WaitEvent* m_event;
 };
 
 /*

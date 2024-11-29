@@ -33,5 +33,6 @@
 3. 使用
     > ```shell
     > g++ example.cc -o example -lgalay-static
+    > # g++ example.cc -o example -lgalay
     > ```
     > 具体使用请查看tutorial目录下的内容

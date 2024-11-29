@@ -17,8 +17,7 @@ namespace galay::event
 
 namespace galay::action
 {
-    class NetEventAction;
-    class FileIoEventAction;
+    class IOEventAction;
 }
 
 namespace galay::async
@@ -37,72 +36,6 @@ private:
     uint32_t m_error_code;
 };
 
-struct NetAddr
-{
-    std::string m_ip;
-    uint16_t m_port;
-};
-
-struct NetIOVec
-{
-    char* m_buf = nullptr;
-    size_t m_len = 0;
-};
-
-struct FileIOVec
-{
-    GHandle m_handle{};
-    char* m_buf = nullptr;
-    size_t m_length{};
-    long long m_offset{};
-};
-
-class AsyncNetIo;
-class AsyncSslNetIo;
-class AsyncFileIo;
-
-extern "C" 
-{
-
-/*
-    ****************************
-                net
-    ****************************
-*/
-
-bool AsyncSocket(AsyncNetIo* asocket);
-bool BindAndListen(AsyncNetIo* asocket, int port, int backlog);
-
-coroutine::Awaiter_GHandle AsyncAccept(AsyncNetIo* asocket, NetAddr* addr);
-coroutine::Awaiter_bool AsyncConnect(AsyncNetIo* async_socket, NetAddr* addr);
-coroutine::Awaiter_int AsyncRecv(AsyncNetIo* asocket, NetIOVec* iov);
-coroutine::Awaiter_int AsyncSend(AsyncNetIo* asocket, NetIOVec* iov);
-coroutine::Awaiter_bool AsyncClose(AsyncNetIo* asocket);
-
-bool AsyncSSLSocket(AsyncSslNetIo* asocket, SSL_CTX* ctx);
-/*
-    must be called after AsyncAccept
-*/
-coroutine::Awaiter_bool AsyncSSLAccept(AsyncSslNetIo* asocket);
-/*
-    must be called after AsyncConnect
-*/
-coroutine::Awaiter_bool SSLConnect(AsyncSslNetIo* asocket);
-coroutine::Awaiter_int AsyncSSLRecv(AsyncSslNetIo* asocket, NetIOVec *iov);
-coroutine::Awaiter_int AsyncSSLSend(AsyncSslNetIo* asocket, NetIOVec *iov);
-coroutine::Awaiter_bool AsyncSSLClose(AsyncSslNetIo* asocket);
-
-/*
-    ****************************
-                file 
-    ****************************
-*/
-coroutine::Awaiter_GHandle AsyncFileOpen(const char* path, int flags, mode_t mode);
-coroutine::Awaiter_int AsyncFileRead(AsyncFileIo* afile, FileIOVec* iov);
-coroutine::Awaiter_int AsyncFileWrite(AsyncFileIo* afile, FileIOVec* iov);
-
-}
-
 class AsyncNetIo
 {
 public:
@@ -111,13 +44,13 @@ public:
 
     HandleOption GetOption() const;
     GHandle& GetHandle() { return m_handle; }
-    action::NetEventAction*& GetAction() { return m_action; };
+    action::IOEventAction*& GetAction() { return m_action; };
     uint32_t &GetErrorCode();
     virtual ~AsyncNetIo();
 protected:
     GHandle m_handle;
     uint32_t m_err_code;
-    action::NetEventAction* m_action;
+    action::IOEventAction* m_action;
 };
 
 class AsyncTcpSocket: public AsyncNetIo
@@ -159,7 +92,7 @@ public:
     using ptr = std::shared_ptr<AsyncFileIo>;
     explicit AsyncFileIo(event::EventEngine* engine);
     [[nodiscard]] HandleOption GetOption() const;
-    action::FileIoEventAction*& GetAction() { return m_action; };
+    action::IOEventAction*& GetAction() { return m_action; };
     GHandle& GetHandle() { return m_handle; }
     uint32_t& GetErrorCode() { return m_error_code; }
     virtual ~AsyncFileIo();
@@ -167,7 +100,7 @@ private:
     // eventfd
     GHandle m_handle;
     uint32_t m_error_code;
-    action::FileIoEventAction* m_action;
+    action::IOEventAction* m_action;
 };
 
 class AsyncFileDescriptor final : public AsyncFileIo

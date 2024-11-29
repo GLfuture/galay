@@ -11,31 +11,33 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
     for (i = begin; i < end; ++ i)
     {
         galay::async::AsyncNetIo* socket = sockets[i]; 
-        galay::async::NetAddr addr{
+        galay::NetAddr addr{
             .m_ip = "127.0.0.1",
             .m_port = g_port
         };
-        bool success = co_await galay::async::AsyncConnect(socket, &addr);
+        bool success = co_await galay::AsyncConnect(socket, &addr);
         if (!success)
         {
             std::cout << "connect failed" << std::endl;
-            bool res = co_await galay::async::AsyncClose(socket);
+            bool res = co_await galay::AsyncClose(socket);
             break;
         }
         
         std::string resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
-        galay::async::NetIOVec iov {
-            .m_buf = resp.data(),
-            .m_len = resp.length()
+        galay::IOVec iov {
+            .m_buffer = resp.data(),
+            .m_offset = 0,
+            .m_length = resp.length()
         };
-        galay::async::NetIOVec iov2 {
-            .m_buf = new char[1024],
-            .m_len = 1024
+        galay::IOVec iov2 {
+            .m_buffer = new char[1024],
+            .m_offset = 0,
+            .m_length = 1024
         };
-        int length = co_await galay::async::AsyncSend(socket, &iov);
-        length = co_await galay::async::AsyncRecv(socket, &iov2);
-        delete[] iov2.m_buf;
-        bool res = co_await galay::async::AsyncClose(socket);
+        int length = co_await galay::AsyncSend(socket, &iov);
+        length = co_await galay::AsyncRecv(socket, &iov2);
+        delete[] iov2.m_buffer;
+        bool res = co_await galay::AsyncClose(socket);
         if (!res)
         {
             std::cout << "close failed" << std::endl;
@@ -54,7 +56,7 @@ void pack(galay::event::EventEngine* engine, std::vector<galay::async::AsyncNetI
 galay::async::AsyncNetIo* initSocket()
 {
     galay::async::AsyncNetIo* socket = new galay::async::AsyncNetIo(galay::GetEventScheduler(0)->GetEngine());
-    galay::async::AsyncSocket(socket);
+    galay::AsyncSocket(socket);
     socket->GetOption().HandleNonBlock();
     return socket;
 }

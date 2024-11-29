@@ -43,77 +43,83 @@ Coroutine test()
 #else
 galay::coroutine::Coroutine test()
 {
-    const GHandle handle = co_await galay::async::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    const GHandle handle = co_await galay::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     galay::async::AsyncFileDescriptor fileio(galay::GetEventScheduler(0)->GetEngine());
     fileio.GetHandle() = handle;
-    galay::async::FileIOVec vec{
-        .m_buf = static_cast<char*>(malloc(10 * 1024 * 1024)),
-        .m_length = 10 * 1024 * 1024,
-        .m_offset = 0
+    galay::FileIOVec vec {
+        .m_handle = handle,
+        .m_iovec = {
+            .m_buffer = static_cast<char*>(malloc(10 * 1024 * 1024)),
+            .m_length = 10 * 1024 * 1024,
+            .m_offset = 0
+        }
     };
     for(int i = 0; i < 10 * 1024 * 1024; ++i) {
         if( i % 128 == 0) {
-            vec.m_buf[i] = '\n';
+            vec.m_iovec.m_buffer[i] = '\n';
         } else {
-            vec.m_buf[i] = 'a';
+            vec.m_iovec.m_buffer[i] = 'a';
         }
     }
     printf("write file\n");
     int length = 10 * 1024 * 1024;
     while(true){
-        int size = co_await galay::async::AsyncFileWrite(&fileio, &vec);
+        int size = co_await galay::AsyncFileWrite(&fileio, &vec);
         printf("write size: %d\n", size);
         if(size < 0) {
             printf("write error: %s\n", galay::error::GetErrorString(fileio.GetErrorCode()).c_str());
             break;
         }
         length -= size;
-        vec.m_offset += size;
-        vec.m_length -= size;
+        vec.m_iovec.m_offset += size;
+        vec.m_iovec.m_length -= size;
         if(length <= 0) {
             break;
         }
     }
     getchar();
-    free(vec.m_buf);
+    free(vec.m_iovec.m_buffer);
     fflush(nullptr);
 
     // 再次读取
     lseek(handle.fd, 0, SEEK_SET);  // 将文件指针移回文件开头
-    galay::async::FileIOVec vec2 {
-        .m_buf = static_cast<char*>(malloc(10 * 1024 * 1024)),
-        .m_length = 10 * 1024 * 1024,
-        .m_offset = 0
+    galay::FileIOVec vec2 {
+        .m_handle = handle,
+        .m_iovec = {
+            .m_buffer = static_cast<char*>(malloc(10 * 1024 * 1024)),
+            .m_length = 10 * 1024 * 1024,
+            .m_offset = 0
+        }
     };
     length = 10 * 1024 * 1024;
     while(true)
     {
-        int size = co_await galay::async::AsyncFileRead(&fileio, &vec2);
+        int size = co_await galay::AsyncFileRead(&fileio, &vec2);
         printf("read size %d\n", size);
         if(size <= 0) {
             printf("write error: %s\n", galay::error::GetErrorString(fileio.GetErrorCode()).c_str());
             break;
         }
         length -= size;
-        vec.m_offset += size;
-        vec.m_length -= size;
+        vec.m_iovec.m_offset += size;
+        vec.m_iovec.m_length -= size;
         if(length <= 0) {
             break;
         }
     }
     for(int i = 0; i < 10 * 1024 * 1024; ++i) {
         if( i % 128 == 0) {
-            if(vec2.m_buf[i] != '\n') {
+            if(vec2.m_iovec.m_buffer[i] != '\n') {
                 printf("error\n");
             }
         } else {
-            if(vec2.m_buf[i] != 'a'){
+            if(vec2.m_iovec.m_buffer[i] != 'a'){
                 printf("error\n");
             }
         }
     }
     printf("success\n");
-    free(vec2.m_buf);
+    free(vec2.m_iovec.m_buffer);
     close(handle.fd);
 }
 

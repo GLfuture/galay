@@ -9,7 +9,7 @@ namespace galay::coroutine
 {
 Coroutine Coroutine::promise_type::get_return_object() noexcept
 {
-    this->m_store = GetThisThreadCoroutineStore();
+    this->m_store = Global_GetCoroutineStore();
     this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this));
     this->m_store->AddCoroutine(m_coroutine);
     return *this->m_coroutine;
