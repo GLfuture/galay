@@ -331,7 +331,7 @@ HttpRequestHeader::HeaderPairs()
 }
 
 error::HttpErrorCode 
-HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index)
+HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, size_t& next_index)
 {
     std::string_view method, version, key, value;
     size_t n = str.size();
@@ -388,7 +388,7 @@ HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, ui
         case HttpDecodeStatus::kHttpHeadKey:
         {
             if (key_begin == 0) key_begin = i;
-            if (str[i] == '\r' && i < n - 3)
+            if (str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
                 next_index = i + 2;
                 status = HttpDecodeStatus::kHttpHeadEnd;
@@ -713,7 +713,7 @@ HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& v
 }
 
 
-std::pair<bool,int> 
+std::pair<bool,size_t> 
 HttpRequest::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
@@ -744,7 +744,6 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
         {
             if(GetChunkBody(buffer)){
                 m_status = HttpDecodeStatus::kHttpBody;
-                return {true, m_next_index};
             }  else {
                 return {false, 0};
             }
@@ -753,13 +752,14 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
         {
             if(GetHttpBody(buffer)) {
                 m_status = HttpDecodeStatus::kHttpBody;
-                return {true, m_next_index};
             } else {
                 return {false, 0};
             }
         }
     }
-    return {true, m_next_index};
+    size_t length = m_next_index;
+    m_next_index = 0;
+    return {true, length};
 }
 
 std::string 
@@ -834,6 +834,7 @@ HttpRequest::EndChunk()
 }
 
 HttpRequest::HttpRequest()
+    :m_next_index(0), m_status(HttpDecodeStatus::kHttpHeadMethod)
 {
     this->m_error = std::make_shared<error::HttpError>();
     this->m_header = std::make_shared<HttpRequestHeader>();
@@ -962,11 +963,12 @@ HttpResponseHeader::ToString()
 }
 
 error::HttpErrorCode 
-HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index)
+HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, size_t& next_index)
 {
     size_t n = str.length();
     std::string_view key;
     size_t i = next_index, code_begin = 0, key_begin = 0, value_begin = 0;
+    spdlog::info("HttpResponseHeader::FromString: {}", next_index);
     for (; i < n; ++i)
     {
         if (status == HttpDecodeStatus::kHttpHeadEnd)
@@ -1017,7 +1019,7 @@ HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, u
         case HttpDecodeStatus::kHttpHeadKey:
         {
             if (key_begin == 0) key_begin = i;
-            if (str[i] == '\r' && i < n - 3)
+            if (str[i] == '\r' && i < n - 1 && str[i + 1] == '\n')
             {
                 next_index = i + 2;
                 status = HttpDecodeStatus::kHttpHeadEnd;
@@ -1058,6 +1060,7 @@ HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, u
 }
 
 HttpResponse::HttpResponse()
+    :m_next_index(0), m_status(HttpDecodeStatus::kHttpHeadVersion)
 {
     this->m_error = std::make_shared<error::HttpError>();
     this->m_header = std::make_shared<HttpResponseHeader>();
@@ -1091,7 +1094,7 @@ HttpResponse::EncodePdu() const
 }
 
 
-std::pair<bool,int> 
+std::pair<bool,size_t> 
 HttpResponse::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
@@ -1121,7 +1124,6 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
         {
             if(GetChunckBody(buffer)){
                 m_status = HttpDecodeStatus::kHttpBody;
-                return {true, m_next_index};
             }  else {
                 return {false, 0};
             }
@@ -1130,13 +1132,14 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
         {
             if(GetHttpBody(buffer)) {
                 m_status = HttpDecodeStatus::kHttpBody;
-                return {true, m_next_index};
             } else {
                 return {false, 0};
             }
         }
     }
-    return {true, m_next_index};
+    size_t length = m_next_index;
+    m_next_index = 0;
+    return {true, length};
 }
 
 bool HttpResponse::HasError() const

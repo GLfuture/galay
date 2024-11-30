@@ -4,9 +4,48 @@
 #include "Scheduler.h"
 #include "WaitAction.h"
 #include "ExternApi.h"
+#include <spdlog/spdlog.h>
 
 namespace galay::coroutine
 {
+CoroutineStore::CoroutineStore()
+{
+    m_coroutines.reserve(DEFAULT_COROUTINE_STORE_HASH_SIZE);
+}
+
+void CoroutineStore::Reserve(size_t size)
+{
+    m_coroutines.reserve(size);
+}
+
+void CoroutineStore::AddCoroutine(Coroutine *co)
+{
+    std::lock_guard lk(m_mutex);
+    auto it = m_coroutines.insert(co);
+    if (!it.second) {
+        spdlog::error("CoroutineStore::AddCoroutine Coroutine {}, Coroutine Add Failed", static_cast<void*>(co));
+    }
+}
+
+void CoroutineStore::RemoveCoroutine(Coroutine *co)
+{
+    std::lock_guard lk(m_mutex);
+    auto it = m_coroutines.find(co);
+    if(it != m_coroutines.end()) m_coroutines.erase(it);
+    else spdlog::error("CoroutineStore::RemoveCoroutine Coroutine {}, Coroutine Not Exist", static_cast<void*>(co));
+}
+
+void CoroutineStore::Clear()
+{
+    std::unique_lock lk(m_mutex);
+    while(!m_coroutines.empty()) {
+        auto it = m_coroutines.begin();
+        lk.unlock();
+        if(it != m_coroutines.end()) (*it)->Destroy();
+        lk.lock();
+    }
+}
+
 Coroutine Coroutine::promise_type::get_return_object() noexcept
 {
     this->m_store = Global_GetCoroutineStore();
@@ -15,37 +54,10 @@ Coroutine Coroutine::promise_type::get_return_object() noexcept
     return *this->m_coroutine;
 }
 
-void Coroutine::promise_type::return_void() const noexcept
-{ 
-    this->m_store->RemoveCoroutine(m_coroutine); 
-}
-
-void CoroutineStore::AddCoroutine(Coroutine *co)
+Coroutine::promise_type::~promise_type()
 {
-    std::lock_guard lk(m_mutex);
-    m_coroutines.push_back(co);
-    co->GetListNode() = std::prev(m_coroutines.end());
-}
-
-void CoroutineStore::RemoveCoroutine(Coroutine *co)
-{
-    if(!co->GetListNode().has_value()) return;
-    std::lock_guard lk(m_mutex);
-    m_coroutines.erase(co->GetListNode().value());
-    co->GetListNode().reset();
-}
-
-void CoroutineStore::Clear()
-{
-    std::lock_guard lk(m_mutex);
-    while(!m_coroutines.empty())
-    {
-        auto node = m_coroutines.front();
-        m_coroutines.pop_front();
-        if(node){
-            node->Destroy();
-        }
-    }
+    this->m_store->RemoveCoroutine(m_coroutine);
+    delete m_coroutine;
 }
 
 Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
@@ -58,8 +70,6 @@ Coroutine::Coroutine(Coroutine&& other) noexcept
 {
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
-    this->m_node = other.m_node;
-    other.m_node.reset();
     this->m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
 }
@@ -68,7 +78,6 @@ Coroutine::Coroutine(const Coroutine& other) noexcept
 {
     this->m_awaiter.store(other.m_awaiter);
     this->m_handle = other.m_handle;
-    this->m_node = other.m_node;
 }
 
 Coroutine&
@@ -76,8 +85,6 @@ Coroutine::operator=(Coroutine&& other) noexcept
 {
     this->m_handle = other.m_handle;
     other.m_handle = nullptr;
-    this->m_node = other.m_node;
-    other.m_node.reset();
     this->m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
     return *this;
@@ -85,7 +92,6 @@ Coroutine::operator=(Coroutine&& other) noexcept
 
 void Coroutine::Destroy()
 {
-    m_handle.promise().GetStore()->RemoveCoroutine(this);
     m_handle.destroy();
 }
 

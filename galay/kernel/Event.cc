@@ -693,10 +693,11 @@ void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
     //doing nothing
 }
 
-int NetWaitEvent::DealRecv(IOVec* iovc)
+int NetWaitEvent::DealRecv(IOVec* vec)
 {
     auto [fd] = this->m_socket->GetHandle();
-    int length = recv(fd, iovc->m_buffer + iovc->m_offset, iovc->m_length, 0);
+    size_t recvBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    int length = recv(fd, vec->m_buffer + vec->m_offset, recvBytes, 0);
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
@@ -705,14 +706,15 @@ int NetWaitEvent::DealRecv(IOVec* iovc)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", fd, length, std::string_view(iovc->m_buffer + iovc->m_offset, length));
+    spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 
-int NetWaitEvent::DealSend(IOVec* iovc)
+int NetWaitEvent::DealSend(IOVec* vec)
 {
     auto [fd] = this->m_socket->GetHandle();
-    const int length = send(fd, iovc->m_buffer + iovc->m_offset, iovc->m_length, 0);
+    size_t writeBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    const int length = send(fd, vec->m_buffer + vec->m_offset, writeBytes, 0);
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
@@ -721,7 +723,7 @@ int NetWaitEvent::DealSend(IOVec* iovc)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("SendEvent::Deal [Handle: {}] [Byte: {}] [Data: {}]", fd, length, std::string_view(iovc->m_buffer + iovc->m_offset, length));
+    spdlog::debug("SendEvent::Deal [Handle: {}] [Byte: {}] [Data: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 
@@ -929,8 +931,8 @@ bool NetSslWaitEvent::OnSslRecvWaitPrepare(const coroutine::Coroutine *co, void*
 bool NetSslWaitEvent::OnSslSendWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 {
     
-    auto* iovc = static_cast<IOVec*>(m_ctx);
-    int sendBytes = DealSend(iovc);
+    auto* vec = static_cast<IOVec*>(m_ctx);
+    int sendBytes = DealSend(vec);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     spdlog::debug("NetSslWaitEvent::OnSslSendWaitPrepare sendBytes: {}", sendBytes);
     if( sendBytes == eCommonNonBlocking){
@@ -1048,10 +1050,11 @@ EventType NetSslWaitEvent::CovertSSLErrorToEventType() const
     return kEventTypeNone;
 }
 
-int NetSslWaitEvent::DealRecv(IOVec* iovc)
+int NetSslWaitEvent::DealRecv(IOVec* vec)
 {
     SSL* ssl = GetAsyncTcpSocket()->GetSSL();
-    int length = SSL_read(ssl, iovc->m_buffer + iovc->m_offset, iovc->m_length);
+    size_t recvBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    int length = SSL_read(ssl, vec->m_buffer + vec->m_offset, recvBytes);
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
@@ -1060,14 +1063,15 @@ int NetSslWaitEvent::DealRecv(IOVec* iovc)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, length, std::string_view(iovc->m_buffer + iovc->m_offset, length));   
+    spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));   
     return length;
 }
 
-int NetSslWaitEvent::DealSend(IOVec* iovc)
+int NetSslWaitEvent::DealSend(IOVec* vec)
 {
     SSL* ssl = GetAsyncTcpSocket()->GetSSL();
-    const int length = SSL_write(ssl, iovc->m_buffer + iovc->m_offset, iovc->m_length);
+    size_t writeBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    const int length = SSL_write(ssl, vec->m_buffer + vec->m_offset, writeBytes);
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
@@ -1076,7 +1080,7 @@ int NetSslWaitEvent::DealSend(IOVec* iovc)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("SendEvent::DealSend [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, length, std::string_view(iovc->m_buffer + iovc->m_offset, length));
+    spdlog::debug("SendEvent::DealSend [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 //#endif
@@ -1191,8 +1195,9 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
 
 bool FileIoWaitEvent::OnKReadWaitPrepare(coroutine::Coroutine *co, void *ctx)
 {
-    auto* vec = static_cast<FileIOVec*>(ctx);
-    int length = read(m_fileio->GetHandle().fd, vec->m_iovec.m_buffer + vec->m_iovec.m_offset, vec->m_iovec.m_length);
+    auto* vec = static_cast<IOVec*>(ctx);
+    size_t readBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    int length = read(m_fileio->GetHandle().fd, vec->m_buffer + vec->m_offset, readBytes);
     if(length < 0){
         if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             return true;
@@ -1207,8 +1212,9 @@ bool FileIoWaitEvent::OnKReadWaitPrepare(coroutine::Coroutine *co, void *ctx)
 
 void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
 {
-    auto* vec = static_cast<FileIOVec*>(m_ctx);
-    int length = read(m_fileio->GetHandle().fd, vec->m_iovec.m_buffer + vec->m_iovec.m_offset, vec->m_iovec.m_length);
+    auto* vec = static_cast<IOVec*>(m_ctx);
+    size_t readBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    int length = read(m_fileio->GetHandle().fd, vec->m_buffer + vec->m_offset, readBytes);
     if( length < 0 ) {
         if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             length = eCommonNonBlocking;
@@ -1224,8 +1230,9 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
 
 bool FileIoWaitEvent::OnKWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
 {
-    auto* vec = static_cast<FileIOVec*>(ctx);
-    int length = write(m_fileio->GetHandle().fd, vec->m_iovec.m_buffer + vec->m_iovec.m_offset, vec->m_iovec.m_length);
+    auto* vec = static_cast<IOVec*>(ctx);
+    size_t writeBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    int length = write(m_fileio->GetHandle().fd, vec->m_buffer + vec->m_offset, writeBytes);
     if(length < 0){
          if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             return true;
@@ -1240,8 +1247,9 @@ bool FileIoWaitEvent::OnKWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
 
 void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
 {
-    auto* vec = static_cast<FileIOVec*>(m_ctx);
-    int length = write(m_fileio->GetHandle().fd, vec->m_iovec.m_buffer + vec->m_iovec.m_offset, vec->m_iovec.m_length);
+    auto* vec = static_cast<IOVec*>(m_ctx);
+    size_t writeBytes = vec->m_offset + vec->m_length > vec->m_size ? vec->m_size - vec->m_offset : vec->m_length;
+    int length = write(m_fileio->GetHandle().fd, vec->m_buffer + vec->m_offset, writeBytes);
     if(length < 0){
          if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             length = eCommonNonBlocking;

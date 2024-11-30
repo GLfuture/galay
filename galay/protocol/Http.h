@@ -198,7 +198,7 @@ namespace galay::protocol::http
         std::map<std::string,std::string>& Args();
         HeaderPair& HeaderPairs();
         std::string ToString();
-        error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index);
+        error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, size_t& next_index);
         void CopyFrom(const HttpRequestHeader::ptr& header);
         void Reset();
     private:
@@ -226,7 +226,7 @@ namespace galay::protocol::http
         HttpRequest();
         HttpRequestHeader::ptr Header();
         std::string& Body();
-        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
         [[nodiscard]] std::string EncodePdu() const override;
         [[nodiscard]] bool HasError() const override;
         [[nodiscard]] int GetErrorCode() const override;
@@ -240,9 +240,9 @@ namespace galay::protocol::http
         bool GetHttpBody(const std::string_view& buffer);
         bool GetChunkBody(const std::string_view& buffer);
     private:
-        HttpDecodeStatus m_status = HttpDecodeStatus::kHttpHeadMethod;
+        HttpDecodeStatus m_status;
         HttpRequestHeader::ptr m_header;
-        uint32_t m_next_index;
+        size_t m_next_index;
         std::string m_body;
         error::HttpError::ptr m_error;
     };
@@ -255,7 +255,7 @@ namespace galay::protocol::http
         HttpStatusCode& Code();
         HeaderPair& HeaderPairs();
         std::string ToString();
-        error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, uint32_t& next_index);
+        error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, size_t& next_index);
     private:
         HttpStatusCode m_code;
         HttpVersion m_version;
@@ -272,7 +272,7 @@ namespace galay::protocol::http
         HttpResponseHeader::ptr Header();
         std::string& Body();
         std::string EncodePdu() const override;
-        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
         bool HasError() const override;
         int GetErrorCode() const override;
         std::string GetErrorString() override;
@@ -286,10 +286,10 @@ namespace galay::protocol::http
         bool GetHttpBody(const std::string_view& buffer);
         bool GetChunckBody(const std::string_view& buffer);
     private:
-        HttpDecodeStatus m_status = HttpDecodeStatus::kHttpHeadVersion;
+        HttpDecodeStatus m_status;
         HttpResponseHeader::ptr m_header;
         std::string m_body;
-        uint32_t m_next_index;
+        size_t m_next_index;
         error::HttpError::ptr m_error;
     };
 }

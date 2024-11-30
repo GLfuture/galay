@@ -115,7 +115,7 @@ namespace galay::protocol::dns
         std::string EncodePdu() const override;
         //after encode, call this function
         void PopQuestion();
-        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
         bool HasError() const override;
         int GetErrorCode() const override;
         std::string GetErrorString() override;
@@ -130,7 +130,7 @@ namespace galay::protocol::dns
     {
     public:
         using ptr = std::shared_ptr<DnsResponse>;
-        std::pair<bool,int> DecodePdu(const std::string_view &buffer) override;
+        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
         // ignore
         std::string EncodePdu() const override;
         bool HasError() const override;

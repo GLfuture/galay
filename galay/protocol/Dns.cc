@@ -129,7 +129,7 @@ void protocol::dns::DnsRequest::PopQuestion()
     m_questions.pop();
 }
 
-std::pair<bool,int> DnsRequest::DecodePdu(const std::string_view &buffer)
+std::pair<bool,size_t> DnsRequest::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];
     char *temp = begin;
@@ -270,7 +270,7 @@ DnsRequest::IsPointer(int in)
 }
 
 
-std::pair<bool,int> 
+std::pair<bool,size_t> 
 DnsResponse::DecodePdu(const std::string_view &buffer)
 {
     char *begin = new char[buffer.length()];

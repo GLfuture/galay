@@ -14,25 +14,29 @@ namespace galay
 
 IOVec VecDeepCopy(const IOVec *src)
 {
-    if(src == nullptr || src->m_length == 0 || src->m_buffer == nullptr) {
+    if(src == nullptr || src->m_length == 0 || src->m_buffer == nullptr || src->m_size == 0) {
         return IOVec{};
     }
     char* buffer = static_cast<char*>(malloc(src->m_length));
-    memcpy(buffer, src->m_buffer, src->m_length);
-    return {buffer, src->m_offset, src->m_length};
+    memcpy(buffer, src->m_buffer, src->m_size);
+    return IOVec {  .m_handle = src->m_handle,
+                    .m_buffer= buffer, 
+                    .m_size = src->m_size, 
+                    .m_offset = src->m_offset,
+                    .m_length = src->m_length};
 }
 
 bool VecMalloc(IOVec *src, size_t size)
 {
-    if (src == nullptr || src->m_length != 0 || src->m_buffer != nullptr) {
+    if (src == nullptr || src->m_size != 0 || src->m_buffer != nullptr) {
         return false;
     }
     src->m_buffer = static_cast<char*>(malloc(size));
     if (src->m_buffer == nullptr) {
         return false;
     }
-    src->m_length = size;
-    return false;
+    src->m_size = size;
+    return true;
 }
 
 bool VecRealloc(IOVec *src, size_t size)
@@ -44,7 +48,7 @@ bool VecRealloc(IOVec *src, size_t size)
     if (src->m_buffer == nullptr) {
         return false;
     }
-    src->m_length = size;
+    src->m_size = size;
     return true;
 }
 
@@ -54,6 +58,7 @@ bool VecFree(IOVec *src)
         return false;
     }
     free(src->m_buffer);
+    src->m_size = 0;
     src->m_length = 0;
     src->m_buffer = nullptr;
     src->m_offset = 0;
@@ -184,14 +189,14 @@ coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, const int flags, mode
     return coroutine::Awaiter_GHandle(GHandle{fd});
 }
 
-coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, FileIOVec *iov)
+coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov)
 {
     dynamic_cast<event::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeRead);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {afileio->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, FileIOVec *iov)
+coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov)
 {
     dynamic_cast<event::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeWrite);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);

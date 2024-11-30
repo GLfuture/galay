@@ -15,8 +15,10 @@ include(cmake/Option.cmake)
 
 if(ENABLE_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
+  message(STATUS "Debug mode enabled")
 else()
   set(CMAKE_BUILD_TYPE Release)
+  message(STATUS "Release mode enabled")
 endif()
 
 #查找依赖

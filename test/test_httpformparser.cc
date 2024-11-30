@@ -99,5 +99,10 @@ Content-Disposition: form-data; name=\"status\"\r\n\
 }
 
 
-
-
+TEST(HttpFormDataHelper, ParseHeadData)
+{
+    std::string msg = "GET / HTTP/1.1\r\n\
+Host: localhost:8080\r\n\r\n";
+    protocol::http::HttpRequest request;
+    request.DecodePdu(msg);
+}

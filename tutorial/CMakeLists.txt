@@ -1,5 +1,5 @@
 project(tutorial)
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     tutorial_client.cc
     tutorial_echo_server.cc

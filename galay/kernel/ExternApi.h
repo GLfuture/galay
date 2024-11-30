@@ -21,15 +21,11 @@ namespace galay {
 
 struct IOVec
 {
-    char* m_buffer = nullptr;
-    long long m_offset = 0;
-    size_t m_length = 0;
-};
-
-struct FileIOVec
-{
     GHandle m_handle{};
-    IOVec m_iovec;
+    char* m_buffer = nullptr;           // buffer
+    size_t m_size = 0;                  // buffer size
+    size_t m_offset = 0;             // offset
+    size_t m_length = 0;                // operation length
 };
 
 struct NetAddr
@@ -97,8 +93,8 @@ coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo* asocket);
     ****************************
 */
 coroutine::Awaiter_GHandle AsyncFileOpen(const char* path, int flags, mode_t mode);
-coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, FileIOVec* iov);
-coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, FileIOVec* iov);
+coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, IOVec* iov);
+coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, IOVec* iov);
 
 
 #define MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES     50

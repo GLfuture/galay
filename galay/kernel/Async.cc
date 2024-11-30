@@ -234,7 +234,7 @@ coroutine::Awaiter_int AsyncFileNativeAio::Commit()
         return coroutine::Awaiter_int(-1);
     }
     m_current_index = 0;
-    GetAction()->GetBindEvent()->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeLinuxAio);
+    dynamic_cast<event::FileIoWaitEvent*>(GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeLinuxAio);
     return coroutine::Awaiter_int(GetAction(), nullptr);
 }
 

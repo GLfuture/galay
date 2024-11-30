@@ -26,11 +26,13 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
         std::string resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
         galay::IOVec iov {
             .m_buffer = resp.data(),
+            .m_size = resp.length(),
             .m_offset = 0,
             .m_length = resp.length()
         };
         galay::IOVec iov2 {
             .m_buffer = new char[1024],
+            .m_size = 1024,
             .m_offset = 0,
             .m_length = 1024
         };
@@ -68,6 +70,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     g_port = atoi(argv[1]);
+    spdlog::set_level(spdlog::level::debug);
     galay::DynamicResizeCoroutineSchedulers(1);
     galay::StartCoroutineSchedulers();
     galay::DynamicResizeEventSchedulers(1);

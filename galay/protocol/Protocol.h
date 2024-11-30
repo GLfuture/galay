@@ -13,7 +13,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<SRequest>;
         using wptr = std::weak_ptr<SRequest>;
         using uptr = std::unique_ptr<SRequest>;
-        virtual std::pair<bool,int> DecodePdu(const std::string_view &buffer) = 0;
+        virtual std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) = 0;
     };
 
     class CResponse{
@@ -21,7 +21,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<CResponse>;
         using wptr = std::weak_ptr<CResponse>;
         using uptr = std::unique_ptr<CResponse>;
-        virtual std::pair<bool,int> DecodePdu(const std::string_view &buffer) = 0;
+        virtual std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) = 0;
     };
 
     class SResponse{
@@ -46,7 +46,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<Request>;
         using wptr = std::weak_ptr<Request>;
         using uptr = std::unique_ptr<Request>;
-        virtual std::pair<bool,int> DecodePdu(const std::string_view &buffer) = 0;
+        virtual std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) = 0;
         virtual std::string EncodePdu() const = 0;
         virtual bool HasError() const = 0;
         virtual int GetErrorCode() const = 0;
@@ -61,7 +61,7 @@ namespace galay::protocol
         using ptr = std::shared_ptr<Response>;
         using wptr = std::weak_ptr<Response>;
         using uptr = std::unique_ptr<Response>;
-        virtual std::pair<bool,int> DecodePdu(const std::string_view &buffer) = 0;
+        virtual std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) = 0;
         virtual std::string EncodePdu() const = 0;
         virtual bool HasError() const = 0;
         virtual int GetErrorCode() const = 0;

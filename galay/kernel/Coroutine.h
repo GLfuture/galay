@@ -10,6 +10,7 @@
 #include <list>
 #include <string>
 #include <optional>
+#include <unordered_set>
 #include "galay/common/Base.h"
 
 namespace galay::action
@@ -40,15 +41,19 @@ public:
     virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) = 0;
 };
 
+#define DEFAULT_COROUTINE_STORE_HASH_SIZE       2048
+
 class CoroutineStore
 {
 public:
+    CoroutineStore();
+    void Reserve(size_t size);
     void AddCoroutine(Coroutine* co);
     void RemoveCoroutine(Coroutine* co);
     void Clear();
 private:
     std::mutex m_mutex;
-    std::list<Coroutine*> m_coroutines;
+    std::unordered_set<Coroutine*> m_coroutines;
 };
 
 //如果上一个协程还在执行过程中没有到达暂停点，resume会从第一个暂停点重新执行
@@ -67,10 +72,10 @@ public:
         static std::suspend_always yield_value() noexcept { return {}; }
         static std::suspend_never final_suspend() noexcept { return {};  }
         static void unhandled_exception() noexcept {}
-        void return_void () const noexcept;
+        void return_void () const noexcept {};
         [[nodiscard]] Coroutine* GetCoroutine() const { return m_coroutine; }
         [[nodiscard]] CoroutineStore* GetStore() const { return m_store; }
-        ~promise_type() { delete m_coroutine; }
+        ~promise_type();
     private:
         CoroutineStore* m_store = nullptr ;
         Coroutine* m_coroutine = nullptr;
@@ -86,11 +91,9 @@ public:
     void Resume() const { return m_handle.resume(); }
     bool SetAwaiter(Awaiter* awaiter);
     Awaiter* GetAwaiter() const;
-    std::optional<std::list<Coroutine*>::iterator>& GetListNode() { return m_node; }
     ~Coroutine() = default;
 private:
     std::atomic<Awaiter*> m_awaiter = nullptr;
-    std::optional<std::list<Coroutine*>::iterator> m_node;
     std::coroutine_handle<promise_type> m_handle;
 };
 

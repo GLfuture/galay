@@ -122,7 +122,7 @@ SmtpRequest::SmtpRequest()
     m_error = std::make_shared<error::SmtpError>();    
 }
 
-std::pair<bool,int> 
+std::pair<bool,size_t> 
 SmtpRequest::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
@@ -180,7 +180,7 @@ SmtpResponse::SmtpResponse()
     m_error = std::make_shared<error::SmtpError>();
 }
 
-std::pair<bool,int> 
+std::pair<bool,size_t> 
 SmtpResponse::DecodePdu(const std::string_view &buffer)
 {
     m_error->Reset();
