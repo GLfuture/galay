@@ -1,7 +1,7 @@
 #ifndef __GALAY_OBJECT_POOL_HPP__
 #define __GALAY_OBJECT_POOL_HPP__
 
-#include <queue>
+#include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include <cinttypes>
 
 namespace galay::util
@@ -15,81 +15,47 @@ concept Object = requires(T t)
 
 //not thread safe
 template<Object T>
-class ObjectPool
+class ObjectPoolMutiThread
 {
 public:
-    ObjectPool(uint32_t capacity)
+    ObjectPoolMutiThread(uint32_t capacity)
         : m_capacity(capacity)
     {
-        for(int i = 0; i < capacity; i++)
-        {
-            m_pool.push_back(new T());
+        for(uint32_t i = 0; i < capacity; ++i) {
+            m_queue.enqueue(new T());
         }
     }
 
-    T* Get()
+    T* GetObjector()
     {
-        if(m_pool.empty())
-        {
-            return new T();
+        if(T* objector = nullptr; m_request_queue.try_dequeue(objector)){
+            return objector;
         }
-        else
-        {
-            T* ptr = m_pool.front();
-            m_pool.pop();
-            return ptr;
-        }
+        return new T();
     }
 
     // to keep capacity fixed
-    void FixedPut(T* ptr)
+    void ReturnObjector(T* objector)
     {
-        if(m_pool.size() < m_capacity)
-        {
-            m_pool.push(ptr);
-        }
-        else
-        {
-            delete ptr;
+        objector->Reset();
+        if(m_queue.size_approx() >= m_capacity.load()){
+            m_queue.enqueue(objector);
+        }else{
+            delete objector;
         }
     }
 
-    //if queue's size >= capacity, capacity will increase
-    void ActivePut(T* ptr)
+    ~ObjectPoolMutiThread()
     {
-        if(m_pool.size() < m_capacity)
-        {
-            m_pool.push(ptr);
-        }
-        else
-        {
-            m_pool.push(ptr);
-            ++ m_capacity;
-        }
-    }
-
-    void DynamicAdjust(uint32_t capacity)
-    {
-        m_capacity = capacity;
-        while (m_capacity < m_pool.size())
-        {
-            delete m_pool.front();
-            m_pool.pop();
-        }
-    }
-
-    ~ObjectPool()
-    {
-        while(!m_pool.empty())
-        {
-            delete m_pool.front();
-            m_pool.pop();
+        T* objector = nullptr;
+        while(m_request_queue.try_dequeue(objector)){
+            delete objector;
         }
     }
 
 private:
-    uint32_t m_capacity;
-    std::queue<T*> m_pool;
+    std::atomic_uint32_t m_capacity;
+    moodycamel::ConcurrentQueue<T*> m_queue;
 };
 
 }

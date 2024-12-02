@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     auto parser = parserManager.CreateParser("init.conf");
     auto confParser = std::dynamic_pointer_cast<galay::util::ConfigParser>(parser);
     std::cout << std::any_cast<std::string>(confParser->GetValue("author")) << std::endl;
-#ifdef INCLUDE_NLOHMANN_JSON_HPP_
+#ifdef INCLUDE_NLOHMANN_JSON_HPP
     parser = parserManager.CreateParser("init.json");
     auto jsonParser = std::dynamic_pointer_cast<galay::util::JsonParser>(parser);
     auto j = std::any_cast<galay::util::JsonValue>(jsonParser->GetValue("dependencies"));

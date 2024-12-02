@@ -7,9 +7,9 @@
 #include <coroutine>
 #include <variant>
 #include <mutex>
-#include <list>
+#include <shared_mutex>
 #include <string>
-#include <optional>
+#include <functional>
 #include <unordered_set>
 #include "galay/common/Base.h"
 
@@ -50,9 +50,10 @@ public:
     void Reserve(size_t size);
     void AddCoroutine(Coroutine* co);
     void RemoveCoroutine(Coroutine* co);
+    bool Exist(Coroutine* co);
     void Clear();
 private:
-    std::mutex m_mutex;
+    std::shared_mutex m_mutex;
     std::unordered_set<Coroutine*> m_coroutines;
 };
 
@@ -90,43 +91,16 @@ public:
     bool Done() const { return m_handle.done(); }
     void Resume() const { return m_handle.resume(); }
     bool SetAwaiter(Awaiter* awaiter);
+    void SetExitCallback(const std::function<void()>& callback);
     Awaiter* GetAwaiter() const;
     ~Coroutine() = default;
 private:
+    void Exit();
+private:
     std::atomic<Awaiter*> m_awaiter = nullptr;
     std::coroutine_handle<promise_type> m_handle;
+    std::function<void()> m_exit_cb;
 };
-
-class Awaiter_bool;
-
-class CoroutineWaiters
-{
-public:
-    using ptr = std::shared_ptr<CoroutineWaiters>;
-    CoroutineWaiters(int num, scheduler::CoroutineScheduler* scheduler);
-    Awaiter_bool Wait(int timeout = -1); //ms
-    int GetRemainNum() const { return m_num.load(); };
-    void AddCoroutineTaskNum(int num) { this->m_num.fetch_add(num); }
-    bool Decrease();
-    ~CoroutineWaiters();
-private:
-    scheduler::CoroutineScheduler* m_scheduler;
-    std::atomic_int m_num;
-    action::CoroutineWaitAction* m_action;
-};
-
-class CoroutineWaitContext
-{
-public:
-    explicit CoroutineWaitContext(CoroutineWaiters& waiters);
-    void AddWaitCoroutineNum(int num) const;
-    [[nodiscard]] int GetRemainWaitCoroutine() const { return m_waiters.GetRemainNum(); };
-    [[nodiscard]] bool Done() const;
-private:
-    CoroutineWaiters& m_waiters;
-};
-
-
 }
 
 
@@ -140,6 +114,7 @@ namespace galay::this_coroutine
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
     extern coroutine::Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
+    extern coroutine::Awaiter_void Exit(const std::function<void(void)>& callback);
 }
 
 #endif

@@ -1,5 +1,5 @@
 #include "Thread.h"
-#include <spdlog/spdlog.h>
+#include "kernel/Log.h"
 
 namespace galay::thread
 {
@@ -83,7 +83,7 @@ ScrambleThreadPool::Start(int num)
     {
         auto th = std::make_unique<std::thread>([this](){
             Run();
-            spdlog::info("[{}:{}] [Thread Exit Normally]",__FILE__,__LINE__);
+            LogInfo("[Thread Exit Normally]");
             Done();
         });
         th->detach();

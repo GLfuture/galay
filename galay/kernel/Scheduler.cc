@@ -4,7 +4,7 @@
 #include "Coroutine.h"
 #include "ExternApi.h"
 #include "galay/util/Thread.h"
-#include <spdlog/spdlog.h>
+#include "Log.h"
 
 namespace galay::scheduler
 {
@@ -26,7 +26,7 @@ bool EventScheduler::Loop(int timeout)
 {
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
-        spdlog::info("{} exit successfully!", Name());
+        LogTrace("[{}({}) exist successfully]", Name(), GetEngine()->GetHandle().fd);
         m_waiter->Decrease();
     });
     this->m_thread->detach();
@@ -40,7 +40,7 @@ bool EventScheduler::Stop() const
         return false;
     }
     m_engine->Stop();
-    Global_GetCoroutineStore()->Clear();
+    GetCoroutineStore()->Clear();
     return m_waiter->Wait(5000);
 }
 
@@ -77,7 +77,7 @@ bool CoroutineScheduler::Loop()
                 break;
             }
         }
-        spdlog::info("{} exit successfully!", Name());
+        LogTrace("[{} exist successfully]", Name());
         m_waiter->Decrease();
     });
     this->m_thread->detach();
@@ -91,7 +91,7 @@ bool CoroutineScheduler::Stop()
         return false;
     }
     m_coroutines_queue.enqueue(nullptr);
-    Global_GetCoroutineStore()->Clear(); 
+    GetCoroutineStore()->Clear(); 
     return m_waiter->Wait(5000);
 }
 

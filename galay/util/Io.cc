@@ -1,7 +1,7 @@
 #include "Io.h"
+#include "kernel/Log.h"
 #include <filesystem>
 #include <fstream>
-#include <spdlog/spdlog.h>
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OPenBSD__) || defined(__NetBSD__)
 #include <arpa/inet.h>
@@ -22,13 +22,13 @@ SyncFileStream::ReadFile(const std::string& FileName, bool IsBinary)
         in.open(FileName);
     }
     if(in.fail()) {
-        spdlog::error("[{}:{}] [open file error, filename:{}]",__FILE__,__LINE__, FileName);
+        LogError("[Open file error, filename:{}]", FileName);
         return "";
     }
     uintmax_t size = std::filesystem::file_size(FileName);
     char *buffer = new char[size];
     in.read(buffer, size);
-    spdlog::debug("[{}:{}] [read from file: {} Bytes]",__FILE__,__LINE__,size);
+    LogTrace("[Read from file: {} Bytes]", size);
     in.close();
     std::string res(buffer,size);
     delete[] buffer;
@@ -46,10 +46,10 @@ SyncFileStream::WriteFile(const std::string& FileName,const std::string& Content
     }
     if(out.fail()){
         std::string path = std::filesystem::current_path();
-        spdlog::error("[{}:{}] [open file: {} failed , now path is {}]",__FILE__,__LINE__,FileName,path);
+        LogError("[Open file: {} failed , now path is {}]", FileName, path);
         return ;
     }
-    spdlog::debug("[{}:{}] [write to file: {} Bytes]",__FILE__,__LINE__,Content.length());
+    LogTrace("[Write to file: {} Bytes]", Content.length());
     out.write(Content.c_str(),Content.length());
     out.close();
 }
@@ -61,19 +61,19 @@ ZeroCopyFile::ReadFile(const std::string &FileName)
     int fd = open(FileName.c_str(),O_RDONLY);
     if(fd == -1){
         std::string path = std::filesystem::current_path();
-        spdlog::error("[{}:{}] [open file: {} failed , now path is {}]",__FILE__,__LINE__,FileName,path);
+        LogError("[Open file: {} failed , now path is {}]", FileName, path);
         return "";
     }
     struct stat st;
     if(fstat(fd,&st) == -1){
-        spdlog::error("[{}:{}] [fstat file: {} failed]",__FILE__,__LINE__,FileName);
+        LogError("[Fstat file: {} failed]", FileName);
         close(fd);
         return "";
     }
     char *p = reinterpret_cast<char*>(mmap(nullptr,st.st_size,PROT_READ,MAP_PRIVATE,fd,0));
     if( p == MAP_FAILED) 
     {
-        spdlog::error("[{}:{}] [mmap file: {} failed]",__FILE__,__LINE__,FileName);
+        LogError("[mmap file: {} failed]", FileName);
         close(fd);
         return "";
     }
@@ -90,25 +90,25 @@ ZeroCopyFile::WriteFile(const std::string &FileName, const std::string &Content,
     int fd = open(FileName.c_str(),O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if(fd == -1) {
         std::string path = std::filesystem::current_path();
-        spdlog::error("[{}:{}] [open file: {} failed, now path is {}]",__FILE__,__LINE__ ,FileName,path);
+        LogError("[Open file: {} failed, now path is {}]", FileName,path);
         return;
     }
     if(ftruncate(fd,Content.size()) == -1){
-        spdlog::error("[{}:{}] [ftruncate '{}' fail] [size:{} Bytes]",__FILE__,__LINE__ ,FileName,Content.length());
+        LogError("[ftruncate {} fail] [size:{} Bytes]", FileName, Content.length());
         return;
     }
     char* p = reinterpret_cast<char*>(mmap(nullptr,Content.size(),PROT_READ | PROT_WRITE,MAP_SHARED,fd,0));
     if (p == MAP_FAILED) {
-        spdlog::error("[{}:{}] [mmap '{}' fail]",__FILE__,__LINE__ ,FileName);
+        LogError("[mmap {} fail]", FileName);
         return;
     }
     memcpy(p,Content.c_str(),Content.size());
     if (msync(p,Content.size(),MS_SYNC) == -1) {
-        spdlog::error("[{}:{}] [msync '{}' fail]",__FILE__,__LINE__ ,FileName);
+        LogError("[msync {} fail]", FileName);
         return;
     }
     if (munmap(p,Content.size()) == -1) {
-        spdlog::error("[{}:{}] [munmap '{}' fail]",__FILE__,__LINE__ ,FileName);
+        LogError("[munmap {} fail]", FileName);
         return;
     }
     close(fd);

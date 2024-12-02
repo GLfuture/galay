@@ -62,13 +62,12 @@ target_link_libraries(${STATIC_LIB} PRIVATE ${DEPEND_LIBS})
 add_library(${SHARED_LIB} SHARED ${OBJECT_LIBS})
 target_link_libraries(${SHARED_LIB} PRIVATE ${DEPEND_LIBS})
 
+target_compile_features(${STATIC_LIB} PRIVATE cxx_std_20)
+target_compile_features(${SHARED_LIB} PRIVATE cxx_std_20)
 
 
 install(TARGETS ${STATIC_LIB} DESTINATION lib EXPORT ${PROJECT_NAME}Targets)
 install(TARGETS ${SHARED_LIB} DESTINATION lib EXPORT ${PROJECT_NAME}Targets)
-
-target_compile_features(${STATIC_LIB} PRIVATE cxx_std_20)
-target_compile_features(${SHARED_LIB} PRIVATE cxx_std_20)
 
 # 生成版本配置文件
 write_basic_package_version_file(

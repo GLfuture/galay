@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <functional>
 
-#ifdef INCLUDE_NLOHMANN_JSON_HPP_
+#ifdef INCLUDE_NLOHMANN_JSON_HPP
     #define USE_NLOHMANN_JSON
 #endif
 

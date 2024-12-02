@@ -7,7 +7,7 @@
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
     
 #endif
-#include <spdlog/spdlog.h>
+#include "Log.h"
 
 
 namespace galay::event
@@ -46,7 +46,7 @@ EpollEventEngine::Loop(int timeout)
         if(initial) {
             initial = false;
             this->m_stop = false;
-            spdlog::info("Engine Start [Engine: {}]", this->m_handle.fd);
+            LogTrace("[Engine Start, Engine: {}]", m_handle.fd);
             nEvents = epoll_wait(m_handle.fd, m_events, m_event_size, timeout);
         }else{
             nEvents = epoll_wait(m_handle.fd, m_events, m_event_size, timeout);
@@ -92,7 +92,7 @@ bool EpollEventEngine::Stop()
 int 
 EpollEventEngine::AddEvent(Event *event, void* ctx)
 {
-    spdlog::debug("EpollEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    LogTrace("[Add {} To Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     epoll_event ev;
     if(!ConvertToEpollEvent(ev, event, ctx))
     {
@@ -108,7 +108,7 @@ EpollEventEngine::AddEvent(Event *event, void* ctx)
         m_error_code = error::Error_NoError;
     }
     while(!event->SetEventEngine(this)){
-        spdlog::error("EpollEventEngine::SetEventEngine Error [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+        LogError("[SetEventEngine failed]");
     }
     return ret;
 }
@@ -116,13 +116,10 @@ EpollEventEngine::AddEvent(Event *event, void* ctx)
 int 
 EpollEventEngine::ModEvent(Event* event, void* ctx)
 {
-    spdlog::debug("EpollEventEngine::ModEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    LogTrace("[Mod {} In Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     epoll_event ev;
     ev.data.ptr = event;
-    if( !ConvertToEpollEvent(ev, event, ctx) )
-    {
-        return 0;
-    }
+    if( !ConvertToEpollEvent(ev, event, ctx) ) return 0;
     int ret = epoll_ctl(m_handle.fd, EPOLL_CTL_MOD, event->GetHandle().fd, &ev);
     if( ret != 0 ) {
         m_error_code = error::MakeErrorCode(error::Error_ModEventError, errno);
@@ -137,7 +134,7 @@ EpollEventEngine::ModEvent(Event* event, void* ctx)
 int 
 EpollEventEngine::DelEvent(Event* event, void* ctx)
 {
-    spdlog::debug("EpollEventEngine::DelEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    LogTrace("[Del {} From Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     GHandle handle = event->GetHandle();
     epoll_event ev;
     ev.data.ptr = event;
@@ -151,7 +148,7 @@ EpollEventEngine::DelEvent(Event* event, void* ctx)
         m_error_code = error::Error_NoError;
     }
     while(!event->SetEventEngine(nullptr)){
-        spdlog::error("EpollEventEngine::SetEventEngine Error [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+        LogError("[SetEventEngine failed]");
     }
     return ret;
 }
@@ -242,6 +239,7 @@ bool KqueueEventEngine::Loop(int timeout)
         if(initial) {
             initial = false;
             this->m_stop = false;
+            LogTrace("[Engine Start, Engine: {}]", m_handle.fd);
             if(timeout > 0) nEvents = kevent(m_handle.fd, nullptr, 0, m_events, m_event_size, &ts);
             else nEvents = kevent(m_handle.fd, nullptr, 0, m_events, m_event_size, nullptr);
         }else{
@@ -251,7 +249,6 @@ bool KqueueEventEngine::Loop(int timeout)
         if(nEvents < 0) {
             continue;
         };
-        spdlog::debug("kevent return {}", nEvents);
         for(int i = 0; i < nEvents; ++i)
         {
             Event* event = (Event*)m_events[i].udata;
@@ -290,7 +287,7 @@ bool KqueueEventEngine::Stop()
 
 int KqueueEventEngine::AddEvent(Event *event, void* ctx)
 {
-    spdlog::debug("KqueueEventEngine::AddEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    LogTrace("[Add {} To Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_ADD;
     if(!ConvertToKEvent(k_event, event, ctx)) {
@@ -304,14 +301,14 @@ int KqueueEventEngine::AddEvent(Event *event, void* ctx)
         m_error_code = error::Error_NoError;
     }
     while(!event->SetEventEngine(this)){
-        spdlog::error("EpollEventEngine::SetEventEngine Error [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+        LogError("[SetEventEngine failed]");
     }
     return ret;
 }
 
 int KqueueEventEngine::ModEvent(Event *event, void* ctx)
 {
-    spdlog::debug("KqueueEventEngine::ModEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    LogTrace("[Mod {} In Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_ADD;
     if(!ConvertToKEvent(k_event, event, ctx)) {
@@ -329,7 +326,7 @@ int KqueueEventEngine::ModEvent(Event *event, void* ctx)
 
 int KqueueEventEngine::DelEvent(Event *event, void* ctx)
 {
-    spdlog::debug("KqueueEventEngine::DelEvent [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+    LogTrace("[Del {} From Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_DELETE;
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);
@@ -340,7 +337,7 @@ int KqueueEventEngine::DelEvent(Event *event, void* ctx)
         m_error_code = error::Error_NoError;
     }
     while(!event->SetEventEngine(nullptr)){
-        spdlog::error("EpollEventEngine::SetEventEngine Error [Engine: {}] [Name: {}, Handle: {}, Type: {}]", this->m_handle.fd, event->Name(), event->GetHandle().fd, ToString(event->GetEventType()));
+        LogError("[SetEventEngine failed]");
     }
     return ret;
 }

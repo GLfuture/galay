@@ -4,8 +4,11 @@
 #define BUFFER_SIZE 1024
 int main()
 {
-    spdlog::set_level(spdlog::level::trace);
-    spdlog::trace("Starting...");
+    auto& logger = galay::log::Logger::GetInstance()->GetLogger();
+    logger->set_level(spdlog::level::trace);
+    logger->flush_on(spdlog::level::trace);
+    int level = logger->level();
+    std::cout << "level: " << level << std::endl;
     galay::server::TcpServerConfig::ptr config = std::make_shared<galay::server::TcpServerConfig>();
     galay::server::TcpServer server(config);
     galay::TcpCallbackStore store([](galay::TcpOperation op)->galay::coroutine::Coroutine {
@@ -102,6 +105,7 @@ int main()
     // });
     // server.Start(8060);
     getchar();
+    std::cout << "level: " << level << std::endl;
     server.Stop();
     return 0;
 }

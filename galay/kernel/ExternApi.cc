@@ -212,12 +212,12 @@ std::vector<scheduler::EventScheduler*> g_event_schedulers;
 std::vector<scheduler::TimerScheduler*> g_timer_schedulers;
 SSL_CTX* g_ssl_ctx = nullptr;
 
-coroutine::CoroutineStore* Global_GetCoroutineStore()
+coroutine::CoroutineStore* GetCoroutineStore()
 {
     return &g_coroutine_store;
 }
 
-bool InitialSSLServerEnv(const char *cert_file, const char *key_file)
+bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)
 {
     SSL_library_init();
     OpenSSL_add_all_algorithms();
@@ -237,7 +237,7 @@ bool InitialSSLServerEnv(const char *cert_file, const char *key_file)
     return true;
 }
 
-bool InitialSSLClientEnv()
+bool InitialiszeSSLClientEnv()
 {
     g_ssl_ctx = SSL_CTX_new(TLS_client_method());
     if (g_ssl_ctx == nullptr) {
@@ -258,6 +258,22 @@ SSL_CTX *GetGlobalSSLCtx()
     return g_ssl_ctx;
 }
 
+void InitializeGalayEnv(int event_schedulers, int coroutine_schedulers, int timer_schedulers, int timeout)
+{
+    DynamicResizeCoroutineSchedulers(coroutine_schedulers);
+    DynamicResizeEventSchedulers(event_schedulers);
+    DynamicResizeTimerSchedulers(timer_schedulers);
+    StartCoroutineSchedulers();
+    StartEventSchedulers(timeout);
+    StartTimerSchedulers(timeout);
+}
+
+void DestroyGalayEnv()
+{
+    StopCoroutineSchedulers();
+    StopEventSchedulers();
+    StopTimerSchedulers();
+}
 
 void DynamicResizeCoroutineSchedulers(const int num)
 {
@@ -376,13 +392,6 @@ scheduler::TimerScheduler *GetTimerScheduler(int index)
     return g_timer_schedulers[index];
 }
 
-void StartAllSchedulers(int timeout)
-{
-    StartCoroutineSchedulers();
-    StartEventSchedulers(timeout);
-    StartTimerSchedulers(timeout);
-}
-
 void StartCoroutineSchedulers()
 {
     for(const auto & g_coroutine_scheduler : g_coroutine_schedulers)
@@ -405,13 +414,6 @@ void StartTimerSchedulers(const int timeout)
     {
         g_timer_scheduler->Loop(timeout);
     }
-}
-
-void StopAllSchedulers()
-{
-    StopCoroutineSchedulers();
-    StopEventSchedulers();
-    StopTimerSchedulers();
 }
 
 void StopCoroutineSchedulers()

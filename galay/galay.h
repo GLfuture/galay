@@ -14,6 +14,7 @@
 #include "kernel/Operation.h"
 #include "kernel/Server.h"
 #include "kernel/ExternApi.h"
+#include "kernel/Log.h"
 
 //protocol
 #include "protocol/Http.h"

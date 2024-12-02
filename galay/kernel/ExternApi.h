@@ -102,14 +102,14 @@ coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, IOVec* iov);
 /*
     Coroutine
 */
-coroutine::CoroutineStore* Global_GetCoroutineStore();
+coroutine::CoroutineStore* GetCoroutineStore();
 
 /*
    OpenSSL 
 */
 
-bool InitialSSLServerEnv(const char* cert_file, const char* key_file);
-bool InitialSSLClientEnv();
+bool InitializeSSLServerEnv(const char* cert_file, const char* key_file);
+bool InitialiszeSSLClientEnv();
 bool DestroySSLEnv();
 SSL_CTX* GetGlobalSSLCtx();
 
@@ -117,6 +117,12 @@ SSL_CTX* GetGlobalSSLCtx();
 /*
     Scheduler
 */
+
+void InitializeGalayEnv(int event_schedulers, int coroutine_schedulers, int timer_schedulers, int timeout);
+void DestroyGalayEnv();
+
+
+// details
 void DynamicResizeCoroutineSchedulers(int num);
 void DynamicResizeEventSchedulers(int num);
 void DynamicResizeTimerSchedulers(int num);
@@ -135,14 +141,12 @@ scheduler::TimerScheduler* GetTimerScheduler(int index);
     Start all schedulers
     [timeout]: timeout in milliseconds, -1 will block
 */
-void StartAllSchedulers(int timeout = -1);
 void StartCoroutineSchedulers();
 void StartEventSchedulers(int timeout);
 void StartTimerSchedulers(int timeout);
 /*
     Stop all schedulers
 */
-void StopAllSchedulers();
 void StopCoroutineSchedulers();
 void StopEventSchedulers(); 
 void StopTimerSchedulers();

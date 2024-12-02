@@ -11,7 +11,7 @@
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
 
 #endif
-#include <spdlog/spdlog.h>
+#include "Log.h"
 
 namespace galay::event
 {
@@ -338,17 +338,18 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
         const GHandle new_handle = co_await AsyncAccept(m_socket, &addr);
         if( new_handle.fd == -1 ){
             if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                spdlog::error("[{}:{}] [[Accept error] [Errmsg:{}]]", __FILE__, __LINE__, error::GetErrorString(error));
+                LogError("[{}]", error::GetErrorString(error));
             }
             co_return;
         }
         async::AsyncNetIo* socket = new async::AsyncTcpSocket(engine);
         socket->GetHandle() = new_handle;
-        spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
-        if (!socket->GetOption().HandleNonBlock())
+        LogTrace("[Handle:{}, Acceot Success]", socket->GetHandle().fd);
+        auto option = socket->GetOption();
+        if (!option.HandleNonBlock())
         {
+            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
             close(new_handle.fd);
-            spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
         }
@@ -403,7 +404,7 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
         const auto [fd] = co_await AsyncAccept(m_socket, &addr);
         if( fd == -1 ){
             if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                spdlog::error("[{}:{}] [[Accept error] [Errmsg:{}]]", __FILE__, __LINE__, error::GetErrorString(error));
+                LogError("[{}]", error::GetErrorString(error));
             }
             co_return;
         }
@@ -413,21 +414,22 @@ coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
             delete socket;
             continue;
         }
-        spdlog::debug("[{}:{}] [[Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
-        if (!socket->GetOption().HandleNonBlock())
+        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
+        auto option = socket->GetOption();
+        if (!option.HandleNonBlock())
         {
+            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
             close(fd);
-            spdlog::error("[{}:{}] [[HandleNonBlock error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
         }
         if(const bool success = co_await AsyncSSLAccept(socket); !success ){
+            LogError("[{}]", error::GetErrorString(socket->GetErrorCode()));
             close(fd);
-            spdlog::error("[{}:{}] [[SSLAccept error] [Errmsg:{}]]", __FILE__, __LINE__, strerror(errno));
             delete socket;
             co_return;
         }
-        spdlog::debug("[{}:{}] [[SSL_Accept success] [Handle:{}]]", __FILE__, __LINE__, socket->GetHandle().fd);
+        LogTrace("[Handle:{}, SSL_Acceot Success]", socket->GetHandle().fd);
         engine->ResetMaxEventSize(fd);
         this->m_callback_store->Execute(socket);
     }
@@ -561,11 +563,15 @@ NetWaitEvent::~NetWaitEvent()
 
 bool NetWaitEvent::OnAcceptWaitPrepare(const coroutine::Coroutine *co, void *ctx) const
 {
+    NetAddr* netaddr = static_cast<NetAddr*>(ctx);
     sockaddr addr{};
     socklen_t addrlen = sizeof(addr);
     GHandle handle {
         .fd = accept(m_socket->GetHandle().fd, &addr, &addrlen),
     };
+    netaddr->m_ip = inet_ntoa(((sockaddr_in*)&addr)->sin_addr);
+    netaddr->m_port = ntohs(((sockaddr_in*)&addr)->sin_port);
+    LogTrace("[Accept Address: {}:{}]", netaddr->m_ip, netaddr->m_port);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     if( handle.fd < 0 ) {
         if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
@@ -583,7 +589,6 @@ bool NetWaitEvent::OnRecvWaitPrepare(const coroutine::Coroutine *co, void* ctx)
     auto* iov = static_cast<IOVec*>(ctx);
     int recvBytes = DealRecv(iov);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
-    spdlog::debug("NetWaitEvent::OnRecvWaitPrepare recvBytes: {}", recvBytes);
     if( recvBytes == eCommonNonBlocking ) {
         return true;
     }
@@ -595,7 +600,6 @@ bool NetWaitEvent::OnSendWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 {
     auto* iov = static_cast<IOVec*>(ctx);
     int sendBytes = DealSend(iov);
-    spdlog::debug("NetWaitEvent::OnSendWaitPrepare sendBytes: {}", sendBytes);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     if( sendBytes == eCommonNonBlocking){
         return true;
@@ -606,9 +610,8 @@ bool NetWaitEvent::OnSendWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 
 bool NetWaitEvent::OnConnectWaitPrepare(coroutine::Coroutine *co, void* ctx) const
 {
-    
-    spdlog::debug("NetWaitEvent::OnConnectWaitPrepare");
     auto* addr = static_cast<NetAddr*>(ctx);
+    LogTrace("[Connect to {}:{}]", addr->m_ip, addr->m_port);
     sockaddr_in saddr{};
     saddr.sin_family = AF_INET;
     saddr.sin_addr.s_addr = inet_addr(addr->m_ip.c_str());
@@ -631,7 +634,6 @@ bool NetWaitEvent::OnConnectWaitPrepare(coroutine::Coroutine *co, void* ctx) con
 
 bool NetWaitEvent::OnCloseWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 {
-    spdlog::debug("NetWaitEvent::OnCloseWaitPrepare");
     coroutine::Awaiter* awaiter = co->GetAwaiter(); 
     if (m_engine) {
         if( m_engine.load()->DelEvent(this, nullptr) != 0 ) {
@@ -640,6 +642,7 @@ bool NetWaitEvent::OnCloseWaitPrepare(const coroutine::Coroutine *co, void* ctx)
             return false;
         }
     }
+    LogTrace("[Close {}]", m_socket->GetHandle().fd);
     if(const int ret = close(m_socket->GetHandle().fd); ret < 0 ) {
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
         awaiter->SetResult(false);
@@ -651,18 +654,14 @@ bool NetWaitEvent::OnCloseWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 
 void NetWaitEvent::HandleErrorEvent(EventEngine *engine)
 {
-    spdlog::debug("NetWaitEvent::HandleErrorEvent");
 }
 
 void NetWaitEvent::HandleAcceptEvent(EventEngine *engine)
 {
-    spdlog::debug("NetWaitEvent::HandleAcceptEvent");
-    // doing nothing
 }
 
 void NetWaitEvent::HandleRecvEvent(EventEngine *engine)
 {
-    spdlog::debug("NetWaitEvent::HandleRecvEvent");
     int recvBytes = DealRecv(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
@@ -672,7 +671,6 @@ void NetWaitEvent::HandleRecvEvent(EventEngine *engine)
 
 void NetWaitEvent::HandleSendEvent(EventEngine *engine)
 {
-    spdlog::debug("NetWaitEvent::HandleSendEvent");
     int sendBytes = DealSend(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
@@ -681,7 +679,6 @@ void NetWaitEvent::HandleSendEvent(EventEngine *engine)
 
 void NetWaitEvent::HandleConnectEvent(EventEngine *engine) const
 {
-    spdlog::debug("NetWaitEvent::HandleConnectEvent");
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(true);
     GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
@@ -689,7 +686,6 @@ void NetWaitEvent::HandleConnectEvent(EventEngine *engine) const
 
 void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
 { 
-    spdlog::debug("NetWaitEvent::HandleCloseEvent");
     //doing nothing
 }
 
@@ -706,7 +702,7 @@ int NetWaitEvent::DealRecv(IOVec* vec)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 
@@ -723,7 +719,7 @@ int NetWaitEvent::DealSend(IOVec* vec)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("SendEvent::Deal [Handle: {}] [Byte: {}] [Data: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 
@@ -876,12 +872,11 @@ NetSslWaitEvent::~NetSslWaitEvent()
 
 bool NetSslWaitEvent::OnSslAcceptWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 {
-    
-    spdlog::debug("NetSslWaitEvent::OnSslAcceptWaitPrepare");
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
     SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_set_accept_state(ssl);
     int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
         return false;
@@ -902,6 +897,7 @@ bool NetSslWaitEvent::OnSslConnectWaitPrepare(const coroutine::Coroutine *co, vo
     SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_set_connect_state(ssl);
     int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
         return false;
@@ -920,7 +916,6 @@ bool NetSslWaitEvent::OnSslRecvWaitPrepare(const coroutine::Coroutine *co, void*
     
     int recvBytes = DealRecv(static_cast<IOVec*>(ctx));
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
-    spdlog::debug("NetSslWaitEvent::OnSslRecvWaitPrepare recvBytes: {}", recvBytes);
     if(recvBytes == eCommonNonBlocking) {
         return true;
     }
@@ -934,7 +929,6 @@ bool NetSslWaitEvent::OnSslSendWaitPrepare(const coroutine::Coroutine *co, void*
     auto* vec = static_cast<IOVec*>(m_ctx);
     int sendBytes = DealSend(vec);
     galay::coroutine::Awaiter* awaiter = co->GetAwaiter();
-    spdlog::debug("NetSslWaitEvent::OnSslSendWaitPrepare sendBytes: {}", sendBytes);
     if( sendBytes == eCommonNonBlocking){
         return true;
     }
@@ -944,8 +938,6 @@ bool NetSslWaitEvent::OnSslSendWaitPrepare(const coroutine::Coroutine *co, void*
 
 bool NetSslWaitEvent::OnSslCloseWaitPrepare(const coroutine::Coroutine *co, void* ctx)
 {
-    
-    spdlog::debug("NetWaitEvent::OnCloseWaitPrepare");
     coroutine::Awaiter* awaiter = co->GetAwaiter(); 
     if (m_engine) {
         if( m_engine.load()->DelEvent(this, nullptr) != 0 ) {
@@ -954,6 +946,7 @@ bool NetSslWaitEvent::OnSslCloseWaitPrepare(const coroutine::Coroutine *co, void
             return false;
         }
     }
+    LogTrace("[Close {}]", m_socket->GetHandle().fd);
     int ret = close(m_socket->GetHandle().fd);
     if( ret < 0 ) {
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLCloseError, errno);
@@ -971,10 +964,10 @@ bool NetSslWaitEvent::OnSslCloseWaitPrepare(const coroutine::Coroutine *co, void
 
 void NetSslWaitEvent::HandleSslAcceptEvent(EventEngine *engine)
 {
-    spdlog::debug("NetSslWaitEvent::HandleSslAcceptEvent");
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
     const int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
         GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
@@ -996,6 +989,7 @@ void NetSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
     const int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
         GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
@@ -1013,7 +1007,6 @@ void NetSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
 
 void NetSslWaitEvent::HandleSslRecvEvent(EventEngine *engine)
 {
-    spdlog::debug("NetSslWaitEvent::HandleSslRecvEvent");
     int recvBytes = DealRecv(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
@@ -1023,7 +1016,6 @@ void NetSslWaitEvent::HandleSslRecvEvent(EventEngine *engine)
 
 void NetSslWaitEvent::HandleSslSendEvent(EventEngine *engine)
 {
-    spdlog::debug("NetSslWaitEvent::HandleSslSendEvent");
     int sendBytes = DealSend(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
@@ -1063,7 +1055,7 @@ int NetSslWaitEvent::DealRecv(IOVec* vec)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("RecvEvent::HandleEvent [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));   
+    LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", GetAsyncTcpSocket()->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 
@@ -1080,7 +1072,7 @@ int NetSslWaitEvent::DealSend(IOVec* vec)
             return eCommonNonBlocking;
         }
     }
-    spdlog::debug("SendEvent::DealSend [Handle: {}] [Byte: {}] [Data: {}]", m_socket->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", GetAsyncTcpSocket()->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
     return length;
 }
 //#endif
@@ -1175,10 +1167,11 @@ bool FileIoWaitEvent::OnAioWaitPrepare(coroutine::Coroutine *co, void *ctx)
 void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
 {
     uint64_t finish_nums = 0;
-    read(m_fileio->GetHandle().fd, &finish_nums, sizeof(uint64_t));
+    int ret = read(m_fileio->GetHandle().fd, &finish_nums, sizeof(uint64_t));
     async::AsyncFileNativeAio* fileio = static_cast<async::AsyncFileNativeAio*>(m_fileio);
     io_event events[DEFAULT_IO_EVENTS_SIZE] = {0};
     int r = io_getevents(fileio->GetIoContext(), 1, DEFAULT_IO_EVENTS_SIZE, events, nullptr);
+    LogTrace("[io_getevents return {} events]", r);
     while (r --> 0)
     {
         auto& event = events[r];
@@ -1206,6 +1199,7 @@ bool FileIoWaitEvent::OnKReadWaitPrepare(coroutine::Coroutine *co, void *ctx)
             length = eCommonOtherFailed;
         }        
     }
+    LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
     co->GetAwaiter()->SetResult(length);
     return false;
 }
@@ -1223,6 +1217,7 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
             length = eCommonOtherFailed;
         }
     }
+    LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
     GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
@@ -1241,6 +1236,7 @@ bool FileIoWaitEvent::OnKWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
             length = eCommonOtherFailed;
         }
     }
+    LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
     co->GetAwaiter()->SetResult(length);
     return false;
 }
@@ -1258,6 +1254,7 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
             length = eCommonOtherFailed;
         }
     }
+    LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
     GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);

@@ -1,5 +1,5 @@
 #include "Http.h"
-#include <spdlog/spdlog.h>
+#include "kernel/Log.h"
 
 namespace galay::error{
 
@@ -362,7 +362,7 @@ HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, si
             {
                 if (m_uri.length() > HTTP_URI_MAX_LEN)
                 {
-                    spdlog::error("[{}:{}] [[uri is too long] [Uri:{}]]", __FILE__, __LINE__, this->m_uri);
+                    LogError("[Uri is too long, Uri:{}]", this->m_uri);
                     return error::kHttpError_UriTooLong;
                 }
                 this->m_uri = ConvertFromUri(std::move(this->m_uri), false);
@@ -727,7 +727,7 @@ HttpRequest::DecodePdu(const std::string_view& buffer)
             return {false, 0};
         }
         if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-            spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
+            LogError("[Header is too long, Header Len: {} Bytes]", buffer.length());
             m_error->Code() = error::kHttpError_HeaderTooLong;
             return {false, 0};
         } 
@@ -868,7 +868,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
         }
         catch(const std::exception& e)
         {
-            spdlog::error("[{}:{}] [[content-length is not a number] [content-length:{}]]", __FILE__, __LINE__, contentLength);
+            LogError("[Content-length is not Integer, content-length:{}]]", contentLength);
             m_error->Code() = error::kHttpError_BadRequest;
 
         }
@@ -879,9 +879,9 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
             if(m_next_index + 4 < n && buffer.substr(m_next_index,4) == "\r\n\r\n") {
                 m_next_index += 4;
             }  
-            spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
+            LogTrace("[Body is completed, Len:{} Bytes, Body Package:{}]", length , this->m_body);
         }else{
-            spdlog::warn("[{}:{}] [[body is incomplete] [Body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
+            LogWarn("[body is incomplete, len:{} Bytes, expect {} Bytes]", n, length);
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }
@@ -889,7 +889,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
         size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
-                spdlog::warn(R"([{}:{}] [[body is incomplete] [not end with '\r\n\r\n']])",__FILE__,__LINE__);
+                LogWarn("[Body is incomplete, header not has length and not end with '\\r\\n\\r\\n']");
                 m_error->Code() = error::kHttpError_BodyInComplete;
                 return false;
             }
@@ -915,16 +915,16 @@ HttpRequest::GetChunkBody(const std::string_view& buffer)
         }
         catch (const std::exception &e)
         {
-            spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
+            LogError("[Chunck is Illegal, ErrMsg:{}]", e.what());
             m_error->Code() = error::kHttpError_ChunckHasError;
             return false;
         }
         if(length == 0){
             m_next_index = pos + 4;
-            spdlog::debug("[{}:{}] [[Chunck is finished] [Chunck Len:{} Bytes]]",__FILE__,__LINE__,pos+4);
+            LogTrace("[Chunck is finished, Chunck Len:{} Bytes]", pos+4);
             break;
         }else if(length + 4 + pos > buffer.length()){
-            spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
+            LogDebug("[Chunck is incomplete, Chunck Len:{} Bytes, Buffer Len:{} Bytes]", length + pos + 4, buffer.length());
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }
@@ -968,7 +968,6 @@ HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, s
     size_t n = str.length();
     std::string_view key;
     size_t i = next_index, code_begin = 0, key_begin = 0, value_begin = 0;
-    spdlog::info("HttpResponseHeader::FromString: {}", next_index);
     for (; i < n; ++i)
     {
         if (status == HttpDecodeStatus::kHttpHeadEnd)
@@ -997,7 +996,7 @@ HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, s
                 }
                 catch (std::invalid_argument &e)
                 {
-                    spdlog::error("[{}:{}] [Http status code is illegal]",__FILE__,__LINE__);
+                    LogError("[Http status code is illegal]");
                     return error::kHttpError_HttpCodeInvalid;
                 }
                 m_code = static_cast<HttpStatusCode>(code);
@@ -1107,7 +1106,7 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
             return {false, 0};
         }
         if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-            spdlog::error("[{}:{}] [[Header is too long] [Header Len: {} Bytes]]", __FILE__, __LINE__, buffer.length());
+            LogError("[Header is too long, Header Len: {} Bytes]", buffer.length());
             m_error->Code() = error::kHttpError_HeaderTooLong;
             return {false, 0};
         } 
@@ -1214,7 +1213,7 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
         }
         catch(const std::exception& e)
         {
-            spdlog::error("[{}:{}] [[content-length is not a number] [content-length:{}]]", __FILE__, __LINE__, contentLength);
+            LogError("[Content-length is not a number, content-length:{}]", contentLength);
             m_error->Code() = error::kHttpError_BadRequest;
 
         }
@@ -1225,9 +1224,9 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
             if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
                 m_next_index += 4;
             }  
-            spdlog::debug("[{}:{}] [[body is completed] [Body Len:{} Bytes] [Body Package:{}]", __FILE__, __LINE__ , length , this->m_body);
+            LogTrace("[Body is completed, Body Len:{} Bytes, Body Package:{}]", length , this->m_body);
         }else{
-            spdlog::warn("[{}:{}] [[body is incomplete] [body len:{} Bytes, expect {} Bytes]]",__FILE__,__LINE__, n, length);
+            LogWarn("[Body is incomplete, Body len:{} Bytes, expect {} Bytes]", n, length);
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }
@@ -1235,7 +1234,7 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
         size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
-                spdlog::warn("[{}:{}] [[body is incomplete] [not end with '\\r\\n\\r\\n']]",__FILE__,__LINE__);
+                LogWarn("[Body is incomplete, header not has length and not end with '\\r\\n\\r\\n']]");
                 m_error->Code() = error::kHttpError_BodyInComplete;
                 return false;
             }
@@ -1262,16 +1261,16 @@ HttpResponse::GetChunckBody(const std::string_view& buffer)
         }
         catch (const std::exception &e)
         {
-            spdlog::error("[{}:{}] [Chunck is Illegal] [ErrMsg:{}]", __FILE__, __LINE__, e.what());
+            LogError("[Chunck is Illegal, ErrMsg:{}]", e.what());
             m_error->Code() = error::kHttpError_ChunckHasError;
             return false;
         }
         if(length == 0){
             m_next_index = pos + 4;
-            spdlog::debug("[{}:{}] [[Chunck is finished] [Chunck Len:{} Bytes]]",__FILE__,__LINE__,pos+4);
+            LogTrace("[Chunck is finished, Chunck Len:{} Bytes]", pos+4);
             break;
         }else if(length + 4 + pos > buffer.length()){
-            spdlog::debug("[{}:{}] [[Chunck is incomplete] [Chunck Len:{} Bytes] [Buffer Len:{} Bytes]]",__FILE__,__LINE__,length + pos + 4,buffer.length());
+            LogTrace("[Chunck is incomplete, Chunck Len:{} Bytes, Buffer Len:{} Bytes]", length + pos + 4, buffer.length());
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }

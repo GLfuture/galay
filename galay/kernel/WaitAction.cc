@@ -4,7 +4,7 @@
 #include "EventEngine.h"
 #include "Scheduler.h"
 #include "ExternApi.h"
-#include <spdlog/spdlog.h>
+#include "Log.h"
 
 namespace galay::action
 {
@@ -54,14 +54,14 @@ bool IOEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
     if (!m_event->BelongEngine())   {
         if(const int ret = m_engine->AddEvent(this->m_event, nullptr); ret != 0 ) {
-            spdlog::warn("IOEventAction::DoAction.AddEvent(handle: {}) failed, {}, engine:{}", m_event->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()), (void*)m_event->BelongEngine());
+            LogWarn("[Add handle({}) to engine:{} failed, error: {}]", m_event->GetHandle().fd, (void*)m_event->BelongEngine(), error::GetErrorString(m_engine->GetErrorCode()));
             m_event->BelongEngine()->ModEvent(this->m_event, nullptr);
             return true;
         }
     }
     else {
         if(const int ret = m_event->BelongEngine()->ModEvent(this->m_event, nullptr); ret != 0 ) {
-            spdlog::warn("IOEventAction::DoAction.ModEvent(handle: {}) failed, {}, engine:{}", m_event->GetHandle().fd, error::GetErrorString(m_engine->GetErrorCode()), (void*)m_event->BelongEngine());
+            LogWarn("[Mod handle({}) from engine:{} failed, error: {}]", m_event->GetHandle().fd, (void*)m_event->BelongEngine(), error::GetErrorString(m_engine->GetErrorCode()));
             m_event->BelongEngine()->AddEvent(this->m_event, nullptr);
             return true;
         }
@@ -79,37 +79,23 @@ IOEventAction::~IOEventAction()
     delete m_event;
 }
 
-CoroutineWaitAction::CoroutineWaitAction()
+
+CoroutineHandleAction::CoroutineHandleAction(std::function<bool(coroutine::Coroutine*, void*)>&& callback)
+    : m_callback(std::forward<std::function<bool(coroutine::Coroutine*, void*)>>(callback))
 {
-    this->m_coroutine = nullptr;
+    
 }
 
-bool CoroutineWaitAction::HasEventToDo()
+bool CoroutineHandleAction::HasEventToDo()
 {
     return true;
 }
 
-bool CoroutineWaitAction::DoAction(coroutine::Coroutine *co, void* ctx)
+bool CoroutineHandleAction::DoAction(coroutine::Coroutine *co, void* ctx)
 {
-    this->m_coroutine = co;
-    return true;
-}
-
-GetCoroutineHandleAction::GetCoroutineHandleAction(coroutine::Coroutine** m_coroutine)
-{
-    this->m_coroutine = m_coroutine;
-}
-
-bool GetCoroutineHandleAction::HasEventToDo()
-{
-    return true;
-}
-
-bool GetCoroutineHandleAction::DoAction(coroutine::Coroutine *co, void* ctx)
-{
-    *(this->m_coroutine) = co;
+    bool res = m_callback(co, ctx);
     delete this;
-    return false;
+    return res;
 }
 
 

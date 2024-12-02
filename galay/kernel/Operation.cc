@@ -140,8 +140,8 @@ HttpOperation::HttpProtoStore::HttpProtoStore(protocol::http::HttpRequest *reque
 
 HttpOperation::HttpProtoStore::~HttpProtoStore()
 {
-    server::HttpServer::ReturnRequest(m_request);
-    server::HttpServer::ReturnResponse(m_response);
+    // server::HttpServer::ReturnRequest(m_request);
+    // server::HttpServer::ReturnResponse(m_response);
 }
 
 HttpOperation::HttpOperation(const TcpOperation& operation, protocol::http::HttpRequest *request, protocol::http::HttpResponse *response)

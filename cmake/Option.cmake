@@ -57,3 +57,7 @@ else()
   option(ENABLE_MIDDLEWARE "Not Enable middleware" OFF)
 endif()
 
+# log
+
+option(ENABLE_TRACE_LOG "Enable trace log" ON)
+
