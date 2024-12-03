@@ -134,7 +134,7 @@ Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b) const
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 TimeEventIDStore::TimeEventIDStore(const int capacity)
 {
-    m_temp = static_cast<int*>(malloc(sizeof(int) * capacity));
+    m_temp = static_cast<int*>(calloc(capacity, sizeof(int)));
     for(int i = 0; i < capacity; i++){
         m_temp[i] = i;
     }
@@ -703,6 +703,7 @@ int NetWaitEvent::DealRecv(IOVec* vec)
         }
     }
     LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    vec->m_offset += length;
     return length;
 }
 
@@ -720,6 +721,7 @@ int NetWaitEvent::DealSend(IOVec* vec)
         }
     }
     LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    vec->m_offset += length;
     return length;
 }
 
@@ -1056,6 +1058,7 @@ int NetSslWaitEvent::DealRecv(IOVec* vec)
         }
     }
     LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", GetAsyncTcpSocket()->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    vec->m_offset += length;
     return length;
 }
 
@@ -1073,6 +1076,7 @@ int NetSslWaitEvent::DealSend(IOVec* vec)
         }
     }
     LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", GetAsyncTcpSocket()->GetHandle().fd, length, std::string_view(vec->m_buffer + vec->m_offset, length));
+    vec->m_offset += length;
     return length;
 }
 //#endif

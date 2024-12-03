@@ -49,7 +49,7 @@ galay::coroutine::Coroutine test()
     galay::FileIOVec vec {
         .m_handle = handle,
         .m_iovec = {
-            .m_buffer = static_cast<char*>(malloc(10 * 1024 * 1024)),
+            .m_buffer = static_cast<char*>(calloc(10 * 1024 * 1024)),
             .m_length = 10 * 1024 * 1024,
             .m_offset = 0
         }
@@ -86,7 +86,7 @@ galay::coroutine::Coroutine test()
     galay::FileIOVec vec2 {
         .m_handle = handle,
         .m_iovec = {
-            .m_buffer = static_cast<char*>(malloc(10 * 1024 * 1024)),
+            .m_buffer = static_cast<char*>(calloc(10 * 1024 * 1024)),
             .m_length = 10 * 1024 * 1024,
             .m_offset = 0
         }

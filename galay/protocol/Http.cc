@@ -446,8 +446,7 @@ HttpRequestHeader::ToString()
     res += ConvertToUri(std::move(url));
     res = res + " " + HttpVersionToString(this->m_version) + "\r\n";
     res += m_headerPairs.ToString();
-    res += "\r\n";
-    return std::move(res);
+    return std::move(res + "\r\n");
 }
 
 void 
@@ -772,7 +771,7 @@ HttpRequest::EncodePdu() const
     if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
         m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
-    return m_header->ToString() + m_body;
+    return std::move(m_header->ToString() + m_body);
 }
 
 int HttpRequest::GetErrorCode() const
@@ -958,8 +957,7 @@ HttpResponseHeader::ToString()
 {
     std::string res =  HttpVersionToString(m_version) + ' ' + std::to_string(static_cast<int>(this->m_code)) + ' ' + HttpStatusCodeToString(m_code) + "\r\n";
     res += m_headerPairs.ToString();
-    res += "\r\n";
-    return res;
+    return std::move(res + "\r\n");
 }
 
 error::HttpErrorCode 
@@ -1079,7 +1077,7 @@ HttpResponse::Body()
     return m_body;
 }
 
-std::string 
+std::string
 HttpResponse::EncodePdu() const
 {
     if((m_header->HeaderPairs().HasKey("Transfer-Encoding") || m_header->HeaderPairs().HasKey("transfer-encoding")) && 
@@ -1089,7 +1087,8 @@ HttpResponse::EncodePdu() const
     if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
         m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
     }
-    return m_header->ToString() + m_body;
+    std::string header = m_header->ToString();
+    return std::move( header + m_body);
 }
 
 

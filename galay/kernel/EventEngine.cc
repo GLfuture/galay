@@ -27,8 +27,7 @@ EpollEventEngine::EpollEventEngine(uint32_t max_events)
 {
     this->m_handle.fd = 0;
     this->m_event_size = max_events;
-    this->m_events = (epoll_event*)malloc(sizeof(epoll_event) * max_events);
-    bzero(m_events, sizeof(epoll_event) * max_events);
+    this->m_events = static_cast<epoll_event*>(calloc(max_events, sizeof(epoll_event)));
     this->m_stop = true;
     this->m_handle.fd = epoll_create(1);
     if(this->m_handle.fd < 0) {
@@ -217,8 +216,7 @@ KqueueEventEngine::KqueueEventEngine(const uint32_t max_events)
 {
     m_handle.fd = kqueue();
     m_event_size = max_events;
-    m_events = static_cast<struct kevent*>(malloc(sizeof(struct kevent) * max_events));
-    bzero(m_events, sizeof(struct kevent) * max_events);
+    m_events = static_cast<struct kevent*>(calloc(max_events, sizeof(struct kevent)));
     this->m_stop = true;
     if(this->m_handle.fd < 0) {
         m_error_code = error::MakeErrorCode(error::Error_EpollCreateError, errno);

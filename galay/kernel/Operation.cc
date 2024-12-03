@@ -52,55 +52,55 @@ TcpConnection::~TcpConnection()
     delete m_socket;
 }
 
-TcpOperation::TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncNetIo* socket)
+TcpConnectionManager::TcpConnectionManager(std::function<coroutine::Coroutine(TcpConnectionManager)>& callback, async::AsyncNetIo* socket)
     : m_callback(callback), m_connection(std::make_shared<TcpConnection>(socket))
 {
 }
 
-TcpConnection::ptr TcpOperation::GetConnection()
+TcpConnection::ptr TcpConnectionManager::GetConnection()
 {
     return m_connection;
 }
 
-void TcpOperation::ReExecute(const TcpOperation& operation) const
+void TcpConnectionManager::ReExecute(const TcpConnectionManager& operation) const
 {
     m_callback(operation);
 }
 
 
-std::any &TcpOperation::GetContext()
+std::any &TcpConnectionManager::GetContext()
 {
     return m_context;
 }
 
-TcpOperation::~TcpOperation()
+TcpConnectionManager::~TcpConnectionManager()
 = default;
 
-TcpSslOperation::TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)> &callback, async::AsyncSslNetIo* socket)
+TcpSslConnectionManager::TcpSslConnectionManager(std::function<coroutine::Coroutine(TcpSslConnectionManager)> &callback, async::AsyncSslNetIo* socket)
     : m_callback(callback), m_connection(std::make_shared<TcpSslConnection>(socket))
 {
 }
 
-TcpSslConnection::ptr TcpSslOperation::GetConnection()
+TcpSslConnection::ptr TcpSslConnectionManager::GetConnection()
 {
     return m_connection;
 }
 
-void TcpSslOperation::ReExecute(const TcpSslOperation& operation) const
+void TcpSslConnectionManager::ReExecute(const TcpSslConnectionManager& operation) const
 {
     m_callback(operation);
 }
 
 
-std::any &TcpSslOperation::GetContext()
+std::any &TcpSslConnectionManager::GetContext()
 {
     return m_context;
 }
 
-TcpSslOperation::~TcpSslOperation()
+TcpSslConnectionManager::~TcpSslConnectionManager()
 = default;
 
-TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpOperation)> &callback)
+TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpConnectionManager)> &callback)
     :m_callback(callback)
 {
 
@@ -108,7 +108,7 @@ TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpO
 
 void TcpCallbackStore::Execute(async::AsyncNetIo* socket)
 {
-    const TcpOperation operation(m_callback, socket);
+    const TcpConnectionManager operation(m_callback, socket);
     m_callback(operation);
 }
 
@@ -122,14 +122,14 @@ TcpSslConnection::~TcpSslConnection()
     delete m_socket;
 }
 
-TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)> &callback)
+TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslConnectionManager)> &callback)
     :m_callback(callback)
 {
 }
 
 void TcpSslCallbackStore::Execute(async::AsyncSslNetIo* socket)
 {
-    const TcpSslOperation operation(m_callback, socket);
+    const TcpSslConnectionManager operation(m_callback, socket);
     this->m_callback(operation);
 }
 
@@ -144,7 +144,7 @@ HttpOperation::HttpProtoStore::~HttpProtoStore()
     // server::HttpServer::ReturnResponse(m_response);
 }
 
-HttpOperation::HttpOperation(const TcpOperation& operation, protocol::http::HttpRequest *request, protocol::http::HttpResponse *response)
+HttpOperation::HttpOperation(const TcpConnectionManager& operation, protocol::http::HttpRequest *request, protocol::http::HttpResponse *response)
     :m_operation(operation), m_proto_store(std::make_shared<HttpProtoStore>(request, response))
 {
 }

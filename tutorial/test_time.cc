@@ -53,10 +53,30 @@
 // }
 
 #include "galay/galay.h"
-
+#include <iostream>
 
 
 int main()
 {
+    {
+        galay::IOVecHolder holder(1024);
+        std::cout << (void*)holder->m_buffer << std::endl;
+        holder.Reset();
+        std::cout << (void*)holder->m_buffer << std::endl;
+    }
 
+    {
+        galay::IOVecHolder holder(1024);
+        std::cout << (void*)holder->m_buffer << std::endl;
+        galay::IOVecHolder holder2;
+        holder2.Reset(std::string("Hello World"));
+        std::cout << (void*)holder2->m_buffer << std::endl;
+    }
+
+    {
+        galay::IOVecHolder holder;
+        holder.Reset(std::string("Hello World"));
+        std::cout << (void*)holder->m_buffer << std::endl;
+    }
+    return 0;
 }

@@ -271,10 +271,10 @@ namespace galay::protocol::http
         HttpResponse();
         HttpResponseHeader::ptr Header();
         std::string& Body();
-        std::string EncodePdu() const override;
+        [[nodiscard]] std::string EncodePdu() const override;
         std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-        bool HasError() const override;
-        int GetErrorCode() const override;
+        [[nodiscard]] bool HasError() const override;
+        [[nodiscard]] int GetErrorCode() const override;
         std::string GetErrorString() override;
         void Reset() override;
         

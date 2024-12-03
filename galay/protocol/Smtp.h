@@ -43,15 +43,15 @@ namespace galay::protocol::smtp
     class SmtpHelper
     {
     public:
-        static std::string Hello(SmtpRequest& request);
-        static std::string Auth(SmtpRequest& request);
-        static std::string Account(SmtpRequest& request, std::string account);
-        static std::string Password(SmtpRequest& request, std::string password);
-        static std::string MailFrom(SmtpRequest& request, std::string from_mail);
-        static std::string RcptTo(SmtpRequest& request, std::string to_mail);
-        static std::string Data(SmtpRequest& request);
-        static std::string Msg(SmtpRequest& request, const SmtpMsgInfo& msg);
-        static std::string Quit(SmtpRequest& request);
+        static std::string_view Hello(SmtpRequest& request);
+        static std::string_view Auth(SmtpRequest& request);
+        static std::string_view Account(SmtpRequest& request, std::string account);
+        static std::string_view Password(SmtpRequest& request, std::string password);
+        static std::string_view MailFrom(SmtpRequest& request, std::string from_mail);
+        static std::string_view RcptTo(SmtpRequest& request, std::string to_mail);
+        static std::string_view Data(SmtpRequest& request);
+        static std::string_view Msg(SmtpRequest& request, const SmtpMsgInfo& msg);
+        static std::string_view Quit(SmtpRequest& request);
     };
 
     class SmtpRequest: public Request, public common::DynamicCreator<Request,SmtpRequest>
@@ -63,9 +63,9 @@ namespace galay::protocol::smtp
         using uptr = std::unique_ptr<SmtpRequest>;
         SmtpRequest();
         std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-        std::string EncodePdu() const override;
-        bool HasError() const override;
-        int GetErrorCode() const override;
+        [[nodiscard]] std::string EncodePdu() const override;
+        [[nodiscard]] bool HasError() const override;
+        [[nodiscard]] int GetErrorCode() const override;
         std::string GetErrorString() override;
         void Reset() override;
         std::string& GetContent();
@@ -86,9 +86,9 @@ namespace galay::protocol::smtp
         using uptr = std::unique_ptr<SmtpResponse>;
         SmtpResponse();
         std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-        std::string EncodePdu() const override;
-        bool HasError() const override;
-        int GetErrorCode() const override;
+        [[nodiscard]] std::string EncodePdu() const override;
+        [[nodiscard]] bool HasError() const override;
+        [[nodiscard]] int GetErrorCode() const override;
         std::string GetErrorString() override;
         void Reset() override;
         std::string& GetContent();

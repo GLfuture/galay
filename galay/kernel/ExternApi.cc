@@ -9,15 +9,89 @@
 
 namespace galay
 {
+IOVecHolder::IOVecHolder(size_t size)
+{
+    VecMalloc(&m_vec, size);
+}
 
+IOVecHolder::IOVecHolder()
+{
+}
+
+void IOVecHolder::Realloc(size_t size)
+{
+    VecRealloc(&m_vec, size);
+}
+
+bool IOVecHolder::Reset(const IOVec &iov)
+{
+    if(iov.m_buffer == nullptr) return false;
+    FreeMemory();
+    m_vec.m_buffer = iov.m_buffer;
+    m_vec.m_size = iov.m_size;
+    m_vec.m_offset = iov.m_offset;
+    m_vec.m_length = iov.m_length;
+    return true;
+}
+
+bool IOVecHolder::Reset()
+{
+    return FreeMemory();
+}
+
+bool IOVecHolder::Reset(std::string &&str)
+{
+    FreeMemory();
+    m_temp = std::forward<std::string>(str);
+    m_vec.m_buffer = m_temp.data();
+    m_vec.m_size = m_temp.length();
+    return true;
+}
+
+IOVec *IOVecHolder::operator->()
+{
+    return &m_vec;
+}
+
+IOVec *IOVecHolder::operator&()
+{
+    return &m_vec;
+}
+
+IOVecHolder::~IOVecHolder()
+{
+    FreeMemory();    
+}
+
+bool IOVecHolder::FreeMemory()
+{
+    bool res;
+    if(m_temp.empty()) {
+        return VecFree(&m_vec);
+    } else {
+        if(m_temp.data() != m_vec.m_buffer) {
+            res = VecFree(&m_vec);
+        }
+    }
+    m_temp.clear();
+    return true;
+}
 // API
+
+void VecFull(IOVec *src, char *buffer, size_t size, size_t offset, size_t length)
+{
+    src->m_buffer = buffer;
+    src->m_size = size;
+    src->m_offset = offset;
+    src->m_length = length;
+}
 
 IOVec VecDeepCopy(const IOVec *src)
 {
     if(src == nullptr || src->m_length == 0 || src->m_buffer == nullptr || src->m_size == 0) {
         return IOVec{};
     }
-    char* buffer = static_cast<char*>(malloc(src->m_length));
+    char* buffer = static_cast<char*>(calloc(src->m_length, sizeof(char)));
     memcpy(buffer, src->m_buffer, src->m_size);
     return IOVec {  .m_handle = src->m_handle,
                     .m_buffer= buffer, 
@@ -31,7 +105,7 @@ bool VecMalloc(IOVec *src, size_t size)
     if (src == nullptr || src->m_size != 0 || src->m_buffer != nullptr) {
         return false;
     }
-    src->m_buffer = static_cast<char*>(malloc(size));
+    src->m_buffer = static_cast<char*>(calloc(size, sizeof(char)));
     if (src->m_buffer == nullptr) {
         return false;
     }
@@ -41,7 +115,7 @@ bool VecMalloc(IOVec *src, size_t size)
 
 bool VecRealloc(IOVec *src, size_t size)
 {
-    if (src == nullptr || src->m_length == 0 || src->m_buffer == nullptr) {
+    if (src == nullptr || src->m_buffer == nullptr) {
         return false;
     }
     src->m_buffer = static_cast<char*>(realloc(src->m_buffer, size));
@@ -54,7 +128,7 @@ bool VecRealloc(IOVec *src, size_t size)
 
 bool VecFree(IOVec *src)
 {
-    if(src == nullptr || src->m_length == 0 || src->m_buffer == nullptr) {
+    if(src == nullptr || src->m_size == 0 || src->m_buffer == nullptr) {
         return false;
     }
     free(src->m_buffer);
@@ -110,17 +184,19 @@ coroutine::Awaiter_bool AsyncConnect(async::AsyncNetIo *asocket, NetAddr* addr)
     return {asocket->GetAction(), addr};
 }
 
-coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, IOVec* iov)
+coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, IOVec* iov, size_t length)
 {
     dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
     return {asocket->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, IOVec *iov)
+coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, IOVec *iov, size_t length)
 {
     dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
     return {asocket->GetAction(), iov};
 }
 
@@ -157,17 +233,19 @@ coroutine::Awaiter_bool SSLConnect(async::AsyncSslNetIo *asocket)
     return {asocket->GetAction(), nullptr};
 }
 
-coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, IOVec *iov)
+coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, IOVec *iov, size_t length)
 {
     dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
     return {asocket->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, IOVec *iov)
+coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, IOVec *iov, size_t length)
 {
     dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
     return {asocket->GetAction(), iov};
 }
 
@@ -189,17 +267,19 @@ coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, const int flags, mode
     return coroutine::Awaiter_GHandle(GHandle{fd});
 }
 
-coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov)
+coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov, size_t length)
 {
     dynamic_cast<event::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeRead);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
     return {afileio->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov)
+coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov, size_t length)
 {
     dynamic_cast<event::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeWrite);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
     return {afileio->GetAction(), iov};
 }
 

@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     config->m_cert_file = argv[1];
     config->m_key_file = argv[2];
     galay::server::TcpSslServer server(config);
-    galay::TcpSslCallbackStore store([](galay::TcpSslOperation op)->galay::coroutine::Coroutine
+    galay::TcpSslCallbackStore store([](galay::TcpSslConnectionManager op)->galay::coroutine::Coroutine
     {
         
         co_return;

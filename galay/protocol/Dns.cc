@@ -75,7 +75,7 @@ DnsProtocol::GetAnswerQueue()
     return std::move(this->m_answers);
 }
 
-std::string 
+std::string
 DnsRequest::EncodePdu() const
 {
     unsigned char buffer[MAX_UDP_LENGTH];
@@ -131,7 +131,7 @@ void protocol::dns::DnsRequest::PopQuestion()
 
 std::pair<bool,size_t> DnsRequest::DecodePdu(const std::string_view &buffer)
 {
-    char *begin = new char[buffer.length()];
+    char *begin = static_cast<char*>(calloc(buffer.length(), sizeof(char)));
     char *temp = begin;
     memset(temp, 0, buffer.length());
     memcpy(temp, buffer.cbegin(), buffer.length());
@@ -273,7 +273,7 @@ DnsRequest::IsPointer(int in)
 std::pair<bool,size_t> 
 DnsResponse::DecodePdu(const std::string_view &buffer)
 {
-    char *begin = new char[buffer.length()];
+    char *begin = static_cast<char*>(calloc(buffer.length(), sizeof(char)));
     char *temp = begin;
     memset(temp, 0, buffer.length());
     memcpy(temp, buffer.cbegin(), buffer.length());
@@ -422,7 +422,7 @@ DnsResponse::DealAnswer(unsigned short type, char *buffer, std::string data)
     break;
     case kDnsQueryCname:
     {
-        char *temp = new char[data.length()];
+        char *temp = static_cast<char*>(calloc(data.length(), sizeof(char)));
         memcpy(temp, data.c_str(), data.length());
         DnsParseName((unsigned char *)buffer, (unsigned char *)temp, res);
         delete[] temp;

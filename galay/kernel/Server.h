@@ -24,7 +24,7 @@ namespace galay::async
 
 namespace galay
 {
-    class TcpOperation;
+    class TcpConnectionManager;
     class TcpCallbackStore;
     class TcpSslCallbackStore;
     class HttpOperation;
@@ -150,7 +150,7 @@ namespace galay::server
         void Start(int port);
         void Stop() override;
     private:
-        coroutine::Coroutine HttpRoute(TcpOperation operation);
+        coroutine::Coroutine HttpRoute(TcpConnectionManager operation);
     private:
         std::unique_ptr<TcpCallbackStore> m_store;
         std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;

@@ -63,23 +63,23 @@ private:
     async::AsyncNetIo* m_socket;
 };
 
-class TcpOperation
+class TcpConnectionManager
 {
     using Timer = event::Timer;
 public:
-    TcpOperation(std::function<coroutine::Coroutine(TcpOperation)>& callback, async::AsyncNetIo* action);
+    TcpConnectionManager(std::function<coroutine::Coroutine(TcpConnectionManager)>& callback, async::AsyncNetIo* action);
     TcpConnection::ptr GetConnection();
 
     /*
         ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
     */
-    void ReExecute(const TcpOperation& operation) const;
+    void ReExecute(const TcpConnectionManager& operation) const;
     std::any& GetContext();
-    ~TcpOperation();
+    ~TcpConnectionManager();
 private:
-    std::function<coroutine::Coroutine(TcpOperation)>& m_callback;
     std::any m_context;
     TcpConnection::ptr m_connection;
+    std::function<coroutine::Coroutine(TcpConnectionManager)>& m_callback;
 };
 
 class TcpSslConnection
@@ -93,20 +93,20 @@ private:
     async::AsyncSslNetIo* m_socket;
 };
 
-class TcpSslOperation
+class TcpSslConnectionManager
 {
     using Timer = event::Timer;
 public:
-    TcpSslOperation(std::function<coroutine::Coroutine(TcpSslOperation)>& callback, async::AsyncSslNetIo* socket);
+    TcpSslConnectionManager(std::function<coroutine::Coroutine(TcpSslConnectionManager)>& callback, async::AsyncSslNetIo* socket);
     TcpSslConnection::ptr GetConnection();
     /*
         ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
     */
-    void ReExecute(const TcpSslOperation& operation) const;
+    void ReExecute(const TcpSslConnectionManager& operation) const;
     std::any& GetContext();
-    ~TcpSslOperation();
+    ~TcpSslConnectionManager();
 private:
-    std::function<coroutine::Coroutine(TcpSslOperation)>& m_callback;
+    std::function<coroutine::Coroutine(TcpSslConnectionManager)>& m_callback;
     std::any m_context;
     TcpSslConnection::ptr m_connection;
 };
@@ -114,19 +114,19 @@ private:
 class TcpCallbackStore
 {
 public:
-    explicit TcpCallbackStore(const std::function<coroutine::Coroutine(TcpOperation)>& callback);
+    explicit TcpCallbackStore(const std::function<coroutine::Coroutine(TcpConnectionManager)>& callback);
     void Execute(async::AsyncNetIo* socket);
 private:
-    std::function<coroutine::Coroutine(TcpOperation)> m_callback;
+    std::function<coroutine::Coroutine(TcpConnectionManager)> m_callback;
 };
 
 class TcpSslCallbackStore
 {
 public:
-    explicit TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslOperation)>& callback);
+    explicit TcpSslCallbackStore(const std::function<coroutine::Coroutine(TcpSslConnectionManager)>& callback);
     void Execute(async::AsyncSslNetIo* socket);
 private:
-    std::function<coroutine::Coroutine(TcpSslOperation)> m_callback;
+    std::function<coroutine::Coroutine(TcpSslConnectionManager)> m_callback;
 };
 
 class HttpOperation
@@ -140,14 +140,14 @@ class HttpOperation
         ~HttpProtoStore();
     };
 public:
-    HttpOperation(const TcpOperation& operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
+    HttpOperation(const TcpConnectionManager& operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
     protocol::http::HttpRequest* GetRequest() const;
     protocol::http::HttpResponse* GetResponse() const;
     TcpConnection::ptr GetConnection();
     void Continue() const;
     ~HttpOperation();
 private:
-    TcpOperation m_operation;
+    TcpConnectionManager m_operation;
     HttpProtoStore::ptr m_proto_store;
 };
 

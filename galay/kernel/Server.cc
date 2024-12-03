@@ -42,6 +42,7 @@ void TcpServer::Start(TcpCallbackStore* store, const int port)
 	
 	DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
 	DynamicResizeTimerSchedulers(m_config->m_timer_scheduler_num);
+	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num);
 	//coroutine scheduler
 	StartCoroutineSchedulers();
 	//net scheduler
@@ -109,6 +110,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, const int port)
 {
     DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
 	DynamicResizeTimerSchedulers(m_config->m_timer_scheduler_num);
+	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num);
 	//coroutine scheduler
 	StartCoroutineSchedulers();
 	//net scheduler
@@ -191,7 +193,7 @@ protocol::http::HttpResponse HttpServer::UriTooLongResponse;
 protocol::http::HttpResponse HttpServer::NotFoundResponse;
 
 HttpServer::HttpServer(const HttpServerConfig::ptr& config)
-	: TcpServer(config), m_store(std::make_unique<TcpCallbackStore>([this](const TcpOperation& operation)->coroutine::Coroutine {
+	: TcpServer(config), m_store(std::make_unique<TcpCallbackStore>([this](const TcpConnectionManager& operation)->coroutine::Coroutine {
 		return HttpRoute(operation);
 	}))
 {
@@ -232,12 +234,12 @@ void HttpServer::Stop()
 	TcpServer::Stop();
 }
 
-coroutine::Coroutine HttpServer::HttpRoute(TcpOperation operation)
+coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager operation)
 {
 	// std::weak_ptr<HttpServerConfig> config = std::dynamic_pointer_cast<HttpServerConfig>(m_config);
 	// auto connection = operation.GetConnection();
 	// //HttpOperation http_operaion(operation, g_http_proto_store.GetRequest(), g_http_proto_store.GetResponse());
-	// char* buffer = static_cast<char*>(malloc(config.lock()->m_max_header_size));
+	// char* buffer = static_cast<char*>(calloc(config.lock()->m_max_header_size));
 	// size_t total_length = 0;
 	// IOVec vec {
 	// 	.m_buffer = buffer,
