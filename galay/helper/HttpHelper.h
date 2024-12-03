@@ -91,9 +91,6 @@ namespace galay::helper::http
         static bool DefaultGet(protocol::http::HttpRequest* request, const std::string& url, bool keepalive = true);
         static bool DefaultPost(protocol::http::HttpRequest* request, const std::string& url, bool keepalive = true);
         //response
-        static bool DefaultNotFound(protocol::http::HttpResponse* response);
-        static bool DefaultUriTooLong(protocol::http::HttpResponse* response);
-        static bool DefaultMethodNotAllowed(protocol::http::HttpResponse* response);
         static bool DefaultRedirect(protocol::http::HttpResponse* response, const std::string& url, HttpResponseCode code);
     };
     

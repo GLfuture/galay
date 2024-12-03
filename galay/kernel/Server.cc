@@ -2,10 +2,11 @@
 #include "Event.h"
 #include "Scheduler.h"
 #include "Async.h"
-#include "Operation.h"
+#include "Connection.h"
 #include "ExternApi.h"
-#include "helper/HttpHelper.h"
+#include "galay/helper/HttpHelper.h"
 #include "Log.h"
+#include "galay/util/Time.h"
 #include <openssl/err.h>
 #include <utility>
 
@@ -188,39 +189,19 @@ TcpSslServer::~TcpSslServer()
 
 //HttpServer
 
-protocol::http::HttpResponse HttpServer::MethodNotAllowedResponse;
-protocol::http::HttpResponse HttpServer::UriTooLongResponse;
-protocol::http::HttpResponse HttpServer::NotFoundResponse;
+util::ObjectPoolMutiThread<HttpServer::HttpRequest> HttpServer::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
+util::ObjectPoolMutiThread<HttpServer::HttpResponse> HttpServer::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
 
 HttpServer::HttpServer(const HttpServerConfig::ptr& config)
 	: TcpServer(config), m_store(std::make_unique<TcpCallbackStore>([this](const TcpConnectionManager& operation)->coroutine::Coroutine {
 		return HttpRoute(operation);
 	}))
 {
-	//g_http_proto_store.Initial(config->m_proto_capacity);
-	helper::http::HttpHelper::DefaultNotFound(&NotFoundResponse);
-	helper::http::HttpHelper::DefaultUriTooLong(&UriTooLongResponse);
-	helper::http::HttpHelper::DefaultMethodNotAllowed(&MethodNotAllowedResponse);
 }
 
-protocol::http::HttpResponse& HttpServer::GetDefaultMethodNotAllowedResponse()
+void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine(HttpConnectionManager)> &&handler)
 {
-    return MethodNotAllowedResponse;
-}
-
-protocol::http::HttpResponse &HttpServer::GetDefaultUriTooLongResponse()
-{
-	return UriTooLongResponse;
-}
-
-protocol::http::HttpResponse &HttpServer::GetDefaultNotFoundResponse()
-{
-	return NotFoundResponse;
-}
-
-void HttpServer::Get(const std::string &path, std::function<coroutine::Coroutine(HttpOperation)> &&handler)
-{
-	m_route_map[protocol::http::HttpMethod::Http_Method_Get][path] = std::forward<std::function<coroutine::Coroutine(HttpOperation)>>(handler);
+	m_route_map[protocol::http::HttpMethod::Http_Method_Get][path] = std::forward<std::function<coroutine::Coroutine(HttpConnectionManager)>>(handler);
 }
 
 void HttpServer::Start(int port)
@@ -234,44 +215,153 @@ void HttpServer::Stop()
 	TcpServer::Stop();
 }
 
-coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager operation)
+/*
+	Keep-alive 需要处理
+*/
+coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager manager)
 {
-	// std::weak_ptr<HttpServerConfig> config = std::dynamic_pointer_cast<HttpServerConfig>(m_config);
-	// auto connection = operation.GetConnection();
-	// //HttpOperation http_operaion(operation, g_http_proto_store.GetRequest(), g_http_proto_store.GetResponse());
-	// char* buffer = static_cast<char*>(calloc(config.lock()->m_max_header_size));
-	// size_t total_length = 0;
-	// IOVec vec {
-	// 	.m_buffer = buffer,
-	// 	.m_length = config.lock()->m_max_header_size
-	// };
-	// int length = co_await AsyncRecv(connection->GetSocket(), &vec);
-	// if(length <= 0) {
-	// 	free(vec.m_buffer);
-	// 	co_await AsyncClose(connection->GetSocket());
-	// 	co_return;
-	// } else {
-	// 	total_length += length;
-	// 	std::string_view data(buffer, total_length);
-	// 	//auto result = http_operaion.GetRequest()->DecodePdu(data);
-	// 	// if( result.first == false ) {
-	// 	// 	switch (http_operaion.GetRequest()->GetErrorCode())
-	// 	// 	{
-	// 	// 	case error::HttpErrorCode::kHttpError_BodyInComplete:
-	// 	// 	case error::HttpErrorCode::kHttpError_HeaderInComplete:
-	// 	// 		break;
-	// 	// 	//case error::
+	size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_config)->m_max_header_size;
+	auto connection = manager.GetConnection();
+	galay::async::AsyncNetIo* socket = connection->GetSocket();
+	galay::IOVecHolder rholder(max_header_size), wholder;
+	HttpConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
+	bool close_connection = false;
+	while(true)
+	{
+step1:
+		while(true) {
+			int length = co_await galay::AsyncRecv(socket, &rholder, max_header_size);
+			if( length <= 0 ) {
+				if( length == galay::event::CommonFailedType::eCommonDisConnect || length == galay::event::CommonFailedType::eCommonOtherFailed ) {
+					co_await galay::AsyncClose(socket);
+					co_return;
+				}
+			} 
+			else { 
+				std::string_view data(rholder->m_buffer, rholder->m_offset);
+				auto result = http_manager.GetRequest()->DecodePdu(data);
+				if(!result.first) { //解析失败
+					switch (http_manager.GetRequest()->GetErrorCode())
+					{
+					case galay::error::HttpErrorCode::kHttpError_HeaderInComplete:
+					case galay::error::HttpErrorCode::kHttpError_BodyInComplete:
+					{
+						if( rholder->m_offset >= rholder->m_size) {
+							rholder.Realloc(rholder->m_size * 2);
+						}
+						break;
+					}
+					case galay::error::HttpErrorCode::kHttpError_BadRequest:
+					{
+						if(m_error_string.contains(HttpStatusCode::BadRequest_400)) {
+							std::string body = m_error_string[HttpStatusCode::BadRequest_400];
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::BadRequest_400, std::move(body));
+						} else {
+							std::string body = "Bad Request";
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::BadRequest_400, std::move(body));
+						}
+						wholder.Reset(http_manager.GetResponse()->EncodePdu());
+						close_connection = true;
+						goto step2;
+					}
+					case galay::error::HttpErrorCode::kHttpError_HeaderTooLong:
+					{
+						if(m_error_string.contains(HttpStatusCode::RequestHeaderFieldsTooLarge_431)) {
+							std::string body = m_error_string[HttpStatusCode::RequestHeaderFieldsTooLarge_431];
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::RequestHeaderFieldsTooLarge_431, std::move(body));
+						} else {
+							std::string body = "Header Too Long";
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::RequestHeaderFieldsTooLarge_431, std::move(body));
+						}
+						wholder.Reset(http_manager.GetResponse()->EncodePdu());
+						close_connection = true;
+						goto step2;
+					}
+					case galay::error::HttpErrorCode::kHttpError_UriTooLong:
+					{
+						if(m_error_string.contains(HttpStatusCode::UriTooLong_414)) {
+							std::string body = m_error_string[HttpStatusCode::UriTooLong_414];
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::UriTooLong_414, std::move(body));
+						} else {
+							std::string body = "Uri Too Long";
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::UriTooLong_414, std::move(body));
+						}
+						wholder.Reset(http_manager.GetResponse()->EncodePdu());
+						close_connection = true;
+						goto step2;
+					}
+					default:
+						break;
+					}
+				}
+				else { //解析成功
+					auto it = m_route_map.find(http_manager.GetRequest()->Header()->Method());
+					if(it != m_route_map.end()) {
+						auto it2 = it->second.find(http_manager.GetRequest()->Header()->Uri());
+						if(it2 != it->second.end()) {
+							it2->second(http_manager);
+							wholder.Reset(http_manager.GetResponse()->EncodePdu());
+							goto step2;
+						} else { //没有该URI
+					 		if(m_error_string.contains(HttpStatusCode::NotFound_404)) {
+								std::string body = m_error_string[HttpStatusCode::NotFound_404];
+								CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::NotFound_404, std::move(body));
+							} else {
+								std::string body = "Not Found";
+								CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::NotFound_404, std::move(body));
+							}
+							wholder.Reset(http_manager.GetResponse()->EncodePdu());
+							goto step2;
+						}
+					} else { //没有该方法
+						if(m_error_string.contains(HttpStatusCode::MethodNotAllowed_405)) {
+							std::string body = m_error_string[HttpStatusCode::MethodNotAllowed_405];
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::MethodNotAllowed_405, std::move(body));
+						} else {
+							std::string body = "Method NotAllowed";
+							CreateHttpResponse(http_manager.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::MethodNotAllowed_405, std::move(body));
+						}
+						wholder.Reset(http_manager.GetResponse()->EncodePdu());
+						goto step2;
+					}
+				}
+			}
+		}
 
-	// 	// 	//default:
-	// 	// 		break;
-	// 	// 	}
-	// 	} else {
-			
-	// 	}
-	// }
-    // co_return;
+step2:
+		while (true)
+		{
+			int length = co_await galay::AsyncSend(socket, &wholder, wholder->m_size);
+			if( length <= 0 ) {
+				close_connection = true;
+				break;
+			} else {
+				if(wholder->m_offset >= wholder->m_size) {
+					break;
+				}
+			}
+		}
+		if(http_manager.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "Close") {
+			close_connection = true;
+		}
+		// clear
+		rholder.ClearBuffer(), wholder.ClearBuffer();
+		http_manager.GetRequest()->Reset(), http_manager.GetResponse()->Reset();
+		if(close_connection) {
+			co_await galay::AsyncClose(socket);
+			break;
+		}
+	}
+	co_return;
 }
 
-
-
+void HttpServer::CreateHttpResponse(protocol::http::HttpResponse* response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string &&body)
+{
+	response->Header()->Version() = version;
+	response->Header()->Code() = code;
+	response->Header()->HeaderPairs().AddHeaderPair("Server", "galay");
+	response->Header()->HeaderPairs().AddHeaderPair("Date", time::GetCurrentGMTTimeString());
+	response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
+	response->Body() = std::forward<std::string>(body);
+}
 }

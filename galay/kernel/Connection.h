@@ -3,6 +3,8 @@
 
 #include <any>
 #include <functional>
+#include "galay/protocol/Http.h"
+#include "galay/util/ObjectPool.hpp"
 #include "Event.h"
 
 namespace galay::coroutine
@@ -32,6 +34,7 @@ namespace galay::protocol::http
     class HttpRequest;
     class HttpResponse;
 };
+
 
 namespace galay
 {
@@ -67,19 +70,13 @@ class TcpConnectionManager
 {
     using Timer = event::Timer;
 public:
-    TcpConnectionManager(std::function<coroutine::Coroutine(TcpConnectionManager)>& callback, async::AsyncNetIo* action);
+    TcpConnectionManager(async::AsyncNetIo* action);
     TcpConnection::ptr GetConnection();
-
-    /*
-        ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
-    */
-    void ReExecute(const TcpConnectionManager& operation) const;
     std::any& GetContext();
     ~TcpConnectionManager();
 private:
     std::any m_context;
     TcpConnection::ptr m_connection;
-    std::function<coroutine::Coroutine(TcpConnectionManager)>& m_callback;
 };
 
 class TcpSslConnection
@@ -97,16 +94,11 @@ class TcpSslConnectionManager
 {
     using Timer = event::Timer;
 public:
-    TcpSslConnectionManager(std::function<coroutine::Coroutine(TcpSslConnectionManager)>& callback, async::AsyncSslNetIo* socket);
+    TcpSslConnectionManager(async::AsyncSslNetIo* socket);
     TcpSslConnection::ptr GetConnection();
-    /*
-        ReExecute will flush m_last_active_time, you can also actively call FlushActiveTimer to flush m_last_active_time
-    */
-    void ReExecute(const TcpSslConnectionManager& operation) const;
     std::any& GetContext();
     ~TcpSslConnectionManager();
 private:
-    std::function<coroutine::Coroutine(TcpSslConnectionManager)>& m_callback;
     std::any m_context;
     TcpSslConnection::ptr m_connection;
 };
@@ -129,25 +121,32 @@ private:
     std::function<coroutine::Coroutine(TcpSslConnectionManager)> m_callback;
 };
 
-class HttpOperation
+class HttpConnectionManager
 {
+    using HttpRequest = protocol::http::HttpRequest;
+    using HttpResponse = protocol::http::HttpResponse;
+
     struct HttpProtoStore
     {
         using ptr = std::shared_ptr<HttpProtoStore>;
-        HttpProtoStore(protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
+        HttpProtoStore(util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
+            util::ObjectPoolMutiThread<HttpResponse>* response_pool);
         protocol::http::HttpRequest* m_request;
         protocol::http::HttpResponse* m_response;
+        util::ObjectPoolMutiThread<HttpRequest>* m_request_pool;
+        util::ObjectPoolMutiThread<HttpResponse>* m_response_pool;
         ~HttpProtoStore();
     };
 public:
-    HttpOperation(const TcpConnectionManager& operation, protocol::http::HttpRequest* request, protocol::http::HttpResponse* response);
+
+    HttpConnectionManager(const TcpConnectionManager& manager, util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
+        util::ObjectPoolMutiThread<HttpResponse>* response_pool);
     protocol::http::HttpRequest* GetRequest() const;
     protocol::http::HttpResponse* GetResponse() const;
     TcpConnection::ptr GetConnection();
-    void Continue() const;
-    ~HttpOperation();
+    ~HttpConnectionManager();
 private:
-    TcpConnectionManager m_operation;
+    TcpConnectionManager m_tcp_manager;
     HttpProtoStore::ptr m_proto_store;
 };
 

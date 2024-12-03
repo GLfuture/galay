@@ -11,7 +11,7 @@
 #include "kernel/Async.h"
 #include "kernel/Event.h"
 #include "kernel/Scheduler.h"
-#include "kernel/Operation.h"
+#include "kernel/Connection.h"
 #include "kernel/Server.h"
 #include "kernel/ExternApi.h"
 #include "kernel/Log.h"

@@ -23,6 +23,14 @@ void IOVecHolder::Realloc(size_t size)
     VecRealloc(&m_vec, size);
 }
 
+void IOVecHolder::ClearBuffer()
+{
+    if(m_vec.m_buffer == nullptr) return;
+    memset(m_vec.m_buffer, 0, m_vec.m_size);
+    m_vec.m_offset = 0;
+    m_vec.m_length = 0;
+}
+
 bool IOVecHolder::Reset(const IOVec &iov)
 {
     if(iov.m_buffer == nullptr) return false;

@@ -28,7 +28,7 @@ public:
 
     T* GetObjector()
     {
-        if(T* objector = nullptr; m_request_queue.try_dequeue(objector)){
+        if(T* objector = nullptr; m_queue.try_dequeue(objector)){
             return objector;
         }
         return new T();
@@ -48,7 +48,7 @@ public:
     ~ObjectPoolMutiThread()
     {
         T* objector = nullptr;
-        while(m_request_queue.try_dequeue(objector)){
+        while(m_queue.try_dequeue(objector)){
             delete objector;
         }
     }

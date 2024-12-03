@@ -7,7 +7,8 @@
 #include <string_view>
 #include <functional>
 #include <unordered_map>
-#include "concurrentqueue/moodycamel/concurrentqueue.h"
+#include <concurrentqueue/moodycamel/concurrentqueue.h>
+#include "galay/util/ObjectPool.hpp"
 #include "galay/protocol/Http.h"
 
 namespace galay::event
@@ -27,7 +28,7 @@ namespace galay
     class TcpConnectionManager;
     class TcpCallbackStore;
     class TcpSslCallbackStore;
-    class HttpOperation;
+    class HttpConnectionManager;
 }
 
 namespace galay::coroutine
@@ -128,32 +129,35 @@ namespace galay::server
         { t.Reset() } -> std::same_as<void>;
     };
 
-#define DEFAULT_PROTOCOL_CAPACITY               1024
+#define DEFAULT_HTTP_REQUEST_POOL_SIZE               2048
+#define DEFAULT_HTTP_RESPONSE_POOL_SIZE              2048
 #define DEFAULT_HTTP_KEEPALIVE_TIME_MS          (7500 * 1000)
 
-    class HttpServer final : public TcpServer
+    class HttpServer final: public TcpServer
     {
-        static protocol::http::HttpResponse UriTooLongResponse;
-        static protocol::http::HttpResponse NotFoundResponse;
-        static protocol::http::HttpResponse MethodNotAllowedResponse;
+        using HttpRequest = protocol::http::HttpRequest;
+        using HttpResponse = protocol::http::HttpResponse;
+        using HttpVersion = protocol::http::HttpVersion;
+        using HttpMethod = protocol::http::HttpMethod;
+        using HttpStatusCode = protocol::http::HttpStatusCode;
+
+        static util::ObjectPoolMutiThread<HttpRequest> RequestPool;
+        static util::ObjectPoolMutiThread<HttpResponse> ResponsePool;
     public:
         explicit HttpServer(const HttpServerConfig::ptr& config);
-
-        static protocol::http::HttpResponse& GetDefaultMethodNotAllowedResponse();
-        static protocol::http::HttpResponse& GetDefaultUriTooLongResponse();
-        static protocol::http::HttpResponse& GetDefaultNotFoundResponse();
-        
         //not thread security
-        void Get(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
-        void Post(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
-        void Put(const std::string& path, std::function<coroutine::Coroutine(HttpOperation)>&& handler);
+        void Get(const std::string& path, std::function<coroutine::Coroutine(HttpConnectionManager)>&& handler);
+        void Post(const std::string& path, std::function<coroutine::Coroutine(HttpConnectionManager)>&& handler);
+        void Put(const std::string& path, std::function<coroutine::Coroutine(HttpConnectionManager)>&& handler);
         void Start(int port);
         void Stop() override;
     private:
-        coroutine::Coroutine HttpRoute(TcpConnectionManager operation);
+        coroutine::Coroutine HttpRoute(TcpConnectionManager manager);
+        void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
     private:
         std::unique_ptr<TcpCallbackStore> m_store;
-        std::unordered_map<protocol::http::HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpOperation)>>> m_route_map;
+        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpConnectionManager)>>> m_route_map;
+        std::unordered_map<HttpStatusCode, std::string> m_error_string;
     };
 
     class HttpspServer

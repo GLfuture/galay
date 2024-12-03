@@ -313,65 +313,6 @@ bool HttpHelper::DefaultGet(protocol::http::HttpRequest *request, const std::str
     return true;
 }
 
-bool HttpHelper::DefaultNotFound(protocol::http::HttpResponse *response)
-{
-    response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-    response->Header()->Code() = protocol::http::HttpStatusCode::NotFound_404;
-    response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-    response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html; charset=utf-8");
-    response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-    response->Body() = "<!DOCTYPE html>\
-<html>\
-<head>\
-    <title>404 Not Found</title>\
-</head>\
-<body>\
-    <h1>404 Not Found</h1>\
-    <p>The requested resource was not found on this server.</p>\
-</body></html>";
-    return true;
-}
-
-bool HttpHelper::DefaultUriTooLong(protocol::http::HttpResponse *response)
-{
-    response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-    response->Header()->Code() = protocol::http::HttpStatusCode::UriTooLong_414;
-    response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-    response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html; charset=utf-8");
-    response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-    response->Body() = "<!DOCTYPE html>\
-<html>\
-<head>\
-    <title>414 URI Too Long</title>\
-</head>\
-<body>\
-    <h1>414 URI Too Long</h1>\
-    <p>The requested URI is too long and cannot be processed by the server.</p>\
-</body>\
-</html>";
-    return true;
-}
-
-bool HttpHelper::DefaultMethodNotAllowed(protocol::http::HttpResponse *response)
-{
-    response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-    response->Header()->Code() = protocol::http::HttpStatusCode::MethodNotAllowed_405;
-    response->Header()->HeaderPairs().AddHeaderPair("Server", "Galay");
-    response->Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html; charset=utf-8");
-    response->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-    response->Body() = "<!DOCTYPE html>\
-<html>\
-<head>\
-    <title>405 Method Not Allowed</title>\
-</head>\
-<body>\
-    <h1>405 Method Not Allowed</h1>\
-    <p>The requested method is not allowed on this server.</p>\
-</body>\
-</html>";
-    return true;
-}
-
 bool HttpHelper::DefaultRedirect(protocol::http::HttpResponse *response, const std::string &url, HttpResponseCode code)
 {
     response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;

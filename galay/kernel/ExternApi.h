@@ -34,6 +34,7 @@ public:
     IOVecHolder(size_t size);
     IOVecHolder();
     void Realloc(size_t size);
+    void ClearBuffer();
     bool Reset(const IOVec& iov);
     bool Reset();
     bool Reset(std::string&& str);
