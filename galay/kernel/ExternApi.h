@@ -118,13 +118,6 @@ coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, IOVec* iov, size
 coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, IOVec* iov, size_t length);
 
 
-#define MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES     50
-
-/*
-    Coroutine
-*/
-coroutine::CoroutineStore* GetCoroutineStore();
-
 /*
    OpenSSL 
 */
@@ -135,13 +128,16 @@ bool DestroySSLEnv();
 SSL_CTX* GetGlobalSSLCtx();
 
 
-/*
-    Scheduler
-*/
 
 void InitializeGalayEnv(int event_schedulers, int coroutine_schedulers, int timer_schedulers, int timeout);
 void DestroyGalayEnv();
 
+/*
+    Scheduler
+*/
+#define MAX_GET_TIMER_SCHEDULER_RETRY_TIMES 50
+
+#define MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES 50
 
 // details
 void DynamicResizeCoroutineSchedulers(int num);

@@ -7,6 +7,7 @@
 #include <coroutine>
 #include <variant>
 #include <mutex>
+#include <list>
 #include <shared_mutex>
 #include <string>
 #include <functional>
@@ -43,6 +44,8 @@ public:
 
 #define DEFAULT_COROUTINE_STORE_HASH_SIZE       2048
 
+
+//只加入父协程，子协程的释放交给ContextCancel做
 class CoroutineStore
 {
 public:
@@ -75,10 +78,8 @@ public:
         static void unhandled_exception() noexcept {}
         void return_void () const noexcept {};
         [[nodiscard]] Coroutine* GetCoroutine() const { return m_coroutine; }
-        [[nodiscard]] CoroutineStore* GetStore() const { return m_store; }
         ~promise_type();
     private:
-        CoroutineStore* m_store = nullptr ;
         Coroutine* m_coroutine = nullptr;
     };
     explicit Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
@@ -91,21 +92,105 @@ public:
     bool Done() const { return m_handle.done(); }
     void Resume() const { return m_handle.resume(); }
     bool SetAwaiter(Awaiter* awaiter);
-    void SetExitCallback(const std::function<void()>& callback);
     Awaiter* GetAwaiter() const;
+
+    void AppendExitCallback(const std::function<void()>& callback);
     ~Coroutine() = default;
 private:
     void Exit();
 private:
     std::atomic<Awaiter*> m_awaiter = nullptr;
     std::coroutine_handle<promise_type> m_handle;
-    std::function<void()> m_exit_cb;
+    std::list<std::function<void()>> m_exit_cbs;
 };
+
+//线程安全
+class WaitGroup
+{
+public:
+    WaitGroup(uint32_t count);
+    void Done();
+    void Reset(uint32_t count = 0);
+    Awaiter_bool Wait();
+private:
+    std::shared_mutex m_mutex;
+    Coroutine* m_coroutine = nullptr;
+    uint32_t m_count = 0;
+};
+
+class RoutineContextCancel;
+
+class RoutineContext
+{
+    friend class RoutineContextCancel;
+public:
+    using ptr = std::shared_ptr<RoutineContext>;
+    using wptr = std::weak_ptr<RoutineContext>;
+    RoutineContext() = default;
+    /*
+        子协程需要进入即调用
+    */
+    virtual Awaiter_void DeferDone();
+    virtual ~RoutineContext() = default;
+protected:
+    virtual void BeCanceled();
+protected:
+    Coroutine* m_coroutine = nullptr;
+};
+
+class RoutineContextCancel
+{
+public:
+    using ptr = std::shared_ptr<RoutineContextCancel>;
+    RoutineContextCancel(RoutineContext::wptr context) : m_context(context) {}
+    void operator()();
+    virtual ~RoutineContextCancel() = default;
+private:
+    RoutineContext::wptr m_context;
+};
+
+class RoutineContextWithWaitGroup: public RoutineContext
+{
+public:
+    using ptr = std::shared_ptr<RoutineContextWithWaitGroup>;
+    using wptr = std::weak_ptr<RoutineContextWithWaitGroup>;
+    RoutineContextWithWaitGroup(uint32_t count) : m_wait_group(count) {}
+    Awaiter_bool Wait();
+    /*
+        子协程需要进入即调用
+    */
+    virtual Awaiter_void DeferDone();
+    virtual ~RoutineContextWithWaitGroup() = default;
+protected:
+    virtual void BeCanceled();
+private:
+    WaitGroup m_wait_group;
+};
+
+
+
 }
 
+namespace galay::coroutine
+{
+
+extern CoroutineStore* GetCoroutineStore();
+
+class ContextFactory
+{
+public:
+    static std::pair<RoutineContext::ptr, RoutineContextCancel::ptr> WithNewContext();
+    static std::pair<RoutineContextWithWaitGroup::ptr, RoutineContextCancel::ptr> WithWaitGroupContext();
+};
+
+}
 
 namespace galay::this_coroutine
 {
+    /*
+        父协程一定需要加入到协程存储
+    */
+    extern coroutine::Awaiter_void AddToCoroutineStore();
     extern coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine);
     /*
         return false only when TimeScheduler is not running
@@ -113,7 +198,7 @@ namespace galay::this_coroutine
         [timer] : timer
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
-    extern coroutine::Awaiter_bool SleepFor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
+    extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
     extern coroutine::Awaiter_void Exit(const std::function<void(void)>& callback);
 }
 

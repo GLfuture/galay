@@ -40,7 +40,6 @@ bool EventScheduler::Stop() const
         return false;
     }
     m_engine->Stop();
-    GetCoroutineStore()->Clear();
     return m_waiter->Wait(5000);
 }
 
@@ -91,7 +90,7 @@ bool CoroutineScheduler::Stop()
         return false;
     }
     m_coroutines_queue.enqueue(nullptr);
-    GetCoroutineStore()->Clear(); 
+    coroutine::GetCoroutineStore()->Clear(); 
     return m_waiter->Wait(5000);
 }
 

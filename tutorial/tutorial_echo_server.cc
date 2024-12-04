@@ -1,83 +1,24 @@
 #include "galay/galay.h"
-#include <iostream>
-#include <spdlog/spdlog.h>
-#define BUFFER_SIZE 1024
+
+using galay::protocol::http::HttpStatusCode;
+using galay::protocol::http::HttpVersion;   
+
+class Handler {
+public:
+    static galay::coroutine::Coroutine GetHelloWorldHandler(galay::HttpConnectionManager manager, galay::coroutine::RoutineContext::ptr context) {
+        co_await context->DeferDone();
+        galay::helper::http::HttpHelper::DefaultHttpResponse(manager.GetResponse(), HttpVersion::Http_Version_1_1 , HttpStatusCode::OK_200, "text/html", "<html> <h1> Hello World </h1> </html>");
+        manager.GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+        co_return;
+    }
+
+};
+
 int main()
 {
-    auto& logger = galay::log::Logger::GetInstance()->GetLogger();
-    logger->set_level(spdlog::level::trace);
-    logger->flush_on(spdlog::level::trace);
-    int level = logger->level();
-    // galay::server::TcpServerConfig::ptr config = std::make_shared<galay::server::TcpServerConfig>();
-    // galay::server::TcpServer server(config);
-    // galay::TcpCallbackStore store([](galay::TcpConnectionManager op)->galay::coroutine::Coroutine {
-    //     auto connection = op.GetConnection();
-    //     galay::async::AsyncNetIo* socket = connection->GetSocket();
-    //     galay::IOVecHolder rholder(BUFFER_SIZE), wholder;
-    //     galay::protocol::http::HttpRequest request;
-    //     galay::protocol::http::HttpResponse response;
-    //     while(true)
-    //     {
-    //         int length = co_await galay::AsyncRecv(socket, &rholder, BUFFER_SIZE);
-    //         std::cout << "recv length: " << length << std::endl;
-    //         if( length <= 0 ) {
-    //             if( length == galay::event::CommonFailedType::eCommonDisConnect || length == galay::event::CommonFailedType::eCommonOtherFailed ) {
-    //                 co_await galay::AsyncClose(socket);
-    //                 co_return;
-    //             }
-    //         } 
-    //         else {
-    //             std::string_view data(rholder->m_buffer, rholder->m_offset);
-    //             auto result = request.DecodePdu(data);
-    //             if(!result.first) {
-    //                 switch (request.GetErrorCode())
-    //                 {
-    //                 case galay::error::HttpErrorCode::kHttpError_HeaderInComplete:
-    //                 case galay::error::HttpErrorCode::kHttpError_BodyInComplete:
-    //                 {
-    //                     if( rholder->m_offset >= rholder->m_size ) {
-    //                         rholder.Realloc(rholder->m_size + BUFFER_SIZE);
-    //                     }
-    //                     break;
-    //                 }
-    //                 case galay::error::HttpErrorCode::kHttpError_BadRequest:
-    //                 {
-                        
-    //                 }
-    //                 default:
-    //                     break;
-    //                 }
-    //             } else {
-    //                 response.Header()->Code() = galay::protocol::http::HttpStatusCode::OK_200;
-    //                 response.Header()->Version() = galay::protocol::http::HttpVersion::Http_Version_1_1;
-    //                 response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
-    //                 response.Body() = "<html> <h1> Hello World </h1> </html>";
-    //                 wholder.Reset(response.EncodePdu());
-    //                 while(true) {
-    //                     int send_len = co_await galay::AsyncSend(socket, &wholder, wholder->m_size);
-    //                     if(send_len > 0) {
-    //                         if(wholder->m_offset == wholder->m_size) break;
-    //                     } else {
-    //                         co_await galay::AsyncClose(socket);
-    //                         co_return;
-    //                     }
-    //                 }
-    //             }
-    //             request.Reset();
-    //             response.Reset();
-    //         }
-    //     }
-    // end:
-    //     co_return;
-    // });
     galay::server::HttpServerConfig::ptr config = std::make_shared<galay::server::HttpServerConfig>();
     galay::server::HttpServer server(config);
-    server.Get("/", [](galay::HttpConnectionManager manager)->galay::coroutine::Coroutine {
-        manager.GetResponse()->Header()->Code() = galay::protocol::http::HttpStatusCode::OK_200;
-        manager.GetResponse()->Header()->Version() = galay::protocol::http::HttpVersion::Http_Version_1_1;
-        manager.GetResponse()->Body() = "<html> <h1> Hello World </h1> </html>";
-        co_return;
-    });
+    server.Get("/", Handler::GetHelloWorldHandler);
     server.Start(8060);
     getchar();
     server.Stop();

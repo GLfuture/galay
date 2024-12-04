@@ -1,6 +1,5 @@
 #include "ExternApi.h"
 #include "Scheduler.h"
-#include "Coroutine.h"
 #include "Async.h"
 #include "Event.h"
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -291,19 +290,12 @@ coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov, s
     return {afileio->GetAction(), iov};
 }
 
-//other
-
-coroutine::CoroutineStore g_coroutine_store;
 
 std::vector<scheduler::CoroutineScheduler*> g_coroutine_schedulers;
 std::vector<scheduler::EventScheduler*> g_event_schedulers;
 std::vector<scheduler::TimerScheduler*> g_timer_schedulers;
 SSL_CTX* g_ssl_ctx = nullptr;
 
-coroutine::CoroutineStore* GetCoroutineStore()
-{
-    return &g_coroutine_store;
-}
 
 bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)
 {
@@ -464,7 +456,7 @@ scheduler::TimerScheduler *GetTimerSchedulerInOrder()
     const uint32_t size = g_timer_schedulers.size();
     uint32_t now = g_current_timer_scheduler_index.load();
     int retries = 0;
-    while(retries < MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES){
+    while(retries < MAX_GET_TIMER_SCHEDULER_RETRY_TIMES){
         if( g_current_timer_scheduler_index.compare_exchange_strong(now, (now + 1) % size) ){
             return g_timer_schedulers[now];
         }

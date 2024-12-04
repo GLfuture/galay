@@ -1,6 +1,8 @@
 #ifndef GALAY_H
 #define GALAY_H
 
+#include "helper/HttpHelper.h"
+
 //common
 #include "common/Base.h"
 #include "common/SignalHandler.h"

@@ -92,6 +92,7 @@ namespace galay::helper::http
         static bool DefaultPost(protocol::http::HttpRequest* request, const std::string& url, bool keepalive = true);
         //response
         static bool DefaultRedirect(protocol::http::HttpResponse* response, const std::string& url, HttpResponseCode code);
+        static bool DefaultHttpResponse(protocol::http::HttpResponse* response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string type, std::string &&body);
     };
     
 }

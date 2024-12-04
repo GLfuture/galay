@@ -26,14 +26,17 @@ namespace galay::async
 namespace galay
 {
     class TcpConnectionManager;
+    class TcpSslConnectionManager;
     class TcpCallbackStore;
     class TcpSslCallbackStore;
     class HttpConnectionManager;
+    class HttpsConnectionManager;
 }
 
 namespace galay::coroutine
 {
     class Coroutine;
+    class RoutineContext;
 }
 
 
@@ -64,7 +67,7 @@ namespace galay::server
         virtual ~TcpServerConfig() = default;
     };
 
-    struct TcpSslServerConfig final : public TcpServerConfig
+    struct TcpSslServerConfig: public TcpServerConfig
     {
         using ptr = std::shared_ptr<TcpSslServerConfig>;
         TcpSslServerConfig();
@@ -73,14 +76,21 @@ namespace galay::server
         ~TcpSslServerConfig() override = default;
     };
 
-    struct HttpServerConfig: public TcpServerConfig
+    struct HttpServerConfig final: public TcpServerConfig
     {
         using ptr = std::shared_ptr<HttpServerConfig>;
         HttpServerConfig();
-        uint32_t m_proto_capacity{};          // 协议对象池容量
         uint32_t m_max_header_size;
 
         ~HttpServerConfig() override = default;
+    };
+
+    struct HttpsServerConfig final: public TcpSslServerConfig 
+    {
+        using ptr = std::shared_ptr<HttpsServerConfig>;
+        HttpsServerConfig();
+        uint32_t m_max_header_size;
+        ~HttpsServerConfig() override = default;
     };
 
     class Server
@@ -95,6 +105,7 @@ namespace galay::server
         //no block
         void Start(TcpCallbackStore* store, int port);
         virtual void Stop();
+        TcpServerConfig::ptr GetConfig() { return m_config; }
         inline bool IsRunning() { return m_is_running; }
         virtual ~TcpServer();
     protected:
@@ -103,13 +114,14 @@ namespace galay::server
         std::vector<event::ListenEvent*> m_listen_events;
     };
 
-    class TcpSslServer final : public Server
+    class TcpSslServer: public Server
     {
     public:
         explicit TcpSslServer(const TcpSslServerConfig::ptr& config);
         //no block
         void Start(TcpSslCallbackStore* store, int port);
         void Stop();
+        TcpSslServerConfig::ptr GetConfig() { return m_config; }
         bool IsRunning() { return m_is_running; }
         ~TcpSslServer();
     protected:
@@ -133,7 +145,7 @@ namespace galay::server
 #define DEFAULT_HTTP_RESPONSE_POOL_SIZE              2048
 #define DEFAULT_HTTP_KEEPALIVE_TIME_MS          (7500 * 1000)
 
-    class HttpServer final: public TcpServer
+    class HttpServer final: public Server
     {
         using HttpRequest = protocol::http::HttpRequest;
         using HttpResponse = protocol::http::HttpResponse;
@@ -141,28 +153,72 @@ namespace galay::server
         using HttpMethod = protocol::http::HttpMethod;
         using HttpStatusCode = protocol::http::HttpStatusCode;
 
+        using Coroutine = coroutine::Coroutine;
+        using RoutineContext_ptr = std::shared_ptr<coroutine::RoutineContext>;
+
         static util::ObjectPoolMutiThread<HttpRequest> RequestPool;
         static util::ObjectPoolMutiThread<HttpResponse> ResponsePool;
     public:
         explicit HttpServer(const HttpServerConfig::ptr& config);
         //not thread security
-        void Get(const std::string& path, std::function<coroutine::Coroutine(HttpConnectionManager)>&& handler);
-        void Post(const std::string& path, std::function<coroutine::Coroutine(HttpConnectionManager)>&& handler);
-        void Put(const std::string& path, std::function<coroutine::Coroutine(HttpConnectionManager)>&& handler);
+        void Get(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Post(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Put(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Delete(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Options(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Head(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Trace(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Patch(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+        void Connect(const std::string& path, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>&& handler);
+
         void Start(int port);
-        void Stop() override;
+        void Stop();
     private:
-        coroutine::Coroutine HttpRoute(TcpConnectionManager manager);
+        Coroutine HttpRoute(TcpConnectionManager manager);
         void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
     private:
+        TcpServer m_server;
         std::unique_ptr<TcpCallbackStore> m_store;
-        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<coroutine::Coroutine(HttpConnectionManager)>>> m_route_map;
+        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine(HttpConnectionManager, RoutineContext_ptr)>>> m_route_map;
         std::unordered_map<HttpStatusCode, std::string> m_error_string;
     };
 
-    class HttpspServer
+    class HttpsServer: public Server
     {
+        using HttpRequest = protocol::http::HttpRequest;
+        using HttpResponse = protocol::http::HttpResponse;
+        using HttpVersion = protocol::http::HttpVersion;
+        using HttpMethod = protocol::http::HttpMethod;
+        using HttpStatusCode = protocol::http::HttpStatusCode;
+
+        using Coroutine = coroutine::Coroutine;
+        using RoutineContext_ptr = std::shared_ptr<coroutine::RoutineContext>;
+
+        static util::ObjectPoolMutiThread<HttpRequest> RequestPool;
+        static util::ObjectPoolMutiThread<HttpResponse> ResponsePool;
     public:
+        explicit HttpsServer(const HttpsServerConfig::ptr& config);
+        //not thread security
+        void Get(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Post(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Put(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Delete(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Options(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Head(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Trace(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Patch(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+        void Connect(const std::string& path, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>&& handler);
+
+        void Start(int port);
+        void Stop();
+    private:
+        Coroutine HttpRoute(TcpSslConnectionManager manager);
+        void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
+    private:
+        TcpSslServer m_server;
+        std::unique_ptr<TcpSslCallbackStore> m_store;
+        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine(HttpsConnectionManager, RoutineContext_ptr)>>> m_route_map;
+        std::unordered_map<HttpStatusCode, std::string> m_error_string;
     };
 }
 

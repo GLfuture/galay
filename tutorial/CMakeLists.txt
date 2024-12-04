@@ -6,6 +6,7 @@ set(SRC_LIST
     tutorial_ssl_echo_server.cc
     test_time.cc
     test_fileio.cc
+    test_waitgroup.cc
     #tutorial_proxy_server.cc
     #tutorial_ratelimiter.cc
     #tutorial_smtp_client.cc

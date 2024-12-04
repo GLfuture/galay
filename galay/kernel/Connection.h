@@ -39,21 +39,6 @@ namespace galay::protocol::http
 namespace galay
 {
 
-#define DEFAULT_CHECK_TIME_MS       (10 * 1000)           //10s
-#define DEFAULT_TCP_TIMEOUT_MS      (10 * 60 * 1000)      //10min
-
-// class StringViewWrapper
-// {
-// public:
-//     explicit StringViewWrapper(std::string_view& origin_view);
-//     std::string_view Data() const;
-//     void Erase(int length) const;
-//     void Clear() const;
-//     ~StringViewWrapper();
-// private:
-//     std::string_view& m_origin_view;
-// };
-
 class TcpConnection
 {
 public:
@@ -68,14 +53,13 @@ private:
 
 class TcpConnectionManager
 {
-    using Timer = event::Timer;
 public:
     TcpConnectionManager(async::AsyncNetIo* action);
     TcpConnection::ptr GetConnection();
-    std::any& GetContext();
+    std::shared_ptr<std::any> GetContext();
     ~TcpConnectionManager();
 private:
-    std::any m_context;
+    std::shared_ptr<std::any> m_context;
     TcpConnection::ptr m_connection;
 };
 
@@ -92,14 +76,13 @@ private:
 
 class TcpSslConnectionManager
 {
-    using Timer = event::Timer;
 public:
     TcpSslConnectionManager(async::AsyncSslNetIo* socket);
     TcpSslConnection::ptr GetConnection();
-    std::any& GetContext();
+    std::shared_ptr<std::any> GetContext();
     ~TcpSslConnectionManager();
 private:
-    std::any m_context;
+    std::shared_ptr<std::any> m_context;
     TcpSslConnection::ptr m_connection;
 };
 
@@ -121,22 +104,25 @@ private:
     std::function<coroutine::Coroutine(TcpSslConnectionManager)> m_callback;
 };
 
+struct HttpProtoStore
+{
+    using HttpRequest = protocol::http::HttpRequest;
+    using HttpResponse = protocol::http::HttpResponse;
+    using ptr = std::shared_ptr<HttpProtoStore>;
+
+    HttpProtoStore(util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
+        util::ObjectPoolMutiThread<HttpResponse>* response_pool);
+    protocol::http::HttpRequest* m_request;
+    protocol::http::HttpResponse* m_response;
+    util::ObjectPoolMutiThread<HttpRequest>* m_request_pool;
+    util::ObjectPoolMutiThread<HttpResponse>* m_response_pool;
+    ~HttpProtoStore();
+};
+
 class HttpConnectionManager
 {
     using HttpRequest = protocol::http::HttpRequest;
     using HttpResponse = protocol::http::HttpResponse;
-
-    struct HttpProtoStore
-    {
-        using ptr = std::shared_ptr<HttpProtoStore>;
-        HttpProtoStore(util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
-            util::ObjectPoolMutiThread<HttpResponse>* response_pool);
-        protocol::http::HttpRequest* m_request;
-        protocol::http::HttpResponse* m_response;
-        util::ObjectPoolMutiThread<HttpRequest>* m_request_pool;
-        util::ObjectPoolMutiThread<HttpResponse>* m_response_pool;
-        ~HttpProtoStore();
-    };
 public:
 
     HttpConnectionManager(const TcpConnectionManager& manager, util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
@@ -150,6 +136,22 @@ private:
     HttpProtoStore::ptr m_proto_store;
 };
 
+class HttpsConnectionManager
+{
+    using HttpRequest = protocol::http::HttpRequest;
+    using HttpResponse = protocol::http::HttpResponse;
+public:
+
+    HttpsConnectionManager(const TcpSslConnectionManager& manager, util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
+        util::ObjectPoolMutiThread<HttpResponse>* response_pool);
+    protocol::http::HttpRequest* GetRequest() const;
+    protocol::http::HttpResponse* GetResponse() const;
+    TcpSslConnection::ptr GetConnection();
+    ~HttpsConnectionManager();
+private:
+    TcpSslConnectionManager m_tcp_ssl_manager;
+    HttpProtoStore::ptr m_proto_store;
+};
 }
 
 

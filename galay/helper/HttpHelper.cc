@@ -1,5 +1,6 @@
 #include "HttpHelper.h"
 #include "galay/util/String.h"
+#include "galay/util/Time.h"
 #include <regex>
 
 namespace galay::helper::http
@@ -315,10 +316,19 @@ bool HttpHelper::DefaultGet(protocol::http::HttpRequest *request, const std::str
 
 bool HttpHelper::DefaultRedirect(protocol::http::HttpResponse *response, const std::string &url, HttpResponseCode code)
 {
-    response->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-    response->Header()->Code() = code;
+    DefaultHttpResponse(response, protocol::http::HttpVersion::Http_Version_1_1, code, "text/html", "");
     response->Header()->HeaderPairs().AddHeaderPair("Location", url);
     return true;
 }
 
+bool HttpHelper::DefaultHttpResponse(protocol::http::HttpResponse *response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string type, std::string &&body)
+{
+    response->Header()->Version() = version;
+    response->Header()->Code() = code;
+    response->Header()->HeaderPairs().AddHeaderPair("Server", "galay");
+    response->Header()->HeaderPairs().AddHeaderPair("Date", time::GetCurrentGMTTimeString());
+    if(!type.empty()) response->Header()->HeaderPairs().AddHeaderPair("Content-Type", type);
+    if(!body.empty()) response->Body() = std::forward<std::string>(body);
+    return true;
+}
 }
