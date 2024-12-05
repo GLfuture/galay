@@ -1,6 +1,6 @@
 #include "HttpHelper.h"
 #include "galay/util/String.h"
-#include "galay/util/Time.h"
+#include "galay/kernel/Time.h"
 #include <regex>
 
 namespace galay::helper::http
@@ -326,7 +326,7 @@ bool HttpHelper::DefaultHttpResponse(protocol::http::HttpResponse *response, pro
     response->Header()->Version() = version;
     response->Header()->Code() = code;
     response->Header()->HeaderPairs().AddHeaderPair("Server", "galay");
-    response->Header()->HeaderPairs().AddHeaderPair("Date", time::GetCurrentGMTTimeString());
+    response->Header()->HeaderPairs().AddHeaderPair("Date", GetCurrentGMTTimeString());
     if(!type.empty()) response->Header()->HeaderPairs().AddHeaderPair("Content-Type", type);
     if(!body.empty()) response->Body() = std::forward<std::string>(body);
     return true;

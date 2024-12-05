@@ -12,7 +12,6 @@ namespace galay::event {
     class CallbackEvent;
     class EventEngine; 
     class TimeEvent;
-    class Timer;
 };
 
 namespace galay::coroutine {
@@ -21,6 +20,10 @@ namespace galay::coroutine {
 
 namespace galay::thread {
     class ThreadWaiters;
+}
+
+namespace galay {
+    class Timer;
 }
 
 namespace galay::scheduler {
@@ -73,7 +76,7 @@ public:
     using ptr = std::shared_ptr<TimerScheduler>;
     TimerScheduler();
     std::string Name() override { return "TimerScheduler"; }
-    std::shared_ptr<event::Timer> AddTimer(int64_t ms, std::function<void(std::shared_ptr<event::Timer>)>&& callback) const;
+    std::shared_ptr<galay::Timer> AddTimer(int64_t ms, std::function<void(std::shared_ptr<galay::Timer>)>&& callback) const;
     bool Loop(int timeout) override;
     bool Stop() const override;
     uint32_t GetErrorCode() const override;

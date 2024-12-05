@@ -3,7 +3,7 @@
 #include "EventEngine.h"
 #include "Scheduler.h"
 #include "Connection.h"
-#include "galay/util/Time.h"
+#include "Time.h"
 #include "ExternApi.h"
 #include <cstring>
 #if defined(__linux__)
@@ -67,70 +67,6 @@ CallbackEvent::~CallbackEvent()
     if( m_engine ) m_engine.load()->DelEvent(this, nullptr);
 }
 
-Timer::Timer(const int64_t during_time, std::function<void(Timer::ptr)> &&func)
-{
-    this->m_rightHandle = std::forward<std::function<void(Timer::ptr)>>(func);
-    SetDuringTime(during_time);
-}
-
-int64_t 
-Timer::GetDuringTime() const
-{
-    return this->m_duringTime;
-}
-
-int64_t 
-Timer::GetExpiredTime() const
-{
-    return this->m_expiredTime;
-}
-
-int64_t 
-Timer::GetRemainTime() const
-{
-    const int64_t time = this->m_expiredTime - time::GetCurrentTime();
-    return time < 0 ? 0 : time;
-}
-
-void 
-Timer::SetDuringTime(int64_t duringTime)
-{
-    this->m_duringTime = duringTime;
-    this->m_expiredTime = time::GetCurrentTime() + duringTime;
-    this->m_success = false;
-}
-
-void 
-Timer::Execute()
-{
-    if ( m_cancle.load() ) return;
-    this->m_rightHandle(shared_from_this());
-    this->m_success = true;
-}
-
-void 
-Timer::Cancle()
-{
-    this->m_cancle = true;
-}
-
-// 是否已经完成
-bool 
-Timer::Success() const
-{
-    return this->m_success.load();
-}
-
-bool 
-Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b) const
-{
-    if (a->GetExpiredTime() > b->GetExpiredTime())
-    {
-        return true;
-    }
-    return false;
-}
-
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 TimeEventIDStore::TimeEventIDStore(const int capacity)
 {
@@ -184,9 +120,9 @@ TimeEvent::TimeEvent(const GHandle handle, EventEngine* engine)
 void TimeEvent::HandleEvent(EventEngine *engine)
 {
 #if defined(__linux__)
-    std::vector<Timer::ptr> timers;
+    std::vector<galay::Timer::ptr> timers;
     std::unique_lock lock(this->m_mutex);
-    while (! m_timers.empty() && m_timers.top()->GetExpiredTime()  <= time::GetCurrentTime() ) {
+    while (! m_timers.empty() && m_timers.top()->GetExpiredTime()  <= GetCurrentTime() ) {
         auto timer = m_timers.top();
         m_timers.pop();
         timers.emplace_back(timer);
@@ -220,9 +156,9 @@ EventEngine *TimeEvent::BelongEngine()
     return m_engine;
 }
 
-Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func)
+galay::Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(galay::Timer::ptr)> &&func)
 {
-    auto timer = std::make_shared<Timer>(during_time, std::forward<std::function<void(Timer::ptr)>>(func));
+    auto timer = std::make_shared<galay::Timer>(during_time, std::forward<std::function<void(galay::Timer::ptr)>>(func));
     std::unique_lock<std::shared_mutex> lock(this->m_mutex);
     this->m_timers.push(timer);
     lock.unlock();
@@ -234,7 +170,7 @@ Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(Timer::pt
     return timer;
 }
 
-void TimeEvent::ReAddTimer(const int64_t during_time, const Timer::ptr& timer)
+void TimeEvent::ReAddTimer(const int64_t during_time, const galay::Timer::ptr& timer)
 {
     timer->SetDuringTime(during_time);
     timer->m_cancle.store(false);

@@ -4,6 +4,7 @@
 #include "EventEngine.h"
 #include "Scheduler.h"
 #include "ExternApi.h"
+#include "Time.h"
 #include "Log.h"
 
 namespace galay::action
@@ -12,10 +13,10 @@ namespace galay::action
 TimeEventAction::TimeEventAction()
 = default;
 
-void TimeEventAction::CreateTimer(const int64_t ms, std::shared_ptr<event::Timer> *timer, std::function<void(const std::shared_ptr<event::Timer>&)> &&callback)
+void TimeEventAction::CreateTimer(const int64_t ms, std::shared_ptr<galay::Timer> *timer, std::function<void(const std::shared_ptr<galay::Timer>&)> &&callback)
 {
     this->m_ms = ms;
-    m_callback = std::forward<std::function<void(const std::shared_ptr<event::Timer>&)>>(callback);
+    m_callback = std::forward<std::function<void(const std::shared_ptr<galay::Timer>&)>>(callback);
     m_timer = timer;
 }
 

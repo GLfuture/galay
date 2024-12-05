@@ -14,17 +14,12 @@
 #include <unordered_set>
 #include "galay/common/Base.h"
 
-namespace galay::action
-{
-    class CoroutineWaitAction;
-}
-
 namespace galay::scheduler
 {
     class CoroutineScheduler;
 }
 
-namespace galay::event
+namespace galay
 {
     class Timer;
 }
@@ -198,7 +193,7 @@ namespace galay::this_coroutine
         [timer] : timer
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
-    extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
+    extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, scheduler::CoroutineScheduler* scheduler = nullptr);
     extern coroutine::Awaiter_void Exit(const std::function<void(void)>& callback);
 }
 

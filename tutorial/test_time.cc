@@ -8,7 +8,7 @@
 #ifdef TEST_SLEEP
 galay::coroutine::Coroutine test()
 {
-    galay::event::Timer::ptr timer;
+    galay::galay::Timer::ptr timer;
     bool res = co_await galay::this_coroutine::Sleepfor(1000, &timer);
     if(res)
         std::cout << "sleep success" << std::endl;
@@ -28,7 +28,7 @@ int main()
     
     galay::event::TimeEvent::ptr event = std::make_shared<galay::event::TimeEvent>(handle, engine.get());
     int i = 0;
-    galay::event::Timer::ptr timer = event->AddTimer(1000, [event, &i](galay::event::Timer::ptr t) {
+    galay::galay::Timer::ptr timer = event->AddTimer(1000, [event, &i](galay::galay::Timer::ptr t) {
         std::cout << "timer expired" << std::endl;
         if(i++ < 10) event->ReAddTimer(1000, t);
     });

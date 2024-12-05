@@ -6,7 +6,6 @@
 #include "ExternApi.h"
 #include "galay/helper/HttpHelper.h"
 #include "Log.h"
-#include "galay/util/Time.h"
 #include <openssl/err.h>
 #include <utility>
 

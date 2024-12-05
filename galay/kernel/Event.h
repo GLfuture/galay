@@ -3,11 +3,8 @@
 
 #include "galay/common/Base.h"
 #include "concurrentqueue/moodycamel/concurrentqueue.h"
-#include <any>
+#include "Time.h"
 #include <queue>
-#include <atomic>
-#include <memory>
-#include <functional>
 #include <shared_mutex>
 
 namespace galay::coroutine
@@ -74,36 +71,7 @@ private:
     std::atomic<EventEngine*> m_engine;
     std::function<void(Event*, EventEngine*)> m_callback;
 };
-/*
-    if timer is cancled and callback is not executed, Success while return false
-*/
-class Timer: public std::enable_shared_from_this<Timer> 
-{
-    friend class TimeEvent;
-public:
-    using ptr = std::shared_ptr<Timer>;
-    class TimerCompare
-    {
-    public:
-        bool operator()(const Timer::ptr &a, const Timer::ptr &b) const;
-    };
-    Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func);
-    int64_t GetDuringTime() const;
-    int64_t GetExpiredTime() const;
-    int64_t GetRemainTime() const;
-    std::any& GetContext() { return m_context; };
-    void SetDuringTime(int64_t during_time);
-    void Execute();
-    void Cancle();
-    bool Success() const;
-private:
-    std::any m_context;
-    int64_t m_expiredTime{};
-    int64_t m_duringTime{};
-    std::atomic_bool m_cancle;
-    std::atomic_bool m_success;
-    std::function<void(Timer::ptr)> m_rightHandle;
-};
+
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 
@@ -140,8 +108,8 @@ public:
     GHandle GetHandle() override { return m_handle; }
     bool SetEventEngine(EventEngine* engine) override;
     EventEngine* BelongEngine() override;
-    Timer::ptr AddTimer(int64_t during_time, std::function<void(Timer::ptr)> &&func); // ms
-    void ReAddTimer(int64_t during_time, const Timer::ptr& timer);
+    galay::Timer::ptr AddTimer(int64_t during_time, std::function<void(galay::Timer::ptr)> &&func); // ms
+    void ReAddTimer(int64_t during_time, const galay::Timer::ptr& timer);
     ~TimeEvent() override;
 private:
 #ifdef __linux__
@@ -151,7 +119,7 @@ private:
     GHandle m_handle;
     std::atomic<EventEngine*> m_engine;
     std::shared_mutex m_mutex;
-    std::priority_queue<Timer::ptr> m_timers;
+    std::priority_queue<galay::Timer::ptr> m_timers;
 };
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 

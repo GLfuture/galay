@@ -277,12 +277,12 @@ coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine)
 
 static thread_local action::TimeEventAction GlobalTimeAction;
 
-coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<event::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
+coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
 {
     if(GetTimerSchedulerNum() == 0) {
         return coroutine::Awaiter_bool(false);
     }
-    GlobalTimeAction.CreateTimer(ms, timer, [scheduler](const event::Timer::ptr& use_timer){
+    GlobalTimeAction.CreateTimer(ms, timer, [scheduler](const galay::Timer::ptr& use_timer){
         const auto co = std::any_cast<coroutine::Coroutine*>(use_timer->GetContext());
         co->GetAwaiter()->SetResult(true);
         if(scheduler == nullptr) {
