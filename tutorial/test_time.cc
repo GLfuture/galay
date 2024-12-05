@@ -3,6 +3,9 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+#define TEST_DEADLINE
+
+#ifdef TEST_SLEEP
 galay::coroutine::Coroutine test()
 {
     galay::event::Timer::ptr timer;
@@ -46,3 +49,33 @@ int main()
     galay::DestroyGalayEnv();
     return 0;
 }
+#elif defined(TEST_DEADLINE)
+
+galay::coroutine::Coroutine* p;
+
+galay::coroutine::Coroutine test()
+{
+    co_await galay::this_coroutine::GetThisCoroutine(p);
+    std::cout << "sleep begin" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::cout << "sleep end" << std::endl;
+    co_return;
+}
+
+int main()
+{ 
+    galay::InitializeGalayEnv(0 ,1 , 1, -1);
+    std::thread th([]{
+        test();
+    });
+    th.detach();
+    getchar();
+    std::cout << "ready to resume\n";
+    p->Destroy();
+    getchar();
+    galay::DestroyGalayEnv();
+
+    return 0;
+}
+
+#endif

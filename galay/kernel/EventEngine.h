@@ -10,7 +10,6 @@ namespace galay::event
 {
     #define DEFAULT_MAX_EVENTS 1024
 
-class EventEngine;
 class Event;
 
 class EventEngine

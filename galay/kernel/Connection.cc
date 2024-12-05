@@ -60,8 +60,8 @@ TcpCallbackStore::TcpCallbackStore(const std::function<coroutine::Coroutine(TcpC
 
 void TcpCallbackStore::Execute(async::AsyncNetIo* socket)
 {
-    const TcpConnectionManager operation(socket);
-    m_callback(operation);
+    const TcpConnectionManager manager(socket);
+    m_callback(manager);
 }
 
 TcpSslConnection::TcpSslConnection(async::AsyncSslNetIo* socket)
@@ -81,8 +81,8 @@ TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutin
 
 void TcpSslCallbackStore::Execute(async::AsyncSslNetIo* socket)
 {
-    const TcpSslConnectionManager operation(socket);
-    this->m_callback(operation);
+    const TcpSslConnectionManager manager(socket);
+    this->m_callback(manager);
 }
 
 HttpProtoStore::HttpProtoStore(util::ObjectPoolMutiThread<HttpRequest>* request_pool, \

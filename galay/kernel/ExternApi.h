@@ -55,7 +55,13 @@ struct NetAddr
 };
 
 
+#ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
     ****************************
@@ -167,8 +173,6 @@ void StartTimerSchedulers(int timeout);
 void StopCoroutineSchedulers();
 void StopEventSchedulers(); 
 void StopTimerSchedulers();
-
-}
 
 
 }

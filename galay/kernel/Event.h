@@ -39,15 +39,6 @@ namespace galay::event
 #define DEFAULT_READ_BUFFER_SIZE    2048
 #define DEFAULT_IO_EVENTS_SIZE      1024
 
-enum EventType
-{
-    kEventTypeNone,
-    kEventTypeError,
-    kEventTypeRead,
-    kEventTypeWrite,
-    kEventTypeTimer,
-};
-
 extern std::string ToString(EventType type);
 
 class EventEngine;

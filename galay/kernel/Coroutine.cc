@@ -5,6 +5,7 @@
 #include "WaitAction.h"
 #include "ExternApi.h"
 #include "Log.h"
+#include <iostream>
 
 namespace galay::coroutine
 {
@@ -63,8 +64,11 @@ Coroutine Coroutine::promise_type::get_return_object() noexcept
 
 Coroutine::promise_type::~promise_type()
 {
-    m_coroutine->Exit();
-    delete m_coroutine;
+    //防止协程运行时resume创建出新的协程，析构时重复析构
+    if(m_coroutine) {
+        m_coroutine->Exit();
+        delete m_coroutine;
+    }
 }
 
 Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept

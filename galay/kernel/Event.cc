@@ -1205,6 +1205,7 @@ bool FileIoWaitEvent::OnKReadWaitPrepare(coroutine::Coroutine *co, void *ctx)
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
     co->GetAwaiter()->SetResult(length);
+    vec->m_offset += length;
     return false;
 }
 
@@ -1224,6 +1225,7 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
     LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
+    vec->m_offset += length;
     GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
 }
 
@@ -1241,6 +1243,7 @@ bool FileIoWaitEvent::OnKWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
         }
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
+    vec->m_offset += length;
     co->GetAwaiter()->SetResult(length);
     return false;
 }
@@ -1261,6 +1264,7 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
+    vec->m_offset += length;
     GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
 }
 

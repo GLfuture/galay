@@ -265,8 +265,8 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager manager)
 	co_await this_coroutine::AddToCoroutineStore();
 	size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size;
 	auto connection = manager.GetConnection();
-	galay::async::AsyncNetIo* socket = connection->GetSocket();
-	galay::IOVecHolder rholder(max_header_size), wholder;
+	async::AsyncNetIo* socket = connection->GetSocket();
+	IOVecHolder rholder(max_header_size), wholder;
 	HttpConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
 	auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
 	co_await this_coroutine::Exit([cancel, socket](){
@@ -277,10 +277,10 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager manager)
 	{
 step1:
 		while(true) {
-			int length = co_await galay::AsyncRecv(socket, &rholder, max_header_size);
+			int length = co_await AsyncRecv(socket, &rholder, max_header_size);
 			if( length <= 0 ) {
-				if( length == galay::event::CommonFailedType::eCommonDisConnect || length == galay::event::CommonFailedType::eCommonOtherFailed ) {
-					co_await galay::AsyncClose(socket);
+				if( length == event::CommonFailedType::eCommonDisConnect || length == event::CommonFailedType::eCommonOtherFailed ) {
+					bool res = co_await AsyncClose(socket);
 					co_return;
 				}
 			} 
@@ -290,8 +290,8 @@ step1:
 				if(!result.first) { //解析失败
 					switch (http_manager.GetRequest()->GetErrorCode())
 					{
-					case galay::error::HttpErrorCode::kHttpError_HeaderInComplete:
-					case galay::error::HttpErrorCode::kHttpError_BodyInComplete:
+					case error::HttpErrorCode::kHttpError_HeaderInComplete:
+					case error::HttpErrorCode::kHttpError_BodyInComplete:
 					{
 						if( rholder->m_offset >= rholder->m_size) {
 							rholder.Realloc(rholder->m_size * 2);
@@ -395,7 +395,7 @@ step2:
 		rholder.ClearBuffer(), wholder.ClearBuffer();
 		http_manager.GetRequest()->Reset(), http_manager.GetResponse()->Reset();
 		if(close_connection) {
-			co_await galay::AsyncClose(socket);
+			bool res = co_await AsyncClose(socket);
 			break;
 		}
 	}
@@ -477,8 +477,8 @@ coroutine::Coroutine HttpsServer::HttpRoute(TcpSslConnectionManager manager)
     co_await this_coroutine::AddToCoroutineStore();
 	size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size;
 	auto connection = manager.GetConnection();
-	galay::async::AsyncNetIo* socket = connection->GetSocket();
-	galay::IOVecHolder rholder(max_header_size), wholder;
+	async::AsyncNetIo* socket = connection->GetSocket();
+	IOVecHolder rholder(max_header_size), wholder;
 	HttpsConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
 	auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
 	co_await this_coroutine::Exit([cancel, socket](){
@@ -489,10 +489,10 @@ coroutine::Coroutine HttpsServer::HttpRoute(TcpSslConnectionManager manager)
 	{
 step1:
 		while(true) {
-			int length = co_await galay::AsyncRecv(socket, &rholder, max_header_size);
+			int length = co_await AsyncRecv(socket, &rholder, max_header_size);
 			if( length <= 0 ) {
-				if( length == galay::event::CommonFailedType::eCommonDisConnect || length == galay::event::CommonFailedType::eCommonOtherFailed ) {
-					co_await galay::AsyncClose(socket);
+				if( length == event::CommonFailedType::eCommonDisConnect || length == event::CommonFailedType::eCommonOtherFailed ) {
+					bool res = co_await AsyncClose(socket);
 					co_return;
 				}
 			} 
@@ -502,15 +502,15 @@ step1:
 				if(!result.first) { //解析失败
 					switch (http_manager.GetRequest()->GetErrorCode())
 					{
-					case galay::error::HttpErrorCode::kHttpError_HeaderInComplete:
-					case galay::error::HttpErrorCode::kHttpError_BodyInComplete:
+					case error::HttpErrorCode::kHttpError_HeaderInComplete:
+					case error::HttpErrorCode::kHttpError_BodyInComplete:
 					{
 						if( rholder->m_offset >= rholder->m_size) {
 							rholder.Realloc(rholder->m_size * 2);
 						}
 						break;
 					}
-					case galay::error::HttpErrorCode::kHttpError_BadRequest:
+					case error::HttpErrorCode::kHttpError_BadRequest:
 					{
 						if(m_error_string.contains(HttpStatusCode::BadRequest_400)) {
 							std::string body = m_error_string[HttpStatusCode::BadRequest_400];
@@ -523,7 +523,7 @@ step1:
 						close_connection = true;
 						goto step2;
 					}
-					case galay::error::HttpErrorCode::kHttpError_HeaderTooLong:
+					case error::HttpErrorCode::kHttpError_HeaderTooLong:
 					{
 						if(m_error_string.contains(HttpStatusCode::RequestHeaderFieldsTooLarge_431)) {
 							std::string body = m_error_string[HttpStatusCode::RequestHeaderFieldsTooLarge_431];
@@ -536,7 +536,7 @@ step1:
 						close_connection = true;
 						goto step2;
 					}
-					case galay::error::HttpErrorCode::kHttpError_UriTooLong:
+					case error::HttpErrorCode::kHttpError_UriTooLong:
 					{
 						if(m_error_string.contains(HttpStatusCode::UriTooLong_414)) {
 							std::string body = m_error_string[HttpStatusCode::UriTooLong_414];
@@ -590,7 +590,7 @@ step1:
 step2:
 		while (true)
 		{
-			int length = co_await galay::AsyncSend(socket, &wholder, wholder->m_size);
+			int length = co_await AsyncSend(socket, &wholder, wholder->m_size);
 			if( length <= 0 ) {
 				close_connection = true;
 				break;
@@ -607,7 +607,7 @@ step2:
 		rholder.ClearBuffer(), wholder.ClearBuffer();
 		http_manager.GetRequest()->Reset(), http_manager.GetResponse()->Reset();
 		if(close_connection) {
-			co_await galay::AsyncClose(socket);
+			bool res = co_await AsyncClose(socket);
 			break;
 		}
 	}

@@ -15,11 +15,6 @@ namespace galay::event
     class EventEngine;
 }
 
-namespace galay::action
-{
-    class IOEventAction;
-}
-
 namespace galay::async
 {
 class HandleOption
