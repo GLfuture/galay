@@ -34,7 +34,7 @@ int main()
     return 0;
 }
 
-#elifdef TEST_ROUTINE_CONTEXT
+#elif defined(TEST_ROUTINE_CONTEXT)
 Coroutine* p = nullptr;
 
 Coroutine cfunc(RoutineContext::ptr context)
@@ -71,7 +71,7 @@ int main()
     return 0;
 }
 
-#elifdef TEST_ROUTINE_CONTEXT_WITH_WAIT_GROUP
+#elif defined(TEST_ROUTINE_CONTEXT_WITH_WAIT_GROUP)
 
 Coroutine* p = nullptr;
 
@@ -102,7 +102,7 @@ Coroutine pfunc()
 
 int main()
 {
-    galay::InitializeGalayEnv(0, 1, 0, -1);
+    galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
     pfunc();
     getchar();
     p->Destroy();
