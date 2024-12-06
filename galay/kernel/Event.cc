@@ -13,7 +13,7 @@
 #endif
 #include "Log.h"
 
-namespace galay::event
+namespace galay::details
 {
 
 std::string ToString(const EventType type)
@@ -50,7 +50,7 @@ void CallbackEvent::HandleEvent(EventEngine *engine)
 
 bool CallbackEvent::SetEventEngine(EventEngine *engine)
 {
-    if(event::EventEngine* t = m_engine.load(); !m_engine.compare_exchange_strong(t, engine)) {
+    if(details::EventEngine* t = m_engine.load(); !m_engine.compare_exchange_strong(t, engine)) {
         return false;
     }
     return true;
@@ -144,7 +144,7 @@ void TimeEvent::HandleEvent(EventEngine *engine)
 
 bool TimeEvent::SetEventEngine(EventEngine *engine)
 {
-    event::EventEngine* t = m_engine.load();
+    details::EventEngine* t = m_engine.load();
     if(!m_engine.compare_exchange_strong(t, engine)) {
         return false;
     }
@@ -248,7 +248,7 @@ GHandle ListenEvent::GetHandle()
 
 bool ListenEvent::SetEventEngine(EventEngine *engine)
 {
-    event::EventEngine* t = m_engine.load();
+    details::EventEngine* t = m_engine.load();
     if(!m_engine.compare_exchange_strong(t, engine)) {
         return false;
     }
@@ -296,7 +296,7 @@ coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
 }
 
 SslListenEvent::SslListenEvent(EventEngine* engine, async::AsyncSslNetIo *socket, TcpSslCallbackStore *callback_store)
-    :m_socket(socket), m_callback_store(callback_store), m_engine(engine), m_action(new action::IOEventAction(engine, new NetSslWaitEvent(socket)))
+    :m_socket(socket), m_callback_store(callback_store), m_engine(engine), m_action(new details::IOEventAction(engine, new NetSslWaitEvent(socket)))
 {
     engine->AddEvent(this, nullptr);
 }
@@ -314,7 +314,7 @@ GHandle SslListenEvent::GetHandle()
 
 bool SslListenEvent::SetEventEngine(EventEngine *engine)
 {
-    event::EventEngine* t = m_engine.load();
+    details::EventEngine* t = m_engine.load();
     if(!m_engine.compare_exchange_strong(t, engine)) {
         return false;
     }
@@ -379,7 +379,7 @@ WaitEvent::WaitEvent()
 
 bool WaitEvent::SetEventEngine(EventEngine *engine)
 {
-    if(event::EventEngine* t = m_engine.load(); !m_engine.compare_exchange_strong(t, engine)) {
+    if(details::EventEngine* t = m_engine.load(); !m_engine.compare_exchange_strong(t, engine)) {
         return false;
     }
     return true;
@@ -392,7 +392,7 @@ EventEngine* WaitEvent::BelongEngine()
 
 
 NetWaitEvent::NetWaitEvent(async::AsyncNetIo *socket)
-    :m_type(kTcpWaitEventTypeError), m_socket(socket)
+    :m_type(kTcpWaitEventTypeError), m_socket(socket), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
 {
 }
 
@@ -602,7 +602,7 @@ void NetWaitEvent::HandleRecvEvent(EventEngine *engine)
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
-    GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleSendEvent(EventEngine *engine)
@@ -610,14 +610,14 @@ void NetWaitEvent::HandleSendEvent(EventEngine *engine)
     int sendBytes = DealSend(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
-    GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleConnectEvent(EventEngine *engine) const
 {
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(true);
-    GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
@@ -908,7 +908,7 @@ void NetSslWaitEvent::HandleSslAcceptEvent(EventEngine *engine)
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
-        GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+        m_scheduler->EnqueueCoroutine(m_waitco);
         return;
     }
     m_ssl_error = SSL_get_error(ssl, r);
@@ -917,7 +917,7 @@ void NetSslWaitEvent::HandleSslAcceptEvent(EventEngine *engine)
     } else {
         awaiter->SetResult(false);
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLAcceptError, errno);
-        GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+        m_scheduler->EnqueueCoroutine(m_waitco);
     }
     
 }
@@ -930,7 +930,7 @@ void NetSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
-        GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+        m_scheduler->EnqueueCoroutine(m_waitco);
     }
     m_ssl_error = SSL_get_error(ssl, r);
     if( m_ssl_error == SSL_ERROR_WANT_READ || m_ssl_error == SSL_ERROR_WANT_WRITE ){
@@ -938,7 +938,7 @@ void NetSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
     } else {
         awaiter->SetResult(false);
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLConnectError, errno);
-        GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+        m_scheduler->EnqueueCoroutine(m_waitco);
     }
     
 }
@@ -949,7 +949,7 @@ void NetSslWaitEvent::HandleSslRecvEvent(EventEngine *engine)
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
-    GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 void NetSslWaitEvent::HandleSslSendEvent(EventEngine *engine)
@@ -957,7 +957,7 @@ void NetSslWaitEvent::HandleSslSendEvent(EventEngine *engine)
     int sendBytes = DealSend(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
-    GetCoroutineScheduler(m_socket->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 void NetSslWaitEvent::HandleSslCloseEvent(EventEngine *engine)
@@ -1018,7 +1018,7 @@ int NetSslWaitEvent::DealSend(IOVec* vec)
 //#endif
 
 FileIoWaitEvent::FileIoWaitEvent(async::AsyncFileIo *fileio)
-    :m_fileio(fileio), m_type(kFileIoWaitEventTypeError)
+    :m_fileio(fileio), m_type(kFileIoWaitEventTypeError), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
 {
     
 }
@@ -1121,7 +1121,7 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
     }
     if( fileio->IoFinished(finish_nums) ){
         engine->DelEvent(this, nullptr);
-        GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+        m_scheduler->EnqueueCoroutine(m_waitco);
     }
 }
 #endif
@@ -1162,7 +1162,7 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
     vec->m_offset += length;
-    GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 bool FileIoWaitEvent::OnKWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
@@ -1201,7 +1201,7 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
     vec->m_offset += length;
-    GetCoroutineScheduler(m_fileio->GetHandle().fd % GetCoroutineSchedulerNum())->EnqueueCoroutine(m_waitco);
+    m_scheduler->EnqueueCoroutine(m_waitco);
 }
 
 }

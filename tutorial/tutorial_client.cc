@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 
 uint16_t g_port = 8080;
-galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
+galay::coroutine::Coroutine test(galay::details::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
 {
     int64_t start = galay::GetCurrentTime();
     int i = 0;
@@ -39,14 +39,14 @@ galay::coroutine::Coroutine test(galay::event::EventEngine* engine, std::vector<
     co_return;
 }
 
-void pack(galay::event::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
+void pack(galay::details::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
 {
     test(engine, sockets, begin, end);
 }
 
 galay::async::AsyncNetIo* initSocket()
 {
-    galay::async::AsyncNetIo* socket = new galay::async::AsyncNetIo(galay::GetEventScheduler(0)->GetEngine());
+    galay::async::AsyncNetIo* socket = new galay::async::AsyncNetIo(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     galay::AsyncSocket(socket);
     socket->GetOption().HandleNonBlock();
     return socket;
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     g_port = atoi(argv[1]);
-    galay::InitializeGalayEnv(1, 1, 0, -1);
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     std::vector<galay::async::AsyncNetIo*> sockets;
     for (size_t i = 0; i < 2048; ++i)
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     std::vector<std::thread> ths;
     for( int i = 0 ; i < 8 ; ++i )
     {
-        ths.push_back(std::thread(std::bind(pack, galay::GetEventScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
+        ths.push_back(std::thread(std::bind(pack, galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
         ths[i].detach();
     }
     getchar();

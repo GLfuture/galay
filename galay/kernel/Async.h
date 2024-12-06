@@ -10,7 +10,7 @@
     #include <libaio.h>
 #endif
 
-namespace galay::event
+namespace galay::details
 {
     class EventEngine;
 }
@@ -35,29 +35,29 @@ class AsyncNetIo
 {
 public:
     using ptr = std::shared_ptr<AsyncNetIo>;
-    explicit AsyncNetIo(event::EventEngine* engine);
+    explicit AsyncNetIo(details::EventEngine* engine);
 
     HandleOption GetOption() const;
     GHandle& GetHandle() { return m_handle; }
-    action::IOEventAction*& GetAction() { return m_action; };
+    details::IOEventAction*& GetAction() { return m_action; };
     uint32_t &GetErrorCode();
     virtual ~AsyncNetIo();
 protected:
     GHandle m_handle;
     uint32_t m_err_code;
-    action::IOEventAction* m_action;
+    details::IOEventAction* m_action;
 };
 
 class AsyncTcpSocket: public AsyncNetIo
 {
 public:
-    explicit AsyncTcpSocket(event::EventEngine* engine);
+    explicit AsyncTcpSocket(details::EventEngine* engine);
 };
 
 class AsyncSslNetIo: public AsyncNetIo
 {
 public:
-    explicit AsyncSslNetIo(event::EventEngine* engine);
+    explicit AsyncSslNetIo(details::EventEngine* engine);
     SSL*& GetSSL() { return m_ssl; }
     ~AsyncSslNetIo() override;
 private:
@@ -67,14 +67,14 @@ private:
 class AsyncSslTcpSocket: public AsyncSslNetIo
 {
 public:
-    explicit AsyncSslTcpSocket(event::EventEngine* engine);
+    explicit AsyncSslTcpSocket(details::EventEngine* engine);
 };
 
 class AsyncUdpSocket: public AsyncNetIo
 {
 public:
     using ptr = std::shared_ptr<AsyncUdpSocket>;
-    explicit AsyncUdpSocket(event::EventEngine* engine);
+    explicit AsyncUdpSocket(details::EventEngine* engine);
     ~AsyncUdpSocket() override;
 private:
     GHandle m_handle;
@@ -85,9 +85,9 @@ class AsyncFileIo
 {
 public:
     using ptr = std::shared_ptr<AsyncFileIo>;
-    explicit AsyncFileIo(event::EventEngine* engine);
+    explicit AsyncFileIo(details::EventEngine* engine);
     [[nodiscard]] HandleOption GetOption() const;
-    action::IOEventAction*& GetAction() { return m_action; };
+    details::IOEventAction*& GetAction() { return m_action; };
     GHandle& GetHandle() { return m_handle; }
     uint32_t& GetErrorCode() { return m_error_code; }
     virtual ~AsyncFileIo();
@@ -95,14 +95,14 @@ private:
     // eventfd
     GHandle m_handle;
     uint32_t m_error_code;
-    action::IOEventAction* m_action;
+    details::IOEventAction* m_action;
 };
 
 class AsyncFileDescriptor final : public AsyncFileIo
 {
 public:
     using ptr = std::shared_ptr<AsyncFileDescriptor>;
-    explicit AsyncFileDescriptor(event::EventEngine* engine);
+    explicit AsyncFileDescriptor(details::EventEngine* engine);
 };
 
 #ifdef  __linux__
@@ -117,7 +117,7 @@ class AsyncFileNativeAio: public AsyncFileIo
 {
 public:
     using ptr = std::shared_ptr<AsyncFileNativeAio>;
-    AsyncFileNativeAio(int maxevents, event::EventEngine* engine);
+    AsyncFileNativeAio(int maxevents, details::EventEngine* engine);
     /*
         return false at m_current_index == maxevents or m_current_index atomic operation;
     */

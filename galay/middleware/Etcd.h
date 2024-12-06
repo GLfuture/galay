@@ -14,7 +14,7 @@ namespace galay::coroutine
     class Awaiter_string;
 }
 
-namespace galay::action
+namespace galay::details
 {
     class EtcdAction: public WaitAction
     {
@@ -61,7 +61,7 @@ namespace galay::middleware::etcd
     private:
         int m_co_sche_index;
         ::etcd::Response m_response;
-        action::EtcdAction m_action;
+        details::EtcdAction m_action;
         std::shared_ptr<::etcd::Client> m_client;
         std::shared_ptr<::etcd::KeepAlive> m_keepalive;
         std::shared_ptr<::etcd::Watcher> m_watcher;

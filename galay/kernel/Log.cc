@@ -3,7 +3,7 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <iostream>
 
-namespace galay::log
+namespace galay::details
 {
 std::unique_ptr<Logger> Logger::m_instance = nullptr;
 

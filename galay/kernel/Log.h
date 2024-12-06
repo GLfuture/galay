@@ -8,7 +8,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-namespace galay::log {
+namespace galay::details {
 
 #define DEFAULT_LOG_QUEUE_SIZE      8192
 #define DEFAULT_LOG_THREADS         2
@@ -31,11 +31,11 @@ private:
 
 }
 
-#define LogTrace(...)       SPDLOG_LOGGER_TRACE(galay::log::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogDebug(...)       SPDLOG_LOGGER_DEBUG(galay::log::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogInfo(...)        SPDLOG_LOGGER_INFO(galay::log::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogWarn(...)        SPDLOG_LOGGER_WARN(galay::log::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogError(...)       SPDLOG_LOGGER_ERROR(galay::log::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogCritical(...)    SPDLOG_LOGGER_CRITICAL(galay::log::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+#define LogTrace(...)       SPDLOG_LOGGER_TRACE(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+#define LogDebug(...)       SPDLOG_LOGGER_DEBUG(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+#define LogInfo(...)        SPDLOG_LOGGER_INFO(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+#define LogWarn(...)        SPDLOG_LOGGER_WARN(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+#define LogError(...)       SPDLOG_LOGGER_ERROR(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+#define LogCritical(...)    SPDLOG_LOGGER_CRITICAL(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
 
 #endif

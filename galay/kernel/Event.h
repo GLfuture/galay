@@ -19,10 +19,6 @@ namespace galay::async
     class AsyncFileIo; 
 }
 
-namespace galay::action
-{
-    class IOEventAction;
-}
 
 namespace galay
 {
@@ -31,7 +27,7 @@ namespace galay
     class IOVec;
 }
 
-namespace galay::event
+namespace galay::details
 {
 #define DEFAULT_READ_BUFFER_SIZE    2048
 #define DEFAULT_IO_EVENTS_SIZE      1024
@@ -39,7 +35,8 @@ namespace galay::event
 extern std::string ToString(EventType type);
 
 class EventEngine;
-class Event;
+class IOEventAction;
+class CoroutineScheduler;
 
 //must be alloc at heap
 class Event
@@ -160,7 +157,7 @@ private:
     std::atomic<EventEngine*> m_engine;
     async::AsyncSslNetIo* m_socket;
     TcpSslCallbackStore* m_callback_store;
-    action::IOEventAction* m_action;
+    details::IOEventAction* m_action;
 };
 
 
@@ -237,6 +234,7 @@ protected:
     NetWaitEventType m_type;
     void *m_ctx{};
     async::AsyncNetIo* m_socket;
+    CoroutineScheduler* m_scheduler;
 };
 
 class NetSslWaitEvent final : public NetWaitEvent
@@ -313,6 +311,7 @@ private:
     void HandleKWriteEvent(EventEngine* engine);
 private:
     void *m_ctx{};
+    CoroutineScheduler* m_scheduler;
     async::AsyncFileIo* m_fileio;
     FileIoWaitEventType m_type;
 };

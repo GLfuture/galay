@@ -14,10 +14,8 @@ namespace galay::server
 
 	
 TcpServerConfig::TcpServerConfig()
-	: m_backlog(DEFAULT_SERVER_BACKLOG)\
-	, m_coroutine_scheduler_num(DEFAULT_SERVER_CO_SCHEDULER_NUM)\
-	, m_network_scheduler_num(DEFAULT_SERVER_NET_SCHEDULER_NUM), m_network_scheduler_timeout_ms(DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS)\
-	, m_timer_scheduler_num(DEFAULT_SERVER_TIMER_SCHEDULER_NUM), m_timer_scheduler_timeout_ms(DEFAULT_SERVER_TIMER_SCHEDULER_TIMEOUT_MS)
+	: m_backlog(DEFAULT_SERVER_BACKLOG), m_coroutineConf(DEFAULT_COROUTINE_SCHEDULER_CONF), \
+	  m_netSchedulerConf(DEFAULT_NETWORK_SCHEDULER_CONF), m_timerSchedulerConf(DEFAULT_TIMER_SCHEDULER_CONF)
 {
 }
 
@@ -44,22 +42,12 @@ TcpServer::TcpServer(TcpServerConfig::ptr config)
 void TcpServer::Start(TcpCallbackStore* store, const int port)
 {
 	
-	DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
-	DynamicResizeTimerSchedulers(m_config->m_timer_scheduler_num);
-	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num);
-	//coroutine scheduler
-	StartCoroutineSchedulers();
-	//net scheduler
-	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
-	{
-		GetEventScheduler(i)->Loop(m_config->m_network_scheduler_timeout_ms);
-	}
-	StartTimerSchedulers(m_config->m_timer_scheduler_timeout_ms);
+	InitializeGalayEnv(m_config->m_coroutineConf, m_config->m_netSchedulerConf, m_config->m_coroutineConf);
 	m_is_running = true;
-	m_listen_events.resize(m_config->m_network_scheduler_num);
-	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
+	m_listen_events.resize(m_config->m_netSchedulerConf.first);
+	for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
 	{
-		async::AsyncNetIo* socket = new async::AsyncTcpSocket(GetEventScheduler(i)->GetEngine());
+		async::AsyncNetIo* socket = new async::AsyncTcpSocket(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
 		if(const bool res = AsyncSocket(socket); !res ) {
 			delete socket;
 			for(int j = 0; j < i; ++j ){
@@ -83,7 +71,7 @@ void TcpServer::Start(TcpCallbackStore* store, const int port)
 			m_listen_events.clear();
 			return;
 		}
-		m_listen_events[i] = new event::ListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
+		m_listen_events[i] = new details::ListenEvent(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
 	} 
 }
 
@@ -94,9 +82,7 @@ void TcpServer::Stop()
 	{
 		delete m_listen_event;
 	}
-	StopCoroutineSchedulers();
-	StopEventSchedulers();
-	StopTimerSchedulers();
+	DestroyGalayEnv();
 	m_is_running = false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
@@ -111,27 +97,17 @@ TcpSslServer::TcpSslServer(const TcpSslServerConfig::ptr& config)
 
 void TcpSslServer::Start(TcpSslCallbackStore *store, const int port)
 {
-    DynamicResizeCoroutineSchedulers(m_config->m_coroutine_scheduler_num);
-	DynamicResizeTimerSchedulers(m_config->m_timer_scheduler_num);
-	DynamicResizeEventSchedulers(m_config->m_network_scheduler_num);
-	//coroutine scheduler
-	StartCoroutineSchedulers();
-	//net scheduler
-	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
-	{
-		GetEventScheduler(i)->Loop(m_config->m_network_scheduler_timeout_ms);
-	}
-	StartTimerSchedulers(m_config->m_timer_scheduler_timeout_ms);
+    InitializeGalayEnv(m_config->m_coroutineConf, m_config->m_netSchedulerConf, m_config->m_coroutineConf);
     if(const bool res = InitializeSSLServerEnv(m_config->m_cert_file, m_config->m_key_file); !res ) {
 		LogError("[InitializeSSLServerEnv init failed, error:{}]", ERR_error_string(ERR_get_error(), nullptr));
 		return;
 	}
 	m_is_running = true;
 	
-	m_listen_events.resize(m_config->m_network_scheduler_num);
-	for(int i = 0 ; i < m_config->m_network_scheduler_num; ++i )
+	m_listen_events.resize(m_config->m_netSchedulerConf.first);
+	for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
 	{
-		async::AsyncSslNetIo* socket = new async::AsyncSslTcpSocket(GetEventScheduler(i)->GetEngine());
+		async::AsyncSslNetIo* socket = new async::AsyncSslTcpSocket(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
 		bool res = AsyncSocket(socket);
 		if( !res ) {
 			delete socket;
@@ -166,7 +142,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, const int port)
 			m_listen_events.clear();
 			return;
 		}
-		m_listen_events[i] = new event::SslListenEvent(GetEventScheduler(i)->GetEngine(), socket, store);
+		m_listen_events[i] = new details::SslListenEvent(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
 	} 
 }
 
@@ -177,9 +153,7 @@ void TcpSslServer::Stop()
 	{
 		delete m_listen_event;
 	}
-	StopCoroutineSchedulers();
-	StopEventSchedulers();
-	StopTimerSchedulers();
+	DestroyGalayEnv();
 	m_is_running = false;
 	DestroySSLEnv();
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -278,7 +252,7 @@ step1:
 		while(true) {
 			int length = co_await AsyncRecv(socket, &rholder, max_header_size);
 			if( length <= 0 ) {
-				if( length == event::CommonFailedType::eCommonDisConnect || length == event::CommonFailedType::eCommonOtherFailed ) {
+				if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
 					bool res = co_await AsyncClose(socket);
 					co_return;
 				}
@@ -490,7 +464,7 @@ step1:
 		while(true) {
 			int length = co_await AsyncRecv(socket, &rholder, max_header_size);
 			if( length <= 0 ) {
-				if( length == event::CommonFailedType::eCommonDisConnect || length == event::CommonFailedType::eCommonOtherFailed ) {
+				if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
 					bool res = co_await AsyncClose(socket);
 					co_return;
 				}

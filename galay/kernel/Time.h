@@ -7,7 +7,7 @@
 #include <string>
 #include <functional>
 
-namespace galay::event {
+namespace galay::details {
     class TimeEvent;
 }
 
@@ -25,7 +25,7 @@ extern std::string GetCurrentGMTTimeString();
 */
 class Timer: public std::enable_shared_from_this<Timer> 
 {
-    friend class event::TimeEvent;
+    friend class details::TimeEvent;
 public:
     using ptr = std::shared_ptr<Timer>;
     class TimerCompare

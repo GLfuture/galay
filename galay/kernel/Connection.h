@@ -19,20 +19,10 @@ namespace galay::async
     class AsyncNetIo;
 };
 
-namespace galay::event
-{
-    class EventEngine;
-}
-
-namespace galay::action
+namespace galay::details
 {
     class IOEventAction;
-};
-
-namespace galay::protocol::http
-{
-    class HttpRequest;
-    class HttpResponse;
+    class EventEngine;
 };
 
 
@@ -105,54 +95,67 @@ private:
     std::function<coroutine::Coroutine(TcpSslConnectionManager)> m_callback;
 };
 
-struct HttpProtoStore
-{
-    using HttpRequest = protocol::http::HttpRequest;
-    using HttpResponse = protocol::http::HttpResponse;
-    using ptr = std::shared_ptr<HttpProtoStore>;
+template <typename T>
+concept RequestType = std::is_base_of<protocol::Request, T>::value;
 
-    HttpProtoStore(util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
-        util::ObjectPoolMutiThread<HttpResponse>* response_pool);
-    protocol::http::HttpRequest* m_request;
-    protocol::http::HttpResponse* m_response;
-    util::ObjectPoolMutiThread<HttpRequest>* m_request_pool;
-    util::ObjectPoolMutiThread<HttpResponse>* m_response_pool;
-    ~HttpProtoStore();
+template <typename T>
+concept ResponseType = std::is_base_of<protocol::Response, T>::value;
+
+template <RequestType Request, ResponseType Response>
+struct ProtocolStore
+{
+    using ptr = std::shared_ptr<ProtocolStore>;
+    ProtocolStore(util::ObjectPoolMutiThread<Request>* request_pool, \
+        util::ObjectPoolMutiThread<Response>* response_pool)
+        :m_request(request_pool->GetObjector()), m_response(response_pool->GetObjector()), m_request_pool(request_pool), m_response_pool(response_pool) {}
+    ~ProtocolStore() {
+        m_request_pool->ReturnObjector(m_request);
+        m_response_pool->ReturnObjector(m_response);
+    }
+    Request* m_request;
+    Response* m_response;
+    util::ObjectPoolMutiThread<Request>* m_request_pool;
+    util::ObjectPoolMutiThread<Response>* m_response_pool;
 };
 
-class HttpConnectionManager
+template <RequestType Request, ResponseType Response>
+class ConnectionManager
 {
-    using HttpRequest = protocol::http::HttpRequest;
-    using HttpResponse = protocol::http::HttpResponse;
 public:
 
-    HttpConnectionManager(const TcpConnectionManager& manager, util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
-        util::ObjectPoolMutiThread<HttpResponse>* response_pool);
-    protocol::http::HttpRequest* GetRequest() const;
-    protocol::http::HttpResponse* GetResponse() const;
-    TcpConnection::ptr GetConnection();
-    ~HttpConnectionManager();
+    ConnectionManager(const TcpConnectionManager& manager, util::ObjectPoolMutiThread<Request>* request_pool, \
+        util::ObjectPoolMutiThread<Response>* response_pool)
+        :m_tcp_manager(manager), m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
+
+    Request* GetRequest() const { return m_proto_store->m_request; }
+    Response* GetResponse() const { return m_proto_store->m_response; }
+    TcpConnection::ptr GetConnection() { return m_tcp_manager.GetConnection(); }
+    ~ConnectionManager() = default;
 private:
     TcpConnectionManager m_tcp_manager;
-    HttpProtoStore::ptr m_proto_store;
+    ProtocolStore<Request, Response>::ptr m_proto_store;
 };
 
-class HttpsConnectionManager
+template <RequestType Request, ResponseType Response>
+class SslConnectionManager
 {
-    using HttpRequest = protocol::http::HttpRequest;
-    using HttpResponse = protocol::http::HttpResponse;
 public:
-
-    HttpsConnectionManager(const TcpSslConnectionManager& manager, util::ObjectPoolMutiThread<HttpRequest>* request_pool, \
-        util::ObjectPoolMutiThread<HttpResponse>* response_pool);
-    protocol::http::HttpRequest* GetRequest() const;
-    protocol::http::HttpResponse* GetResponse() const;
-    TcpSslConnection::ptr GetConnection();
-    ~HttpsConnectionManager();
+    SslConnectionManager(const TcpSslConnectionManager& manager, util::ObjectPoolMutiThread<Request>* request_pool, \
+        util::ObjectPoolMutiThread<Response>* response_pool)
+        :m_tcp_ssl_manager(manager), m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
+    Request* GetRequest() const { return m_proto_store->m_request; }
+    Response* GetResponse() const { return m_proto_store->m_response; }
+    TcpSslConnection::ptr GetConnection() { return m_tcp_ssl_manager.GetConnection(); }
+    ~SslConnectionManager() = default;
 private:
     TcpSslConnectionManager m_tcp_ssl_manager;
-    HttpProtoStore::ptr m_proto_store;
+    ProtocolStore<Request, Response>::ptr m_proto_store;
 };
+
+using HttpConnectionManager = ConnectionManager<protocol::http::HttpRequest, protocol::http::HttpResponse>;
+using HttpsConnectionManager = SslConnectionManager<protocol::http::HttpRequest, protocol::http::HttpResponse>;
+
+
 }
 
 

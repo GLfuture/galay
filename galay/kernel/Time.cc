@@ -95,7 +95,7 @@ Deadline::Deadline()
 
 coroutine::Awaiter_bool Deadline::TimeOut(uint64_t timeout_ms)
 {
-    auto action = new action::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx){
+    auto action = new details::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx){
         return false;
     });
     return {action, nullptr};

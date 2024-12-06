@@ -4,7 +4,7 @@
 namespace galay::coroutine
 {
 
-Awaiter_void::Awaiter_void(action::WaitAction *action, void* ctx)
+Awaiter_void::Awaiter_void(details::WaitAction *action, void* ctx)
     : m_ctx(ctx), m_action(action), m_coroutine_handle(nullptr)
 {
 
@@ -47,7 +47,7 @@ Coroutine *Awaiter_void::GetCoroutine() const
     return nullptr;
 }
 
-Awaiter_int::Awaiter_int(action::WaitAction* action, void* ctx)
+Awaiter_int::Awaiter_int(details::WaitAction* action, void* ctx)
     : m_ctx(ctx), m_result(0), m_action(action), m_coroutine_handle(nullptr)
 {
 
@@ -102,7 +102,7 @@ Coroutine *Awaiter_int::GetCoroutine() const
     return nullptr;
 }
 
-Awaiter_bool::Awaiter_bool(action::WaitAction* action, void* ctx)
+Awaiter_bool::Awaiter_bool(details::WaitAction* action, void* ctx)
 {
     this->m_action = action;
     this->m_result = false;
@@ -159,7 +159,7 @@ Coroutine* Awaiter_bool::GetCoroutine() const
     return nullptr;
 }
 
-Awaiter_ptr::Awaiter_ptr(action::WaitAction *action, void* ctx)
+Awaiter_ptr::Awaiter_ptr(details::WaitAction *action, void* ctx)
 {
     this->m_action = action;
     this->m_coroutine_handle = nullptr;
@@ -216,7 +216,7 @@ Coroutine *Awaiter_ptr::GetCoroutine() const
     return nullptr;
 }
 
-Awaiter_string::Awaiter_string(action::WaitAction *action, void* ctx)
+Awaiter_string::Awaiter_string(details::WaitAction *action, void* ctx)
 {
     this->m_action = action;
     this->m_result = "";
@@ -277,7 +277,7 @@ Coroutine *Awaiter_string::GetCoroutine() const
 
 //GHandle
 
-Awaiter_GHandle::Awaiter_GHandle(action::WaitAction *action, void* ctx)
+Awaiter_GHandle::Awaiter_GHandle(details::WaitAction *action, void* ctx)
     : m_ctx(ctx), m_result({-1}), m_action(action), m_coroutine_handle(nullptr)
 {
 

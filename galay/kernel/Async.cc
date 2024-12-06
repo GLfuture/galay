@@ -91,8 +91,8 @@ uint32_t& HandleOption::GetErrorCode()
     return m_error_code;
 }
 
-AsyncNetIo::AsyncNetIo(event::EventEngine* engine)
-    : m_handle({}), m_err_code(0), m_action(new action::IOEventAction(engine, new event::NetWaitEvent(this)))
+AsyncNetIo::AsyncNetIo(details::EventEngine* engine)
+    : m_handle({}), m_err_code(0), m_action(new details::IOEventAction(engine, new details::NetWaitEvent(this)))
 {
 }
 
@@ -113,12 +113,12 @@ uint32_t &AsyncNetIo::GetErrorCode()
     return this->m_err_code;
 }
 
-AsyncTcpSocket::AsyncTcpSocket(event::EventEngine *engine)
+AsyncTcpSocket::AsyncTcpSocket(details::EventEngine *engine)
     :AsyncNetIo(engine)
 {
 }
 
-AsyncSslNetIo::AsyncSslNetIo(event::EventEngine *engine)
+AsyncSslNetIo::AsyncSslNetIo(details::EventEngine *engine)
     : AsyncNetIo(engine)
 {
 }
@@ -131,12 +131,12 @@ AsyncSslNetIo::~AsyncSslNetIo()
     }
 }
 
-AsyncSslTcpSocket::AsyncSslTcpSocket(event::EventEngine *engine)
+AsyncSslTcpSocket::AsyncSslTcpSocket(details::EventEngine *engine)
     :AsyncSslNetIo(engine)
 {
 }
 
-AsyncUdpSocket::AsyncUdpSocket(event::EventEngine *engine)
+AsyncUdpSocket::AsyncUdpSocket(details::EventEngine *engine)
     :AsyncNetIo(engine), m_handle({}), m_error_code(0)
 {
 }
@@ -144,8 +144,8 @@ AsyncUdpSocket::AsyncUdpSocket(event::EventEngine *engine)
 AsyncUdpSocket::~AsyncUdpSocket()
 = default;
 
-AsyncFileIo::AsyncFileIo(event::EventEngine* engine)
-    :m_handle({}), m_error_code(0), m_action(new action::IOEventAction(engine, new event::FileIoWaitEvent(this)))
+AsyncFileIo::AsyncFileIo(details::EventEngine* engine)
+    :m_handle({}), m_error_code(0), m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
 {
 
 }
@@ -162,7 +162,7 @@ AsyncFileIo::~AsyncFileIo()
 
 #ifdef __linux__ 
 
-AsyncFileNativeAio::AsyncFileNativeAio(int maxevents, event::EventEngine *engine)
+AsyncFileNativeAio::AsyncFileNativeAio(int maxevents, details::EventEngine *engine)
     :AsyncFileIo(engine), m_current_index(0), m_unfinished_io(0)
 {
     int ret = io_setup(maxevents, &m_ioctx);
@@ -234,7 +234,7 @@ coroutine::Awaiter_int AsyncFileNativeAio::Commit()
         return coroutine::Awaiter_int(-1);
     }
     m_current_index = 0;
-    dynamic_cast<event::FileIoWaitEvent*>(GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeLinuxAio);
+    dynamic_cast<details::FileIoWaitEvent*>(GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
     return coroutine::Awaiter_int(GetAction(), nullptr);
 }
 
@@ -252,7 +252,7 @@ AsyncFileNativeAio::~AsyncFileNativeAio()
 
 #endif
 
-AsyncFileDescriptor::AsyncFileDescriptor(event::EventEngine *engine)
+AsyncFileDescriptor::AsyncFileDescriptor(details::EventEngine *engine)
     :AsyncFileIo(engine)
 {
 }

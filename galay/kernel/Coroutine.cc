@@ -148,7 +148,7 @@ void WaitGroup::Done()
     if(m_count == 0) {
         if(m_coroutine) {
             m_coroutine->GetAwaiter()->SetResult(true);
-            GetCoroutineSchedulerInOrder()->EnqueueCoroutine(m_coroutine);
+            CoroutineSchedulerHolder::GetInstance()->GetScheduler()->EnqueueCoroutine(m_coroutine);
         }
     }
 }
@@ -162,7 +162,7 @@ void WaitGroup::Reset(uint32_t count)
 
 Awaiter_bool WaitGroup::Wait()
 {
-    auto* action = new action::CoroutineHandleAction([this](coroutine::Coroutine* co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([this](coroutine::Coroutine* co, void* ctx)->bool{
         std::unique_lock lk(m_mutex);
         if(m_count == 0) {
             co->GetAwaiter()->SetResult(false);
@@ -176,7 +176,7 @@ Awaiter_bool WaitGroup::Wait()
 
 Awaiter_void RoutineContext::DeferDone()
 {
-    auto* action = new action::CoroutineHandleAction([this](coroutine::Coroutine* co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([this](coroutine::Coroutine* co, void* ctx)->bool{
         m_coroutine = co;
         co->AppendExitCallback([this](){
             m_coroutine = nullptr;
@@ -205,7 +205,7 @@ Awaiter_bool RoutineContextWithWaitGroup::Wait()
 
 Awaiter_void RoutineContextWithWaitGroup::DeferDone()
 {
-    auto* action = new action::CoroutineHandleAction([this](coroutine::Coroutine* co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([this](coroutine::Coroutine* co, void* ctx)->bool{
         m_coroutine = co;
         co->AppendExitCallback([this](){
             m_wait_group.Done();
@@ -256,7 +256,7 @@ namespace galay::this_coroutine
 {
 coroutine::Awaiter_void AddToCoroutineStore()
 {
-    auto* action = new action::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx)->bool{
         co->AppendExitCallback([co](){
             coroutine::GetCoroutineStore()->RemoveCoroutine(co);
         });
@@ -268,25 +268,22 @@ coroutine::Awaiter_void AddToCoroutineStore()
 
 coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine)
 {
-    auto* action = new action::CoroutineHandleAction([&coroutine](coroutine::Coroutine* co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([&coroutine](coroutine::Coroutine* co, void* ctx)->bool{
         coroutine = co;
         return false;
     });
     return {action, nullptr};
 }
 
-static thread_local action::TimeEventAction GlobalTimeAction;
+static thread_local details::TimeEventAction GlobalTimeAction;
 
-coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, scheduler::CoroutineScheduler* scheduler)
+coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, details::CoroutineScheduler* scheduler)
 {
-    if(GetTimerSchedulerNum() == 0) {
-        return coroutine::Awaiter_bool(false);
-    }
     GlobalTimeAction.CreateTimer(ms, timer, [scheduler](const galay::Timer::ptr& use_timer){
         const auto co = std::any_cast<coroutine::Coroutine*>(use_timer->GetContext());
         co->GetAwaiter()->SetResult(true);
         if(scheduler == nullptr) {
-            GetCoroutineSchedulerInOrder()->EnqueueCoroutine(co);
+            CoroutineSchedulerHolder::GetInstance()->GetScheduler()->EnqueueCoroutine(co);
         } else{
             scheduler->EnqueueCoroutine(co);
         }
@@ -297,7 +294,7 @@ coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* time
 
 coroutine::Awaiter_void Exit(const std::function<void(void)>& callback)
 {
-    auto* action = new action::CoroutineHandleAction([callback](coroutine::Coroutine* co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([callback](coroutine::Coroutine* co, void* ctx)->bool{
         co->AppendExitCallback(std::move(callback));
         return false;
     });

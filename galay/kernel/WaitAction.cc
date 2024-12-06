@@ -7,7 +7,7 @@
 #include "Time.h"
 #include "Log.h"
 
-namespace galay::action
+namespace galay::details
 {
 
 TimeEventAction::TimeEventAction()
@@ -31,7 +31,7 @@ bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
     if(m_ms <= 0) {
         return false;
     } 
-    *m_timer = GetTimerSchedulerInOrder()->AddTimer(m_ms, std::move(m_callback));
+    *m_timer = TimerSchedulerHolder::GetInstance()->GetScheduler()->AddTimer(m_ms, std::move(m_callback));
     (*m_timer)->GetContext() = co;
     return true;
 }
@@ -39,7 +39,7 @@ bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
 TimeEventAction::~TimeEventAction()
 = default;
 
-IOEventAction::IOEventAction(event::EventEngine* engine, event::WaitEvent *event)
+IOEventAction::IOEventAction(details::EventEngine* engine, details::WaitEvent *event)
     :m_engine(engine), m_event(event)
 {
 }
@@ -70,7 +70,7 @@ bool IOEventAction::DoAction(coroutine::Coroutine *co, void* ctx)
     return true;
 }
 
-void IOEventAction::ResetEvent(event::WaitEvent *event)
+void IOEventAction::ResetEvent(details::WaitEvent *event)
 {
     this->m_event = event;
 }

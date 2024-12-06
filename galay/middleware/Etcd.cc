@@ -2,7 +2,7 @@
 #include "galay/kernel/Scheduler.h"
 #include "galay/kernel/ExternApi.h"
 
-bool galay::action::EtcdAction::DoAction(coroutine::Coroutine *co, void *ctx)
+bool galay::details::EtcdAction::DoAction(coroutine::Coroutine *co, void *ctx)
 {
     m_callback(co, ctx);
     return true;

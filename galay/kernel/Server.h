@@ -5,13 +5,11 @@
 #include <vector>
 #include <atomic>
 #include <string_view>
-#include <functional>
 #include <unordered_map>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
-#include "galay/util/ObjectPool.hpp"
-#include "galay/protocol/Http.h"
+#include "Connection.h"
 
-namespace galay::event
+namespace galay::details
 {
     class ListenEvent;
     class SslListenEvent;
@@ -21,16 +19,6 @@ namespace galay::async
 {
     class AsyncNetIo;
     class AsyncSslNetIo;
-}
-
-namespace galay
-{
-    class TcpConnectionManager;
-    class TcpSslConnectionManager;
-    class TcpCallbackStore;
-    class TcpSslCallbackStore;
-    class HttpConnectionManager;
-    class HttpsConnectionManager;
 }
 
 namespace galay::coroutine
@@ -44,12 +32,9 @@ namespace galay::server
 {
 
 #define DEFAULT_SERVER_BACKLOG                          32
-#define DEFAULT_SERVER_NET_SCHEDULER_NUM                4
-#define DEFAULT_SERVER_CO_SCHEDULER_TIMEOUT_MS          (-1)
-#define DEFAULT_SERVER_CO_SCHEDULER_NUM                 4
-#define DEFAULT_SERVER_NET_SCHEDULER_TIMEOUT_MS         (-1)
-#define DEFAULT_SERVER_TIMER_SCHEDULER_NUM              1
-#define DEFAULT_SERVER_TIMER_SCHEDULER_TIMEOUT_MS       (-1)
+#define DEFAULT_COROUTINE_SCHEDULER_CONF                {4, -1}
+#define DEFAULT_NETWORK_SCHEDULER_CONF                  {4, -1}
+#define DEFAULT_TIMER_SCHEDULER_CONF                    {1, -1}
 
 
 #define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
@@ -58,12 +43,10 @@ namespace galay::server
     {
         using ptr = std::shared_ptr<TcpServerConfig>;
         TcpServerConfig();
-        int m_backlog;                          // 半连接队列长度
-        int m_coroutine_scheduler_num;          // 协程线程个数
-        int m_network_scheduler_num;            // 网络线程个数
-        int m_network_scheduler_timeout_ms;     // EventEngine返回一次的超时
-        int m_timer_scheduler_num;              // 定时线程个数
-        int m_timer_scheduler_timeout_ms;       // EventEngine返回一次的超时
+        int m_backlog;                                  // 半连接队列长度
+        std::pair<uint32_t, int> m_coroutineConf;       // 协程调度器配置
+        std::pair<uint32_t, int> m_netSchedulerConf;    // 网络调度器配置
+        std::pair<uint32_t, int> m_timerSchedulerConf;  // 定时调度器配置
         virtual ~TcpServerConfig() = default;
     };
 
@@ -111,7 +94,7 @@ namespace galay::server
     protected:
         TcpServerConfig::ptr m_config;
         std::atomic_bool m_is_running;
-        std::vector<event::ListenEvent*> m_listen_events;
+        std::vector<details::ListenEvent*> m_listen_events;
     };
 
     class TcpSslServer: public Server
@@ -127,7 +110,7 @@ namespace galay::server
     protected:
         TcpSslServerConfig::ptr m_config;
         std::atomic_bool m_is_running;
-        std::vector<event::SslListenEvent*> m_listen_events;
+        std::vector<details::SslListenEvent*> m_listen_events;
     };
     
     template<typename T>

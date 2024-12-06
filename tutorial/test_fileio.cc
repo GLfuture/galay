@@ -44,7 +44,7 @@ Coroutine test()
 galay::coroutine::Coroutine test()
 {
     const GHandle handle = co_await galay::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    galay::async::AsyncFileDescriptor fileio(galay::GetEventScheduler(0)->GetEngine());
+    galay::async::AsyncFileDescriptor fileio(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     fileio.GetHandle() = handle;
     galay::IOVecHolder holder;
     galay::VecMalloc(&holder, 10 * 1024 * 1024);
@@ -109,15 +109,11 @@ galay::coroutine::Coroutine test()
 int main()
 {
     spdlog::set_level(spdlog::level::debug);
-    galay::DynamicResizeEventSchedulers(1);
-    galay::DynamicResizeCoroutineSchedulers(1);
-    galay::StartEventSchedulers(-1);
-    galay::StartCoroutineSchedulers();
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
     std::this_thread::sleep_for(std::chrono::seconds(1));
     test();
     getchar();
-    galay::StopCoroutineSchedulers();
-    galay::StopEventSchedulers();
+    galay::DestroyGalayEnv();
     remove("test.txt");
     return 0;
 }

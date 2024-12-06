@@ -22,11 +22,11 @@ int main()
 {
 #ifdef USE_KQUEUE
     spdlog::set_level(spdlog::level::debug);
-    galay::event::KqueueEventEngine::ptr engine = std::make_shared<galay::event::KqueueEventEngine>();
+    galay::details::KqueueEventEngine::ptr engine = std::make_shared<galay::details::KqueueEventEngine>();
     GHandle handle{};
-    galay::event::TimeEvent::CreateHandle(handle);
+    galay::details::TimeEvent::CreateHandle(handle);
     
-    galay::event::TimeEvent::ptr event = std::make_shared<galay::event::TimeEvent>(handle, engine.get());
+    galay::details::TimeEvent::ptr event = std::make_shared<galay::details::TimeEvent>(handle, engine.get());
     int i = 0;
     galay::galay::Timer::ptr timer = event->AddTimer(1000, [event, &i](galay::galay::Timer::ptr t) {
         std::cout << "timer expired" << std::endl;
@@ -64,7 +64,7 @@ galay::coroutine::Coroutine test()
 
 int main()
 { 
-    galay::InitializeGalayEnv(0 ,1 , 1, -1);
+    galay::InitializeGalayEnv({1, -1}, {0, -1}, {1, -1});
     std::thread th([]{
         test();
     });

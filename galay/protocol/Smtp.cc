@@ -31,35 +31,35 @@ std::string SmtpError::ToString(SmtpErrorCode code) const
 
 namespace galay::protocol::smtp
 {
-std::string_view 
+std::string 
 SmtpHelper::Hello(SmtpRequest& request)
 {
     request.m_content = "HELO MSG";
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::Auth(SmtpRequest& request)
 {
     request.m_content = "AUTH LOGIN";
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::Account(SmtpRequest& request, std::string account)
 {
     request.m_content = security::Base64Util::Base64Encode(account);
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::Password(SmtpRequest& request, std::string password)
 {
     request.m_content = security::Base64Util::Base64Encode(password);
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::MailFrom(SmtpRequest& request, std::string from_mail)
 {
     request.m_frommail = from_mail;
@@ -68,7 +68,7 @@ SmtpHelper::MailFrom(SmtpRequest& request, std::string from_mail)
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::RcptTo(SmtpRequest& request, std::string to_mail)
 {
     request.m_tomails.push(to_mail);
@@ -77,14 +77,14 @@ SmtpHelper::RcptTo(SmtpRequest& request, std::string to_mail)
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::Data(SmtpRequest& request)
 {
     request.m_content = "DATA";
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::Msg(SmtpRequest& request, const SmtpMsgInfo& msg)
 {
     std::string res = "From: <";
@@ -109,7 +109,7 @@ SmtpHelper::Msg(SmtpRequest& request, const SmtpMsgInfo& msg)
     return request.EncodePdu();
 }
 
-std::string_view
+std::string
 SmtpHelper::Quit(SmtpRequest& request)
 {
     request.m_content = "QUIT\r\n";

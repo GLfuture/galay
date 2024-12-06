@@ -4,13 +4,9 @@
 #include "Coroutine.h"
 #include <string>
 
-namespace galay::event
+namespace galay::details
 {
-    class WaitEvent;
-}
-
-namespace galay::action
-{
+class WaitEvent;
 
 class WaitAction
 {
@@ -27,7 +23,7 @@ namespace galay::coroutine
 class Awaiter_void final : public Awaiter
 {
 public:
-    Awaiter_void(action::WaitAction* action, void* ctx);
+    Awaiter_void(details::WaitAction* action, void* ctx);
     Awaiter_void();
     [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
@@ -37,14 +33,14 @@ public:
     [[nodiscard]] Coroutine* GetCoroutine() const;
 private:
     void* m_ctx;
-    action::WaitAction* m_action;
+    details::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
 class Awaiter_int final : public Awaiter
 {
 public:
-    Awaiter_int(action::WaitAction* action, void* ctx);
+    Awaiter_int(details::WaitAction* action, void* ctx);
     explicit Awaiter_int(int result);
     [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
@@ -55,14 +51,14 @@ public:
 private:
     void* m_ctx;
     int m_result;
-    action::WaitAction* m_action;
+    details::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
 class Awaiter_bool final : public Awaiter
 {
 public:
-    Awaiter_bool(action::WaitAction* action, void* ctx);
+    Awaiter_bool(details::WaitAction* action, void* ctx);
     explicit Awaiter_bool(bool result);
     [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
@@ -73,14 +69,14 @@ public:
 private:
     void* m_ctx;
     bool m_result;
-    action::WaitAction* m_action;
+    details::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
 class Awaiter_ptr final : public Awaiter
 {
 public:
-    Awaiter_ptr(action::WaitAction* action, void* ctx);
+    Awaiter_ptr(details::WaitAction* action, void* ctx);
     explicit Awaiter_ptr(void* ptr);
     [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
@@ -91,7 +87,7 @@ public:
 private:
     void* m_ctx;
     void* m_ptr;
-    action::WaitAction* m_action;
+    details::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
@@ -99,7 +95,7 @@ private:
 class Awaiter_string final : public Awaiter
 {
 public:
-    Awaiter_string(action::WaitAction* action, void* ctx);
+    Awaiter_string(details::WaitAction* action, void* ctx);
     explicit Awaiter_string(const std::string& result);
     [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
@@ -110,14 +106,14 @@ public:
 private:
     void* m_ctx;
     std::string m_result;
-    action::WaitAction* m_action;
+    details::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 
 class Awaiter_GHandle final : public Awaiter
 {
 public:
-    Awaiter_GHandle(action::WaitAction* action, void* ctx);
+    Awaiter_GHandle(details::WaitAction* action, void* ctx);
     explicit Awaiter_GHandle(GHandle handle);
     [[nodiscard]] bool await_ready() const noexcept;
     //true will suspend, false will not
@@ -128,7 +124,7 @@ public:
 private:
     void* m_ctx;
     GHandle m_result;
-    action::WaitAction* m_action;
+    details::WaitAction* m_action;
     std::coroutine_handle<Coroutine::promise_type> m_coroutine_handle;
 };
 

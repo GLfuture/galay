@@ -8,6 +8,10 @@
 
 namespace galay
 {
+
+SSL_CTX* g_ssl_ctx = nullptr;
+
+
 IOVecHolder::IOVecHolder(size_t size)
 {
     VecMalloc(&m_vec, size);
@@ -179,21 +183,21 @@ bool BindAndListen(async::AsyncNetIo *asocket, int port, int backlog)
 
 coroutine::Awaiter_GHandle AsyncAccept(async::AsyncNetIo *asocket, NetAddr* addr)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeAccept);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeAccept);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), addr};
 }
 
 coroutine::Awaiter_bool AsyncConnect(async::AsyncNetIo *asocket, NetAddr* addr)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeConnect);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeConnect);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), addr};
 }
 
 coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, IOVec* iov, size_t length)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeRecv);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
     return {asocket->GetAction(), iov};
@@ -201,7 +205,7 @@ coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, IOVec* iov, size_t 
 
 coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, IOVec *iov, size_t length)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSend);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
     return {asocket->GetAction(), iov};
@@ -209,7 +213,7 @@ coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, IOVec *iov, size_t 
 
 coroutine::Awaiter_bool AsyncClose(async::AsyncNetIo *asocket)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeClose);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeClose);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), nullptr};
 }
@@ -228,21 +232,21 @@ bool AsyncSSLSocket(async::AsyncSslNetIo* asocket, SSL_CTX *ctx)
 
 coroutine::Awaiter_bool AsyncSSLAccept(async::AsyncSslNetIo *asocket)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslAccept);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslAccept);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), nullptr};
 }
 
 coroutine::Awaiter_bool SSLConnect(async::AsyncSslNetIo *asocket)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslConnect);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslConnect);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), nullptr};
 }
 
 coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, IOVec *iov, size_t length)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslRecv);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
     return {asocket->GetAction(), iov};
@@ -250,7 +254,7 @@ coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, IOVec *iov, s
 
 coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, IOVec *iov, size_t length)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslSend);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
     return {asocket->GetAction(), iov};
@@ -258,7 +262,7 @@ coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, IOVec *iov, s
 
 coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo *asocket)
 {
-    dynamic_cast<event::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(event::kTcpWaitEventTypeSslClose);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslClose);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), nullptr};
 }
@@ -276,7 +280,7 @@ coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, const int flags, mode
 
 coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov, size_t length)
 {
-    dynamic_cast<event::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeRead);
+    dynamic_cast<details::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeRead);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
     return {afileio->GetAction(), iov};
@@ -284,17 +288,14 @@ coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov, si
 
 coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov, size_t length)
 {
-    dynamic_cast<event::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(event::kFileIoWaitEventTypeWrite);
+    dynamic_cast<details::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeWrite);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
     return {afileio->GetAction(), iov};
 }
 
 
-std::vector<scheduler::CoroutineScheduler*> g_coroutine_schedulers;
-std::vector<scheduler::EventScheduler*> g_event_schedulers;
-std::vector<scheduler::TimerScheduler*> g_timer_schedulers;
-SSL_CTX* g_ssl_ctx = nullptr;
+
 
 
 bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)
@@ -338,192 +339,18 @@ SSL_CTX *GetGlobalSSLCtx()
     return g_ssl_ctx;
 }
 
-void InitializeGalayEnv(int event_schedulers, int coroutine_schedulers, int timer_schedulers, int timeout)
+void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf)
 {
-    DynamicResizeCoroutineSchedulers(coroutine_schedulers);
-    DynamicResizeEventSchedulers(event_schedulers);
-    DynamicResizeTimerSchedulers(timer_schedulers);
-    StartCoroutineSchedulers();
-    StartEventSchedulers(timeout);
-    StartTimerSchedulers(timeout);
+    CoroutineSchedulerHolder::GetInstance()->Initialize(coroutineConf.first, coroutineConf.second);
+    EeventSchedulerHolder::GetInstance()->Initialize(eventConf.first, eventConf.second);
+    TimerSchedulerHolder::GetInstance()->Initialize(timerConf.first, timerConf.second);
 }
 
 void DestroyGalayEnv()
 {
-    StopCoroutineSchedulers();
-    StopEventSchedulers();
-    StopTimerSchedulers();
-}
-
-void DynamicResizeCoroutineSchedulers(const int num)
-{
-    const int now = static_cast<int>(g_coroutine_schedulers.size());
-    if(const int sub = num - now; sub > 0) {
-        for(int i = 0; i < sub; ++i) {
-            g_coroutine_schedulers.push_back(new scheduler::CoroutineScheduler);
-        }
-    }else if(sub < 0) {
-        for(int i = now - 1 ; i >= -sub ; -- i)
-        {
-            g_coroutine_schedulers[i]->Stop();
-            delete g_coroutine_schedulers[i];
-            g_coroutine_schedulers.erase(std::prev(g_coroutine_schedulers.end()));
-        }
-    }
-}
-
-void DynamicResizeEventSchedulers(const int num)
-{
-    const int now = static_cast<int>(g_event_schedulers.size());
-    if(const int sub = num - now; sub > 0) {
-        for(int i = 0; i < sub; ++i) {
-            g_event_schedulers.push_back(new scheduler::EventScheduler);
-        }
-    } else if(sub < 0) {
-        for(int i = now - 1 ; i >= -sub ; -- i)
-        {
-            g_event_schedulers[i]->Stop();
-            delete g_event_schedulers[i];
-            g_event_schedulers.erase(std::prev(g_event_schedulers.end()));
-        }
-    }
-}
-
-void DynamicResizeTimerSchedulers(const int num)
-{
-    const int now = static_cast<int>(g_timer_schedulers.size());
-    if(const int sub = num - now; sub > 0) {
-        for(int i = 0; i < sub; ++i) {
-            g_timer_schedulers.push_back(new scheduler::TimerScheduler);
-        }
-    } else if(sub < 0) {
-        for(int i = g_timer_schedulers.size() - 1 ; i >= -sub ; -- i)
-        {
-            g_timer_schedulers[i]->Stop();
-            delete g_timer_schedulers[i];
-            g_timer_schedulers.erase(std::prev(g_timer_schedulers.end()));
-        }
-    }
-}
-
-int GetCoroutineSchedulerNum()
-{
-    return g_coroutine_schedulers.size();
-}
-
-int GetEventSchedulerNum()
-{
-    return g_event_schedulers.size();
-}
-
-int GetTimerSchedulerNum()
-{
-    return g_timer_schedulers.size();
-}
-
-scheduler::EventScheduler* GetEventScheduler(int index)
-{
-    return g_event_schedulers[index];
-}
-
-static std::atomic_uint32_t g_current_coroutine_scheduler_index = 0;
-
-scheduler::CoroutineScheduler *GetCoroutineSchedulerInOrder()
-{
-    const uint32_t size = g_coroutine_schedulers.size();
-    uint32_t now = g_current_coroutine_scheduler_index.load();
-    int retries = 0;
-    while(retries < MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES){
-        if( g_current_coroutine_scheduler_index.compare_exchange_strong(now, (now + 1) % size) ){
-            return g_coroutine_schedulers[now];
-        }
-        std::this_thread::yield();
-        now = g_current_coroutine_scheduler_index.load();
-        ++retries;
-    }
-    return nullptr;
-}
-
-scheduler::CoroutineScheduler *GetCoroutineScheduler(int index)
-{
-    return g_coroutine_schedulers[index];
-}
-
-static std::atomic_uint32_t g_current_timer_scheduler_index = 0;
-
-scheduler::TimerScheduler *GetTimerSchedulerInOrder()
-{
-    const uint32_t size = g_timer_schedulers.size();
-    uint32_t now = g_current_timer_scheduler_index.load();
-    int retries = 0;
-    while(retries < MAX_GET_TIMER_SCHEDULER_RETRY_TIMES){
-        if( g_current_timer_scheduler_index.compare_exchange_strong(now, (now + 1) % size) ){
-            return g_timer_schedulers[now];
-        }
-        std::this_thread::yield();
-        now = g_current_timer_scheduler_index.load();
-        ++retries;
-    }
-    return nullptr;
-}
-
-scheduler::TimerScheduler *GetTimerScheduler(int index)
-{
-    return g_timer_schedulers[index];
-}
-
-void StartCoroutineSchedulers()
-{
-    for(const auto & g_coroutine_scheduler : g_coroutine_schedulers)
-    {
-        g_coroutine_scheduler->Loop();
-    }
-}
-
-void StartEventSchedulers(int timeout)
-{
-    for(const auto & g_event_scheduler : g_event_schedulers)
-    {
-        g_event_scheduler->Loop(timeout);
-    }
-}
-
-void StartTimerSchedulers(const int timeout)
-{
-    for(const auto & g_timer_scheduler : g_timer_schedulers)
-    {
-        g_timer_scheduler->Loop(timeout);
-    }
-}
-
-void StopCoroutineSchedulers()
-{
-    for(const auto & g_coroutine_scheduler : g_coroutine_schedulers)
-    {
-        g_coroutine_scheduler->Stop();
-        delete g_coroutine_scheduler;
-    }
-    g_coroutine_schedulers.clear();
-}
-
-void StopEventSchedulers()
-{
-    for(const auto & g_event_scheduler : g_event_schedulers)
-    {
-        g_event_scheduler->Stop();
-        delete g_event_scheduler;
-    }
-    g_event_schedulers.clear();
-}
-
-void StopTimerSchedulers()
-{
-    for(int i = 0 ; i < g_timer_schedulers.size() ; ++i )
-    {
-        g_timer_schedulers[i]->Stop();
-        delete g_timer_schedulers[i];
-    }
-    g_timer_schedulers.clear();
+    CoroutineSchedulerHolder::GetInstance()->Destroy();
+    EeventSchedulerHolder::GetInstance()->Destroy();
+    TimerSchedulerHolder::GetInstance()->Destroy();
 }
 
 }

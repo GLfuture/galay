@@ -10,7 +10,7 @@
 #include "Log.h"
 
 
-namespace galay::event
+namespace galay::details
 {
 
 std::atomic_uint32_t EventEngine::gEngineId = 0;
@@ -44,8 +44,8 @@ EpollEventEngine::Loop(int timeout)
         int nEvents;
         if(initial) {
             initial = false;
-            this->m_stop = false;
             LogTrace("[Engine Start, Engine: {}]", m_handle.fd);
+            this->m_stop = false;
             nEvents = epoll_wait(m_handle.fd, m_events, m_event_size, timeout);
         }else{
             nEvents = epoll_wait(m_handle.fd, m_events, m_event_size, timeout);
@@ -236,8 +236,8 @@ bool KqueueEventEngine::Loop(int timeout)
         int nEvents;
         if(initial) {
             initial = false;
-            this->m_stop = false;
             LogTrace("[Engine Start, Engine: {}]", m_handle.fd);
+            this->m_stop = false;
             if(timeout > 0) nEvents = kevent(m_handle.fd, nullptr, 0, m_events, m_event_size, &ts);
             else nEvents = kevent(m_handle.fd, nullptr, 0, m_events, m_event_size, nullptr);
         }else{

@@ -4,20 +4,17 @@
 #include "Awaiter.h"
 #include <functional>
 
-namespace galay::event{
-    class NetWaitEvent;
-    class NetSslWaitEvent;
-    class UdpWaitEvent;
-    class FileIoWaitEvent;
-    class EventEngine;
-}
-
 namespace galay{
     class Timer;
 }
 
-namespace galay::action {
+namespace galay::details {
 
+class NetWaitEvent;
+class NetSslWaitEvent;
+class UdpWaitEvent;
+class FileIoWaitEvent;
+class EventEngine;
 /*
     global 
 */
@@ -45,16 +42,16 @@ class IOEventAction: public WaitAction
 public:
     using ptr = std::shared_ptr<IOEventAction>;
 
-    IOEventAction(event::EventEngine* engine, event::WaitEvent* event);
+    IOEventAction(details::EventEngine* engine, details::WaitEvent* event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     bool DoAction(coroutine::Coroutine* co, void* ctx) override;
-    void ResetEvent(event::WaitEvent* event);
-    [[nodiscard]] event::WaitEvent* GetBindEvent() const { return m_event; };
+    void ResetEvent(details::WaitEvent* event);
+    [[nodiscard]] details::WaitEvent* GetBindEvent() const { return m_event; };
     ~IOEventAction() override;
 private:
-    event::EventEngine* m_engine;
-    event::WaitEvent* m_event;
+    details::EventEngine* m_engine;
+    details::WaitEvent* m_event;
 };
 
 

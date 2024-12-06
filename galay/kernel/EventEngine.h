@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 
-namespace galay::event
+namespace galay::details
 {
     #define DEFAULT_MAX_EVENTS 1024
 
@@ -26,6 +26,7 @@ public:
     virtual int AddEvent(Event* event, void* ctx) = 0;
     virtual int ModEvent(Event* event, void* ctx) = 0;
     virtual int DelEvent(Event* event, void* ctx) = 0;
+    virtual bool IsRunning() const = 0;
     virtual uint32_t GetErrorCode() const = 0;
     virtual GHandle GetHandle() = 0;
     virtual uint32_t GetMaxEventSize() = 0;
@@ -46,6 +47,7 @@ public:
     virtual int AddEvent(Event* event, void* ctx) override;
     virtual int ModEvent(Event* event, void* ctx) override;
     virtual int DelEvent(Event* event, void* ctx) override;
+    bool IsRunning() const override { return !m_stop; }
     virtual uint32_t GetErrorCode() const override { return m_error_code; }
     virtual GHandle GetHandle() override { return m_handle; }
     virtual uint32_t GetMaxEventSize() override { return m_event_size; }
@@ -90,6 +92,7 @@ public:
         DelEvent will move the event from event list, please call Event.Free() to free the event
     */
     int DelEvent(Event* event, void* ctx) override;
+    bool IsRunning() const override { return !m_stop; }
     uint32_t GetErrorCode() const override { return m_error_code; }
     GHandle GetHandle() override { return m_handle; }
     uint32_t GetMaxEventSize() override { return m_event_size; }

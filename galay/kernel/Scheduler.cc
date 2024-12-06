@@ -6,18 +6,17 @@
 #include "galay/util/Thread.h"
 #include "Log.h"
 
-namespace galay::scheduler
+namespace galay::details
 {
 
 EventScheduler::EventScheduler()
 {
-    m_start = false;
 #if defined(USE_EPOLL)
-    m_engine = std::make_shared<event::EpollEventEngine>();
+    m_engine = std::make_shared<details::EpollEventEngine>();
 #elif defined(USE_IOURING)
     m_engine = std::make_shared<IoUringEventEngine>();
 #elif defined(USE_KQUEUE)
-    m_engine = std::make_shared<event::KqueueEventEngine>();
+    m_engine = std::make_shared<details::KqueueEventEngine>();
 #endif
     m_waiter = std::make_shared<thread::ThreadWaiters>(1);
 }
@@ -30,17 +29,19 @@ bool EventScheduler::Loop(int timeout)
         m_waiter->Decrease();
     });
     this->m_thread->detach();
-    m_start = true;
     return true;
 }
 
 bool EventScheduler::Stop() const
 {
-    if(!m_start) {
-        return false;
-    }
+    if(!m_engine->IsRunning()) return false;
     m_engine->Stop();
     return m_waiter->Wait(5000);
+}
+
+bool EventScheduler::IsRunning() const
+{
+    return m_engine->IsRunning();
 }
 
 uint32_t EventScheduler::GetErrorCode() const
@@ -48,12 +49,10 @@ uint32_t EventScheduler::GetErrorCode() const
     return m_engine->GetErrorCode();
 }
 
-EventScheduler::~EventScheduler()
-= default;
 
 CoroutineScheduler::CoroutineScheduler()
+    : m_running(false)
 {
-    m_start = false;
     m_waiter = std::make_shared<thread::ThreadWaiters>(1);
 }
 
@@ -63,10 +62,11 @@ CoroutineScheduler::EnqueueCoroutine(coroutine::Coroutine *coroutine)
     m_coroutines_queue.enqueue(coroutine);
 }
 
-bool CoroutineScheduler::Loop()
+bool CoroutineScheduler::Loop(int timeout)
 {
     this->m_thread = std::make_unique<std::thread>([this](){
         coroutine::Coroutine* co = nullptr;
+        m_running = true;
         while(true)
         {
             m_coroutines_queue.wait_dequeue(co);
@@ -80,13 +80,12 @@ bool CoroutineScheduler::Loop()
         m_waiter->Decrease();
     });
     this->m_thread->detach();
-    m_start = true;
     return true;
 }
 
 bool CoroutineScheduler::Stop()
 {
-    if(!m_start) {
+    if(!m_running) {
         return false;
     }
     m_coroutines_queue.enqueue(nullptr);
@@ -94,13 +93,16 @@ bool CoroutineScheduler::Stop()
     return m_waiter->Wait(5000);
 }
 
-
+bool CoroutineScheduler::IsRunning() const
+{
+    return m_running;
+}
 
 TimerScheduler::TimerScheduler()
 {
     GHandle handle{};
-    event::TimeEvent::CreateHandle(handle);
-    m_timer_event = new event::TimeEvent(handle, m_engine.get());
+    details::TimeEvent::CreateHandle(handle);
+    m_timer_event = new details::TimeEvent(handle, m_engine.get());
 }
 
 std::shared_ptr<galay::Timer> TimerScheduler::AddTimer(const int64_t ms, std::function<void(std::shared_ptr<galay::Timer>)>&& callback) const
@@ -118,13 +120,19 @@ bool TimerScheduler::Stop() const
     return EventScheduler::Stop();
 }
 
+bool TimerScheduler::IsRunning() const
+{
+    return EventScheduler::IsRunning();
+}
+
 uint32_t TimerScheduler::GetErrorCode() const
 {
     return EventScheduler::GetErrorCode();
 }
 
 TimerScheduler::~TimerScheduler()
-{
-    delete m_timer_event;
+{ 
+    delete m_timer_event; 
 }
+
 }

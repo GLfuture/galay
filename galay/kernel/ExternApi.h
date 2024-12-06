@@ -2,10 +2,13 @@
 #define GALAY_EXTERNAPI_H
 
 #include "Awaiter.h"
+#include "Strategy.hpp"
+#include "Log.h"
+#include <thread>
 #include <openssl/ssl.h>
 
 
-namespace galay::scheduler {
+namespace galay::details {
     class EventScheduler;
     class CoroutineScheduler;
     class TimerScheduler;
@@ -134,46 +137,130 @@ bool DestroySSLEnv();
 SSL_CTX* GetGlobalSSLCtx();
 
 
+template<typename T>
+concept LoadBalancerType = requires(T t)
+{
+    requires std::is_constructible_v<T, const std::vector<typename T::value_type*>&>;
+    requires std::is_same_v<decltype(t.Select()), typename T::value_type*>;
+};
 
-void InitializeGalayEnv(int event_schedulers, int coroutine_schedulers, int timer_schedulers, int timeout);
+#define MAX_START_RETRY             50
+
+template<LoadBalancerType Type>
+class SchedulerHolder
+{
+    static std::unique_ptr<Type> SchedulerLoadBalancer;
+    static std::unique_ptr<SchedulerHolder> Instance;
+public:
+
+void Initialize(uint32_t scheduler_size, int timeout)
+{
+    m_schedulers.reserve(scheduler_size);
+    std::vector<typename Type::value_type*> scheduler_ptrs;
+    scheduler_ptrs.reserve(scheduler_size);
+    for (int i = 0; i < scheduler_size; i++)
+    {
+        int try_count = MAX_START_RETRY;
+        m_schedulers[i] = std::make_unique<typename Type::value_type>();
+        scheduler_ptrs[i] = m_schedulers[i].get();
+        m_schedulers[i]->Loop(timeout);
+        while(!m_schedulers[i]->IsRunning() && try_count-- >= 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        if(try_count <= 0) {
+            LogTrace("Start coroutine scheduler failed, index: {}", i);
+            exit(-1);
+        }
+    }
+    SchedulerLoadBalancer = std::make_unique<Type>(scheduler_ptrs);
+}
+
+void Initialize(std::vector<std::unique_ptr<typename Type::value_type>>&& schedulers)
+{
+    m_schedulers = std::forward<decltype(schedulers)>(schedulers);
+    std::vector<typename Type::value_type*> scheduler_ptrs;
+    scheduler_ptrs.reserve(m_schedulers.size());
+    for(auto& scheduler : m_schedulers) {
+        scheduler_ptrs.push_back(scheduler.get());
+    }
+    SchedulerLoadBalancer = std::make_unique<Type>(scheduler_ptrs);
+}
+
+void Destroy()
+{
+    for( auto& scheduler : m_schedulers) {
+        scheduler->Stop();
+    }
+}
+
+static SchedulerHolder* GetInstance()
+{
+    if(!Instance) {
+        Instance = std::make_unique<SchedulerHolder>();
+    }
+    return Instance.get();
+}
+
+Type::value_type* GetScheduler()
+{
+    return SchedulerLoadBalancer.get()->Select();
+}
+
+Type::value_type* GetScheduler(uint32_t index)
+{
+    return m_schedulers[index].get();
+}
+
+private:
+    std::vector<std::unique_ptr<typename Type::value_type>> m_schedulers;
+};
+
+template<LoadBalancerType Type>
+std::unique_ptr<Type> SchedulerHolder<Type>::SchedulerLoadBalancer;
+
+template<LoadBalancerType Type>
+std::unique_ptr<SchedulerHolder<Type>> SchedulerHolder<Type>::Instance;
+
+using EeventSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
+using CoroutineSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
+using TimerSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
+
+// template<>
+// details::EventScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>::GetScheduler()
+// {
+//     return SchedulerLoadBalancer.get()->Select();
+// }
+
+// template<>
+// details::CoroutineScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>::GetScheduler()
+// {
+//     return SchedulerLoadBalancer.get()->Select();
+// }
+
+// template<>
+// details::CoroutineScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>::GetScheduler(uint32_t index)
+// {
+//     return m_schedulers[index].get();
+// }
+
+// template<>
+// details::EventScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>::GetScheduler(uint32_t index)
+// {
+//     return m_schedulers[index].get();
+// }
+
+// template<>
+// details::TimerScheduler* GetScheduler(uint32_t index)
+// {
+//     return nullptr;
+// }
+
+extern "C" {
+
+void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf);
 void DestroyGalayEnv();
 
-/*
-    Scheduler
-*/
-#define MAX_GET_TIMER_SCHEDULER_RETRY_TIMES 50
-
-#define MAX_GET_COROUTINE_SCHEDULER_RETRY_TIMES 50
-
-// details
-void DynamicResizeCoroutineSchedulers(int num);
-void DynamicResizeEventSchedulers(int num);
-void DynamicResizeTimerSchedulers(int num);
-
-int GetCoroutineSchedulerNum();
-int GetEventSchedulerNum();
-int GetTimerSchedulerNum();
-
-scheduler::EventScheduler* GetEventScheduler(int index);
-scheduler::CoroutineScheduler* GetCoroutineSchedulerInOrder();
-scheduler::CoroutineScheduler* GetCoroutineScheduler(int index);
-scheduler::TimerScheduler* GetTimerSchedulerInOrder();
-scheduler::TimerScheduler* GetTimerScheduler(int index);
-
-/*
-    Start all schedulers
-    [timeout]: timeout in milliseconds, -1 will block
-*/
-void StartCoroutineSchedulers();
-void StartEventSchedulers(int timeout);
-void StartTimerSchedulers(int timeout);
-/*
-    Stop all schedulers
-*/
-void StopCoroutineSchedulers();
-void StopEventSchedulers(); 
-void StopTimerSchedulers();
-
+}
 
 }
 
