@@ -242,9 +242,9 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager manager)
 	IOVecHolder rholder(max_header_size), wholder;
 	HttpConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
 	auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
-	co_await this_coroutine::Exit([cancel, socket](){
+	co_await this_coroutine::DeferExit(std::bind([](coroutine::RoutineContextCancel::ptr cancel){
 		(*cancel)();
-	});
+	}, cancel));
 	bool close_connection = false;
 	while(true)
 	{
@@ -454,7 +454,7 @@ coroutine::Coroutine HttpsServer::HttpRoute(TcpSslConnectionManager manager)
 	IOVecHolder rholder(max_header_size), wholder;
 	HttpsConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
 	auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
-	co_await this_coroutine::Exit([cancel, socket](){
+	co_await this_coroutine::DeferExit([cancel, socket](){
 		(*cancel)();
 	});
 	bool close_connection = false;

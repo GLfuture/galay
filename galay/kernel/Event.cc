@@ -12,6 +12,7 @@
 
 #endif
 #include "Log.h"
+#include <iostream>
 
 namespace galay::details
 {
@@ -156,7 +157,7 @@ EventEngine *TimeEvent::BelongEngine()
     return m_engine;
 }
 
-galay::Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(galay::Timer::ptr)> &&func)
+galay::Timer::ptr TimeEvent::AddTimer(uint64_t during_time, std::function<void(galay::Timer::ptr)> &&func)
 {
     auto timer = std::make_shared<galay::Timer>(during_time, std::forward<std::function<void(galay::Timer::ptr)>>(func));
     std::unique_lock<std::shared_mutex> lock(this->m_mutex);
@@ -170,7 +171,7 @@ galay::Timer::ptr TimeEvent::AddTimer(int64_t during_time, std::function<void(ga
     return timer;
 }
 
-void TimeEvent::ReAddTimer(const int64_t during_time, const galay::Timer::ptr& timer)
+void TimeEvent::ReAddTimer(const uint64_t during_time, const galay::Timer::ptr& timer)
 {
     timer->SetDuringTime(during_time);
     timer->m_cancle.store(false);
@@ -392,7 +393,7 @@ EventEngine* WaitEvent::BelongEngine()
 
 
 NetWaitEvent::NetWaitEvent(async::AsyncNetIo *socket)
-    :m_type(kTcpWaitEventTypeError), m_socket(socket), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
+    :m_type(kTcpWaitEventTypeError), m_socket(socket)
 {
 }
 
@@ -602,7 +603,7 @@ void NetWaitEvent::HandleRecvEvent(EventEngine *engine)
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleSendEvent(EventEngine *engine)
@@ -610,14 +611,14 @@ void NetWaitEvent::HandleSendEvent(EventEngine *engine)
     int sendBytes = DealSend(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleConnectEvent(EventEngine *engine) const
 {
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(true);
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
@@ -908,7 +909,7 @@ void NetSslWaitEvent::HandleSslAcceptEvent(EventEngine *engine)
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
-        m_scheduler->EnqueueCoroutine(m_waitco);
+        m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
         return;
     }
     m_ssl_error = SSL_get_error(ssl, r);
@@ -917,7 +918,7 @@ void NetSslWaitEvent::HandleSslAcceptEvent(EventEngine *engine)
     } else {
         awaiter->SetResult(false);
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLAcceptError, errno);
-        m_scheduler->EnqueueCoroutine(m_waitco);
+        m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
     }
     
 }
@@ -930,7 +931,7 @@ void NetSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
         awaiter->SetResult(true);
-        m_scheduler->EnqueueCoroutine(m_waitco);
+        m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
     }
     m_ssl_error = SSL_get_error(ssl, r);
     if( m_ssl_error == SSL_ERROR_WANT_READ || m_ssl_error == SSL_ERROR_WANT_WRITE ){
@@ -938,7 +939,7 @@ void NetSslWaitEvent::HandleSslConnectEvent(EventEngine *engine)
     } else {
         awaiter->SetResult(false);
         m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLConnectError, errno);
-        m_scheduler->EnqueueCoroutine(m_waitco);
+        m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
     }
     
 }
@@ -949,7 +950,7 @@ void NetSslWaitEvent::HandleSslRecvEvent(EventEngine *engine)
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 void NetSslWaitEvent::HandleSslSendEvent(EventEngine *engine)
@@ -957,7 +958,7 @@ void NetSslWaitEvent::HandleSslSendEvent(EventEngine *engine)
     int sendBytes = DealSend(static_cast<IOVec*>(m_ctx));
     galay::coroutine::Awaiter* awaiter = m_waitco->GetAwaiter();
     awaiter->SetResult(sendBytes);
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 void NetSslWaitEvent::HandleSslCloseEvent(EventEngine *engine)
@@ -1018,7 +1019,7 @@ int NetSslWaitEvent::DealSend(IOVec* vec)
 //#endif
 
 FileIoWaitEvent::FileIoWaitEvent(async::AsyncFileIo *fileio)
-    :m_fileio(fileio), m_type(kFileIoWaitEventTypeError), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
+    :m_fileio(fileio), m_type(kFileIoWaitEventTypeError)
 {
     
 }
@@ -1121,7 +1122,7 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
     }
     if( fileio->IoFinished(finish_nums) ){
         engine->DelEvent(this, nullptr);
-        m_scheduler->EnqueueCoroutine(m_waitco);
+        m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
     }
 }
 #endif
@@ -1162,7 +1163,7 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
     vec->m_offset += length;
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 bool FileIoWaitEvent::OnKWriteWaitPrepare(coroutine::Coroutine *co, void *ctx)
@@ -1201,7 +1202,7 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     engine->DelEvent(this, nullptr);
     m_waitco->GetAwaiter()->SetResult(length);
     vec->m_offset += length;
-    m_scheduler->EnqueueCoroutine(m_waitco);
+    m_waitco->BelongScheduler()->EnqueueCoroutine(m_waitco);
 }
 
 }

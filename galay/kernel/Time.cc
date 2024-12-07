@@ -23,25 +23,25 @@ std::string GetCurrentGMTTimeString()
 
 
 
-Timer::Timer(const int64_t during_time, std::function<void(Timer::ptr)> &&func)
+Timer::Timer(const uint64_t during_time, std::function<void(Timer::ptr)> &&func)
 {
     this->m_rightHandle = std::forward<std::function<void(Timer::ptr)>>(func);
     SetDuringTime(during_time);
 }
 
-int64_t 
+uint64_t 
 Timer::GetDuringTime() const
 {
     return this->m_duringTime;
 }
 
-int64_t 
+uint64_t 
 Timer::GetExpiredTime() const
 {
     return this->m_expiredTime;
 }
 
-int64_t 
+uint64_t 
 Timer::GetRemainTime() const
 {
     const int64_t time = this->m_expiredTime - GetCurrentTime();
@@ -49,7 +49,7 @@ Timer::GetRemainTime() const
 }
 
 void 
-Timer::SetDuringTime(int64_t duringTime)
+Timer::SetDuringTime(uint64_t duringTime)
 {
     this->m_duringTime = duringTime;
     this->m_expiredTime = GetCurrentTime() + duringTime;
@@ -67,7 +67,7 @@ Timer::Execute()
 void 
 Timer::Cancle()
 {
-    this->m_cancle = true;
+    this->m_cancle.store(true);
 }
 
 // 是否已经完成
@@ -88,16 +88,21 @@ Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b) const
 }
 
 
-Deadline::Deadline()
-    :m_last_active_time(GetCurrentTime()), m_timer(nullptr)
-{
-}
+// Deadline::Deadline()
+//     :m_last_active_time(GetCurrentTime()), m_timer(nullptr)
+// {
+// }
 
-coroutine::Awaiter_bool Deadline::TimeOut(uint64_t timeout_ms)
-{
-    auto action = new details::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx){
-        return false;
-    });
-    return {action, nullptr};
-}
+// Deadline::~Deadline()
+// {
+//     m_timer->Cancle();
+// }
+
+// coroutine::Awaiter_bool Deadline::TimeOut(uint64_t timeout_ms)
+// {
+//     auto action = new details::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx){
+//         return false;
+//     });
+//     return {action, nullptr};
+// }
 }

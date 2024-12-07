@@ -58,7 +58,7 @@ void CoroutineStore::Clear()
 
 Coroutine Coroutine::promise_type::get_return_object() noexcept
 {
-    this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this));
+    this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this), CoroutineSchedulerHolder::GetInstance()->GetScheduler());
     return *this->m_coroutine;
 }
 
@@ -71,10 +71,11 @@ Coroutine::promise_type::~promise_type()
     }
 }
 
-Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
+Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle, details::CoroutineScheduler* scheduler) noexcept
 {
     this->m_handle = handle;
     this->m_awaiter = nullptr;
+    this->m_scheduler = scheduler;
 }
 
 Coroutine::Coroutine(Coroutine&& other) noexcept
@@ -148,7 +149,7 @@ void WaitGroup::Done()
     if(m_count == 0) {
         if(m_coroutine) {
             m_coroutine->GetAwaiter()->SetResult(true);
-            CoroutineSchedulerHolder::GetInstance()->GetScheduler()->EnqueueCoroutine(m_coroutine);
+            m_coroutine->BelongScheduler()->EnqueueCoroutine(m_coroutine);
         }
     }
 }
@@ -283,7 +284,7 @@ coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* time
         const auto co = std::any_cast<coroutine::Coroutine*>(use_timer->GetContext());
         co->GetAwaiter()->SetResult(true);
         if(scheduler == nullptr) {
-            CoroutineSchedulerHolder::GetInstance()->GetScheduler()->EnqueueCoroutine(co);
+            co->BelongScheduler()->EnqueueCoroutine(co);
         } else{
             scheduler->EnqueueCoroutine(co);
         }
@@ -292,7 +293,7 @@ coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* time
 }
 
 
-coroutine::Awaiter_void Exit(const std::function<void(void)>& callback)
+coroutine::Awaiter_void DeferExit(const std::function<void(void)>& callback)
 {
     auto* action = new details::CoroutineHandleAction([callback](coroutine::Coroutine* co, void* ctx)->bool{
         co->AppendExitCallback(std::move(callback));

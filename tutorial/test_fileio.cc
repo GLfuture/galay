@@ -13,7 +13,7 @@ using galay::coroutine::Coroutine;
 Coroutine test()
 {
     GHandle handle = co_await galay::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, 0644);
-    galay::async::AsyncFileNativeAio fileio((int)128, galay::GetEventScheduler(0)->GetEngine());
+    galay::async::AsyncFileNativeAio fileio((int)128, galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     void* buffer;
     posix_memalign(&buffer, PEER_SIZE, PEER_SIZE * 10);
     for(int i = 0; i < PEER_SIZE * 10; ++i) {

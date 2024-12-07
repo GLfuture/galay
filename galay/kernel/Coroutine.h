@@ -77,12 +77,13 @@ public:
     private:
         Coroutine* m_coroutine = nullptr;
     };
-    explicit Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
+    explicit Coroutine(std::coroutine_handle<promise_type> handle, details::CoroutineScheduler* scheduler) noexcept;
     Coroutine(Coroutine&& other) noexcept;
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
     
     std::coroutine_handle<promise_type> GetHandle() { return this->m_handle; }
+    details::CoroutineScheduler* BelongScheduler() { return this->m_scheduler; }
     void Destroy();
     bool Done() const { return m_handle.done(); }
     void Resume() const { return m_handle.resume(); }
@@ -94,6 +95,7 @@ public:
 private:
     void Exit();
 private:
+    std::atomic<details::CoroutineScheduler*> m_scheduler;
     std::atomic<Awaiter*> m_awaiter = nullptr;
     std::coroutine_handle<promise_type> m_handle;
     std::list<std::function<void()>> m_exit_cbs;
@@ -194,7 +196,11 @@ namespace galay::this_coroutine
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
     extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, details::CoroutineScheduler* scheduler = nullptr);
-    extern coroutine::Awaiter_void Exit(const std::function<void(void)>& callback);
+
+    /*
+        注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
+    */
+    extern coroutine::Awaiter_void DeferExit(const std::function<void(void)>& callback);
 }
 
 #endif

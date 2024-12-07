@@ -105,8 +105,8 @@ public:
     GHandle GetHandle() override { return m_handle; }
     bool SetEventEngine(EventEngine* engine) override;
     EventEngine* BelongEngine() override;
-    galay::Timer::ptr AddTimer(int64_t during_time, std::function<void(galay::Timer::ptr)> &&func); // ms
-    void ReAddTimer(int64_t during_time, const galay::Timer::ptr& timer);
+    galay::Timer::ptr AddTimer(uint64_t during_time, std::function<void(galay::Timer::ptr)> &&func); // ms
+    void ReAddTimer(uint64_t during_time, const galay::Timer::ptr& timer);
     ~TimeEvent() override;
 private:
 #ifdef __linux__
@@ -234,7 +234,6 @@ protected:
     NetWaitEventType m_type;
     void *m_ctx{};
     async::AsyncNetIo* m_socket;
-    CoroutineScheduler* m_scheduler;
 };
 
 class NetSslWaitEvent final : public NetWaitEvent
@@ -311,7 +310,6 @@ private:
     void HandleKWriteEvent(EventEngine* engine);
 private:
     void *m_ctx{};
-    CoroutineScheduler* m_scheduler;
     async::AsyncFileIo* m_fileio;
     FileIoWaitEventType m_type;
 };

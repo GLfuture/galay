@@ -56,9 +56,11 @@ galay::coroutine::Coroutine* p;
 galay::coroutine::Coroutine test()
 {
     co_await galay::this_coroutine::GetThisCoroutine(p);
-    std::cout << "sleep begin" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    std::cout << "sleep end" << std::endl;
+    co_await galay::this_coroutine::DeferExit([](){
+        std::cout << "defer exit" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::cout << "defer exit end" << std::endl;
+    });
     co_return;
 }
 
@@ -70,6 +72,10 @@ int main()
     });
     th.detach();
     getchar();
+    std::thread th2([]{
+        p->Destroy();
+    });
+    th2.detach();
     std::cout << "ready to resume\n";
     p->Destroy();
     getchar();

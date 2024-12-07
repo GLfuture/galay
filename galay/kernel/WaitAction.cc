@@ -13,7 +13,7 @@ namespace galay::details
 TimeEventAction::TimeEventAction()
 = default;
 
-void TimeEventAction::CreateTimer(const int64_t ms, std::shared_ptr<galay::Timer> *timer, std::function<void(const std::shared_ptr<galay::Timer>&)> &&callback)
+void TimeEventAction::CreateTimer(const uint64_t ms, std::shared_ptr<galay::Timer> *timer, std::function<void(const std::shared_ptr<galay::Timer>&)> &&callback)
 {
     this->m_ms = ms;
     m_callback = std::forward<std::function<void(const std::shared_ptr<galay::Timer>&)>>(callback);

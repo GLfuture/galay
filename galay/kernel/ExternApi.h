@@ -144,7 +144,7 @@ concept LoadBalancerType = requires(T t)
     requires std::is_same_v<decltype(t.Select()), typename T::value_type*>;
 };
 
-#define MAX_START_RETRY             50
+#define MAX_START_SCHEDULERS_RETRY   50
 
 template<LoadBalancerType Type>
 class SchedulerHolder
@@ -155,14 +155,12 @@ public:
 
 void Initialize(uint32_t scheduler_size, int timeout)
 {
-    m_schedulers.reserve(scheduler_size);
     std::vector<typename Type::value_type*> scheduler_ptrs;
-    scheduler_ptrs.reserve(scheduler_size);
-    for (int i = 0; i < scheduler_size; i++)
+    for (int i = 0; i < scheduler_size; ++i)
     {
-        int try_count = MAX_START_RETRY;
-        m_schedulers[i] = std::make_unique<typename Type::value_type>();
-        scheduler_ptrs[i] = m_schedulers[i].get();
+        int try_count = MAX_START_SCHEDULERS_RETRY;
+        m_schedulers.emplace_back(std::make_unique<typename Type::value_type>());
+        scheduler_ptrs.emplace_back(m_schedulers[i].get());
         m_schedulers[i]->Loop(timeout);
         while(!m_schedulers[i]->IsRunning() && try_count-- >= 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -224,36 +222,6 @@ std::unique_ptr<SchedulerHolder<Type>> SchedulerHolder<Type>::Instance;
 using EeventSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
 using CoroutineSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 using TimerSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
-
-// template<>
-// details::EventScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>::GetScheduler()
-// {
-//     return SchedulerLoadBalancer.get()->Select();
-// }
-
-// template<>
-// details::CoroutineScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>::GetScheduler()
-// {
-//     return SchedulerLoadBalancer.get()->Select();
-// }
-
-// template<>
-// details::CoroutineScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>::GetScheduler(uint32_t index)
-// {
-//     return m_schedulers[index].get();
-// }
-
-// template<>
-// details::EventScheduler* SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>::GetScheduler(uint32_t index)
-// {
-//     return m_schedulers[index].get();
-// }
-
-// template<>
-// details::TimerScheduler* GetScheduler(uint32_t index)
-// {
-//     return nullptr;
-// }
 
 extern "C" {
 

@@ -35,6 +35,7 @@ public:
     using ptr = std::shared_ptr<TcpConnection>;
     explicit TcpConnection(async::AsyncNetIo* socket);
     [[nodiscard]] async::AsyncNetIo* GetSocket() const { return m_socket; } 
+    
     ~TcpConnection();
 private:
     async::AsyncNetIo* m_socket;
@@ -57,9 +58,7 @@ class TcpSslConnection
 public:
     using ptr = std::shared_ptr<TcpSslConnection>;
     explicit TcpSslConnection(async::AsyncSslNetIo* socket);
-    [[nodiscard]] async::AsyncSslNetIo* GetSocket() const { return m_socket; }
-
-    
+    [[nodiscard]] async::AsyncSslNetIo* GetSocket() const { return m_socket; }    
     ~TcpSslConnection();
 private:
     async::AsyncSslNetIo* m_socket;

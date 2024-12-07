@@ -1,5 +1,5 @@
 #include "Thread.h"
-#include "kernel/Log.h"
+#include "galay/kernel/Log.h"
 
 namespace galay::thread
 {

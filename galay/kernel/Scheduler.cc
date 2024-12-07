@@ -105,7 +105,7 @@ TimerScheduler::TimerScheduler()
     m_timer_event = new details::TimeEvent(handle, m_engine.get());
 }
 
-std::shared_ptr<galay::Timer> TimerScheduler::AddTimer(const int64_t ms, std::function<void(std::shared_ptr<galay::Timer>)>&& callback) const
+std::shared_ptr<galay::Timer> TimerScheduler::AddTimer(const uint64_t ms, std::function<void(std::shared_ptr<galay::Timer>)>&& callback) const
 {
     return m_timer_event->AddTimer(ms, std::forward<std::function<void(std::shared_ptr<galay::Timer>)>>(callback));
 }

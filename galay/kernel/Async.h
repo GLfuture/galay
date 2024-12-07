@@ -39,7 +39,7 @@ public:
 
     HandleOption GetOption() const;
     GHandle& GetHandle() { return m_handle; }
-    details::IOEventAction*& GetAction() { return m_action; };
+    details::IOEventAction* GetAction() { return m_action; };
     uint32_t &GetErrorCode();
     virtual ~AsyncNetIo();
 protected:
@@ -87,7 +87,7 @@ public:
     using ptr = std::shared_ptr<AsyncFileIo>;
     explicit AsyncFileIo(details::EventEngine* engine);
     [[nodiscard]] HandleOption GetOption() const;
-    details::IOEventAction*& GetAction() { return m_action; };
+    details::IOEventAction* GetAction() { return m_action; };
     GHandle& GetHandle() { return m_handle; }
     uint32_t& GetErrorCode() { return m_error_code; }
     virtual ~AsyncFileIo();

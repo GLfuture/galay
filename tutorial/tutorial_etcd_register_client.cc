@@ -12,10 +12,9 @@ galay::coroutine::Coroutine func()
 
 int main()
 {
-    galay::DynamicResizeCoroutineSchedulers(1);
-    galay::StartCoroutineSchedulers();
+    galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
     func();
     getchar();
-    galay::StopCoroutineSchedulers();
+    galay::DestroyGalayEnv();
     return 0;
 }

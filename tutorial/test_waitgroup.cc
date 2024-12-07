@@ -40,7 +40,7 @@ Coroutine* p = nullptr;
 Coroutine cfunc(RoutineContext::ptr context)
 {
     co_await context->DeferDone();
-    co_await galay::this_coroutine::Exit([]{
+    co_await galay::this_coroutine::DeferExit([]{
         std::cout << "cfunc exit" << std::endl;
     });
     co_return;
@@ -52,7 +52,7 @@ Coroutine pfunc()
     co_await galay::this_coroutine::GetThisCoroutine(p);
     std::cout << "pfunc start" << std::endl;
     cfunc(context);
-    co_await galay::this_coroutine::Exit([cancle]{
+    co_await galay::this_coroutine::DeferExit([cancle]{
         std::cout << "pfunc exit" << std::endl;
         (*cancle)();
     });
@@ -78,7 +78,7 @@ Coroutine* p = nullptr;
 Coroutine cfunc(RoutineContext::ptr context)
 {
     co_await context->DeferDone();
-    co_await galay::this_coroutine::Exit([]{
+    co_await galay::this_coroutine::DeferExit([]{
         std::cout << "cfunc exit" << std::endl;
     });
     co_await std::suspend_always{};
@@ -91,7 +91,7 @@ Coroutine pfunc()
     co_await galay::this_coroutine::GetThisCoroutine(p);
     std::cout << "pfunc start" << std::endl;
     cfunc(context);
-    co_await galay::this_coroutine::Exit([cancle]{
+    co_await galay::this_coroutine::DeferExit([cancle]{
         std::cout << "pfunc exit" << std::endl;
         (*cancle)();
     });

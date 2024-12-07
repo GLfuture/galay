@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <random>
+#include <iostream>
 
 namespace galay::details 
 {
@@ -23,6 +24,7 @@ public:
 
     T* Select()
     {
+        if(m_nodes.empty()) return nullptr;
         uint32_t index = m_index.load(std::memory_order_relaxed);
         if( !m_index.compare_exchange_strong(index, (index + 1) % m_nodes.size())) return nullptr;
         return m_nodes[index];

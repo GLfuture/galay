@@ -13,6 +13,7 @@ namespace galay::details {
 
 namespace galay::coroutine {
     class Awaiter_bool;
+    class Awaiter_void;
 }
 
 namespace galay {
@@ -33,32 +34,22 @@ public:
     public:
         bool operator()(const Timer::ptr &a, const Timer::ptr &b) const;
     };
-    Timer(int64_t during_time, std::function<void(Timer::ptr)> &&func);
-    int64_t GetDuringTime() const;
-    int64_t GetExpiredTime() const;
-    int64_t GetRemainTime() const;
+    Timer(uint64_t during_time, std::function<void(Timer::ptr)> &&func);
+    uint64_t GetDuringTime() const;
+    uint64_t GetExpiredTime() const;
+    uint64_t GetRemainTime() const;
     std::any& GetContext() { return m_context; };
-    void SetDuringTime(int64_t during_time);
+    void SetDuringTime(uint64_t during_time);
     void Execute();
     void Cancle();
     bool Success() const;
 private:
     std::any m_context;
-    int64_t m_expiredTime{};
-    int64_t m_duringTime{};
-    std::atomic_bool m_cancle;
-    std::atomic_bool m_success;
+    uint64_t m_expiredTime{};
+    uint64_t m_duringTime{};
+    std::atomic_bool m_cancle{false};
+    std::atomic_bool m_success{false};
     std::function<void(Timer::ptr)> m_rightHandle;
-};
-
-class Deadline
-{
-public:
-    Deadline();
-    coroutine::Awaiter_bool TimeOut(uint64_t timeout_ms);
-private:
-    Timer::ptr m_timer;
-    uint64_t m_last_active_time;
 };
 
 }
