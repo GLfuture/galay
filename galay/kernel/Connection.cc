@@ -82,7 +82,7 @@ TcpSslCallbackStore::TcpSslCallbackStore(const std::function<coroutine::Coroutin
 void TcpSslCallbackStore::Execute(async::AsyncSslNetIo* socket)
 {
     const TcpSslConnectionManager manager(socket);
-    this->m_callback(manager);
+    m_callback(manager);
 }
 
 }

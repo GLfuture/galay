@@ -18,14 +18,14 @@ Awaiter_void::Awaiter_void()
 
 bool Awaiter_void::await_ready() const noexcept
 {
-    return this->m_action == nullptr || !this->m_action->HasEventToDo();
+    return m_action == nullptr || !m_action->HasEventToDo();
 }
 
 bool Awaiter_void::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
-    this->m_coroutine_handle = handle;
+    m_coroutine_handle = handle;
     Coroutine* co = handle.promise().GetCoroutine();
-    return this->m_action->DoAction(co, m_ctx);
+    return m_action->DoAction(co, m_ctx);
 }
 
 void Awaiter_void::await_resume() const noexcept
@@ -55,25 +55,25 @@ Awaiter_int::Awaiter_int(details::WaitAction* action, void* ctx)
 
 Awaiter_int::Awaiter_int(const int result)
 {
-    this->m_action = nullptr;
-    this->m_result = result;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = nullptr;
+    m_action = nullptr;
+    m_result = result;
+    m_coroutine_handle = nullptr;
+    m_ctx = nullptr;
 }
 
 bool Awaiter_int::await_ready() const noexcept
 {
-    return this->m_action == nullptr || !this->m_action->HasEventToDo();
+    return m_action == nullptr || !m_action->HasEventToDo();
 }
 
 bool Awaiter_int::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
-    this->m_coroutine_handle = handle;
+    m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
     while(!co->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    return this->m_action->DoAction(co, m_ctx);
+    return m_action->DoAction(co, m_ctx);
 }
 
 int Awaiter_int::await_resume() const noexcept
@@ -104,28 +104,28 @@ Coroutine *Awaiter_int::GetCoroutine() const
 
 Awaiter_bool::Awaiter_bool(details::WaitAction* action, void* ctx)
 {
-    this->m_action = action;
-    this->m_result = false;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = ctx;
+    m_action = action;
+    m_result = false;
+    m_coroutine_handle = nullptr;
+    m_ctx = ctx;
 }
 
 Awaiter_bool::Awaiter_bool(const bool result)
 {
-    this->m_action = nullptr;
-    this->m_result = result;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = nullptr;
+    m_action = nullptr;
+    m_result = result;
+    m_coroutine_handle = nullptr;
+    m_ctx = nullptr;
 }
 
 bool Awaiter_bool::await_ready() const noexcept
 {
-    return this->m_action == nullptr || !this->m_action->HasEventToDo();
+    return m_action == nullptr || !m_action->HasEventToDo();
 }
 
 bool Awaiter_bool::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
-    this->m_coroutine_handle = handle;
+    m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
     while(!co->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
@@ -161,33 +161,33 @@ Coroutine* Awaiter_bool::GetCoroutine() const
 
 Awaiter_ptr::Awaiter_ptr(details::WaitAction *action, void* ctx)
 {
-    this->m_action = action;
-    this->m_coroutine_handle = nullptr;
-    this->m_ptr = nullptr;
-    this->m_ctx = ctx;
+    m_action = action;
+    m_coroutine_handle = nullptr;
+    m_ptr = nullptr;
+    m_ctx = ctx;
 }
 
 Awaiter_ptr::Awaiter_ptr(void *ptr)
 {
-    this->m_action = nullptr;
-    this->m_ptr = ptr;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = nullptr;
+    m_action = nullptr;
+    m_ptr = ptr;
+    m_coroutine_handle = nullptr;
+    m_ctx = nullptr;
 }
 
 bool Awaiter_ptr::await_ready() const noexcept
 {
-    return this->m_action == nullptr || !this->m_action->HasEventToDo();
+    return m_action == nullptr || !m_action->HasEventToDo();
 }
 
 bool Awaiter_ptr::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
-    this->m_coroutine_handle = handle;
+    m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
     while(!co->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    return this->m_action->DoAction(co, m_ctx);
+    return m_action->DoAction(co, m_ctx);
 }
 
 void *Awaiter_ptr::await_resume() const noexcept
@@ -218,32 +218,32 @@ Coroutine *Awaiter_ptr::GetCoroutine() const
 
 Awaiter_string::Awaiter_string(details::WaitAction *action, void* ctx)
 {
-    this->m_action = action;
-    this->m_result = "";
-    this->m_ctx = ctx;
-    this->m_coroutine_handle = nullptr;
+    m_action = action;
+    m_result = "";
+    m_ctx = ctx;
+    m_coroutine_handle = nullptr;
 }
 
 Awaiter_string::Awaiter_string(const std::string& result)
 {
-    this->m_action = nullptr;
-    this->m_result = result;
-    this->m_coroutine_handle = nullptr;
-    this->m_ctx = nullptr;
+    m_action = nullptr;
+    m_result = result;
+    m_coroutine_handle = nullptr;
+    m_ctx = nullptr;
 }
 
 bool Awaiter_string::await_ready() const noexcept
 {
-    return this->m_action == nullptr || !this->m_action->HasEventToDo();
+    return m_action == nullptr || !m_action->HasEventToDo();
 }
 bool Awaiter_string::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
-    this->m_coroutine_handle = handle;
+    m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
     while(!co->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    return this->m_action->DoAction(co, m_ctx);
+    return m_action->DoAction(co, m_ctx);
 }
 
 std::string Awaiter_string::await_resume() const noexcept
@@ -291,16 +291,16 @@ Awaiter_GHandle::Awaiter_GHandle(GHandle handle)
 
 bool Awaiter_GHandle::await_ready() const noexcept
 {
-    return this->m_action == nullptr || !this->m_action->HasEventToDo();
+    return m_action == nullptr || !m_action->HasEventToDo();
 }
 bool Awaiter_GHandle::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
-    this->m_coroutine_handle = handle;
+    m_coroutine_handle = handle;
     coroutine::Coroutine* co = handle.promise().GetCoroutine();
     while(!co->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    return this->m_action->DoAction(co, m_ctx);
+    return m_action->DoAction(co, m_ctx);
 }
 
 GHandle Awaiter_GHandle::await_resume() const noexcept

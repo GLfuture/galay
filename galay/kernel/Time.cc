@@ -1,108 +1,113 @@
 #include "Time.h"
 #include "WaitAction.h"
+#include "Event.h"
 #include <chrono>
 namespace galay
 {
 
-int64_t GetCurrentTime()
-{
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-
-std::string GetCurrentGMTTimeString()
-{
-    std::time_t now = std::time(nullptr);
-    std::tm* gmt_time = std::gmtime(&now);
-    if (gmt_time == nullptr) {
-        return "";
-    }
-    char buffer[80];
-    std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
-    return buffer;
-}
-
-
-
-Timer::Timer(const uint64_t during_time, std::function<void(Timer::ptr)> &&func)
-{
-    this->m_rightHandle = std::forward<std::function<void(Timer::ptr)>>(func);
-    SetDuringTime(during_time);
-}
-
-uint64_t 
-Timer::GetDuringTime() const
-{
-    return this->m_duringTime;
-}
-
-uint64_t 
-Timer::GetExpiredTime() const
-{
-    return this->m_expiredTime;
-}
-
-uint64_t 
-Timer::GetRemainTime() const
-{
-    const int64_t time = this->m_expiredTime - GetCurrentTime();
-    return time < 0 ? 0 : time;
-}
-
-void 
-Timer::SetDuringTime(uint64_t duringTime)
-{
-    this->m_duringTime = duringTime;
-    this->m_expiredTime = GetCurrentTime() + duringTime;
-    this->m_success = false;
-}
-
-void 
-Timer::Execute()
-{
-    if ( m_cancle.load() ) return;
-    this->m_rightHandle(shared_from_this());
-    this->m_success = true;
-}
-
-void 
-Timer::Cancle()
-{
-    this->m_cancle.store(true);
-}
-
-// 是否已经完成
-bool 
-Timer::Success() const
-{
-    return this->m_success.load();
-}
-
-bool 
-Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b) const
-{
-    if (a->GetExpiredTime() > b->GetExpiredTime())
+    int64_t GetCurrentTimeMs()
     {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
+    std::string GetCurrentGMTTimeString()
+    {
+        std::time_t now = std::time(nullptr);
+        std::tm *gmt_time = std::gmtime(&now);
+        if (gmt_time == nullptr)
+        {
+            return "";
+        }
+        char buffer[80];
+        std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
+        return buffer;
+    }
+
+    Timer::Timer(const uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func)
+    {
+        m_rightHandle = std::move(func);
+        ResetTimeout(during_time);
+    }
+
+    uint64_t
+    Timer::GetTimeout() const
+    {
+        return m_timeout;
+    }
+
+    uint64_t
+    Timer::GetDeadline() const
+    {
+        return m_deadline;
+    }
+
+    uint64_t
+    Timer::GetRemainTime() const
+    {
+        const int64_t time = m_deadline - GetCurrentTimeMs();
+        return time < 0 ? 0 : time;
+    }
+
+    bool
+    Timer::ResetTimeout(uint64_t timeout)
+    {
+        uint64_t old = m_timeout.load();
+        if(!m_timeout.compare_exchange_strong(old, timeout)) return false;
+        old = m_deadline.load();
+        if(!m_deadline.compare_exchange_strong(old, GetCurrentTimeMs() + timeout)) return false;
+        m_success = false;
         return true;
     }
-    return false;
-}
 
+    void
+    Timer::Execute(details::TimeEvent::wptr event)
+    {
+        if (m_cancle.load())
+            return;
+        m_rightHandle(event, shared_from_this());
+        m_success.store(true);
+    }
 
-// Deadline::Deadline()
-//     :m_last_active_time(GetCurrentTime()), m_timer(nullptr)
-// {
-// }
+    bool
+    Timer::Cancle()
+    {
+        bool old = m_cancle.load();
+        if(old == true) return false;
+        return m_cancle.compare_exchange_strong(old, true); 
+    }
 
-// Deadline::~Deadline()
-// {
-//     m_timer->Cancle();
-// }
+    // 是否已经完成
+    bool
+    Timer::Success() const
+    {
+        return m_success.load();
+    }
 
-// coroutine::Awaiter_bool Deadline::TimeOut(uint64_t timeout_ms)
-// {
-//     auto action = new details::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx){
-//         return false;
-//     });
-//     return {action, nullptr};
-// }
+    bool
+    Timer::TimerCompare::operator()(const Timer::ptr &a, const Timer::ptr &b) const
+    {
+        if (a->GetDeadline() > b->GetDeadline())
+        {
+            return true;
+        }
+        return false;
+    }
+
+    // Deadline::Deadline()
+    //     :m_last_active_time(GetCurrentTimeMs()), m_timer(nullptr)
+    // {
+    // }
+
+    // Deadline::~Deadline()
+    // {
+    //     m_timer->Cancle();
+    // }
+
+    // coroutine::Awaiter_bool Deadline::TimeOut(uint64_t timeout_ms)
+    // {
+    //     auto action = new details::CoroutineHandleAction([](coroutine::Coroutine* co, void* ctx){
+    //         return false;
+    //     });
+    //     return {action, nullptr};
+    // }
 }

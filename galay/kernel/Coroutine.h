@@ -195,12 +195,27 @@ namespace galay::this_coroutine
         [timer] : timer
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
-    extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, details::CoroutineScheduler* scheduler = nullptr);
+    extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<Timer>* timer, details::CoroutineScheduler* scheduler = nullptr);
 
     /*
         注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
     */
     extern coroutine::Awaiter_void DeferExit(const std::function<void(void)>& callback);
+    
+
+    //用在father 协程中，通过father销毁child
+    class RoutineDeadLine
+    {
+    public:
+        RoutineDeadLine(const std::function<void(void)>& callback);
+        bool Refluash();
+        coroutine::Awaiter_void operator()(uint64_t ms);
+        ~RoutineDeadLine() = default;
+    private:
+        std::shared_ptr<Timer> m_timer;
+        std::atomic_uint64_t m_last_active_time;
+        std::function<void(void)> m_callback;
+    };
 }
 
 #endif

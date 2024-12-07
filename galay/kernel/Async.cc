@@ -25,9 +25,9 @@ HandleOption::HandleOption(const GHandle handle)
 bool HandleOption::HandleBlock()
 {
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    int flag = fcntl(this->m_handle.fd, F_GETFL, 0);
+    int flag = fcntl(m_handle.fd, F_GETFL, 0);
     flag &= ~O_NONBLOCK;
-    int ret = fcntl(this->m_handle.fd, F_SETFL, flag);
+    int ret = fcntl(m_handle.fd, F_SETFL, flag);
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     u_long mode = 0; // 1 表示非阻塞模式
     int ret = ioctlsocket(m_handle, FIONBIO, &mode);
@@ -42,9 +42,9 @@ bool HandleOption::HandleBlock()
 bool HandleOption::HandleNonBlock()
 {
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    int flag = fcntl(this->m_handle.fd, F_GETFL, 0);
+    int flag = fcntl(m_handle.fd, F_GETFL, 0);
     flag |= O_NONBLOCK;
-    int ret = fcntl(this->m_handle.fd, F_SETFL, flag);
+    int ret = fcntl(m_handle.fd, F_SETFL, flag);
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     u_long mode = 1; // 1 表示非阻塞模式
     int ret = ioctlsocket(m_handle.fd, FIONBIO, &mode);
@@ -60,7 +60,7 @@ bool HandleOption::HandleReuseAddr()
 {
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     int option = 1;
-    int ret = setsockopt(this->m_handle.fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    int ret = setsockopt(m_handle.fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
     BOOL option = TRUE;
     int ret = setsockopt(m_handle.fd, SOL_SOCKET, SO_REUSEADDR, (char*)&option, sizeof(option));
@@ -76,7 +76,7 @@ bool HandleOption::HandleReusePort()
 {
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     constexpr int option = 1;
-    if (const int ret = setsockopt(this->m_handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option)); ret < 0) {
+    if (const int ret = setsockopt(m_handle.fd, SOL_SOCKET, SO_REUSEPORT, &option, sizeof(option)); ret < 0) {
         m_error_code = error::MakeErrorCode(error::ErrorCode::Error_SetSockOptError, errno);
         return false;
     }
@@ -99,7 +99,7 @@ AsyncNetIo::AsyncNetIo(details::EventEngine* engine)
 HandleOption
 AsyncNetIo::GetOption() const
 {
-    return HandleOption(this->m_handle);
+    return HandleOption(m_handle);
 }
 
 AsyncNetIo::~AsyncNetIo()
@@ -110,7 +110,7 @@ AsyncNetIo::~AsyncNetIo()
 
 uint32_t &AsyncNetIo::GetErrorCode()
 {
-    return this->m_err_code;
+    return m_err_code;
 }
 
 AsyncTcpSocket::AsyncTcpSocket(details::EventEngine *engine)

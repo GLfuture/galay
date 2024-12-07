@@ -123,15 +123,15 @@ void TimeEvent::HandleEvent(EventEngine *engine)
 #if defined(__linux__)
     std::vector<galay::Timer::ptr> timers;
     std::unique_lock lock(this->m_mutex);
-    while (! m_timers.empty() && m_timers.top()->GetExpiredTime()  <= GetCurrentTime() ) {
+    while (! m_timers.empty() && m_timers.top()->GetDeadline()  <= GetCurrentTimeMs() ) {
         auto timer = m_timers.top();
         m_timers.pop();
         timers.emplace_back(timer);
     }
     lock.unlock();
-    for (auto timer : timers)
+    for (auto timer: timers)
     {
-        timer->Execute();
+        timer->Execute(weak_from_this());
     }
     UpdateTimers();
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
@@ -139,7 +139,7 @@ void TimeEvent::HandleEvent(EventEngine *engine)
     Timer::ptr timer = m_timers.top();
     m_timers.pop();
     lock.unlock();
-    timer->Execute();
+    timer->Execute(weak_from_this());
 #endif
 }
 
@@ -157,9 +157,9 @@ EventEngine *TimeEvent::BelongEngine()
     return m_engine;
 }
 
-galay::Timer::ptr TimeEvent::AddTimer(uint64_t during_time, std::function<void(galay::Timer::ptr)> &&func)
+galay::Timer::ptr TimeEvent::AddTimer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func)
 {
-    auto timer = std::make_shared<galay::Timer>(during_time, std::forward<std::function<void(galay::Timer::ptr)>>(func));
+    auto timer = std::make_shared<galay::Timer>(during_time, std::move(func));
     std::unique_lock<std::shared_mutex> lock(this->m_mutex);
     this->m_timers.push(timer);
     lock.unlock();
@@ -173,7 +173,7 @@ galay::Timer::ptr TimeEvent::AddTimer(uint64_t during_time, std::function<void(g
 
 void TimeEvent::ReAddTimer(const uint64_t during_time, const galay::Timer::ptr& timer)
 {
-    timer->SetDuringTime(during_time);
+    timer->ResetTimeout(during_time);
     timer->m_cancle.store(false);
     std::unique_lock lock(this->m_mutex);
     this->m_timers.push(timer);

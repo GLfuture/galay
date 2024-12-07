@@ -89,13 +89,14 @@ private:
 };
 #endif
 
-class TimeEvent final : public Event
+class TimeEvent final: public Event,  public std::enable_shared_from_this<TimeEvent>
 {
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
     static TimeEventIDStore g_idStore; 
 #endif
 public:
     using ptr = std::shared_ptr<TimeEvent>;
+    using wptr = std::weak_ptr<TimeEvent>;
     static bool CreateHandle(GHandle& handle);
     
     TimeEvent(GHandle handle, EventEngine* engine);
@@ -105,7 +106,7 @@ public:
     GHandle GetHandle() override { return m_handle; }
     bool SetEventEngine(EventEngine* engine) override;
     EventEngine* BelongEngine() override;
-    galay::Timer::ptr AddTimer(uint64_t during_time, std::function<void(galay::Timer::ptr)> &&func); // ms
+    galay::Timer::ptr AddTimer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func); // ms
     void ReAddTimer(uint64_t during_time, const galay::Timer::ptr& timer);
     ~TimeEvent() override;
 private:

@@ -58,8 +58,8 @@ void CoroutineStore::Clear()
 
 Coroutine Coroutine::promise_type::get_return_object() noexcept
 {
-    this->m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this), CoroutineSchedulerHolder::GetInstance()->GetScheduler());
-    return *this->m_coroutine;
+    m_coroutine = new Coroutine(std::coroutine_handle<promise_type>::from_promise(*this), CoroutineSchedulerHolder::GetInstance()->GetScheduler());
+    return *m_coroutine;
 }
 
 Coroutine::promise_type::~promise_type()
@@ -73,35 +73,35 @@ Coroutine::promise_type::~promise_type()
 
 Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle, details::CoroutineScheduler* scheduler) noexcept
 {
-    this->m_handle = handle;
-    this->m_awaiter = nullptr;
-    this->m_scheduler = scheduler;
+    m_handle = handle;
+    m_awaiter = nullptr;
+    m_scheduler = scheduler;
 }
 
 Coroutine::Coroutine(Coroutine&& other) noexcept
 {
-    this->m_handle = other.m_handle;
+    m_handle = other.m_handle;
     other.m_handle = nullptr;
-    this->m_awaiter.store(other.m_awaiter);
+    m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
-    this->m_exit_cbs.splice(this->m_exit_cbs.begin(), other.m_exit_cbs);
+    m_exit_cbs.splice(m_exit_cbs.begin(), other.m_exit_cbs);
 }
 
 Coroutine::Coroutine(const Coroutine& other) noexcept
 {
-    this->m_awaiter.store(other.m_awaiter);
-    this->m_handle = other.m_handle;
-    this->m_exit_cbs = other.m_exit_cbs;
+    m_awaiter.store(other.m_awaiter);
+    m_handle = other.m_handle;
+    m_exit_cbs = other.m_exit_cbs;
 }
 
 Coroutine&
 Coroutine::operator=(Coroutine&& other) noexcept
 {
-    this->m_handle = other.m_handle;
+    m_handle = other.m_handle;
     other.m_handle = nullptr;
-    this->m_awaiter.store(other.m_awaiter);
+    m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
-    this->m_exit_cbs.splice(this->m_exit_cbs.begin(), other.m_exit_cbs);
+    m_exit_cbs.splice(m_exit_cbs.begin(), other.m_exit_cbs);
     return *this;
 }
 
@@ -120,7 +120,7 @@ bool Coroutine::SetAwaiter(Awaiter *awaiter)
 
 void Coroutine::AppendExitCallback(const std::function<void()>& callback)
 {
-    this->m_exit_cbs.emplace_front(callback);
+    m_exit_cbs.emplace_front(callback);
 }
 
 Awaiter *Coroutine::GetAwaiter() const
@@ -276,11 +276,11 @@ coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine)
     return {action, nullptr};
 }
 
-static thread_local details::TimeEventAction GlobalTimeAction;
+static thread_local details::TimeEventAction galayTimeAction;
 
-coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* timer, details::CoroutineScheduler* scheduler)
+coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<Timer>* timer, details::CoroutineScheduler* scheduler)
 {
-    GlobalTimeAction.CreateTimer(ms, timer, [scheduler](const galay::Timer::ptr& use_timer){
+    galayTimeAction.CreateTimer(ms, timer, [scheduler](details::TimeEvent::wptr event, Timer::ptr use_timer){
         const auto co = std::any_cast<coroutine::Coroutine*>(use_timer->GetContext());
         co->GetAwaiter()->SetResult(true);
         if(scheduler == nullptr) {
@@ -289,7 +289,7 @@ coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<galay::Timer>* time
             scheduler->EnqueueCoroutine(co);
         }
     });
-    return {&GlobalTimeAction , nullptr};
+    return {&galayTimeAction , nullptr};
 }
 
 
@@ -301,4 +301,33 @@ coroutine::Awaiter_void DeferExit(const std::function<void(void)>& callback)
     });
     return {action, nullptr};
 }
+
+
+RoutineDeadLine::RoutineDeadLine(const std::function<void(void)>& callback)
+    : m_callback(callback), m_last_active_time(GetCurrentTimeMs())
+{
+}
+
+bool RoutineDeadLine::Refluash()
+{
+    uint64_t old = m_last_active_time.load();
+    if(!m_last_active_time.compare_exchange_strong(old, GetCurrentTimeMs())) {
+        return false;
+    }
+    return true;
+}
+
+//ToDo
+coroutine::Awaiter_void RoutineDeadLine::operator()(uint64_t ms)
+{
+    galayTimeAction.CreateTimer(ms, &(m_timer), [](details::TimeEvent::wptr event, Timer::ptr timer){
+        if(timer->GetDeadline() > GetCurrentTimeMs()) {
+            if(!event.expired()) {
+                event.lock()->ReAddTimer(timer->GetTimeout(), timer);
+            }
+        }
+    });
+    return {&galayTimeAction, nullptr};
+}
+
 }

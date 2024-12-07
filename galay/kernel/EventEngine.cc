@@ -366,7 +366,7 @@ bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void *c
     case kEventTypeTimer:
     {
         ev.filter = EVFILT_TIMER;
-        int64_t during_time = static_cast<Timer*>(ctx)->GetDuringTime();
+        int64_t during_time = static_cast<Timer*>(ctx)->GetTimeout();
         ev.data = during_time;
     }
         break;

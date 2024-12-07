@@ -18,7 +18,7 @@ namespace galay::coroutine {
 
 namespace galay {
 
-extern int64_t GetCurrentTime(); 
+extern int64_t GetCurrentTimeMs(); 
 extern std::string GetCurrentGMTTimeString();
 
 /*
@@ -34,22 +34,22 @@ public:
     public:
         bool operator()(const Timer::ptr &a, const Timer::ptr &b) const;
     };
-    Timer(uint64_t during_time, std::function<void(Timer::ptr)> &&func);
-    uint64_t GetDuringTime() const;
-    uint64_t GetExpiredTime() const;
+    Timer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func);
+    uint64_t GetTimeout() const;
+    uint64_t GetDeadline() const;
     uint64_t GetRemainTime() const;
     std::any& GetContext() { return m_context; };
-    void SetDuringTime(uint64_t during_time);
-    void Execute();
-    void Cancle();
+    bool ResetTimeout(uint64_t timeout);
+    void Execute(std::weak_ptr<details::TimeEvent> event);
+    bool Cancle();
     bool Success() const;
 private:
     std::any m_context;
-    uint64_t m_expiredTime{};
-    uint64_t m_duringTime{};
+    std::atomic_uint64_t m_deadline{};
+    std::atomic_uint64_t m_timeout{};
     std::atomic_bool m_cancle{false};
     std::atomic_bool m_success{false};
-    std::function<void(Timer::ptr)> m_rightHandle;
+    std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> m_rightHandle;
 };
 
 }
