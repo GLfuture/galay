@@ -276,20 +276,23 @@ coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine*& coroutine)
     return {action, nullptr};
 }
 
-static thread_local details::TimeEventAction galayTimeAction;
-
-coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<Timer>* timer, details::CoroutineScheduler* scheduler)
+coroutine::Awaiter_void Sleepfor(int64_t ms)
 {
-    galayTimeAction.CreateTimer(ms, timer, [scheduler](details::TimeEvent::wptr event, Timer::ptr use_timer){
-        const auto co = std::any_cast<coroutine::Coroutine*>(use_timer->GetContext());
-        co->GetAwaiter()->SetResult(true);
-        if(scheduler == nullptr) {
+    auto func = [ms](coroutine::Coroutine* co, void* ctx)->bool{
+        if(ms <= 0) return false;
+        auto timecb = [co](details::TimeEvent::wptr event, Timer::ptr timer){
             co->BelongScheduler()->EnqueueCoroutine(co);
-        } else{
-            scheduler->EnqueueCoroutine(co);
-        }
-    });
-    return {&galayTimeAction , nullptr};
+        };
+        auto timer = std::make_shared<Timer>(ms, std::move(timecb));
+        auto coexitcb = [timer]() {
+            timer->Cancle();
+        };
+        co->AppendExitCallback(coexitcb);
+        TimerSchedulerHolder::GetInstance()->GetScheduler(0)->AddTimer(ms,  timer);
+        return true;
+    };
+    auto* action = new details::CoroutineHandleAction(std::move(func));
+    return {action , nullptr};
 }
 
 
@@ -317,17 +320,9 @@ bool RoutineDeadLine::Refluash()
     return true;
 }
 
-//ToDo
-coroutine::Awaiter_void RoutineDeadLine::operator()(uint64_t ms)
+// ToDo
+coroutine::Awaiter_bool RoutineDeadLine::operator()(uint64_t ms)
 {
-    galayTimeAction.CreateTimer(ms, &(m_timer), [](details::TimeEvent::wptr event, Timer::ptr timer){
-        if(timer->GetDeadline() > GetCurrentTimeMs()) {
-            if(!event.expired()) {
-                event.lock()->ReAddTimer(timer->GetTimeout(), timer);
-            }
-        }
-    });
-    return {&galayTimeAction, nullptr};
 }
 
 }

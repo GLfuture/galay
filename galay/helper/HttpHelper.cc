@@ -205,7 +205,7 @@ HttpFormDataHelper::ParseFormData(protocol::http::HttpRequest::ptr request, std:
                 //file
                 if(pos != std::string::npos)
                 {
-                    std::string_view filename = disposition.substr(pos + 10, disposition.length() - pos - 11);
+                    std::string filename = disposition.substr(pos + 10, disposition.length() - pos - 11);
                     std::string_view body = part.substr(eLength, part.length() - eLength - 2);
                     std::string tfile = std::string(filename.data(), filename.length());
                     FormFile file;

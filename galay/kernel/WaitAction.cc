@@ -10,35 +10,6 @@
 namespace galay::details
 {
 
-TimeEventAction::TimeEventAction()
-= default;
-
-void TimeEventAction::CreateTimer(const uint64_t ms, std::shared_ptr<galay::Timer> *timer, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)> &&callback)
-{
-    this->m_ms = ms;
-    m_callback = std::move(callback);
-    m_timer = timer;
-}
-
-bool TimeEventAction::HasEventToDo()
-{
-    return true;
-}
-
-
-bool TimeEventAction::DoAction(coroutine::Coroutine *co, void *ctx)
-{
-    if(m_ms <= 0) {
-        return false;
-    } 
-    *m_timer = TimerSchedulerHolder::GetInstance()->GetScheduler()->AddTimer(m_ms, std::move(m_callback));
-    (*m_timer)->GetContext() = co;
-    return true;
-}
-
-TimeEventAction::~TimeEventAction()
-= default;
-
 IOEventAction::IOEventAction(details::EventEngine* engine, details::WaitEvent *event)
     :m_engine(engine), m_event(event)
 {

@@ -46,10 +46,10 @@ class TcpConnectionManager
 public:
     TcpConnectionManager(async::AsyncNetIo* action);
     TcpConnection::ptr GetConnection();
-    std::shared_ptr<std::any> GetContext();
+    std::shared_ptr<std::any> GetUserData();
     ~TcpConnectionManager();
 private:
-    std::shared_ptr<std::any> m_context;
+    std::shared_ptr<std::any> m_userdata;
     TcpConnection::ptr m_connection;
 };
 
@@ -69,10 +69,10 @@ class TcpSslConnectionManager
 public:
     TcpSslConnectionManager(async::AsyncSslNetIo* socket);
     TcpSslConnection::ptr GetConnection();
-    std::shared_ptr<std::any> GetContext();
+    std::shared_ptr<std::any> GetUserData();
     ~TcpSslConnectionManager();
 private:
-    std::shared_ptr<std::any> m_context;
+    std::shared_ptr<std::any> m_userdata;
     TcpSslConnection::ptr m_connection;
 };
 
@@ -129,6 +129,7 @@ public:
     Request* GetRequest() const { return m_proto_store->m_request; }
     Response* GetResponse() const { return m_proto_store->m_response; }
     TcpConnection::ptr GetConnection() { return m_tcp_manager.GetConnection(); }
+    std::shared_ptr<std::any> GetUserData() const { return m_tcp_manager.GetUserData(); }
     ~ConnectionManager() = default;
 private:
     TcpConnectionManager m_tcp_manager;
@@ -145,6 +146,7 @@ public:
     Request* GetRequest() const { return m_proto_store->m_request; }
     Response* GetResponse() const { return m_proto_store->m_response; }
     TcpSslConnection::ptr GetConnection() { return m_tcp_ssl_manager.GetConnection(); }
+    std::shared_ptr<std::any> GetUserData() const { return m_tcp_ssl_manager.GetUserData(); }
     ~SslConnectionManager() = default;
 private:
     TcpSslConnectionManager m_tcp_ssl_manager;

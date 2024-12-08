@@ -1,26 +1,22 @@
 #include "galay/galay.h"
 #include "galay/kernel/EventEngine.h"
 #include <iostream>
-#include <spdlog/spdlog.h>
 
-#define TEST_DEADLINE
+#define TEST_SLEEP
 
 #ifdef TEST_SLEEP
 galay::coroutine::Coroutine test()
 {
-    galay::galay::Timer::ptr timer;
-    bool res = co_await galay::this_coroutine::Sleepfor(1000, &timer);
-    if(res)
-        std::cout << "sleep success" << std::endl;
-    else
-        std::cout << "sleep failed" << std::endl;
+    std::cout << "start" << std::endl;
+    co_await galay::this_coroutine::Sleepfor(5000);
+    std::cout << "sleep 1s" << std::endl;
     co_return;
 }
 
 
 int main()
 {
-#ifdef USE_KQUEUE
+#ifdef TEST_TIMER
     spdlog::set_level(spdlog::level::debug);
     galay::details::KqueueEventEngine::ptr engine = std::make_shared<galay::details::KqueueEventEngine>();
     GHandle handle{};
@@ -28,9 +24,9 @@ int main()
     
     galay::details::TimeEvent::ptr event = std::make_shared<galay::details::TimeEvent>(handle, engine.get());
     int i = 0;
-    galay::galay::Timer::ptr timer = event->AddTimer(1000, [event, &i](galay::galay::Timer::ptr t) {
+    galay::Timer::ptr timer = event->AddTimer(1000, [event, &i](auto event, galay::Timer::ptr t) {
         std::cout << "timer expired" << std::endl;
-        if(i++ < 10) event->ReAddTimer(1000, t);
+        if(i++ < 10) event.lock()->AddTimer(1000, t);
     });
     
     std::thread th([engine](){
@@ -42,7 +38,7 @@ int main()
     getchar(); 
     return 0;
 #endif
-    galay::InitializeGalayEnv(0 ,1 , 1, -1);
+    galay::InitializeGalayEnv({1, -1}, {0, -1}, {1, -1});
     test();
     std::cout << "main thread wait..." << std::endl;
     getchar();
@@ -61,6 +57,14 @@ galay::coroutine::Coroutine test()
         std::this_thread::sleep_for(std::chrono::seconds(5));
         std::cout << "defer exit end" << std::endl;
     });
+    galay::this_coroutine::RoutineDeadLine deadline([](){
+        std::cout << "deadline expired" << std::endl;
+    });
+    co_await deadline(100);
+    for(int i = 0; i < 10; ++i) {
+        deadline.Refluash();
+    }
+    std::cout << "after deadline" << std::endl;
     co_return;
 }
 
@@ -72,16 +76,11 @@ int main()
     });
     th.detach();
     getchar();
-    std::thread th2([]{
-        p->Destroy();
-    });
-    th2.detach();
-    std::cout << "ready to resume\n";
-    p->Destroy();
-    getchar();
+    std::cout << "main thread wait..." << std::endl;
     galay::DestroyGalayEnv();
 
     return 0;
 }
+ 
 
 #endif

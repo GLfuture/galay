@@ -157,9 +157,11 @@ EventEngine *TimeEvent::BelongEngine()
     return m_engine;
 }
 
-galay::Timer::ptr TimeEvent::AddTimer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func)
+galay::Timer::ptr TimeEvent::AddTimer(uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func)
 {
-    auto timer = std::make_shared<galay::Timer>(during_time, std::move(func));
+    auto timer = std::make_shared<galay::Timer>(timeout, std::move(func));
+    timer->ResetTimeout(timeout);
+    timer->m_cancle.store(false);
     std::unique_lock<std::shared_mutex> lock(this->m_mutex);
     this->m_timers.push(timer);
     lock.unlock();
@@ -171,9 +173,9 @@ galay::Timer::ptr TimeEvent::AddTimer(uint64_t during_time, std::function<void(s
     return timer;
 }
 
-void TimeEvent::ReAddTimer(const uint64_t during_time, const galay::Timer::ptr& timer)
+void TimeEvent::AddTimer(const uint64_t timeout, const galay::Timer::ptr& timer)
 {
-    timer->ResetTimeout(during_time);
+    timer->ResetTimeout(timeout);
     timer->m_cancle.store(false);
     std::unique_lock lock(this->m_mutex);
     this->m_timers.push(timer);
@@ -184,6 +186,7 @@ void TimeEvent::ReAddTimer(const uint64_t during_time, const galay::Timer::ptr& 
     m_engine.load()->ModEvent(this, timer.get());
 #endif
 }
+
 
 TimeEvent::~TimeEvent()
 {

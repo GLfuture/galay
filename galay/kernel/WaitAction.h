@@ -4,36 +4,9 @@
 #include "Awaiter.h"
 #include <functional>
 
-namespace galay{
-    class Timer;
-}
-
 namespace galay::details {
 
-class TimeEvent;
-class NetWaitEvent;
-class NetSslWaitEvent;
-class UdpWaitEvent;
-class FileIoWaitEvent;
 class EventEngine;
-/*
-    global 
-*/
-class TimeEventAction: public WaitAction
-{
-public:
-    using ptr = std::shared_ptr<TimeEventAction>;
-    TimeEventAction();
-    void CreateTimer(const uint64_t ms, std::shared_ptr<galay::Timer>* timer, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)>&& callback);
-    bool HasEventToDo() override;
-    // Add Timer
-    bool DoAction(coroutine::Coroutine* co, void* ctx) override;
-    ~TimeEventAction() override;
-private:
-    uint64_t m_ms{};
-    std::shared_ptr<galay::Timer>* m_timer{};
-    std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)> m_callback;
-};
 
 /*
     one net event be triggered will resume this coroutine

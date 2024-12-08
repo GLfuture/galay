@@ -78,7 +78,8 @@ public:
     using ptr = std::shared_ptr<TimerScheduler>;
     TimerScheduler();
     std::string Name() override { return "TimerScheduler"; }
-    std::shared_ptr<galay::Timer> AddTimer(uint64_t ms, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)>&& callback) const;
+    std::shared_ptr<Timer> AddTimer(uint64_t ms, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)>&& callback) const;
+    void AddTimer(const uint64_t ms, const std::shared_ptr<Timer>& timer);
     bool Loop(int timeout) override;
     bool Stop() const override;
     bool IsRunning() const;

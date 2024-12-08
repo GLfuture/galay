@@ -107,7 +107,7 @@ public:
     bool SetEventEngine(EventEngine* engine) override;
     EventEngine* BelongEngine() override;
     galay::Timer::ptr AddTimer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func); // ms
-    void ReAddTimer(uint64_t during_time, const galay::Timer::ptr& timer);
+    void AddTimer(const uint64_t timeout, const galay::Timer::ptr& timer);
     ~TimeEvent() override;
 private:
 #ifdef __linux__

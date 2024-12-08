@@ -34,22 +34,24 @@ public:
     public:
         bool operator()(const Timer::ptr &a, const Timer::ptr &b) const;
     };
-    Timer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func);
+    Timer();
+    Timer(uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func);
     uint64_t GetTimeout() const;
     uint64_t GetDeadline() const;
     uint64_t GetRemainTime() const;
-    std::any& GetContext() { return m_context; };
+    std::any& GetUserData() { return m_context; };
     bool ResetTimeout(uint64_t timeout);
+    bool ResetTimeout(uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func);
     void Execute(std::weak_ptr<details::TimeEvent> event);
     bool Cancle();
-    bool Success() const;
+    bool IsSuccess() const;
 private:
     std::any m_context;
     std::atomic_uint64_t m_deadline{};
     std::atomic_uint64_t m_timeout{};
     std::atomic_bool m_cancle{false};
     std::atomic_bool m_success{false};
-    std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> m_rightHandle;
+    std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> m_callback;
 };
 
 }

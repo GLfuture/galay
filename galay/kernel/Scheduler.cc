@@ -100,9 +100,6 @@ bool CoroutineScheduler::IsRunning() const
 
 TimerScheduler::TimerScheduler()
 {
-    GHandle handle{};
-    details::TimeEvent::CreateHandle(handle);
-    m_timer_event = new details::TimeEvent(handle, m_engine.get());
 }
 
 std::shared_ptr<galay::Timer> TimerScheduler::AddTimer(const uint64_t ms, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)>&& callback) const
@@ -110,13 +107,22 @@ std::shared_ptr<galay::Timer> TimerScheduler::AddTimer(const uint64_t ms, std::f
     return m_timer_event->AddTimer(ms, std::move(callback));
 }
 
+void TimerScheduler::AddTimer(const uint64_t ms, const std::shared_ptr<Timer>& timer)
+{
+    m_timer_event->AddTimer(ms, timer);
+}
+
 bool TimerScheduler::Loop(const int timeout)
 {
+    GHandle handle{};
+    details::TimeEvent::CreateHandle(handle);
+    m_timer_event = new details::TimeEvent(handle, m_engine.get());
     return EventScheduler::Loop(timeout);
 }
 
 bool TimerScheduler::Stop() const
 {
+    delete m_timer_event; 
     return EventScheduler::Stop();
 }
 
@@ -132,7 +138,6 @@ uint32_t TimerScheduler::GetErrorCode() const
 
 TimerScheduler::~TimerScheduler()
 { 
-    delete m_timer_event; 
 }
 
 }

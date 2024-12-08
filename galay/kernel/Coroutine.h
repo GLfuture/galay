@@ -195,7 +195,7 @@ namespace galay::this_coroutine
         [timer] : timer
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
-    extern coroutine::Awaiter_bool Sleepfor(int64_t ms, std::shared_ptr<Timer>* timer, details::CoroutineScheduler* scheduler = nullptr);
+    extern coroutine::Awaiter_void Sleepfor(int64_t ms);
 
     /*
         注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
@@ -209,7 +209,7 @@ namespace galay::this_coroutine
     public:
         RoutineDeadLine(const std::function<void(void)>& callback);
         bool Refluash();
-        coroutine::Awaiter_void operator()(uint64_t ms);
+        coroutine::Awaiter_bool operator()(uint64_t ms);
         ~RoutineDeadLine() = default;
     private:
         std::shared_ptr<Timer> m_timer;
