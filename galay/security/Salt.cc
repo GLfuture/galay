@@ -1,5 +1,5 @@
 #include "Salt.h"
-#include "galay/util/Random.h"
+#include "galay/utils/Random.h"
 #include <string.h>
 #include <openssl/rand.h>
 

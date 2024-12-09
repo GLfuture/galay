@@ -26,5 +26,5 @@ public:
 
 TEST(ReflectionTest,CreateTest)
 {
-    EXPECT_NE(galay::common::UserFactory<>::GetInstance()->Create(galay::util::GetTypeName<Child>()).get(),nullptr);
+    EXPECT_NE(galay::common::UserFactory<>::GetInstance()->Create(galay::utils::GetTypeName<Child>()).get(),nullptr);
 }

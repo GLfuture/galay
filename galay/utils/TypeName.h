@@ -8,7 +8,7 @@
 #endif
 
 
-namespace galay::util
+namespace galay::utils
 {
     template <typename T>
     std::string GetTypeName()

@@ -3,7 +3,7 @@
 
 TEST(Trie, test)
 {
-    galay::tree::TrieTree tree;
+    galay::utils::TrieTree tree;
     tree.Add("hello");
     tree.Add("world");
     tree.Add("hi");

@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <list>
 #include <memory>
-#include "galay/util/TypeName.h"
+#include "galay/utils/TypeName.h"
 
 namespace galay
 {

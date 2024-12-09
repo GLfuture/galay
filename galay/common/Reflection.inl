@@ -172,27 +172,27 @@ galay::common::DynamicCreator<BaseClass, T, Targs...>::~DynamicCreator()
  template <typename BaseClass, typename T, typename... Targs>
  galay::common::Register<BaseClass,T,Targs...>::Register()
 {
-    std::string typeName = util::GetTypeName<T>();
+    std::string typeName = utils::GetTypeName<T>();
 }
 
 template <typename T, typename... Targs>
 galay::common::Register<galay::protocol::Request,T,Targs...>::Register()
 {
-    std::string typeName = util::GetTypeName<T>();
+    std::string typeName = utils::GetTypeName<T>();
     galay::common::RequestFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::protocol::Request, T, Targs...>::CreateObject);
 }
 
 template <typename T, typename... Targs>
 galay::common::Register<galay::protocol::Response,T,Targs...>::Register()
 {
-    std::string typeName = util::GetTypeName<T>();
+    std::string typeName = utils::GetTypeName<T>();
     galay::common::ResponseFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::protocol::Response, T, Targs...>::CreateObject);
 }
 
 template <typename T, typename... Targs>
 galay::common::Register<galay::Base,T,Targs...>::Register()
 {
-    std::string typeName = util::GetTypeName<T>();
+    std::string typeName = utils::GetTypeName<T>();
     galay::common::UserFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::Base, T, Targs...>::CreateObject);
 }
 

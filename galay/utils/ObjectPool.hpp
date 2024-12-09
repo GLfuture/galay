@@ -4,7 +4,7 @@
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include <cinttypes>
 
-namespace galay::util
+namespace galay::utils
 {
 
 template <typename T>

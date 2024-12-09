@@ -4,7 +4,7 @@
 #include <any>
 #include <functional>
 #include "galay/protocol/Http.h"
-#include "galay/util/ObjectPool.hpp"
+#include "galay/utils/ObjectPool.hpp"
 #include "Event.h"
 
 namespace galay::coroutine
@@ -104,8 +104,8 @@ template <RequestType Request, ResponseType Response>
 struct ProtocolStore
 {
     using ptr = std::shared_ptr<ProtocolStore>;
-    ProtocolStore(util::ObjectPoolMutiThread<Request>* request_pool, \
-        util::ObjectPoolMutiThread<Response>* response_pool)
+    ProtocolStore(utils::ObjectPoolMutiThread<Request>* request_pool, \
+        utils::ObjectPoolMutiThread<Response>* response_pool)
         :m_request(request_pool->GetObjector()), m_response(response_pool->GetObjector()), m_request_pool(request_pool), m_response_pool(response_pool) {}
     ~ProtocolStore() {
         m_request_pool->ReturnObjector(m_request);
@@ -113,8 +113,8 @@ struct ProtocolStore
     }
     Request* m_request;
     Response* m_response;
-    util::ObjectPoolMutiThread<Request>* m_request_pool;
-    util::ObjectPoolMutiThread<Response>* m_response_pool;
+    utils::ObjectPoolMutiThread<Request>* m_request_pool;
+    utils::ObjectPoolMutiThread<Response>* m_response_pool;
 };
 
 template <RequestType Request, ResponseType Response>
@@ -122,8 +122,8 @@ class ConnectionManager
 {
 public:
 
-    ConnectionManager(const TcpConnectionManager& manager, util::ObjectPoolMutiThread<Request>* request_pool, \
-        util::ObjectPoolMutiThread<Response>* response_pool)
+    ConnectionManager(const TcpConnectionManager& manager, utils::ObjectPoolMutiThread<Request>* request_pool, \
+        utils::ObjectPoolMutiThread<Response>* response_pool)
         :m_tcp_manager(manager), m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
 
     Request* GetRequest() const { return m_proto_store->m_request; }
@@ -140,8 +140,8 @@ template <RequestType Request, ResponseType Response>
 class SslConnectionManager
 {
 public:
-    SslConnectionManager(const TcpSslConnectionManager& manager, util::ObjectPoolMutiThread<Request>* request_pool, \
-        util::ObjectPoolMutiThread<Response>* response_pool)
+    SslConnectionManager(const TcpSslConnectionManager& manager, utils::ObjectPoolMutiThread<Request>* request_pool, \
+        utils::ObjectPoolMutiThread<Response>* response_pool)
         :m_tcp_ssl_manager(manager), m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
     Request* GetRequest() const { return m_proto_store->m_request; }
     Response* GetResponse() const { return m_proto_store->m_response; }

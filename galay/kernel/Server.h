@@ -139,8 +139,8 @@ namespace galay::server
         using Coroutine = coroutine::Coroutine;
         using RoutineContext_ptr = std::shared_ptr<coroutine::RoutineContext>;
 
-        static util::ObjectPoolMutiThread<HttpRequest> RequestPool;
-        static util::ObjectPoolMutiThread<HttpResponse> ResponsePool;
+        static utils::ObjectPoolMutiThread<HttpRequest> RequestPool;
+        static utils::ObjectPoolMutiThread<HttpResponse> ResponsePool;
     public:
         explicit HttpServer(const HttpServerConfig::ptr& config);
         //not thread security
@@ -177,8 +177,8 @@ namespace galay::server
         using Coroutine = coroutine::Coroutine;
         using RoutineContext_ptr = std::shared_ptr<coroutine::RoutineContext>;
 
-        static util::ObjectPoolMutiThread<HttpRequest> RequestPool;
-        static util::ObjectPoolMutiThread<HttpResponse> ResponsePool;
+        static utils::ObjectPoolMutiThread<HttpRequest> RequestPool;
+        static utils::ObjectPoolMutiThread<HttpResponse> ResponsePool;
     public:
         explicit HttpsServer(const HttpsServerConfig::ptr& config);
         //not thread security

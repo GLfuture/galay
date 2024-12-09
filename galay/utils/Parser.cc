@@ -2,7 +2,7 @@
 #include "Io.h"
 #include "String.h"
 
-namespace galay::util
+namespace galay::utils
 {
 ParserManager::ParserManager()
 {

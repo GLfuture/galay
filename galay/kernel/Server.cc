@@ -164,8 +164,8 @@ TcpSslServer::~TcpSslServer()
 
 //HttpServer
 
-util::ObjectPoolMutiThread<HttpServer::HttpRequest> HttpServer::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
-util::ObjectPoolMutiThread<HttpServer::HttpResponse> HttpServer::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
+utils::ObjectPoolMutiThread<HttpServer::HttpRequest> HttpServer::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
+utils::ObjectPoolMutiThread<HttpServer::HttpResponse> HttpServer::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
 
 HttpServer::HttpServer(const HttpServerConfig::ptr& config)
 	: m_server(config), m_store(std::make_unique<TcpCallbackStore>([this](const TcpConnectionManager& manager)->coroutine::Coroutine {
@@ -380,8 +380,8 @@ void HttpServer::CreateHttpResponse(protocol::http::HttpResponse* response, prot
 	helper::http::HttpHelper::DefaultHttpResponse(response, version, code, "text/html", std::move(body));
 }
 
-util::ObjectPoolMutiThread<HttpsServer::HttpRequest> HttpsServer::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
-util::ObjectPoolMutiThread<HttpsServer::HttpResponse> HttpsServer::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
+utils::ObjectPoolMutiThread<HttpsServer::HttpRequest> HttpsServer::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
+utils::ObjectPoolMutiThread<HttpsServer::HttpResponse> HttpsServer::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
 
 HttpsServer::HttpsServer(const HttpsServerConfig::ptr &config)
 	: m_server(config), m_store(std::make_unique<TcpSslCallbackStore>([this](const TcpSslConnectionManager& manager)->coroutine::Coroutine {

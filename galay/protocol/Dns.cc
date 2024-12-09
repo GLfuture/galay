@@ -1,5 +1,5 @@
 #include "Dns.h"
-#include "galay/util/String.h"
+#include "galay/utils/String.h"
 #include <cstring>
 namespace galay::error
 {

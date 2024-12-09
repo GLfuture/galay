@@ -19,7 +19,7 @@
     #include <nlohmann/json.hpp>
 #endif
 
-namespace galay::util
+namespace galay::utils
 {
     class ParserBase
     {

@@ -24,16 +24,16 @@
 #include "protocol/Smtp.h"
 #include "protocol/Dns.h"
 
-//util
-#include "util/Parser.h"
-#include "util/Io.h"
-#include "util/String.h"
-#include "util/TypeName.h"
-#include "util/Random.h"
-#include "util/RateLimiter.h"
-#include "util/Tree.h"
-#include "util/Thread.h"
-#include "util/ThreadSefe.hpp"
+//utils
+#include "utils/Parser.h"
+#include "utils/Io.h"
+#include "utils/String.h"
+#include "utils/TypeName.h"
+#include "utils/Random.h"
+#include "utils/RateLimiter.h"
+#include "utils/Tree.h"
+#include "utils/Thread.h"
+#include "utils/ThreadSefe.hpp"
 
 #ifndef GALAY_VERSION
 #define GALAY_VERSION "0.0.1"

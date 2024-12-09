@@ -32,7 +32,7 @@ endif()
 
 include_directories(thirdparty)
 
-set(DEPEND_LIBS kernel util protocol ${MIDDLEWARE} security common helper)
+set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common helper)
 set(STATIC_LIB ${PROJECT_NAME}-static)
 set(SHARED_LIB ${PROJECT_NAME})
 

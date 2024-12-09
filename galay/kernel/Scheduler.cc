@@ -3,7 +3,7 @@
 #include "EventEngine.h"
 #include "Coroutine.h"
 #include "ExternApi.h"
-#include "galay/util/Thread.h"
+#include "galay/utils/Thread.h"
 #include "Log.h"
 
 namespace galay::details
