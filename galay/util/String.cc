@@ -41,7 +41,7 @@ StringSplitter::SpiltWithStr(const std::string &str, const std::string& symbol)
 
 
 std::vector<std::string> 
-StringSplitter::Spilt_With_Char_Connect_With_char(const std::string &str, const char partition, const char connction)
+StringSplitter::SpiltWithCharAndConnectWithchar(const std::string &str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;
@@ -147,7 +147,7 @@ StringSplitter::SpiltWithStr(std::string_view str, std::string_view symbol)
 }
 
 std::vector<std::string_view> 
-StringSplitter::Spilt_With_Char_Connect_With_char(std::string_view str, const char partition, const char connction)
+StringSplitter::SpiltWithCharAndConnectWithchar(std::string_view str, const char partition, const char connction)
 {
     int beg = 0, end = 0;
     uint16_t status = 0;

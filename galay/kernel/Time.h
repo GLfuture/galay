@@ -32,9 +32,9 @@ public:
     class TimerCompare
     {
     public:
+        TimerCompare() = default;
         bool operator()(const Timer::ptr &a, const Timer::ptr &b) const;
     };
-    Timer();
     Timer(uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func);
     uint64_t GetTimeout() const;
     uint64_t GetDeadline() const;

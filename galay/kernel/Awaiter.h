@@ -13,7 +13,7 @@ class WaitAction
 public:
     virtual ~WaitAction() = default;
     virtual bool HasEventToDo() = 0;
-    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) = 0;
+    virtual bool DoAction(coroutine::Coroutine::wptr co, void* ctx) = 0;
 };
 }
 
@@ -30,7 +30,7 @@ public:
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     void await_resume() const noexcept;
     void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    [[nodiscard]] Coroutine* GetCoroutine() const;
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const;
 private:
     void* m_ctx;
     details::WaitAction* m_action;
@@ -47,7 +47,7 @@ public:
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     [[nodiscard]] int await_resume() const noexcept;
     void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    [[nodiscard]] Coroutine* GetCoroutine() const;
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const;
 private:
     void* m_ctx;
     int m_result;
@@ -65,7 +65,7 @@ public:
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     [[nodiscard]] bool await_resume() const noexcept;
     void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    [[nodiscard]] Coroutine* GetCoroutine() const;
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const;
 private:
     void* m_ctx;
     bool m_result;
@@ -83,7 +83,7 @@ public:
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     [[nodiscard]] void* await_resume() const noexcept;
     void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    [[nodiscard]] Coroutine* GetCoroutine() const;
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const;
 private:
     void* m_ctx;
     void* m_ptr;
@@ -102,7 +102,7 @@ public:
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     [[nodiscard]] std::string await_resume() const noexcept;
     void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    [[nodiscard]] Coroutine* GetCoroutine() const;
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const;
 private:
     void* m_ctx;
     std::string m_result;
@@ -120,7 +120,7 @@ public:
     bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept;
     [[nodiscard]] GHandle await_resume() const noexcept;
     void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) override;
-    [[nodiscard]] Coroutine* GetCoroutine() const;
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const;
 private:
     void* m_ctx;
     GHandle m_result;

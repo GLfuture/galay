@@ -2,7 +2,7 @@
 #include "galay/kernel/EventEngine.h"
 #include <iostream>
 
-#define TEST_SLEEP
+#define TEST_AUTO_DESTROY
 
 #ifdef TEST_SLEEP
 galay::coroutine::Coroutine test()
@@ -47,7 +47,7 @@ int main()
 }
 #elif defined(TEST_DEADLINE)
 
-galay::coroutine::Coroutine* p;
+galay::coroutine::Coroutine::wptr p;
 
 galay::coroutine::Coroutine test()
 {
@@ -81,6 +81,33 @@ int main()
 
     return 0;
 }
+
+#elif defined(TEST_AUTO_DESTROY)
+
+galay::coroutine::Coroutine test()
+{
+    co_await galay::this_coroutine::AddToCoroutineStore();
+    co_await galay::this_coroutine::DeferExit([](){
+        std::cout << "defer exit" << std::endl;
+    });
+    galay::this_coroutine::AutoDestructor::ptr auto_destructor = std::make_shared<galay::this_coroutine::AutoDestructor>();
+    co_await auto_destructor->Start(1000);
+    std::cout << "sleep start" << std::endl;
+    co_await galay::this_coroutine::Sleepfor(10000);
+    std::cout << "sleep end" << std::endl;
+    co_return ;
+}
  
+int main()
+{
+    GALAY_APP_MAIN(
+        test();
+        std::cout << "main thread wait..." << std::endl;
+        getchar();
+    )
+    return 0;
+}
+
+
 
 #endif

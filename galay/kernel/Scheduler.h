@@ -37,11 +37,18 @@ public:
 class CoroutineScheduler final : public Scheduler
 {
 public:
+    enum class Action
+    {
+        kActionResume,
+        kActionDestroy,
+    };
     using ptr = std::shared_ptr<CoroutineScheduler>;
     using uptr = std::unique_ptr<CoroutineScheduler>;
+    using Coroutine_wptr = std::weak_ptr<coroutine::Coroutine>; 
     CoroutineScheduler();
     std::string Name() override { return "CoroutineScheduler"; }
-    void EnqueueCoroutine(coroutine::Coroutine* coroutine);
+    void ToResumeCoroutine(Coroutine_wptr coroutine);
+    void ToDestroyCoroutine(Coroutine_wptr coroutine);
     bool Loop(int timeout);
     bool Stop();
     bool IsRunning() const;
@@ -49,7 +56,7 @@ private:
     std::atomic_bool m_running;
     std::unique_ptr<std::thread> m_thread;
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
-    moodycamel::BlockingConcurrentQueue<coroutine::Coroutine*> m_coroutines_queue;
+    moodycamel::BlockingConcurrentQueue<std::pair<Action, Coroutine_wptr>> m_coroutines_queue;
 };
 
 

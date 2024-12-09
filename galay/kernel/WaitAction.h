@@ -19,7 +19,7 @@ public:
     IOEventAction(details::EventEngine* engine, details::WaitEvent* event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
-    bool DoAction(coroutine::Coroutine* co, void* ctx) override;
+    bool DoAction(coroutine::Coroutine::wptr co, void* ctx) override;
     void ResetEvent(details::WaitEvent* event);
     [[nodiscard]] details::WaitEvent* GetBindEvent() const { return m_event; };
     ~IOEventAction() override;
@@ -32,11 +32,11 @@ private:
 class CoroutineHandleAction: public WaitAction
 {
 public:
-    CoroutineHandleAction(std::function<bool(coroutine::Coroutine*, void*)>&& callback);
+    CoroutineHandleAction(std::function<bool(coroutine::Coroutine::wptr, void*)>&& callback);
     virtual bool HasEventToDo() override;
-    virtual bool DoAction(coroutine::Coroutine* co, void* ctx) override;
+    virtual bool DoAction(coroutine::Coroutine::wptr co, void* ctx) override;
 private:
-    std::function<bool(coroutine::Coroutine*, void*)> m_callback;
+    std::function<bool(coroutine::Coroutine::wptr, void*)> m_callback;
 };
 
 }

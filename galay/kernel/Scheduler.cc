@@ -57,21 +57,38 @@ CoroutineScheduler::CoroutineScheduler()
 }
 
 void 
-CoroutineScheduler::EnqueueCoroutine(coroutine::Coroutine *coroutine)
+CoroutineScheduler::ToResumeCoroutine(Coroutine_wptr coroutine)
 {
-    m_coroutines_queue.enqueue(coroutine);
+    m_coroutines_queue.enqueue({Action::kActionResume, coroutine});
+}
+
+void CoroutineScheduler::ToDestroyCoroutine(Coroutine_wptr coroutine)
+{
+    m_coroutines_queue.enqueue({Action::kActionDestroy, coroutine});
 }
 
 bool CoroutineScheduler::Loop(int timeout)
 {
     this->m_thread = std::make_unique<std::thread>([this](){
-        coroutine::Coroutine* co = nullptr;
+        std::pair<Action, Coroutine_wptr> co;
         m_running = true;
         while(true)
         {
             m_coroutines_queue.wait_dequeue(co);
-            if(co) {
-                co->Resume();
+            if(!co.second.expired()) {
+                switch (co.first)
+                {
+                case Action::kActionResume:
+                    co.second.lock()->Resume();
+                    break;
+                case Action::kActionDestroy:
+                {   
+                    co.second.lock()->Destroy();
+                    break;
+                }
+                default:
+                    break;
+                }
             }else{
                 break;
             }
@@ -88,8 +105,8 @@ bool CoroutineScheduler::Stop()
     if(!m_running) {
         return false;
     }
-    m_coroutines_queue.enqueue(nullptr);
     coroutine::GetCoroutineStore()->Clear(); 
+    m_coroutines_queue.enqueue({});
     return m_waiter->Wait(5000);
 }
 

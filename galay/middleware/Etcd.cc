@@ -2,7 +2,7 @@
 #include "galay/kernel/Scheduler.h"
 #include "galay/kernel/ExternApi.h"
 
-bool galay::details::EtcdAction::DoAction(coroutine::Coroutine *co, void *ctx)
+bool galay::details::EtcdAction::DoAction(coroutine::Coroutine::wptr co, void *ctx)
 {
     m_callback(co, ctx);
     return true;
@@ -47,11 +47,11 @@ EtcdClient::EtcdClient(const std::string& EtcdAddrs, int co_sche_index)
 coroutine::Awaiter_bool 
 EtcdClient::RegisterService(const std::string& ServiceName, const std::string& ServiceAddr)
 {
-    m_action.ResetCallback([this, ServiceName, ServiceAddr](coroutine::Coroutine* co, void* ctx) {
+    m_action.ResetCallback([this, ServiceName, ServiceAddr](coroutine::Coroutine::wptr co, void* ctx) {
         this->m_client->put(ServiceName, ServiceAddr).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
-            co->GetAwaiter()->SetResult(true);
-            co->BelongScheduler()->EnqueueCoroutine(co);
+            co.lock()->GetAwaiter()->SetResult(true);
+            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });
     });
     return coroutine::Awaiter_bool(&m_action, nullptr);
@@ -60,14 +60,14 @@ EtcdClient::RegisterService(const std::string& ServiceName, const std::string& S
 coroutine::Awaiter_bool 
 EtcdClient::RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL)
 {
-    m_action.ResetCallback([this, ServiceName, ServiceAddr, TTL](coroutine::Coroutine* co, void* ctx) {
+    m_action.ResetCallback([this, ServiceName, ServiceAddr, TTL](coroutine::Coroutine::wptr co, void* ctx) {
         m_client->leasekeepalive(TTL).then([this,ServiceName,ServiceAddr,co](std::shared_ptr<::etcd::KeepAlive> keepalive){
             m_keepalive = keepalive;
             int64_t leaseid = keepalive->Lease();
             m_client->put(ServiceName,ServiceAddr,leaseid).then([this, co](::etcd::Response resp){
                 m_response = std::move(resp);
-                co->GetAwaiter()->SetResult(true);
-                co->BelongScheduler()->EnqueueCoroutine(co);
+                co.lock()->GetAwaiter()->SetResult(true);
+                co.lock()->BelongScheduler()->ToResumeCoroutine(co);
             });
         });
     });
@@ -77,11 +77,11 @@ EtcdClient::RegisterService(const std::string& ServiceName, const std::string& S
 coroutine::Awaiter_bool 
 EtcdClient::DiscoverService(const std::string& ServiceName)
 {
-    m_action.ResetCallback([this, ServiceName](coroutine::Coroutine* co, void* ctx){
+    m_action.ResetCallback([this, ServiceName](coroutine::Coroutine::wptr co, void* ctx){
         m_client->get(ServiceName).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
-            co->GetAwaiter()->SetResult(true);
-            co->BelongScheduler()->EnqueueCoroutine(co);
+            co.lock()->GetAwaiter()->SetResult(true);
+            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });
     });
     return coroutine::Awaiter_bool(&m_action, nullptr);
@@ -90,11 +90,11 @@ EtcdClient::DiscoverService(const std::string& ServiceName)
 coroutine::Awaiter_bool 
 EtcdClient::DiscoverServicePrefix(const std::string& Prefix)
 {
-    m_action.ResetCallback([this, Prefix](coroutine::Coroutine* co, void* ctx){
+    m_action.ResetCallback([this, Prefix](coroutine::Coroutine::wptr co, void* ctx){
         m_client->ls(Prefix).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
-            co->GetAwaiter()->SetResult(true);
-            co->BelongScheduler()->EnqueueCoroutine(co);
+            co.lock()->GetAwaiter()->SetResult(true);
+            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });
     });
     return coroutine::Awaiter_bool(&m_action, nullptr);

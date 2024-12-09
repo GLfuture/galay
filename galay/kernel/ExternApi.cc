@@ -270,7 +270,7 @@ coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo *asocket)
 coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, const int flags, mode_t mode)
 {
 #if defined(__linux__) || defined(__APPLE__) 
-    const int fd = open(path, flags);
+    const int fd = open(path, flags, mode);
 #endif
     const auto handle = GHandle{fd};
     async::HandleOption option(handle);
@@ -293,9 +293,6 @@ coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov, s
     iov->m_length = length;
     return {afileio->GetAction(), iov};
 }
-
-
-
 
 
 bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)

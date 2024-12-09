@@ -153,8 +153,10 @@ class SchedulerHolder
     static std::unique_ptr<SchedulerHolder> Instance;
 public:
 
+//最少为1
 void Initialize(uint32_t scheduler_size, int timeout)
 {
+    if(scheduler_size == 0) scheduler_size = 1;
     std::vector<typename Type::value_type*> scheduler_ptrs;
     for (int i = 0; i < scheduler_size; ++i)
     {

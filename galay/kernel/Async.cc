@@ -198,7 +198,7 @@ bool AsyncFileNativeAio::PrepareWrite(GHandle handle, char *buf, size_t len, lon
     if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
     io_prep_pwrite(m_iocb_ptrs[num], handle.fd, buf, len, offset);
     io_set_eventfd(m_iocb_ptrs[num], GetHandle().fd);
-    m_iocb_ptrs[num]->data = this;
+    m_iocb_ptrs[num]->data = callback;
     return true;
 }
 
@@ -235,7 +235,7 @@ coroutine::Awaiter_int AsyncFileNativeAio::Commit()
     }
     m_current_index = 0;
     dynamic_cast<details::FileIoWaitEvent*>(GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
-    return coroutine::Awaiter_int(GetAction(), nullptr);
+    return {GetAction(), nullptr};
 }
 
 bool AsyncFileNativeAio::IoFinished(uint64_t finished_io)

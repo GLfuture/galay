@@ -117,7 +117,7 @@ private:
     GHandle m_handle;
     std::atomic<EventEngine*> m_engine;
     std::shared_mutex m_mutex;
-    std::priority_queue<galay::Timer::ptr> m_timers;
+    std::priority_queue<Timer::ptr, std::vector<std::shared_ptr<galay::Timer>>, Timer::TimerCompare> m_timers;
 };
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 
@@ -165,17 +165,18 @@ private:
 class WaitEvent: public Event
 {
 public:
+    using Coroutine_wptr = std::weak_ptr<coroutine::Coroutine>;
     WaitEvent();
     /*
         OnWaitPrepare() return false coroutine will not suspend, else suspend
     */
-    virtual bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) = 0;
+    virtual bool OnWaitPrepare(Coroutine_wptr co, void* ctx) = 0;
     bool SetEventEngine(EventEngine* engine) override;
     EventEngine* BelongEngine() override;
     ~WaitEvent() override = default;
 protected:
     std::atomic<EventEngine*> m_engine;
-    coroutine::Coroutine* m_waitco;
+    Coroutine_wptr m_waitco;
 };
 
 enum NetWaitEventType
@@ -206,7 +207,7 @@ public:
     explicit NetWaitEvent(async::AsyncNetIo* socket);
     
     std::string Name() override;
-    bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
+    bool OnWaitPrepare(Coroutine_wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
     EventType GetEventType() override;
     GHandle GetHandle() override;
@@ -214,11 +215,11 @@ public:
     async::AsyncNetIo* GetAsyncTcpSocket() const { return m_socket; }
     ~NetWaitEvent() override;
 protected:
-    bool OnAcceptWaitPrepare(const coroutine::Coroutine* co, void* ctx) const;
-    bool OnRecvWaitPrepare(const coroutine::Coroutine* co, void* ctx);
-    bool OnSendWaitPrepare(const coroutine::Coroutine* co, void* ctx);
-    bool OnConnectWaitPrepare(coroutine::Coroutine* co, void* ctx) const;
-    bool OnCloseWaitPrepare(const coroutine::Coroutine* co, void* ctx);
+    bool OnAcceptWaitPrepare(const Coroutine_wptr co, void* ctx) const;
+    bool OnRecvWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnSendWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnConnectWaitPrepare(Coroutine_wptr co, void* ctx) const;
+    bool OnCloseWaitPrepare(const Coroutine_wptr co, void* ctx);
 
     void HandleErrorEvent(EventEngine* engine);
     void HandleAcceptEvent(EventEngine* engine);
@@ -243,16 +244,16 @@ public:
     explicit NetSslWaitEvent(async::AsyncSslNetIo* socket);
     std::string Name() override;
     EventType GetEventType() override;
-    bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
+    bool OnWaitPrepare(Coroutine_wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
     async::AsyncSslNetIo* GetAsyncTcpSocket() const;
     ~NetSslWaitEvent() override;
 protected:
-    bool OnSslAcceptWaitPrepare(const coroutine::Coroutine* co, void* ctx);
-    bool OnSslConnectWaitPrepare(const coroutine::Coroutine* co, void* ctx);
-    bool OnSslRecvWaitPrepare(const coroutine::Coroutine* co, void* ctx);
-    bool OnSslSendWaitPrepare(const coroutine::Coroutine* co, void* ctx);
-    bool OnSslCloseWaitPrepare(const coroutine::Coroutine* co, void* ctx);
+    bool OnSslAcceptWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnSslConnectWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnSslRecvWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnSslSendWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnSslCloseWaitPrepare(const Coroutine_wptr co, void* ctx);
 
     void HandleSslAcceptEvent(EventEngine* engine);
     void HandleSslConnectEvent(EventEngine* engine);
@@ -293,7 +294,7 @@ class FileIoWaitEvent final : public WaitEvent
 public:
     explicit FileIoWaitEvent(async::AsyncFileIo* fileio);
     std::string Name() override;
-    bool OnWaitPrepare(coroutine::Coroutine* co, void* ctx) override;
+    bool OnWaitPrepare(Coroutine_wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
     EventType GetEventType() override;
     GHandle GetHandle() override;
@@ -302,12 +303,12 @@ public:
     ~FileIoWaitEvent() override;
 private:
 #ifdef __linux__
-    bool OnAioWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    bool OnAioWaitPrepare(Coroutine_wptr co, void* ctx);
     void HandleAioEvent(EventEngine* engine);
 #endif
-    bool OnKReadWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    bool OnKReadWaitPrepare(Coroutine_wptr co, void* ctx);
     void HandleKReadEvent(EventEngine* engine);
-    bool OnKWriteWaitPrepare(coroutine::Coroutine* co, void* ctx);
+    bool OnKWriteWaitPrepare(Coroutine_wptr co, void* ctx);
     void HandleKWriteEvent(EventEngine* engine);
 private:
     void *m_ctx{};

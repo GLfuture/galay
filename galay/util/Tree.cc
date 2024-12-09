@@ -1,6 +1,6 @@
 #include "Tree.h"
 
-namespace galay::tree 
+namespace galay::utils 
 {
 TrieTree::TrieNode::TrieNode(char value, uint32_t frequence)
 {

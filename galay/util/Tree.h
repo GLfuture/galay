@@ -7,7 +7,7 @@
 #include <queue>
 #include <string>
 
-namespace galay::tree
+namespace galay::utils
 {
     class TrieTree
     {

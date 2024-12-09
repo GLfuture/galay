@@ -23,11 +23,6 @@ std::string GetCurrentGMTTimeString()
     return buffer;
 }
 
-Timer::Timer()
-    : m_timeout(0)
-{
-}
-
 Timer::Timer(const uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func)
 {
     m_callback = std::move(func);

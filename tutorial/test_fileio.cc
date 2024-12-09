@@ -20,6 +20,7 @@ Coroutine test()
         ((char*)buffer)[i] = 'a';
     }
     fileio.PrepareWrite(handle, (char*)buffer, PEER_SIZE * 10, 0);
+    spdlog::info("write file");
     int ret = co_await fileio.Commit();
     printf("ret: %d\n", ret);
     printf("error is %s\n", galay::error::GetErrorString(fileio.GetErrorCode()).c_str());
@@ -30,7 +31,7 @@ Coroutine test()
     fileio.PrepareRead(handle, (char*)after, PEER_SIZE * 10, 0);
     ret = co_await fileio.Commit();
     printf("ret: %d\n", ret);
-    if(strcmp((char*)buffer, (char*)after) == 0) {
+    if(strncmp((char*)buffer, (char*)after, PEER_SIZE * 10) == 0) {
         printf("fileio test success\n");
     } else {
         printf("fileio test failed\n");
@@ -108,12 +109,13 @@ galay::coroutine::Coroutine test()
 
 int main()
 {
-    spdlog::set_level(spdlog::level::debug);
-    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+GALAY_APP_MAIN(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     test();
+    spdlog::info("test");
     getchar();
     galay::DestroyGalayEnv();
     remove("test.txt");
+);
     return 0;
 }

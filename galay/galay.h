@@ -35,5 +35,17 @@
 #include "util/Thread.h"
 #include "util/ThreadSefe.hpp"
 
+#ifndef GALAY_VERSION
+#define GALAY_VERSION "0.0.1"
+#endif
+
+#define GALAY_APP_MAIN(custom_code) \
+{ \
+    galay::InitializeGalayEnv(DEFAULT_COROUTINE_SCHEDULER_CONF, DEFAULT_NETWORK_SCHEDULER_CONF, DEFAULT_TIMER_SCHEDULER_CONF ); \
+    custom_code; \
+    galay::DestroyGalayEnv(); \
+}
+
+
 
 #endif

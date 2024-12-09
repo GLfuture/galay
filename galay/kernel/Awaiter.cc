@@ -24,7 +24,7 @@ bool Awaiter_void::await_ready() const noexcept
 bool Awaiter_void::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     m_coroutine_handle = handle;
-    Coroutine* co = handle.promise().GetCoroutine();
+    Coroutine::wptr co = handle.promise().GetCoroutine();
     return m_action->DoAction(co, m_ctx);
 }
 
@@ -39,12 +39,12 @@ void Awaiter_void::SetResult(const std::variant<std::monostate, int, bool, void*
     }
 }
 
-Coroutine *Awaiter_void::GetCoroutine() const
+Coroutine::wptr Awaiter_void::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
     }
-    return nullptr;
+    return {};
 }
 
 Awaiter_int::Awaiter_int(details::WaitAction* action, void* ctx)
@@ -69,8 +69,12 @@ bool Awaiter_int::await_ready() const noexcept
 bool Awaiter_int::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     m_coroutine_handle = handle;
-    coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    while(!co->SetAwaiter(this)){
+    coroutine::Coroutine::wptr co = handle.promise().GetCoroutine();
+    if(co.expired()) {
+        LogError("[Coroutine expired]");
+        return false;
+    }
+    while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
     return m_action->DoAction(co, m_ctx);
@@ -79,7 +83,7 @@ bool Awaiter_int::await_suspend(const std::coroutine_handle<Coroutine::promise_t
 int Awaiter_int::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+        while(!m_coroutine_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
     }
@@ -94,12 +98,12 @@ void Awaiter_int::SetResult(const std::variant<std::monostate, int, bool, void*,
     m_result = std::get<int>(result);
 }
 
-Coroutine *Awaiter_int::GetCoroutine() const
+Coroutine::wptr Awaiter_int::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
     }
-    return nullptr;
+    return {};
 }
 
 Awaiter_bool::Awaiter_bool(details::WaitAction* action, void* ctx)
@@ -126,8 +130,12 @@ bool Awaiter_bool::await_ready() const noexcept
 bool Awaiter_bool::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     m_coroutine_handle = handle;
-    coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    while(!co->SetAwaiter(this)){
+    coroutine::Coroutine::wptr co = handle.promise().GetCoroutine();
+    if(co.expired()) {
+        LogError("[Coroutine expired]");
+        return false;
+    }
+    while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
     return m_action->DoAction(co, m_ctx);
@@ -136,7 +144,7 @@ bool Awaiter_bool::await_suspend(const std::coroutine_handle<Coroutine::promise_
 bool Awaiter_bool::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+        while(!m_coroutine_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
     }
@@ -151,12 +159,12 @@ void Awaiter_bool::SetResult(const std::variant<std::monostate, int, bool, void*
     m_result = std::get<bool>(result);
 }
 
-Coroutine* Awaiter_bool::GetCoroutine() const
+Coroutine::wptr Awaiter_bool::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
     }
-    return nullptr;
+    return {};
 }
 
 Awaiter_ptr::Awaiter_ptr(details::WaitAction *action, void* ctx)
@@ -183,8 +191,12 @@ bool Awaiter_ptr::await_ready() const noexcept
 bool Awaiter_ptr::await_suspend(const std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     m_coroutine_handle = handle;
-    coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    while(!co->SetAwaiter(this)){
+    coroutine::Coroutine::wptr co = handle.promise().GetCoroutine();
+    if(co.expired()) {
+        LogError("[Coroutine expired]");
+        return false;
+    }
+    while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
     return m_action->DoAction(co, m_ctx);
@@ -193,7 +205,7 @@ bool Awaiter_ptr::await_suspend(const std::coroutine_handle<Coroutine::promise_t
 void *Awaiter_ptr::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+        while(!m_coroutine_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
     }
@@ -208,12 +220,12 @@ void Awaiter_ptr::SetResult(const std::variant<std::monostate, int, bool, void*,
     m_ptr = std::get<void*>(result);
 }
 
-Coroutine *Awaiter_ptr::GetCoroutine() const
+Coroutine::wptr Awaiter_ptr::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
     }
-    return nullptr;
+    return {};
 }
 
 Awaiter_string::Awaiter_string(details::WaitAction *action, void* ctx)
@@ -239,8 +251,12 @@ bool Awaiter_string::await_ready() const noexcept
 bool Awaiter_string::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     m_coroutine_handle = handle;
-    coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    while(!co->SetAwaiter(this)){
+    coroutine::Coroutine::wptr co = handle.promise().GetCoroutine();
+    if(co.expired()) {
+        LogError("[Coroutine expired]");
+        return false;
+    }
+    while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
     return m_action->DoAction(co, m_ctx);
@@ -249,7 +265,7 @@ bool Awaiter_string::await_suspend(std::coroutine_handle<Coroutine::promise_type
 std::string Awaiter_string::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+        while(!m_coroutine_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
     }
@@ -265,12 +281,12 @@ void Awaiter_string::SetResult(const std::variant<std::monostate, int, bool, voi
     m_result = std::get<std::string>(result);
 }
 
-Coroutine *Awaiter_string::GetCoroutine() const
+Coroutine::wptr Awaiter_string::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
     }
-    return nullptr;
+    return {};
 }
 
 
@@ -296,8 +312,12 @@ bool Awaiter_GHandle::await_ready() const noexcept
 bool Awaiter_GHandle::await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept
 {
     m_coroutine_handle = handle;
-    coroutine::Coroutine* co = handle.promise().GetCoroutine();
-    while(!co->SetAwaiter(this)){
+    coroutine::Coroutine::wptr co = handle.promise().GetCoroutine();
+    if(co.expired()) {
+        LogError("[Coroutine expired]");
+        return false;
+    }
+    while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
     return m_action->DoAction(co, m_ctx);
@@ -306,7 +326,7 @@ bool Awaiter_GHandle::await_suspend(std::coroutine_handle<Coroutine::promise_typ
 GHandle Awaiter_GHandle::await_resume() const noexcept
 {
     if( m_coroutine_handle ) {
-        while(!m_coroutine_handle.promise().GetCoroutine()->SetAwaiter(nullptr)){
+        while(!m_coroutine_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
     }
@@ -322,12 +342,12 @@ void Awaiter_GHandle::SetResult(const std::variant<std::monostate, int, bool, vo
     m_result = std::get<GHandle>(result);
 }
 
-Coroutine *Awaiter_GHandle::GetCoroutine() const
+Coroutine::wptr Awaiter_GHandle::GetCoroutine() const
 {
     if( m_coroutine_handle ) {
         return m_coroutine_handle.promise().GetCoroutine();
     }
-    return nullptr;
+    return {};
 }
 
 
