@@ -10,147 +10,8 @@ namespace galay
 {
 
 SSL_CTX* g_ssl_ctx = nullptr;
-
-
-IOVecHolder::IOVecHolder(size_t size)
-{
-    VecMalloc(&m_vec, size);
-}
-
-IOVecHolder::IOVecHolder()
-{
-}
-
-void IOVecHolder::Realloc(size_t size)
-{
-    VecRealloc(&m_vec, size);
-}
-
-void IOVecHolder::ClearBuffer()
-{
-    if(m_vec.m_buffer == nullptr) return;
-    memset(m_vec.m_buffer, 0, m_vec.m_size);
-    m_vec.m_offset = 0;
-    m_vec.m_length = 0;
-}
-
-bool IOVecHolder::Reset(const IOVec &iov)
-{
-    if(iov.m_buffer == nullptr) return false;
-    FreeMemory();
-    m_vec.m_buffer = iov.m_buffer;
-    m_vec.m_size = iov.m_size;
-    m_vec.m_offset = iov.m_offset;
-    m_vec.m_length = iov.m_length;
-    return true;
-}
-
-bool IOVecHolder::Reset()
-{
-    return FreeMemory();
-}
-
-bool IOVecHolder::Reset(std::string &&str)
-{
-    FreeMemory();
-    m_temp = std::forward<std::string>(str);
-    m_vec.m_buffer = m_temp.data();
-    m_vec.m_size = m_temp.length();
-    return true;
-}
-
-IOVec *IOVecHolder::operator->()
-{
-    return &m_vec;
-}
-
-IOVec *IOVecHolder::operator&()
-{
-    return &m_vec;
-}
-
-IOVecHolder::~IOVecHolder()
-{
-    FreeMemory();    
-}
-
-bool IOVecHolder::FreeMemory()
-{
-    bool res;
-    if(m_temp.empty()) {
-        return VecFree(&m_vec);
-    } else {
-        if(m_temp.data() != m_vec.m_buffer) {
-            res = VecFree(&m_vec);
-        }
-    }
-    m_temp.clear();
-    return true;
-}
 // API
-
-void VecFull(IOVec *src, char *buffer, size_t size, size_t offset, size_t length)
-{
-    src->m_buffer = buffer;
-    src->m_size = size;
-    src->m_offset = offset;
-    src->m_length = length;
-}
-
-IOVec VecDeepCopy(const IOVec *src)
-{
-    if(src == nullptr || src->m_length == 0 || src->m_buffer == nullptr || src->m_size == 0) {
-        return IOVec{};
-    }
-    char* buffer = static_cast<char*>(calloc(src->m_length, sizeof(char)));
-    memcpy(buffer, src->m_buffer, src->m_size);
-    return IOVec {  .m_handle = src->m_handle,
-                    .m_buffer= buffer, 
-                    .m_size = src->m_size, 
-                    .m_offset = src->m_offset,
-                    .m_length = src->m_length};
-}
-
-bool VecMalloc(IOVec *src, size_t size)
-{
-    if (src == nullptr || src->m_size != 0 || src->m_buffer != nullptr) {
-        return false;
-    }
-    src->m_buffer = static_cast<char*>(calloc(size, sizeof(char)));
-    if (src->m_buffer == nullptr) {
-        return false;
-    }
-    src->m_size = size;
-    return true;
-}
-
-bool VecRealloc(IOVec *src, size_t size)
-{
-    if (src == nullptr || src->m_buffer == nullptr) {
-        return false;
-    }
-    src->m_buffer = static_cast<char*>(realloc(src->m_buffer, size));
-    if (src->m_buffer == nullptr) {
-        return false;
-    }
-    src->m_size = size;
-    return true;
-}
-
-bool VecFree(IOVec *src)
-{
-    if(src == nullptr || src->m_size == 0 || src->m_buffer == nullptr) {
-        return false;
-    }
-    free(src->m_buffer);
-    src->m_size = 0;
-    src->m_length = 0;
-    src->m_buffer = nullptr;
-    src->m_offset = 0;
-    return true;
-}
-
-bool AsyncSocket(async::AsyncNetIo *asocket)
+bool AsyncTcpSocket(async::AsyncNetIo *asocket)
 {
     asocket->GetErrorCode() = error::ErrorCode::Error_NoError;
     asocket->GetHandle().fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -158,6 +19,21 @@ bool AsyncSocket(async::AsyncNetIo *asocket)
         asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
         return false;
     }
+    async::HandleOption option(asocket->GetHandle());
+    option.HandleNonBlock();
+    return true;
+}
+
+bool AsyncUdpSocket(async::AsyncNetIo *asocket)
+{
+    asocket->GetErrorCode() = error::ErrorCode::Error_NoError;
+    asocket->GetHandle().fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (asocket->GetHandle().fd < 0) {
+        asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
+        return false;
+    }
+    async::HandleOption option(asocket->GetHandle());
+    option.HandleNonBlock();
     return true;
 }
 
@@ -195,7 +71,7 @@ coroutine::Awaiter_bool AsyncConnect(async::AsyncNetIo *asocket, NetAddr* addr)
     return {asocket->GetAction(), addr};
 }
 
-coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, IOVec* iov, size_t length)
+coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, TcpIOVec* iov, size_t length)
 {
     dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -203,7 +79,7 @@ coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo *asocket, IOVec* iov, size_t 
     return {asocket->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, IOVec *iov, size_t length)
+coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, TcpIOVec *iov, size_t length)
 {
     dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -211,9 +87,25 @@ coroutine::Awaiter_int AsyncSend(async::AsyncNetIo *asocket, IOVec *iov, size_t 
     return {asocket->GetAction(), iov};
 }
 
+coroutine::Awaiter_int AsyncRecvFrom(async::AsyncNetIo *asocket, UdpIOVec *iov, size_t length)
+{
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kUdpWaitEventTypeRecvFrom);
+    asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
+    return coroutine::Awaiter_int(asocket->GetAction(), iov);
+}
+
+coroutine::Awaiter_int AsyncSendTo(async::AsyncNetIo *asocket, UdpIOVec *iov, size_t length)
+{
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kUdpWaitEventTypeSendTo);
+    asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    iov->m_length = length;
+    return coroutine::Awaiter_int(asocket->GetAction(), iov);
+}
+
 coroutine::Awaiter_bool AsyncClose(async::AsyncNetIo *asocket)
 {
-    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeClose);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kWaitEventTypeClose);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), nullptr};
 }
@@ -244,7 +136,7 @@ coroutine::Awaiter_bool SSLConnect(async::AsyncSslNetIo *asocket)
     return {asocket->GetAction(), nullptr};
 }
 
-coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, IOVec *iov, size_t length)
+coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, TcpIOVec *iov, size_t length)
 {
     dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslRecv);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -252,7 +144,7 @@ coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo *asocket, IOVec *iov, s
     return {asocket->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, IOVec *iov, size_t length)
+coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, TcpIOVec *iov, size_t length)
 {
     dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslSend);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -262,7 +154,7 @@ coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo *asocket, IOVec *iov, s
 
 coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo *asocket)
 {
-    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kTcpWaitEventTypeSslClose);
+    dynamic_cast<details::NetWaitEvent*>(asocket->GetAction()->GetBindEvent())->ResetNetWaitEventType(details::kWaitEventTypeSslClose);
     asocket->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket->GetAction(), nullptr};
 }
@@ -278,7 +170,7 @@ coroutine::Awaiter_GHandle AsyncFileOpen(const char *path, const int flags, mode
     return coroutine::Awaiter_GHandle(GHandle{fd});
 }
 
-coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov, size_t length)
+coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, FileIOVec *iov, size_t length)
 {
     dynamic_cast<details::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeRead);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -286,7 +178,7 @@ coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo *afileio, IOVec *iov, si
     return {afileio->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, IOVec *iov, size_t length)
+coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo *afileio, FileIOVec *iov, size_t length)
 {
     dynamic_cast<details::FileIoWaitEvent*>(afileio->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeWrite);
     afileio->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);

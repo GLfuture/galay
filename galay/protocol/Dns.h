@@ -92,19 +92,21 @@ namespace galay::protocol::dns
 
     #pragma pack(pop)
 
+    extern std::string GetDnsAnswerTypeString(unsigned short type);
+
     class DnsProtocol
     {
     public:
         DnsProtocol();
         DnsHeader GetHeader();
         void SetHeader(DnsHeader &&header);
-        void SetQuestionQueue(std::queue<DnsQuestion> &&questions);
+        void SetQuestion(DnsQuestion &&question);
         std::queue<DnsAnswer> GetAnswerQueue();
 
     protected:
         DnsHeader m_header{0};
         error::DnsError::ptr m_error;
-        std::queue<DnsQuestion> m_questions;
+        DnsQuestion m_question;
         std::queue<DnsAnswer> m_answers;
     };
 
@@ -113,8 +115,6 @@ namespace galay::protocol::dns
     public:
         using ptr = std::shared_ptr<DnsRequest>;
         [[nodiscard]] std::string EncodePdu() const override;
-        //after encode, call this function
-        void PopQuestion();
         std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
         [[nodiscard]] bool HasError() const override;
         [[nodiscard]] int GetErrorCode() const override;

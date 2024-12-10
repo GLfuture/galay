@@ -48,7 +48,7 @@ void TcpServer::Start(TcpCallbackStore* store, const int port)
 	for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
 	{
 		async::AsyncNetIo* socket = new async::AsyncTcpSocket(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
-		if(const bool res = AsyncSocket(socket); !res ) {
+		if(const bool res = AsyncTcpSocket(socket); !res ) {
 			delete socket;
 			for(int j = 0; j < i; ++j ){
 				delete m_listen_events[j];
@@ -58,7 +58,6 @@ void TcpServer::Start(TcpCallbackStore* store, const int port)
 			return;
 		}
 		async::HandleOption option(socket->GetHandle());
-		option.HandleNonBlock();
 		option.HandleReuseAddr();
 		option.HandleReusePort();
 		
@@ -108,7 +107,7 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, const int port)
 	for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
 	{
 		async::AsyncSslNetIo* socket = new async::AsyncSslTcpSocket(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
-		bool res = AsyncSocket(socket);
+		bool res = AsyncTcpSocket(socket);
 		if( !res ) {
 			delete socket;
 			for(int j = 0; j < i; ++j ){
@@ -119,7 +118,6 @@ void TcpSslServer::Start(TcpSslCallbackStore *store, const int port)
 			return;
 		}
 		async::HandleOption option(socket->GetHandle());
-		option.HandleNonBlock();
 		option.HandleReuseAddr();
 		option.HandleReusePort();
 		res = AsyncSSLSocket(socket, GetGlobalSSLCtx());
@@ -239,7 +237,7 @@ coroutine::Coroutine HttpServer::HttpRoute(TcpConnectionManager manager)
 	size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size;
 	auto connection = manager.GetConnection();
 	async::AsyncNetIo* socket = connection->GetSocket();
-	IOVecHolder rholder(max_header_size), wholder;
+	IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
 	HttpConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
 	auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
 	co_await this_coroutine::DeferExit(std::bind([](coroutine::RoutineContextCancel::ptr cancel){
@@ -451,7 +449,7 @@ coroutine::Coroutine HttpsServer::HttpRoute(TcpSslConnectionManager manager)
 	size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size;
 	auto connection = manager.GetConnection();
 	async::AsyncNetIo* socket = connection->GetSocket();
-	IOVecHolder rholder(max_header_size), wholder;
+	IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
 	HttpsConnectionManager http_manager(manager, &RequestPool, &ResponsePool);
 	auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
 	co_await this_coroutine::DeferExit([cancel, socket](){

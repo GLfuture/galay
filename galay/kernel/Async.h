@@ -48,11 +48,23 @@ protected:
     details::IOEventAction* m_action;
 };
 
-class AsyncTcpSocket: public AsyncNetIo
+class AsyncFileIo
 {
 public:
-    explicit AsyncTcpSocket(details::EventEngine* engine);
+    using ptr = std::shared_ptr<AsyncFileIo>;
+    explicit AsyncFileIo(details::EventEngine* engine);
+    [[nodiscard]] HandleOption GetOption() const;
+    details::IOEventAction* GetAction() { return m_action; };
+    GHandle& GetHandle() { return m_handle; }
+    uint32_t& GetErrorCode() { return m_error_code; }
+    virtual ~AsyncFileIo();
+private:
+    // eventfd
+    GHandle m_handle;
+    uint32_t m_error_code;
+    details::IOEventAction* m_action;
 };
+
 
 class AsyncSslNetIo: public AsyncNetIo
 {
@@ -62,6 +74,12 @@ public:
     ~AsyncSslNetIo() override;
 private:
     SSL* m_ssl = nullptr;
+};
+
+class AsyncTcpSocket: public AsyncNetIo
+{
+public:
+    explicit AsyncTcpSocket(details::EventEngine* engine);
 };
 
 class AsyncSslTcpSocket: public AsyncSslNetIo
@@ -81,22 +99,6 @@ private:
     uint32_t m_error_code;
 };
 
-class AsyncFileIo
-{
-public:
-    using ptr = std::shared_ptr<AsyncFileIo>;
-    explicit AsyncFileIo(details::EventEngine* engine);
-    [[nodiscard]] HandleOption GetOption() const;
-    details::IOEventAction* GetAction() { return m_action; };
-    GHandle& GetHandle() { return m_handle; }
-    uint32_t& GetErrorCode() { return m_error_code; }
-    virtual ~AsyncFileIo();
-private:
-    // eventfd
-    GHandle m_handle;
-    uint32_t m_error_code;
-    details::IOEventAction* m_action;
-};
 
 class AsyncFileDescriptor final : public AsyncFileIo
 {

@@ -24,7 +24,9 @@ namespace galay
 {
     class TcpCallbackStore;
     class TcpSslCallbackStore;
-    class IOVec;
+    class TcpIOVec;
+    class UdpIOVec;
+    class FileIOVec;
 }
 
 namespace galay::details
@@ -181,7 +183,7 @@ protected:
 
 enum NetWaitEventType
 {
-    kTcpWaitEventTypeError,
+    kWaitEventTypeError,
     kTcpWaitEventTypeAccept,
     kTcpWaitEventTypeSslAccept,
     kTcpWaitEventTypeRecv,
@@ -190,8 +192,10 @@ enum NetWaitEventType
     kTcpWaitEventTypeSslSend,
     kTcpWaitEventTypeConnect,
     kTcpWaitEventTypeSslConnect,
-    kTcpWaitEventTypeClose,
-    kTcpWaitEventTypeSslClose,
+    kWaitEventTypeClose,
+    kWaitEventTypeSslClose,
+    kUdpWaitEventTypeRecvFrom,
+    kUdpWaitEventTypeSendTo,
 };
 
 enum CommonFailedType
@@ -215,23 +219,31 @@ public:
     async::AsyncNetIo* GetAsyncTcpSocket() const { return m_socket; }
     ~NetWaitEvent() override;
 protected:
-    bool OnAcceptWaitPrepare(const Coroutine_wptr co, void* ctx) const;
-    bool OnRecvWaitPrepare(const Coroutine_wptr co, void* ctx);
-    bool OnSendWaitPrepare(const Coroutine_wptr co, void* ctx);
-    bool OnConnectWaitPrepare(Coroutine_wptr co, void* ctx) const;
+    bool OnTcpAcceptWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpRecvWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpSendWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpConnectWaitPrepare(const Coroutine_wptr co, void* ctx);
     bool OnCloseWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnUdpRecvfromWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnUdpSendtoWaitPrepare(const Coroutine_wptr co, void* ctx);
+
 
     void HandleErrorEvent(EventEngine* engine);
-    void HandleAcceptEvent(EventEngine* engine);
-    void HandleRecvEvent(EventEngine* engine);
-    void HandleSendEvent(EventEngine* engine);
-    void HandleConnectEvent(EventEngine* engine) const;
+    void HandleTcpAcceptEvent(EventEngine* engine);
+    void HandleTcpRecvEvent(EventEngine* engine);
+    void HandleTcpSendEvent(EventEngine* engine);
+    void HandleTcpConnectEvent(EventEngine* engine);
     void HandleCloseEvent(EventEngine* engine);
+    void HandleUdpRecvfromEvent(EventEngine* engine);
+    void HandleUdpSendtoEvent(EventEngine* engine);
 
     // return recvByte
-    virtual int DealRecv(IOVec* iov);
+    virtual int TcpDealRecv(TcpIOVec* iov);
     // return sendByte
-    virtual int DealSend(IOVec* iov);
+    virtual int TcpDealSend(TcpIOVec* iov);
+
+    virtual int UdpDealRecvfrom(UdpIOVec *iov);
+    virtual int UdpDealSendto(UdpIOVec* iov);
 protected:
     NetWaitEventType m_type;
     void *m_ctx{};
@@ -249,23 +261,23 @@ public:
     async::AsyncSslNetIo* GetAsyncTcpSocket() const;
     ~NetSslWaitEvent() override;
 protected:
-    bool OnSslAcceptWaitPrepare(const Coroutine_wptr co, void* ctx);
-    bool OnSslConnectWaitPrepare(const Coroutine_wptr co, void* ctx);
-    bool OnSslRecvWaitPrepare(const Coroutine_wptr co, void* ctx);
-    bool OnSslSendWaitPrepare(const Coroutine_wptr co, void* ctx);
-    bool OnSslCloseWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpSslAcceptWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpSslConnectWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpSslRecvWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpSslSendWaitPrepare(const Coroutine_wptr co, void* ctx);
+    bool OnTcpSslCloseWaitPrepare(const Coroutine_wptr co, void* ctx);
 
-    void HandleSslAcceptEvent(EventEngine* engine);
-    void HandleSslConnectEvent(EventEngine* engine);
-    void HandleSslRecvEvent(EventEngine* engine);
-    void HandleSslSendEvent(EventEngine* engine);
-    void HandleSslCloseEvent(EventEngine* engine);
+    void HandleTcpSslAcceptEvent(EventEngine* engine);
+    void HandleTcpSslConnectEvent(EventEngine* engine);
+    void HandleTcpSslRecvEvent(EventEngine* engine);
+    void HandleTcpSslSendEvent(EventEngine* engine);
+    void HandleTcpSslCloseEvent(EventEngine* engine);
 
     EventType CovertSSLErrorToEventType() const;
     // return recvByte
-    int DealRecv(IOVec* iovc) override;
+    int TcpDealRecv(TcpIOVec* iovc) override;
     // return sendByte
-    int DealSend(IOVec* iovc) override;
+    int TcpDealSend(TcpIOVec* iovc) override;
 private:
     int m_ssl_error{};
 };

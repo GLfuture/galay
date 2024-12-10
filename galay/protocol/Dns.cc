@@ -8,6 +8,8 @@ static const char* DnsErrors[] = {
     "No Error"
 };
 
+
+
 bool DnsError::HasError() const
 {
     return m_code != kDnsError_NoError;
@@ -33,6 +35,39 @@ DnsError::ToString(DnsErrorCode code) const
 
 namespace galay::protocol::dns
 {
+
+std::string GetDnsAnswerTypeString(unsigned short type)
+{
+    switch (type)
+    {
+    case kDnsQueryA:
+        return "A";
+    case kDnsQueryAAAA:
+        return "AAAA";
+    case kDnsQueryAXFR:
+        return "AXFR";
+    case kDnsQueryAny:
+        return "ANY";
+    case kDnsQueryCname:
+        return "CNAME";
+    case kDnsQueryHInfo:
+        return "HINFO";
+    case kDnsQueryMX:
+        return "MX";
+    case kDnsQueryNS:
+        return "NS";
+    case kDnsQueryPtr:
+        return "PTR";
+    case kDnsQuerySOA:
+        return "SOA";
+    case kDnsQueryWKS:
+        return "WKS";
+    default:
+        break;
+    }
+    return std::string();
+}
+
 
 void DnsHeader::Reset()
 {
@@ -62,9 +97,9 @@ DnsProtocol::SetHeader(DnsHeader&& header)
 }
 
 void
-DnsProtocol::SetQuestionQueue(std::queue<DnsQuestion> &&questions)
+DnsProtocol::SetQuestion(DnsQuestion &&questions)
 {
-    this->m_questions = std::forward<std::queue<DnsQuestion> &&>(questions);
+    this->m_question = std::move(questions);
 }
 
 
@@ -110,23 +145,17 @@ DnsRequest::EncodePdu() const
     ptr += sizeof(unsigned short);
     int len = sizeof(DnsHeader); // 12
 
-    DnsQuestion question = m_questions.front();
-    std::string qname = ModifyHostname(question.m_qname);
+    std::string qname = ModifyHostname(m_question.m_qname);
     memcpy(ptr, qname.c_str(), qname.length());
     ptr += qname.length();
-    *(unsigned short *)ptr = htons(question.m_type);
+    *(unsigned short *)ptr = htons(m_question.m_type);
     ptr += 2;
-    *(unsigned short *)ptr = htons(question.m_class);
+    *(unsigned short *)ptr = htons(m_question.m_class);
     ptr += 2;
     len = len + qname.length() + 4;
 
     char *begin = (char *)&buffer[0];
     return std::string(begin, len);
-}
-
-void protocol::dns::DnsRequest::PopQuestion()
-{
-    m_questions.pop();
 }
 
 std::pair<bool,size_t> DnsRequest::DecodePdu(const std::string_view &buffer)
@@ -181,7 +210,7 @@ std::pair<bool,size_t> DnsRequest::DecodePdu(const std::string_view &buffer)
         memcpy(&qclass, temp, sizeof(unsigned short));
         temp += sizeof(unsigned short);
         q.m_class = ntohs(qclass);
-        m_questions.push(q);
+        m_question = q;
     }
     return {true, buffer.length()};
 }
@@ -205,9 +234,7 @@ void DnsRequest::Reset()
 {
     m_error->Reset();
     m_header.Reset();
-    while(!m_questions.empty()) {
-        m_questions.pop();
-    }
+    m_question = {};
     while(!m_answers.empty()){
         m_answers.pop();
     }
@@ -323,7 +350,7 @@ DnsResponse::DecodePdu(const std::string_view &buffer)
         memcpy(&qclass, temp, sizeof(unsigned short));
         temp += sizeof(unsigned short);
         q.m_class = ntohs(qclass);
-        m_questions.push(q);
+        m_question = q;
     }
 
     for (int i = 0; i < m_header.m_answers_RRs; i++)
@@ -381,11 +408,9 @@ void DnsResponse::Reset()
 {
     m_error->Reset();
     m_header.Reset();
+    m_question = {};
     while(!m_answers.empty()){
         m_answers.pop();
-    }
-    while(!m_questions.empty()){
-        m_questions.pop();
     }
 }
 

@@ -24,7 +24,7 @@ galay::coroutine::Coroutine test(galay::details::EventEngine* engine, std::vecto
         }
         
         std::string resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
-        galay::IOVecHolder wholder, rholder(1024);
+        galay::IOVecHolder<galay::TcpIOVec> wholder, rholder(1024);
         wholder.Reset(std::move(resp));
         int length = co_await galay::AsyncSend(socket, &wholder, wholder->m_size);
         length = co_await galay::AsyncRecv(socket, &rholder, rholder->m_size);
@@ -47,7 +47,7 @@ void pack(galay::details::EventEngine* engine, std::vector<galay::async::AsyncNe
 galay::async::AsyncNetIo* initSocket()
 {
     galay::async::AsyncNetIo* socket = new galay::async::AsyncNetIo(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
-    galay::AsyncSocket(socket);
+    galay::AsyncTcpSocket(socket);
     socket->GetOption().HandleNonBlock();
     return socket;
 }

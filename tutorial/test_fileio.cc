@@ -47,8 +47,7 @@ galay::coroutine::Coroutine test()
     const GHandle handle = co_await galay::AsyncFileOpen("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     galay::async::AsyncFileDescriptor fileio(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     fileio.GetHandle() = handle;
-    galay::IOVecHolder holder;
-    galay::VecMalloc(&holder, 10 * 1024 * 1024);
+    galay::IOVecHolder<galay::FileIOVec> holder(10 * 1024 * 1024);
     for(int i = 0; i < 10 * 1024 * 1024; ++i) {
         if( i % 128 == 0) {
             holder->m_buffer[i] = '\n';

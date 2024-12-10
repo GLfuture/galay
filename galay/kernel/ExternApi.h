@@ -5,6 +5,7 @@
 #include "Strategy.hpp"
 #include "Log.h"
 #include <thread>
+#include <concepts>
 #include <openssl/ssl.h>
 
 
@@ -21,41 +22,173 @@ namespace galay::async {
 }
 
 namespace galay {
+struct NetAddr
+{
+    std::string m_ip;
+    uint16_t m_port;
+};
 
 struct IOVec
 {
-    GHandle m_handle{};
     char* m_buffer = nullptr;           // buffer
     size_t m_size = 0;                  // buffer size
     size_t m_offset = 0;                // offset
     size_t m_length = 0;                // operation length
 };
 
-class IOVecHolder
+struct TcpIOVec: public IOVec
+{
+};
+
+struct FileIOVec: public IOVec
+{
+};
+
+
+struct UdpIOVec: public IOVec
+{
+    NetAddr m_addr;
+};
+
+template<typename T>
+concept VecBase = requires(T t) {
+    std::is_base_of_v<IOVec, T>;
+};
+
+template <VecBase IOVecType>
+class  IOVecHolder
 {
 public:
-    IOVecHolder(size_t size);
-    IOVecHolder();
-    void Realloc(size_t size);
-    void ClearBuffer();
-    bool Reset(const IOVec& iov);
-    bool Reset();
-    bool Reset(std::string&& str);
-    IOVec* operator->();
-    IOVec* operator &();
-    ~IOVecHolder();
+    IOVecHolder() = default;
+    IOVecHolder(size_t size) { VecMalloc(&m_vec, size); }
+    IOVecHolder(std::string&& buffer) {
+        if(!buffer.empty()) {
+            Reset(std::move(buffer));
+        }
+    }
+    bool Realloc(size_t size)
+    {
+        return VecRealloc(&m_vec, size);
+    }
+
+    void ClearBuffer(){
+        if(m_vec.m_buffer == nullptr) return;
+        memset(m_vec.m_buffer, 0, m_vec.m_size);
+        m_vec.m_offset = 0;
+        m_vec.m_length = 0;
+    }
+
+    bool Reset(const IOVecType& iov)
+    {
+        if(iov.m_buffer == nullptr) return false;
+        FreeMemory();
+        m_vec.m_buffer = iov.m_buffer;
+        m_vec.m_size = iov.m_size;
+        m_vec.m_offset = iov.m_offset;
+        m_vec.m_length = iov.m_length;
+        return true;
+    }
+
+    bool Reset()
+    {
+        return FreeMemory();
+    }
+
+    bool Reset(std::string&& str)
+    {
+        FreeMemory();
+        m_temp = std::forward<std::string>(str);
+        m_vec.m_buffer = m_temp.data();
+        m_vec.m_size = m_temp.length();
+        return true;
+    }
+
+    IOVecType* operator->()
+    {
+        return &m_vec;
+    }
+
+    IOVecType* operator &()
+    {
+        return &m_vec;
+    }
+
+    ~IOVecHolder()
+    {
+        FreeMemory();    
+    }
 private:
-    bool FreeMemory();
+
+    bool VecMalloc(IOVecType* src, size_t size)
+    {
+        if (src == nullptr || src->m_size != 0 || src->m_buffer != nullptr) {
+            return false;
+        }
+        src->m_buffer = static_cast<char*>(calloc(size, sizeof(char)));
+        if (src->m_buffer == nullptr) {
+            return false;
+        }
+        src->m_size = size;
+        return true;
+    }
+    
+    bool VecRealloc(IOVecType* src, size_t size)
+    {
+        if (src == nullptr || src->m_buffer == nullptr) {
+            return false;
+        }
+        src->m_buffer = static_cast<char*>(realloc(src->m_buffer, size));
+        if (src->m_buffer == nullptr) {
+            return false;
+        }
+        src->m_size = size;
+        return true;
+    }
+
+    bool VecFree(IOVecType* src)
+    {
+        if(src == nullptr || src->m_size == 0 || src->m_buffer == nullptr) {
+            return false;
+        }
+        free(src->m_buffer);
+        src->m_size = 0;
+        src->m_length = 0;
+        src->m_buffer = nullptr;
+        src->m_offset = 0;
+        return true;
+    }
+
+    bool FreeMemory() 
+    {
+        bool res;
+        if(m_temp.empty()) {
+            return VecFree(&m_vec);
+        } else {
+            if(m_temp.data() != m_vec.m_buffer) {
+                res = VecFree(&m_vec);
+            }
+        }
+        m_temp.clear();
+        return true;
+    }
 private:
-    IOVec m_vec;
+    IOVecType m_vec;
     std::string m_temp;
 };
 
-struct NetAddr
+template<>
+inline bool IOVecHolder<UdpIOVec>::Reset(const UdpIOVec& iov)
 {
-    std::string m_ip;
-    uint16_t m_port;
-};
+    if(iov.m_buffer == nullptr) return false;
+    FreeMemory();
+    m_vec.m_buffer = iov.m_buffer;
+    m_vec.m_size = iov.m_size;
+    m_vec.m_offset = iov.m_offset;
+    m_vec.m_length = iov.m_length;
+    m_vec.m_addr = iov.m_addr;
+    return true;
+}
+
 
 
 #ifdef __cplusplus
@@ -66,17 +199,6 @@ extern "C" {
 }
 #endif
 
-/*
-    ****************************
-            Vec Help
-    ****************************
-*/
-void VecFull(IOVec* src, char* buffer, size_t size, size_t offset, size_t length);
-IOVec VecDeepCopy(const IOVec* src);
-bool VecMalloc(IOVec* src, size_t size);
-bool VecRealloc(IOVec* src, size_t size);
-bool VecFree(IOVec* src);
-
 
 /*
     ****************************
@@ -84,7 +206,8 @@ bool VecFree(IOVec* src);
     ****************************
 */
 
-bool AsyncSocket(async::AsyncNetIo* asocket);
+bool AsyncTcpSocket(async::AsyncNetIo* asocket);
+bool AsyncUdpSocket(async::AsyncNetIo* asocket);
 bool BindAndListen(async::AsyncNetIo* asocket, int port, int backlog);
 
 coroutine::Awaiter_GHandle AsyncAccept(async::AsyncNetIo* asocket, NetAddr* addr);
@@ -95,13 +218,18 @@ coroutine::Awaiter_bool AsyncConnect(async::AsyncNetIo* async_socket, NetAddr* a
         0   close connection
         <0  error
 */
-coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo* asocket, IOVec* iov, size_t length);
+coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo* asocket, TcpIOVec* iov, size_t length);
 /*
     return: 
         >0   bytes send
         <0  error
 */
-coroutine::Awaiter_int AsyncSend(async::AsyncNetIo* asocket, IOVec* iov, size_t length);
+coroutine::Awaiter_int AsyncSend(async::AsyncNetIo* asocket, TcpIOVec* iov, size_t length);
+/*
+
+*/
+coroutine::Awaiter_int AsyncRecvFrom(async::AsyncNetIo* asocket, UdpIOVec* iov, size_t length);
+coroutine::Awaiter_int AsyncSendTo(async::AsyncNetIo* asocket, UdpIOVec* iov, size_t length);
 coroutine::Awaiter_bool AsyncClose(async::AsyncNetIo* asocket);
 
 bool AsyncSSLSocket(async::AsyncSslNetIo* asocket, SSL_CTX* ctx);
@@ -113,8 +241,8 @@ coroutine::Awaiter_bool AsyncSSLAccept(async::AsyncSslNetIo* asocket);
     must be called after AsyncConnect
 */
 coroutine::Awaiter_bool SSLConnect(async::AsyncSslNetIo* asocket);
-coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo* asocket, IOVec *iov, size_t length);
-coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo* asocket, IOVec *iov, size_t length);
+coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo* asocket, TcpIOVec *iov, size_t length);
+coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo* asocket, TcpIOVec *iov, size_t length);
 coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo* asocket);
 
 /*
@@ -123,8 +251,8 @@ coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo* asocket);
     ****************************
 */
 coroutine::Awaiter_GHandle AsyncFileOpen(const char* path, int flags, mode_t mode);
-coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, IOVec* iov, size_t length);
-coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, IOVec* iov, size_t length);
+coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, FileIOVec* iov, size_t length);
+coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, FileIOVec* iov, size_t length);
 
 
 /*
