@@ -4,31 +4,31 @@
 #include <spdlog/spdlog.h>
 
 uint16_t g_port = 8080;
-galay::coroutine::Coroutine test(galay::details::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
+galay::coroutine::Coroutine test(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
     int64_t start = galay::GetCurrentTimeMs();
     int i = 0;
     for (i = begin; i < end; ++ i)
     {
-        galay::async::AsyncNetIo* socket = sockets[i]; 
+        galay::AsyncTcpSocket* socket = sockets[i]; 
         galay::NetAddr addr{
             .m_ip = "127.0.0.1",
             .m_port = g_port
         };
-        bool success = co_await galay::AsyncConnect(socket, &addr);
+        bool success = co_await socket->Connect(&addr);
         if (!success)
         {
             std::cout << "connect failed" << std::endl;
-            bool res = co_await galay::AsyncClose(socket);
+            bool res = co_await socket->Close();
             break;
         }
         
         std::string resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
         galay::IOVecHolder<galay::TcpIOVec> wholder, rholder(1024);
         wholder.Reset(std::move(resp));
-        int length = co_await galay::AsyncSend(socket, &wholder, wholder->m_size);
-        length = co_await galay::AsyncRecv(socket, &rholder, rholder->m_size);
-        bool res = co_await galay::AsyncClose(socket);
+        int length = co_await socket->Send(&wholder, wholder->m_size);
+        length = co_await socket->Recv(&rholder, rholder->m_size);
+        bool res = co_await socket->Close();
         if (!res)
         {
             std::cout << "close failed" << std::endl;
@@ -39,16 +39,15 @@ galay::coroutine::Coroutine test(galay::details::EventEngine* engine, std::vecto
     co_return;
 }
 
-void pack(galay::details::EventEngine* engine, std::vector<galay::async::AsyncNetIo*>& sockets, int begin, int end)
+void pack(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
     test(engine, sockets, begin, end);
 }
 
-galay::async::AsyncNetIo* initSocket()
+galay::AsyncTcpSocket* initSocket()
 {
-    galay::async::AsyncNetIo* socket = new galay::async::AsyncNetIo(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
-    galay::AsyncTcpSocket(socket);
-    socket->GetOption().HandleNonBlock();
+    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
+    socket->Socket();
     return socket;
 }
 
@@ -61,10 +60,10 @@ int main(int argc, char* argv[])
     g_port = atoi(argv[1]);
     galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    std::vector<galay::async::AsyncNetIo*> sockets;
+    std::vector<galay::AsyncTcpSocket*> sockets;
     for (size_t i = 0; i < 2048; ++i)
     {
-        galay::async::AsyncNetIo* socket = initSocket();
+        galay::AsyncTcpSocket* socket = initSocket();
         sockets.push_back(socket);
     }
     std::vector<std::thread> ths;
@@ -74,6 +73,9 @@ int main(int argc, char* argv[])
         ths[i].detach();
     }
     getchar();
+    for( int i = 0 ; i < 2048 ; ++i ) {
+        delete sockets[i];
+    }
     galay::DestroyGalayEnv();
     return 0;
 }

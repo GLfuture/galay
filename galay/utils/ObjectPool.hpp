@@ -3,6 +3,7 @@
 
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include <cinttypes>
+#include <concepts>
 
 namespace galay::utils
 {

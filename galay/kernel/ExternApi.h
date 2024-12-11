@@ -1,25 +1,14 @@
 #ifndef GALAY_EXTERNAPI_H
 #define GALAY_EXTERNAPI_H
 
-#include "Awaiter.h"
+
 #include "Strategy.hpp"
+#include "Scheduler.h"
 #include "Log.h"
 #include <thread>
 #include <concepts>
 #include <openssl/ssl.h>
 
-
-namespace galay::details {
-    class EventScheduler;
-    class CoroutineScheduler;
-    class TimerScheduler;
-}
-
-namespace galay::async {
-    class AsyncNetIo;
-    class AsyncSslNetIo;
-    class AsyncFileIo;
-}
 
 namespace galay {
 struct NetAddr
@@ -198,62 +187,6 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
-
-/*
-    ****************************
-                net
-    ****************************
-*/
-
-bool AsyncTcpSocket(async::AsyncNetIo* asocket);
-bool AsyncUdpSocket(async::AsyncNetIo* asocket);
-bool BindAndListen(async::AsyncNetIo* asocket, int port, int backlog);
-
-coroutine::Awaiter_GHandle AsyncAccept(async::AsyncNetIo* asocket, NetAddr* addr);
-coroutine::Awaiter_bool AsyncConnect(async::AsyncNetIo* async_socket, NetAddr* addr);
-/*
-    return: 
-        >0   bytes read
-        0   close connection
-        <0  error
-*/
-coroutine::Awaiter_int AsyncRecv(async::AsyncNetIo* asocket, TcpIOVec* iov, size_t length);
-/*
-    return: 
-        >0   bytes send
-        <0  error
-*/
-coroutine::Awaiter_int AsyncSend(async::AsyncNetIo* asocket, TcpIOVec* iov, size_t length);
-/*
-
-*/
-coroutine::Awaiter_int AsyncRecvFrom(async::AsyncNetIo* asocket, UdpIOVec* iov, size_t length);
-coroutine::Awaiter_int AsyncSendTo(async::AsyncNetIo* asocket, UdpIOVec* iov, size_t length);
-coroutine::Awaiter_bool AsyncClose(async::AsyncNetIo* asocket);
-
-bool AsyncSSLSocket(async::AsyncSslNetIo* asocket, SSL_CTX* ctx);
-/*
-    must be called after AsyncAccept
-*/
-coroutine::Awaiter_bool AsyncSSLAccept(async::AsyncSslNetIo* asocket);
-/*
-    must be called after AsyncConnect
-*/
-coroutine::Awaiter_bool SSLConnect(async::AsyncSslNetIo* asocket);
-coroutine::Awaiter_int AsyncSSLRecv(async::AsyncSslNetIo* asocket, TcpIOVec *iov, size_t length);
-coroutine::Awaiter_int AsyncSSLSend(async::AsyncSslNetIo* asocket, TcpIOVec *iov, size_t length);
-coroutine::Awaiter_bool AsyncSSLClose(async::AsyncSslNetIo* asocket);
-
-/*
-    ****************************
-                file 
-    ****************************
-*/
-coroutine::Awaiter_GHandle AsyncFileOpen(const char* path, int flags, mode_t mode);
-coroutine::Awaiter_int AsyncFileRead(async::AsyncFileIo* afile, FileIOVec* iov, size_t length);
-coroutine::Awaiter_int AsyncFileWrite(async::AsyncFileIo* afile, FileIOVec* iov, size_t length);
-
 
 /*
    OpenSSL 

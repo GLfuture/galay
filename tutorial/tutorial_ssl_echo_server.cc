@@ -12,13 +12,13 @@ int main(int argc, char** argv)
     galay::server::TcpSslServerConfig::ptr config = std::make_shared<galay::server::TcpSslServerConfig>();
     config->m_cert_file = argv[1];
     config->m_key_file = argv[2];
-    galay::server::TcpSslServer server(config);
-    galay::TcpSslCallbackStore store([](galay::TcpSslConnectionManager op)->galay::coroutine::Coroutine
+    galay::server::Server<galay::AsyncTcpSslSocket, galay::server::TcpSslServerConfig> server(config);
+    galay::CallbackStore<galay::AsyncTcpSslSocket> store([](galay::Connection<galay::AsyncTcpSslSocket>::ptr conn)->galay::coroutine::Coroutine
     {
         
         co_return;
     });
-    server.Start(&store, 2333);
+    server.Start(&store, "", 2333);
     getchar();
     server.Stop();
     return 0;

@@ -4,7 +4,7 @@
 #include <string>
 #include <thread>
 #include <functional>
-#include "concurrentqueue/moodycamel/blockingconcurrentqueue.h"
+#include <concurrentqueue/moodycamel/blockingconcurrentqueue.h>
 #include "galay/common/Base.h"
 
 namespace galay::coroutine {
@@ -68,7 +68,7 @@ public:
     EventScheduler();
     std::string Name() override { return "EventScheduler"; }
     virtual bool Loop(int timeout);
-    virtual bool Stop() const;
+    virtual bool Stop();
     bool IsRunning() const;
     virtual uint32_t GetErrorCode() const;
     virtual details::EventEngine* GetEngine() { return m_engine.get(); }
@@ -88,13 +88,13 @@ public:
     std::shared_ptr<Timer> AddTimer(uint64_t ms, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)>&& callback) const;
     void AddTimer(const uint64_t ms, const std::shared_ptr<Timer>& timer);
     bool Loop(int timeout) override;
-    bool Stop() const override;
+    bool Stop() override;
     bool IsRunning() const;
     uint32_t GetErrorCode() const override;
     details::EventEngine* GetEngine() override { return m_engine.get(); }
     ~TimerScheduler();
 private:
-    details::TimeEvent* m_timer_event;
+    std::shared_ptr<details::TimeEvent> m_timer_event;
 };
 
 }

@@ -16,7 +16,7 @@ const char* g_error_str[] = {
     "Close Error",
     "SSLSocket Error",
     "SSLAccept Error",
-    "SSLConnect Error",
+    "AsyncSSLConnect Error",
     "SSLClose Error",
     "FileRead Error",
     "FileWrite Error",

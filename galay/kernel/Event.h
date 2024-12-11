@@ -4,29 +4,16 @@
 #include "galay/common/Base.h"
 #include "concurrentqueue/moodycamel/concurrentqueue.h"
 #include "Time.h"
+#include "EventEngine.h"
+#include "Internal.h"
+#include "Connection.hpp"
 #include <queue>
 #include <shared_mutex>
 
-namespace galay::coroutine
-{
-    class Coroutine;
-}
-
-namespace galay::async
-{
-    class AsyncNetIo;
-    class AsyncSslNetIo;
-    class AsyncFileIo; 
-}
-
-
 namespace galay
 {
-    class TcpCallbackStore;
-    class TcpSslCallbackStore;
-    class TcpIOVec;
-    class UdpIOVec;
-    class FileIOVec;
+    template <typename Socket>
+    class CallbackStore;
 }
 
 namespace galay::details
@@ -124,44 +111,141 @@ private:
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 
 
+template <typename SocketType>
 class ListenEvent final : public Event
 {
 public:
-    ListenEvent(EventEngine* engine, async::AsyncNetIo* socket, TcpCallbackStore* callback_store);
-    void HandleEvent(EventEngine* engine) override;
-    std::string Name() override { return "ListenEvent"; }
+    ListenEvent(EventEngine* engine, SocketType* socket, CallbackStore<SocketType>* store)
+        : m_socket(socket), m_store(store), m_engine(engine)
+    {
+        engine->AddEvent(this, nullptr);
+    }
+
+    void HandleEvent(EventEngine* engine) override
+    {
+        engine->ModEvent(this, nullptr);
+        CreateConnection(engine);
+    }
+
+    std::string Name() override { return "UnkownEvent"; }
     EventType GetEventType() override { return kEventTypeRead; }
-    GHandle GetHandle() override;
-    bool SetEventEngine(EventEngine* engine) override;
-    EventEngine* BelongEngine() override;
-    ~ListenEvent() override;
+    GHandle GetHandle() override
+    {
+        return m_socket->GetHandle();
+    }
+
+    bool SetEventEngine(EventEngine* engine) override
+    {
+        details::EventEngine* t = m_engine.load();
+        if(!m_engine.compare_exchange_strong(t, engine)) {
+            return false;
+        }
+        return true;
+    }
+
+    EventEngine* BelongEngine() override
+    {
+        return m_engine.load();
+    }
+
+    ~ListenEvent() override
+    {
+        if(m_engine) m_engine.load()->DelEvent(this, nullptr);
+        delete m_socket;
+    }
 private:
-    coroutine::Coroutine CreateTcpSocket(EventEngine* engine);
+    coroutine::Coroutine CreateConnection(EventEngine* engine) {
+        LogError("[not support [SocketType]]");
+        co_return;
+    }
 private:
     std::atomic<EventEngine*> m_engine;
-    async::AsyncNetIo* m_socket;
-    TcpCallbackStore* m_callback_store;
+    SocketType* m_socket;
+    CallbackStore<SocketType>* m_store;
 };
 
-class SslListenEvent final : public Event
+template<>
+inline std::string ListenEvent<galay::AsyncTcpSocket>::Name()
 {
-public:
-    SslListenEvent(EventEngine* engine, async::AsyncSslNetIo* socket, TcpSslCallbackStore* callback_store);
-    void HandleEvent(EventEngine* engine) override;
-    std::string Name() override { return "SslListenEvent"; }
-    EventType GetEventType() override { return kEventTypeRead; }
-    GHandle GetHandle() override;
-    bool SetEventEngine(EventEngine* engine) override;
-    EventEngine* BelongEngine() override;
-    ~SslListenEvent() override;
-private:
-    coroutine::Coroutine CreateTcpSslSocket(EventEngine* engine);
-private:
-    std::atomic<EventEngine*> m_engine;
-    async::AsyncSslNetIo* m_socket;
-    TcpSslCallbackStore* m_callback_store;
-    details::IOEventAction* m_action;
-};
+    return "TcpListenEvent";
+}
+
+template<>
+inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
+{
+    return "TcpSslListenEvent";
+}
+
+template<>
+inline coroutine::Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection(EventEngine* engine)
+{
+    NetAddr addr;
+    while(true)
+    {
+        const GHandle handle = co_await m_socket->Accept(&addr);
+        if( handle.fd == -1 ){
+            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
+                LogError("[{}]", error::GetErrorString(error));
+            }
+            co_return;
+        }
+        galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(engine);
+        if( !socket->Socket(handle) ) {
+            delete socket;
+            co_return;
+        }
+        LogTrace("[Handle:{}, Acceot Success]", socket->GetHandle().fd);
+        if (auto option = HandleOption(socket->GetHandle()); !option.HandleNonBlock())
+        {
+            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
+            close(handle.fd);
+            delete socket;
+            co_return;
+        }
+        engine->ResetMaxEventSize(handle.fd);
+        this->m_store->Execute(socket);
+    }
+    co_return;
+}
+
+template<>
+inline coroutine::Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(EventEngine* engine)
+{
+    NetAddr addr;
+    while (true)
+    {
+        const auto handle = co_await m_socket->Accept(&addr);
+        if( handle.fd == -1 ){
+            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
+                LogError("[{}]", error::GetErrorString(error));
+            }
+            co_return;
+        }
+        AsyncTcpSslSocket* socket = new AsyncTcpSslSocket(engine);
+        if( bool res = socket->Socket(handle); !res ) {
+            delete socket;
+            continue;
+        }
+        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
+        if (auto option = HandleOption(handle); !option.HandleNonBlock())
+        {
+            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
+            close(handle.fd);
+            delete socket;
+            co_return;
+        }
+        if(const bool success = co_await socket->SSLAccept(); !success ){
+            LogError("[{}]", error::GetErrorString(socket->GetErrorCode()));
+            close(handle.fd);
+            delete socket;
+            co_return;
+        }
+        LogTrace("[Handle:{}, SSL_Acceot Success]", socket->GetHandle().fd);
+        engine->ResetMaxEventSize(handle.fd);
+        this->m_store->Execute(socket);
+    }
+    
+}
 
 
 class WaitEvent: public Event
@@ -208,7 +292,7 @@ enum CommonFailedType
 class NetWaitEvent: public WaitEvent
 {
 public:
-    explicit NetWaitEvent(async::AsyncNetIo* socket);
+    explicit NetWaitEvent(AsyncNetIo* socket);
     
     std::string Name() override;
     bool OnWaitPrepare(Coroutine_wptr co, void* ctx) override;
@@ -216,7 +300,7 @@ public:
     EventType GetEventType() override;
     GHandle GetHandle() override;
     void ResetNetWaitEventType(const NetWaitEventType type) { m_type = type; }
-    async::AsyncNetIo* GetAsyncTcpSocket() const { return m_socket; }
+    AsyncNetIo* GetAsyncTcpSocket() const { return m_socket; }
     ~NetWaitEvent() override;
 protected:
     bool OnTcpAcceptWaitPrepare(const Coroutine_wptr co, void* ctx);
@@ -247,18 +331,18 @@ protected:
 protected:
     NetWaitEventType m_type;
     void *m_ctx{};
-    async::AsyncNetIo* m_socket;
+    AsyncNetIo* m_socket;
 };
 
 class NetSslWaitEvent final : public NetWaitEvent
 {
 public:
-    explicit NetSslWaitEvent(async::AsyncSslNetIo* socket);
+    explicit NetSslWaitEvent(AsyncSslNetIo* socket);
     std::string Name() override;
     EventType GetEventType() override;
     bool OnWaitPrepare(Coroutine_wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
-    async::AsyncSslNetIo* GetAsyncTcpSocket() const;
+    AsyncSslNetIo* GetAsyncTcpSocket() const;
     ~NetSslWaitEvent() override;
 protected:
     bool OnTcpSslAcceptWaitPrepare(const Coroutine_wptr co, void* ctx);
@@ -299,19 +383,20 @@ enum FileIoWaitEventType
 #endif
     kFileIoWaitEventTypeRead,
     kFileIoWaitEventTypeWrite,
+    kFileIoWaitEventTypeClose
 };
 
 class FileIoWaitEvent final : public WaitEvent
 {
 public:
-    explicit FileIoWaitEvent(async::AsyncFileIo* fileio);
+    explicit FileIoWaitEvent(AsyncFileIo* fileio);
     std::string Name() override;
     bool OnWaitPrepare(Coroutine_wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
     EventType GetEventType() override;
     GHandle GetHandle() override;
     void ResetFileIoWaitEventType(FileIoWaitEventType type) { m_type = type; }
-    async::AsyncFileIo* GetAsyncTcpSocket() const { return m_fileio; }
+    AsyncFileIo* GetAsyncTcpSocket() const { return m_fileio; }
     ~FileIoWaitEvent() override;
 private:
 #ifdef __linux__
@@ -322,9 +407,12 @@ private:
     void HandleKReadEvent(EventEngine* engine);
     bool OnKWriteWaitPrepare(Coroutine_wptr co, void* ctx);
     void HandleKWriteEvent(EventEngine* engine);
+
+    bool OnCloseWaitPrepare(const Coroutine_wptr co, void* ctx);
+    
 private:
     void *m_ctx{};
-    async::AsyncFileIo* m_fileio;
+    AsyncFileIo* m_fileio;
     FileIoWaitEventType m_type;
 };
 

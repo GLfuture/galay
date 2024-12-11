@@ -1,8 +1,7 @@
 #include "Event.h"
 #include "Async.h"
-#include "EventEngine.h"
 #include "Scheduler.h"
-#include "Connection.h"
+#include "Connection.hpp"
 #include "Time.h"
 #include "ExternApi.h"
 #include <cstring>
@@ -11,8 +10,6 @@
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
 
 #endif
-#include "Log.h"
-#include <iostream>
 
 namespace galay::details
 {
@@ -233,149 +230,6 @@ void TimeEvent::UpdateTimers()
 
 //#if defined(USE_EPOLL) && !defined(USE_AIO)
 
-ListenEvent::ListenEvent(EventEngine* engine, async::AsyncNetIo* socket, TcpCallbackStore* callback_store)
-    : m_socket(socket), m_callback_store(callback_store), m_engine(engine)
-{
-    engine->AddEvent(this, nullptr);
-}
-
-void ListenEvent::HandleEvent(EventEngine *engine)
-{
-    engine->ModEvent(this, nullptr);
-    CreateTcpSocket(engine);
-}
-
-GHandle ListenEvent::GetHandle()
-{
-    return m_socket->GetHandle();
-}
-
-bool ListenEvent::SetEventEngine(EventEngine *engine)
-{
-    details::EventEngine* t = m_engine.load();
-    if(!m_engine.compare_exchange_strong(t, engine)) {
-        return false;
-    }
-    return true;
-}
-
-EventEngine* ListenEvent::BelongEngine()
-{
-    return m_engine.load();
-}
-
-ListenEvent::~ListenEvent()
-{
-    if(m_engine) m_engine.load()->DelEvent(this, nullptr);
-    delete m_socket;
-}
-
-coroutine::Coroutine ListenEvent::CreateTcpSocket(EventEngine *engine)
-{
-    NetAddr addr;
-    while(true)
-    {
-        const GHandle new_handle = co_await AsyncAccept(m_socket, &addr);
-        if( new_handle.fd == -1 ){
-            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                LogError("[{}]", error::GetErrorString(error));
-            }
-            co_return;
-        }
-        async::AsyncNetIo* socket = new async::AsyncTcpSocket(engine);
-        socket->GetHandle() = new_handle;
-        LogTrace("[Handle:{}, Acceot Success]", socket->GetHandle().fd);
-        auto option = socket->GetOption();
-        if (!option.HandleNonBlock())
-        {
-            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
-            close(new_handle.fd);
-            delete socket;
-            co_return;
-        }
-        engine->ResetMaxEventSize(new_handle.fd);
-        this->m_callback_store->Execute(socket);
-    }
-    co_return;
-}
-
-SslListenEvent::SslListenEvent(EventEngine* engine, async::AsyncSslNetIo *socket, TcpSslCallbackStore *callback_store)
-    :m_socket(socket), m_callback_store(callback_store), m_engine(engine), m_action(new details::IOEventAction(engine, new NetSslWaitEvent(socket)))
-{
-    engine->AddEvent(this, nullptr);
-}
-
-void SslListenEvent::HandleEvent(EventEngine *engine)
-{
-    engine->ModEvent(this, nullptr);
-    CreateTcpSslSocket(engine);
-}
-
-GHandle SslListenEvent::GetHandle()
-{
-    return m_socket->GetHandle();
-}
-
-bool SslListenEvent::SetEventEngine(EventEngine *engine)
-{
-    details::EventEngine* t = m_engine.load();
-    if(!m_engine.compare_exchange_strong(t, engine)) {
-        return false;
-    }
-    return true;
-}
-
-EventEngine* SslListenEvent::BelongEngine()
-{
-    return m_engine.load();
-}
-
-SslListenEvent::~SslListenEvent()
-{
-    m_engine.load()->DelEvent(this, nullptr);
-    delete m_action;
-}
-
-coroutine::Coroutine SslListenEvent::CreateTcpSslSocket(EventEngine *engine)
-{
-    NetAddr addr;
-    while (true)
-    {
-        const auto [fd] = co_await AsyncAccept(m_socket, &addr);
-        if( fd == -1 ){
-            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                LogError("[{}]", error::GetErrorString(error));
-            }
-            co_return;
-        }
-        async::AsyncSslNetIo* socket = new async::AsyncSslTcpSocket(engine);
-        bool res = AsyncSSLSocket(socket, GetGlobalSSLCtx());
-        if( !res ) {
-            delete socket;
-            continue;
-        }
-        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
-        auto option = socket->GetOption();
-        if (!option.HandleNonBlock())
-        {
-            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
-            close(fd);
-            delete socket;
-            co_return;
-        }
-        if(const bool success = co_await AsyncSSLAccept(socket); !success ){
-            LogError("[{}]", error::GetErrorString(socket->GetErrorCode()));
-            close(fd);
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, SSL_Acceot Success]", socket->GetHandle().fd);
-        engine->ResetMaxEventSize(fd);
-        this->m_callback_store->Execute(socket);
-    }
-    
-}
-
 WaitEvent::WaitEvent()
     :m_engine(nullptr), m_waitco({})
 {
@@ -395,7 +249,7 @@ EventEngine* WaitEvent::BelongEngine()
 }
 
 
-NetWaitEvent::NetWaitEvent(async::AsyncNetIo *socket)
+NetWaitEvent::NetWaitEvent(AsyncNetIo *socket)
     :m_type(kWaitEventTypeError), m_socket(socket)
 {
 }
@@ -771,7 +625,7 @@ int NetWaitEvent::UdpDealSendto(UdpIOVec *iov)
     return length;
 }
 
-NetSslWaitEvent::NetSslWaitEvent(async::AsyncSslNetIo *socket)
+NetSslWaitEvent::NetSslWaitEvent(AsyncSslNetIo *socket)
     :NetWaitEvent(socket)
 {
 }
@@ -912,9 +766,9 @@ void NetSslWaitEvent::HandleEvent(EventEngine *engine)
     }
 }
 
-async::AsyncSslNetIo *NetSslWaitEvent::GetAsyncTcpSocket() const
+AsyncSslNetIo *NetSslWaitEvent::GetAsyncTcpSocket() const
 {
-    return dynamic_cast<async::AsyncSslNetIo*>(m_socket);
+    return dynamic_cast<AsyncSslNetIo*>(m_socket);
 }
 
 NetSslWaitEvent::~NetSslWaitEvent()
@@ -923,7 +777,7 @@ NetSslWaitEvent::~NetSslWaitEvent()
 bool NetSslWaitEvent::OnTcpSslAcceptWaitPrepare(const Coroutine_wptr co, void* ctx)
 {
     galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
-    SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_set_accept_state(ssl);
     int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
@@ -944,7 +798,7 @@ bool NetSslWaitEvent::OnTcpSslConnectWaitPrepare(const Coroutine_wptr co, void* 
 {
     
     galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
-    SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_set_connect_state(ssl);
     int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
@@ -1005,7 +859,7 @@ bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const Coroutine_wptr co, void* ct
     } else {
         awaiter->SetResult(true);
     }
-    SSL*& ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
+    SSL*& ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_shutdown(ssl);
     SSL_free(ssl);
     ssl = nullptr;
@@ -1015,7 +869,7 @@ bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const Coroutine_wptr co, void* ct
 void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 {
     galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
-    SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     const int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
@@ -1037,7 +891,7 @@ void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
 {
     galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
-    SSL* ssl = dynamic_cast<async::AsyncSslNetIo*>(m_socket)->GetSSL();
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     const int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
     if( r == 1 ){
@@ -1129,7 +983,7 @@ int NetSslWaitEvent::TcpDealSend(TcpIOVec* iov)
 }
 //#endif
 
-FileIoWaitEvent::FileIoWaitEvent(async::AsyncFileIo *fileio)
+FileIoWaitEvent::FileIoWaitEvent(AsyncFileIo *fileio)
     :m_fileio(fileio), m_type(kFileIoWaitEventTypeError)
 {
     
@@ -1137,7 +991,22 @@ FileIoWaitEvent::FileIoWaitEvent(async::AsyncFileIo *fileio)
 
 std::string FileIoWaitEvent::Name()
 {
-    return "FileIoWaitEvent";
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return "LinuxAioEvent";
+#endif
+    case kFileIoWaitEventTypeRead:
+        return "KReadEvent";
+    case kFileIoWaitEventTypeWrite:
+        return "KWriteEvent";
+    case kFileIoWaitEventTypeClose:
+        return "CloseEvent";
+    default:
+        break;
+    }
+    return "Unknown";
 }
 
 bool FileIoWaitEvent::OnWaitPrepare(Coroutine_wptr co, void *ctx)
@@ -1154,6 +1023,8 @@ bool FileIoWaitEvent::OnWaitPrepare(Coroutine_wptr co, void *ctx)
         return OnKReadWaitPrepare(co, ctx);
     case kFileIoWaitEventTypeWrite:
         return OnKWriteWaitPrepare(co, ctx);
+    case kFileIoWaitEventTypeClose:
+        return OnCloseWaitPrepare(co, ctx);
     default:
         break;
     }
@@ -1175,6 +1046,8 @@ void FileIoWaitEvent::HandleEvent(EventEngine *engine)
     case kFileIoWaitEventTypeWrite:
         HandleKWriteEvent(engine);
         break;
+    case kFileIoWaitEventTypeClose:
+        break;
     default:
         break;
     }
@@ -1192,6 +1065,8 @@ EventType FileIoWaitEvent::GetEventType()
         return kEventTypeRead;
     case kFileIoWaitEventTypeWrite:
         return kEventTypeWrite;
+    case kFileIoWaitEventTypeClose:
+        return kEventTypeNone;
     default: ;
     }
     return kEventTypeNone;
@@ -1199,6 +1074,15 @@ EventType FileIoWaitEvent::GetEventType()
 
 GHandle FileIoWaitEvent::GetHandle()
 {
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return static_cast<AsyncFileNativeAio*>(m_fileio)->GetEventHandle();
+#endif
+    default:
+        break;
+    }
     return m_fileio->GetHandle();
 }
 
@@ -1219,8 +1103,8 @@ bool FileIoWaitEvent::OnAioWaitPrepare(Coroutine_wptr co, void *ctx)
 void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
 {
     uint64_t finish_nums = 0;
-    int ret = read(m_fileio->GetHandle().fd, &finish_nums, sizeof(uint64_t));
-    async::AsyncFileNativeAio* fileio = static_cast<async::AsyncFileNativeAio*>(m_fileio);
+    auto fileio = static_cast<AsyncFileNativeAio*>(m_fileio);
+    int ret = read(fileio->GetEventHandle().fd, &finish_nums, sizeof(uint64_t));
     io_event events[DEFAULT_IO_EVENTS_SIZE] = {0};
     int r = io_getevents(fileio->GetIoContext(), 1, DEFAULT_IO_EVENTS_SIZE, events, nullptr);
     LogTrace("[io_getevents return {} events]", r);
@@ -1228,7 +1112,7 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
     {
         auto& event = events[r];
         if(event.data != nullptr) {
-            static_cast<async::AioCallback*>(event.data)->OnAioComplete(&event);
+            static_cast<AioCallback*>(event.data)->OnAioComplete(&event);
         }
     }
     if( fileio->IoFinished(finish_nums) ){
@@ -1316,4 +1200,23 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
 
+bool FileIoWaitEvent::OnCloseWaitPrepare(const Coroutine_wptr co, void *ctx)
+{
+    coroutine::Awaiter* awaiter = co.lock()->GetAwaiter(); 
+    if (m_engine) {
+        if( m_engine.load()->DelEvent(this, nullptr) != 0 ) {
+            awaiter->SetResult(false);
+            m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
+            return false;
+        }
+    }
+    LogTrace("[Close {}]", m_fileio->GetHandle().fd);
+    if(const int ret = close(m_fileio->GetHandle().fd); ret < 0 ) {
+        m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
+        awaiter->SetResult(false);
+    } else {
+        awaiter->SetResult(true);
+    }
+    return false;
+}
 }

@@ -32,7 +32,7 @@ bool EventScheduler::Loop(int timeout)
     return true;
 }
 
-bool EventScheduler::Stop() const
+bool EventScheduler::Stop()
 {
     if(!m_engine->IsRunning()) return false;
     m_engine->Stop();
@@ -133,13 +133,13 @@ bool TimerScheduler::Loop(const int timeout)
 {
     GHandle handle{};
     details::TimeEvent::CreateHandle(handle);
-    m_timer_event = new details::TimeEvent(handle, m_engine.get());
+    m_timer_event = std::make_shared<details::TimeEvent>(handle, m_engine.get());
     return EventScheduler::Loop(timeout);
 }
 
-bool TimerScheduler::Stop() const
+bool TimerScheduler::Stop()
 {
-    delete m_timer_event; 
+    m_timer_event.reset();
     return EventScheduler::Stop();
 }
 

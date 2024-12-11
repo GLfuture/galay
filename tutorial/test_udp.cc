@@ -2,8 +2,8 @@
 
 galay::coroutine::Coroutine test_dns()
 {
-    galay::async::AsyncUdpSocket socket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler()->GetEngine());
-    if (!galay::AsyncUdpSocket(&socket))
+    galay::AsyncUdpSocket socket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler()->GetEngine());
+    if (!socket.Socket())
     {
         printf("create socket failed\n");
         co_return;
@@ -25,9 +25,9 @@ galay::coroutine::Coroutine test_dns()
         .m_ip = "8.8.8.8",
         .m_port = 53
     };
-    int length = co_await galay::AsyncSendTo(&socket, &sholder, 1500);
+    int length = co_await socket.SendTo(&sholder, 1500);
     printf("sendto success %d\n", length);
-    length = co_await galay::AsyncRecvFrom(&socket, &rholder, 1500);
+    length = co_await socket.RecvFrom(&rholder, 1500);
     galay::protocol::dns::DnsResponse response;
     size_t size = length;
     response.DecodePdu({rholder->m_buffer, size});

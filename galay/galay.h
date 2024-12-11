@@ -13,7 +13,7 @@
 #include "kernel/Async.h"
 #include "kernel/Event.h"
 #include "kernel/Scheduler.h"
-#include "kernel/Connection.h"
+#include "kernel/Connection.hpp"
 #include "kernel/Server.h"
 #include "kernel/ExternApi.h"
 #include "kernel/Log.h"
