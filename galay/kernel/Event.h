@@ -6,7 +6,7 @@
 #include "Time.h"
 #include "EventEngine.h"
 #include "Internal.h"
-#include "Connection.hpp"
+#include "Session.hpp"
 #include <queue>
 #include <shared_mutex>
 
@@ -95,8 +95,8 @@ public:
     GHandle GetHandle() override { return m_handle; }
     bool SetEventEngine(EventEngine* engine) override;
     EventEngine* BelongEngine() override;
-    galay::Timer::ptr AddTimer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func); // ms
-    void AddTimer(const uint64_t timeout, const galay::Timer::ptr& timer);
+    Timer::ptr AddTimer(uint64_t during_time, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func); // ms
+    void AddTimer(const uint64_t timeout, const Timer::ptr& timer);
     ~TimeEvent() override;
 private:
 #ifdef __linux__
@@ -195,13 +195,6 @@ inline coroutine::Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection
             co_return;
         }
         LogTrace("[Handle:{}, Acceot Success]", socket->GetHandle().fd);
-        if (auto option = HandleOption(socket->GetHandle()); !option.HandleNonBlock())
-        {
-            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
-            close(handle.fd);
-            delete socket;
-            co_return;
-        }
         engine->ResetMaxEventSize(handle.fd);
         this->m_store->Execute(socket);
     }
@@ -224,16 +217,9 @@ inline coroutine::Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(Eve
         AsyncTcpSslSocket* socket = new AsyncTcpSslSocket(engine);
         if( bool res = socket->Socket(handle); !res ) {
             delete socket;
-            continue;
-        }
-        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
-        if (auto option = HandleOption(handle); !option.HandleNonBlock())
-        {
-            LogError("[{}]", error::GetErrorString(option.GetErrorCode()));
-            close(handle.fd);
-            delete socket;
             co_return;
         }
+        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
         if(const bool success = co_await socket->SSLAccept(); !success ){
             LogError("[{}]", error::GetErrorString(socket->GetErrorCode()));
             close(handle.fd);

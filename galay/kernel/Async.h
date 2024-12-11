@@ -50,6 +50,8 @@ public:
     uint32_t &GetErrorCode();
     virtual ~AsyncNetIo();
 protected:
+    virtual void ActionInit(details::EventEngine *engine);
+protected:
     GHandle m_handle;
     uint32_t m_err_code;
     details::IOEventAction* m_action;
@@ -64,6 +66,8 @@ public:
     explicit AsyncSslNetIo(SSL* ssl, details::EventEngine* engine);
     SSL*& GetSSL() { return m_ssl; }
     ~AsyncSslNetIo() override;
+protected:
+    void ActionInit(details::EventEngine *engine) override;
 protected:
     SSL* m_ssl;
 };

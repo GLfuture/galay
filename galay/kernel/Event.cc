@@ -1,7 +1,7 @@
 #include "Event.h"
 #include "Async.h"
 #include "Scheduler.h"
-#include "Connection.hpp"
+#include "Session.hpp"
 #include "Time.h"
 #include "ExternApi.h"
 #include <cstring>
@@ -154,9 +154,9 @@ EventEngine *TimeEvent::BelongEngine()
     return m_engine;
 }
 
-galay::Timer::ptr TimeEvent::AddTimer(uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, galay::Timer::ptr)> &&func)
+Timer::ptr TimeEvent::AddTimer(uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func)
 {
-    auto timer = std::make_shared<galay::Timer>(timeout, std::move(func));
+    auto timer = std::make_shared<Timer>(timeout, std::move(func));
     timer->ResetTimeout(timeout);
     timer->m_cancle.store(false);
     std::unique_lock<std::shared_mutex> lock(this->m_mutex);

@@ -9,17 +9,14 @@ int main(int argc, char** argv)
         return -1;
     }
     spdlog::set_level(spdlog::level::debug);
-    galay::server::TcpSslServerConfig::ptr config = std::make_shared<galay::server::TcpSslServerConfig>();
-    config->m_cert_file = argv[1];
-    config->m_key_file = argv[2];
-    galay::server::Server<galay::AsyncTcpSslSocket, galay::server::TcpSslServerConfig> server(config);
-    galay::CallbackStore<galay::AsyncTcpSslSocket> store([](galay::Connection<galay::AsyncTcpSslSocket>::ptr conn)->galay::coroutine::Coroutine
-    {
-        
-        co_return;
-    });
-    server.Start(&store, "", 2333);
+    galay::server::HttpServerConfig::ptr config = std::make_shared<galay::server::HttpServerConfig>();
+    galay::InitializeGalayEnv(config->m_coroutineConf, config->m_netSchedulerConf, config->m_timerSchedulerConf);
+    galay::InitializeSSLServerEnv(argv[1], argv[2]);
+    galay::server::HttpServer<galay::AsyncTcpSslSocket> server(config);
+    server.Start("", 2333);
     getchar();
     server.Stop();
+    galay::DestroySSLEnv();
+    galay::DestroyGalayEnv();
     return 0;
 }

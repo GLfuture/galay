@@ -5,7 +5,6 @@
 #include "WaitAction.h"
 #include "ExternApi.h"
 #include "Log.h"
-#include <iostream>
 
 namespace galay::coroutine
 {
@@ -67,7 +66,7 @@ Coroutine::promise_type::~promise_type()
 {
     //防止协程运行时resume创建出新的协程，析构时重复析构
     if(m_coroutine) {
-        m_coroutine->Exit();
+        m_coroutine->ToExit();
     }
 }
 
@@ -123,7 +122,7 @@ Awaiter *Coroutine::GetAwaiter() const
     return m_awaiter.load();
 }
 
-void Coroutine::Exit()
+void Coroutine::ToExit()
 {
     while(!m_exit_cbs.empty()) {
         m_exit_cbs.front()();

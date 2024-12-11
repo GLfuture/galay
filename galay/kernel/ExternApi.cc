@@ -9,7 +9,7 @@
 namespace galay
 {
 
-SSL_CTX* g_ssl_ctx = nullptr;
+SSL_CTX* SslCtx = nullptr;
 // API
 
 
@@ -18,16 +18,16 @@ bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();
-    g_ssl_ctx = SSL_CTX_new(TLS_server_method());
-    if (g_ssl_ctx == nullptr) {
+    SslCtx = SSL_CTX_new(TLS_server_method());
+    if (SslCtx == nullptr) {
         return false;
     }
 
     // 加载证书和私钥
-    if (SSL_CTX_use_certificate_file(g_ssl_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_certificate_file(SslCtx, cert_file, SSL_FILETYPE_PEM) <= 0) {
         return false;
     }
-    if (SSL_CTX_use_PrivateKey_file(g_ssl_ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_PrivateKey_file(SslCtx, key_file, SSL_FILETYPE_PEM) <= 0) {
         return false;
     }
     return true;
@@ -35,8 +35,8 @@ bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)
 
 bool InitialiszeSSLClientEnv()
 {
-    g_ssl_ctx = SSL_CTX_new(TLS_client_method());
-    if (g_ssl_ctx == nullptr) {
+    SslCtx = SSL_CTX_new(TLS_client_method());
+    if (SslCtx == nullptr) {
         return false;
     }
     return true;
@@ -44,14 +44,14 @@ bool InitialiszeSSLClientEnv()
 
 bool DestroySSLEnv()
 {
-    SSL_CTX_free(g_ssl_ctx);
+    SSL_CTX_free(SslCtx);
     EVP_cleanup();
     return true;
 }
 
 SSL_CTX *GetGlobalSSLCtx()
 {
-    return g_ssl_ctx;
+    return SslCtx;
 }
 
 void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf)

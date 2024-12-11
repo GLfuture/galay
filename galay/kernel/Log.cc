@@ -1,7 +1,6 @@
 #include "Log.h"
 #include <spdlog/async.h>
 #include <spdlog/sinks/rotating_file_sink.h>
-#include <iostream>
 
 namespace galay::details
 {

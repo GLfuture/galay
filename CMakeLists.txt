@@ -120,5 +120,6 @@ install(DIRECTORY ${HEADER_SRC_DIR}
         PATTERN "*.h"
         PATTERN "*.hpp"
         PATTERN "*.inl"
+        PATTERN "*.tcc"
 )
 

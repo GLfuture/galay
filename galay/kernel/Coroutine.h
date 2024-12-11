@@ -96,7 +96,7 @@ public:
     void AppendExitCallback(const std::function<void()>& callback);
     ~Coroutine() = default;
 private:
-    void Exit();
+    void ToExit();
 private:
     std::atomic<details::CoroutineScheduler*> m_scheduler;
     std::atomic<Awaiter*> m_awaiter = nullptr;

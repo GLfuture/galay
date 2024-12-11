@@ -179,25 +179,6 @@ inline bool IOVecHolder<UdpIOVec>::Reset(const UdpIOVec& iov)
 }
 
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-/*
-   OpenSSL 
-*/
-
-bool InitializeSSLServerEnv(const char* cert_file, const char* key_file);
-bool InitialiszeSSLClientEnv();
-bool DestroySSLEnv();
-SSL_CTX* GetGlobalSSLCtx();
-
-
 template<typename T>
 concept LoadBalancerType = requires(T t)
 {
@@ -286,13 +267,22 @@ using EeventSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<de
 using CoroutineSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 using TimerSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
+
+bool InitializeSSLServerEnv(const char* cert_file, const char* key_file);
+bool InitialiszeSSLClientEnv();
+bool DestroySSLEnv();
+SSL_CTX* GetGlobalSSLCtx();
 void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf);
 void DestroyGalayEnv();
 
-}
 
+#ifdef __cplusplus
+}
+#endif
 }
 
 #endif

@@ -16,9 +16,9 @@ public:
 
 int main()
 {
-    galay::InitializeGalayEnv({4, -1}, {4, -1}, {1, -1});
     galay::server::HttpServerConfig::ptr config = std::make_shared<galay::server::HttpServerConfig>();
-    galay::server::HttpServer<galay::AsyncTcpSocket, galay::server::HttpServerConfig> server(config);
+    galay::InitializeGalayEnv(config->m_coroutineConf, config->m_netSchedulerConf, config->m_timerSchedulerConf);
+    galay::server::HttpServer<galay::AsyncTcpSocket> server(config);
     server.Get("/", Handler::GetHelloWorldHandler);
     server.Start("", 8060);
     getchar();

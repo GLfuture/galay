@@ -99,8 +99,9 @@ AsyncNetIo::AsyncNetIo(details::EventEngine* engine)
 }
 
 AsyncNetIo::AsyncNetIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_err_code(0), m_action(new details::IOEventAction(engine, new details::NetWaitEvent(this)))
+    :m_handle(handle), m_err_code(0)
 {
+    ActionInit(engine);
 }
 
 HandleOption
@@ -114,6 +115,10 @@ AsyncNetIo::~AsyncNetIo()
     delete m_action;
 }
 
+void AsyncNetIo::ActionInit(details::EventEngine *engine)
+{
+    m_action = new details::IOEventAction(engine, new details::NetWaitEvent(this));
+}
 
 uint32_t &AsyncNetIo::GetErrorCode()
 {
@@ -123,6 +128,7 @@ uint32_t &AsyncNetIo::GetErrorCode()
 AsyncSslNetIo::AsyncSslNetIo(details::EventEngine *engine)
     : AsyncNetIo(engine), m_ssl(nullptr)
 {
+    ActionInit(engine);
 }
 
 AsyncSslNetIo::AsyncSslNetIo(GHandle handle, details::EventEngine *engine)
@@ -141,6 +147,11 @@ AsyncSslNetIo::~AsyncSslNetIo()
         SSL_shutdown(m_ssl);
         SSL_free(m_ssl);
     }
+}
+
+void AsyncSslNetIo::ActionInit(details::EventEngine *engine)
+{
+    m_action = new details::IOEventAction(engine, new details::NetSslWaitEvent(this));
 }
 
 AsyncFileIo::AsyncFileIo(details::EventEngine* engine)
@@ -311,7 +322,8 @@ bool AsyncTcpSocket::Socket() const
 bool AsyncTcpSocket::Socket(GHandle handle)
 {
     m_io->GetHandle() = handle;
-    return true;
+    HandleOption option(handle);
+    return option.HandleNonBlock();
 }
 
 bool AsyncTcpSocket::Bind(const std::string& addr, int port)
@@ -387,6 +399,10 @@ bool AsyncTcpSslSocket::Socket() const
 bool AsyncTcpSslSocket::Socket(GHandle handle)
 {
     m_io->GetHandle() = handle;
+    HandleOption option(handle);
+    if(!option.HandleNonBlock()) {
+        return false;
+    }
     return details::AsyncSSLSocket(m_io, SslCtx);;
 }
 
