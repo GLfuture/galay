@@ -4,4 +4,4 @@
 /.vs
 /cmake-build-debug
 /out
-/lib
+/install

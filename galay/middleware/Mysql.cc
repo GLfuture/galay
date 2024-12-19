@@ -197,7 +197,7 @@ MysqlClient::MysqlClient(std::string charset)
 }
 
 int 
-MysqlClient::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint16_t Port)
+MysqlClient::Connect(const std::string& Remote,const std::string& UserName,const std::string& Password,const std::string& DBName, uint32_t Port)
 {
     if (!mysql_real_connect(this->m_handle, Remote.c_str(), UserName.c_str(), Password.c_str(), DBName.c_str(), Port, NULL, 0))
     {

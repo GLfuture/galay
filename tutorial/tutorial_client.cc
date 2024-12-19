@@ -3,7 +3,7 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 
-uint16_t g_port = 8080;
+uint32_t g_port = 8080;
 galay::coroutine::Coroutine test(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
     int64_t start = galay::GetCurrentTimeMs();

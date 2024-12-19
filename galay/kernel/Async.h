@@ -18,10 +18,10 @@ namespace galay::details
 namespace galay
 {
 
-class NetAddr;
-class TcpIOVec;
-class UdpIOVec;
-class FileIOVec;
+struct NetAddr;
+struct TcpIOVec;
+struct UdpIOVec;
+struct FileIOVec;
 
 class HandleOption
 {

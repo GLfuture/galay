@@ -59,7 +59,7 @@ namespace galay::middleware::mysql
         using uptr = std::unique_ptr<MysqlClient>;
 
         MysqlClient(std::string charset = "utf8mb4");
-        int Connect(const std::string &Remote, const std::string &UserName, const std::string &Password, const std::string &DBName, uint16_t Port = 3306);
+        int Connect(const std::string &Remote, const std::string &UserName, const std::string &Password, const std::string &DBName, uint32_t Port = 3306);
         void DisConnect();
         int GetSocket();
         int CreateTable(std::string TableName, const std::vector<std::tuple<std::string, std::string, std::string>> &Field_Type_Key);

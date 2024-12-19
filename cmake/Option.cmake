@@ -1,4 +1,5 @@
 option(ENABLE_DEBUG "Enable debug" ON)
+option(ENABLE_INSTALL_SYSTEM "Enable install system" ON) 
 
 #gtest
 find_path(GTEST_INCLUDE_DIR NAMES gtest)
@@ -18,9 +19,25 @@ if(MYSQL_INCLUDE_DIR AND MYSQL_LIBRARY)
 endif()
 
 if(MYSQL_FOUND)
+  find_package(MySQL REQUIRED)
   option(ENABLE_MYSQL "Enable mysql" ON)
 else()
   option(ENABLE_MYSQL "Not Enable mysql" OFF)
+endif()
+
+#redis
+find_path(REDIS_INCLUDE_DIR NAMES hiredis)
+find_library(REDIS_LIBRARY NAMES hiredis)
+
+if(REDIS_INCLUDE_DIR AND REDIS_LIBRARY)
+  set(REDIS_FOUND TRUE)
+endif()
+
+if(REDIS_FOUND)
+  find_package(Hiredis REQUIRED)
+  option(ENABLE_REDIS "Enable redis" ON)
+else()
+  option(ENABLE_REDIS "Not Enable redis" OFF)
 endif()
 
 #find etcd
@@ -33,6 +50,8 @@ if(ETCD_INCLUDE_DIR AND ETCD_LIBRARY AND CPPREST_LIBRARY)
 endif()
 
 if(ETCD_FOUND)
+  find_package(etcd-cpp-api REQUIRED)
+  find_package(cpprest REQUIRED)
   option(ENABLE_ETCD "Enable etcd" ON)
 else()
   option(ENABLE_ETCD "Not Enable etcd" OFF)
@@ -51,7 +70,8 @@ else()
 endif()
 
 # all
-if(ENABLE_MYSQL OR ENABLE_ETCD)
+if(ENABLE_MYSQL OR ENABLE_ETCD OR ENABLE_REDIS)
+  message(STATUS "Enable middleware")
   option(ENABLE_MIDDLEWARE "Enable middleware" ON)
 else()
   option(ENABLE_MIDDLEWARE "Not Enable middleware" OFF)
