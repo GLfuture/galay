@@ -9,6 +9,16 @@
 
 namespace galay::redis 
 {
+
+#define RedisLogTrace(logger, ...)       SPDLOG_LOGGER_TRACE(logger, __VA_ARGS__)
+#define RedisLogDebug(logger, ...)       SPDLOG_LOGGER_DEBUG(logger, __VA_ARGS__)
+#define RedisLogInfo(logger, ...)        SPDLOG_LOGGER_INFO(logger, __VA_ARGS__)
+#define RedisLogWarn(logger, ...)        SPDLOG_LOGGER_WARN(logger, __VA_ARGS__)
+#define RedisLogError(logger, ...)       SPDLOG_LOGGER_ERROR(logger, __VA_ARGS__)
+#define RedisLogCritical(logger, ...)    SPDLOG_LOGGER_CRITICAL(logger, __VA_ARGS__)
+
+
+
 enum class RedisConnectionOption {
     kRedisConnectionWithNull,
     kRedisConnectionWithTimeout,
@@ -115,6 +125,7 @@ class RedisSession
 public:
 
     RedisSession(RedisConfig::ptr config);
+	RedisSession(RedisConfig::ptr config, Logger::ptr logger);
     bool Connect(const std::string& url);
     bool Connect(const std::string& host, uint32_t port, const std::string& username, const std::string& password);
     bool Connect(const std::string& host, uint32_t port, const std::string& username, const std::string& password, uint32_t db_index);
@@ -287,15 +298,19 @@ public:
 private:
     redisContext* m_redis;
     RedisConfig::ptr m_config;
-
+	Logger::ptr m_logger;
 };
 
 class AsyncRedisSession 
 {
 public:
 	AsyncRedisSession(RedisConfig::ptr config);
+	AsyncRedisSession(RedisConfig::ptr config, Logger::ptr logger);
+	
 private:
 	redisAsyncContext* m_redis;
+	RedisConfig::ptr m_config;
+	Logger::ptr m_logger;
 };
 
 }

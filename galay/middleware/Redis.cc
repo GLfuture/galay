@@ -227,8 +227,15 @@ RedisValue::~RedisValue()
 
 
 RedisSession::RedisSession(RedisConfig::ptr config)
-    : m_config(config)
+    : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("RedisLogger"))
 {
+    m_logger->Pattern("[%Y-%m-%d %H:%M:%S.%f][%L][%t][%25!s:%4!#][%20!!] %v").Level(spdlog::level::info);
+}
+
+RedisSession::RedisSession(RedisConfig::ptr config, Logger::ptr logger)
+    : m_config(config), m_logger(logger)
+{
+    m_logger->Level(spdlog::level::info);
 }
 
 // redis://[password@]host[:port][/db_index]
@@ -248,7 +255,7 @@ bool RedisSession::Connect(const std::string &url)
         if (matches.size() > 4 && !matches[4].str().empty()) {
             host = matches[4];
         } else {
-            LogError("[Redis host is invalid]");
+            RedisLogError(m_logger->SpdLogger(), "[Redis host is invalid]");
             return false;
         }
         if (matches.size() > 5 && !matches[5].str().empty()) {
@@ -258,7 +265,7 @@ bool RedisSession::Connect(const std::string &url)
             }
             catch(const std::exception& e)
             {
-                LogError("[Redis url is invalid]");
+                RedisLogError(m_logger->SpdLogger(), "[Redis url is invalid]");
                 return false;
             }
         }
@@ -269,13 +276,13 @@ bool RedisSession::Connect(const std::string &url)
             }
             catch(const std::exception& e)
             {
-                LogError("[Redis url is invalid]");
+                RedisLogError(m_logger->SpdLogger(), "[Redis url is invalid]");
                 return false;
             }
         }
     
     } else {
-        LogError("[Redis url is invalid]");
+        RedisLogError(m_logger->SpdLogger(), "[Redis url is invalid]");
         return false;
     }
     return Connect(host, port, username, password, db_index);
@@ -291,8 +298,12 @@ bool RedisSession::Connect(const std::string &host, uint32_t port, const std::st
     return Connect(host, port, username, password, db_index, 2);
 }
 
-bool RedisSession::Connect(const std::string &host, uint32_t port, const std::string& username, const std::string &password, uint32_t db_index, int version)
+bool RedisSession::Connect(const std::string &ehost, uint32_t port, const std::string& username, const std::string &password, uint32_t db_index, int version)
 {
+    std::string host = ehost;
+    if( ehost == "localhost") {
+        host = "127.0.0.1";
+    }
     switch (m_config->GetConnectOption())
     {
     case RedisConnectionOption::kRedisConnectionWithNull:
@@ -352,17 +363,17 @@ bool RedisSession::Connect(const std::string &host, uint32_t port, const std::st
     }
     if(! m_redis || m_redis->err) {
         if(m_redis) {
-            LogError("[Redis connect to {}:{} failed, error is {}]", host.c_str(), port, m_redis->errstr);
+            RedisLogError(m_logger->SpdLogger(), "[Redis connect to {}:{} failed, error is {}]", host.c_str(), port, m_redis->errstr);
             redisFree(m_redis);
             m_redis = nullptr;
             return false;
         } else {
-            LogError("[Redis connect to {}:{} failed]", host.c_str(), port);
+            RedisLogError(m_logger->SpdLogger(), "[Redis connect to {}:{} failed]", host.c_str(), port);
             return false;           
         }
         return false;
     }
-    LogInfo("[Redis connect to {}:{}]", host.c_str(), port);
+    RedisLogInfo(m_logger->SpdLogger(), "[Redis connect to {}:{}]", host.c_str(), port);
     redisReply *reply;
 	// Authentication
 	if (!password.empty()) {
@@ -375,15 +386,15 @@ bool RedisSession::Connect(const std::string &host, uint32_t port, const std::st
         reply = static_cast<redisReply*>(redisCommand(m_redis, query.c_str()));
         if (!reply || reply->type == REDIS_REPLY_ERROR) {
             if (reply) {
-                LogError("Authentication failure, error is {}", reply->str);
+                RedisLogError(m_logger->SpdLogger(), "[Authentication failure, error is {}]", reply->str);
                 freeReplyObject(reply);
             } else {
-                LogError("Authentication failure");
+                RedisLogError(m_logger->SpdLogger(), "[Authentication failure]");
             }
             return false;
         }
         freeReplyObject(reply);
-        LogInfo("Authentication success");
+        RedisLogInfo(m_logger->SpdLogger(), "[Authentication success]");
 	}
 	if( db_index != 0 ) {
         auto reply = SelectDB(db_index);
@@ -546,8 +557,13 @@ RedisSession::~RedisSession()
 }
 
 AsyncRedisSession::AsyncRedisSession(RedisConfig::ptr config)
+    : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("AsyncRedisLogger"))
 {
     
 }
 
+AsyncRedisSession::AsyncRedisSession(RedisConfig::ptr config, Logger::ptr logger)
+    : m_config(config), m_logger(logger)
+{
+}
 }

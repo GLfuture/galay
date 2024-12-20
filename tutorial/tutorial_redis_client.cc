@@ -5,7 +5,7 @@
 using namespace galay::redis;
 
 int main() {
-    std::string url = "redis://123456@192.168.20.129:6379";
+    std::string url = "redis://123456@127.0.0.1:6379";
     auto config = RedisConfig::CreateConfig();
     config->ConnectWithTimeout(1000);
     RedisSession session(config);

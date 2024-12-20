@@ -12,7 +12,7 @@ using galay::coroutine::Coroutine;
 #ifdef __linux__
 Coroutine test()
 {
-    galay::details::Logger::GetInstance()->GetLogger()->set_level(spdlog::level::trace);
+    galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger()->set_level(spdlog::level::trace);
     galay::AsyncFileNativeAioDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(),1024);
     bool res = descriptor.Open("test.txt", O_RDWR | O_CREAT, 0644);
     if(!res) {

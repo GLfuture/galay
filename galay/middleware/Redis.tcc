@@ -135,9 +135,11 @@ inline RedisValue RedisSession::ZRem(const std::string &key, Key... members)
 template <typename... Args>
 inline redisReply *RedisSession::RedisCommand(const std::string &cmd, Args... args)
 {
+    std::string query = "";
+    RedisLogInfo(m_logger->SpdLogger(), "[redisCommand: cmd is {}]", cmd);
     redisReply* reply = static_cast<redisReply*>(redisCommand(m_redis, cmd.c_str(), args...));
     if (!reply) {
-        LogError("[redisCommand failed: cmd is {}, error is {}]", cmd, m_redis->errstr);
+        RedisLogError(m_logger->SpdLogger(), "[redisCommand failed: cmd is {}, error is {}]", cmd, m_redis->errstr);
         redisFree(m_redis);
         m_redis = nullptr;
         return nullptr;
