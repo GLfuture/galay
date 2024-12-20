@@ -16,22 +16,53 @@ set(SRC_LIST
     #tutorial_https_server.cc
     #demo.cc
     )
+
+set(INSTALL_BIN)
 include_directories(${CMAKE_SOURCE_DIR})    
 
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
-    target_link_libraries(${EXECUTABLE_NAME} galay-static)
+    target_link_libraries(${EXECUTABLE_NAME} galay)
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
+        INSTALL_RPATH $ORIGIN/../lib
+    )
+    list(APPEND INSTALL_BIN ${EXECUTABLE_NAME})
 endforeach()
 
 if(ETCD_FOUND)
     add_executable(tutorial_etcd_discover_client tutorial_etcd_discover_client.cc)
-    target_link_libraries(tutorial_etcd_discover_client  galay-static)
+    target_link_libraries(tutorial_etcd_discover_client  galay)
+    set_target_properties(tutorial_etcd_discover_client PROPERTIES
+        INSTALL_RPATH $ORIGIN/../lib
+    )
     add_executable(tutorial_etcd_register_client tutorial_etcd_register_client.cc)
-    target_link_libraries(tutorial_etcd_register_client  galay-static)
+    target_link_libraries(tutorial_etcd_register_client  galay)
+    set_target_properties(tutorial_etcd_register_client PROPERTIES
+        INSTALL_RPATH $ORIGIN/../lib
+    )
+    list(APPEND INSTALL_BIN tutorial_etcd_discover_client tutorial_etcd_register_client)
 endif()
 
 if(MYSQL_FOUND)
     add_executable(tutorial_mysql_client tutorial_mysql_client.cc)
-    target_link_libraries(tutorial_mysql_client  galay-static)
+    target_link_libraries(tutorial_mysql_client galay)
+    set_target_properties(tutorial_mysql_client PROPERTIES
+        INSTALL_RPATH $ORIGIN/../lib
+    )
+    list(APPEND INSTALL_BIN tutorial_mysql_client)
+endif()
+
+if(REDIS_FOUND)
+    add_executable(tutorial_redis_client tutorial_redis_client.cc)
+    find_package(Hiredis REQUIRED)
+    target_link_libraries(tutorial_redis_client PRIVATE galay ${Hiredis})
+    set_target_properties(tutorial_redis_client PROPERTIES
+        INSTALL_RPATH $ORIGIN/../lib
+    )
+    list(APPEND INSTALL_BIN tutorial_redis_client)
+endif()
+
+if(NOT ENABLE_INSTALL_SYSTEM)
+    install(TARGETS ${INSTALL_BIN} DESTINATION bin)
 endif()

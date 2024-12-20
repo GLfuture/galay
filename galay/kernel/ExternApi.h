@@ -14,7 +14,7 @@ namespace galay {
 struct NetAddr
 {
     std::string m_ip;
-    uint16_t m_port;
+    uint32_t m_port;
 };
 
 struct IOVec
@@ -149,7 +149,7 @@ private:
 
     bool FreeMemory() 
     {
-        bool res;
+        bool res = false;
         if(m_temp.empty()) {
             return VecFree(&m_vec);
         } else {

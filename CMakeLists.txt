@@ -7,18 +7,25 @@ include(CMakePackageConfigHelpers)
 set(CXX_STANDARD_REQUIRED on)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_INSTALL_PREFIX /usr/local)
+
 set(HEADER_SRC_DIR galay)
 set(HEADER_DST_DIR include)
 
 include(cmake/Option.cmake)
 
-if(ENABLE_DEBUG)
-  set(CMAKE_BUILD_TYPE Debug)
-  message(STATUS "Debug mode enabled")
+if(ENABLE_INSTALL_SYSTEM)
+    set(CMAKE_INSTALL_PREFIX /usr/local)
 else()
-  set(CMAKE_BUILD_TYPE Release)
-  message(STATUS "Release mode enabled")
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install)
+endif()
+message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
+
+if(ENABLE_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+    message(STATUS "Debug mode enabled")
+else()
+    set(CMAKE_BUILD_TYPE Release)
+    message(STATUS "Release mode enabled")
 endif()
 
 #查找依赖
@@ -31,6 +38,8 @@ if(ENABLE_MIDDLEWARE)
 endif()
 
 include_directories(thirdparty)
+
+set(THIRDPARTY_INCLUDE_DIRS concurrentqueue)
 
 set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common helper)
 set(STATIC_LIB ${PROJECT_NAME}-static)
@@ -45,12 +54,12 @@ add_subdirectory(galay)
 set(OBJECT_LIBS)
 
 foreach(depend_lib ${DEPEND_LIBS})
-  message(STATUS "Processing dependency: ${depend_lib}")
-  if(TARGET ${depend_lib})
-      list(APPEND OBJECT_LIBS $<TARGET_OBJECTS:${depend_lib}>)
-  else()
-      message(FATAL_ERROR "Target ${depend_lib}_obj does not exist")
-  endif()
+    message(STATUS "Processing dependency: ${depend_lib}")
+    if(TARGET ${depend_lib})
+        list(APPEND OBJECT_LIBS $<TARGET_OBJECTS:${depend_lib}>)
+    else()
+        message(FATAL_ERROR "Target ${depend_lib}_obj does not exist")
+    endif()
 endforeach()
 
 
@@ -109,17 +118,28 @@ add_subdirectory(tutorial)
 
 #test
 if(ENABLE_GTEST)
-  message(STATUS "add test directory")
-  add_subdirectory(test)
+    message(STATUS "Add test directory")
+    add_subdirectory(test)
 endif()
 
 install(DIRECTORY ${HEADER_SRC_DIR}
-        DESTINATION ${HEADER_DST_DIR}
-        COMPONENT devel
-        FILES_MATCHING
-        PATTERN "*.h"
-        PATTERN "*.hpp"
-        PATTERN "*.inl"
-        PATTERN "*.tcc"
+    DESTINATION ${HEADER_DST_DIR}
+    COMPONENT devel
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp"
+    PATTERN "*.inl"
+    PATTERN "*.tcc"
 )
 
+foreach(THIRDPARTY_INCLUDE_DIR ${THIRDPARTY_INCLUDE_DIRS})
+    install(DIRECTORY thirdparty/${THIRDPARTY_INCLUDE_DIR}
+            DESTINATION ${HEADER_DST_DIR}
+            COMPONENT devel
+            FILES_MATCHING
+            PATTERN "*.h"
+            PATTERN "*.hpp"
+            PATTERN "*.inl"
+            PATTERN "*.tcc"
+    )
+endforeach()

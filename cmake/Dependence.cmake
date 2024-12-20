@@ -2,10 +2,10 @@
 find_package(OpenSSL REQUIRED)
 
 if(OPENSSL_FOUND)
-    message(STATUS "openssl found")
+    message(STATUS "Openssl found")
     include_directories(${OPENSSL_INCLUDE_DIR})
 else()
-    message(FATAL_ERROR "openssl not found")
+    message(FATAL_ERROR "Openssl not found")
 endif()
 
 #spdlog 
@@ -32,11 +32,11 @@ find_library(   SPDLOG_LIBRARY
             )
 
 if(SPDLOG_INCLUDE_DIR AND SPDLOG_LIBRARY)
-    message(STATUS "spdlog found")
+    message(STATUS "Spdlog found")
     include_directories(${SPDLOG_INCLUDE_DIR})
     set(SPDLOG_FOUND TRUE)
 else()
-    message(FATAL_ERROR "spdlog not found")
+    message(FATAL_ERROR "Spdlog not found")
 endif()
 
 #libaio
@@ -64,9 +64,9 @@ find_library(   LIBAIO_LIBRARY
             )
 
 if(LIBAIO_INCLUDE_DIR AND LIBAIO_LIBRARY)
-    message(STATUS "libaio found")
+    message(STATUS "Libaio found")
     include_directories(${LIBAIO_INCLUDE_DIR})
     set(LIBAIO_FOUND TRUE)
 else()
-    message(STATUS "libaio not found")
+    message(STATUS "Libaio not found")
 endif()

@@ -179,7 +179,7 @@ inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
 template<>
 inline coroutine::Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection(EventEngine* engine)
 {
-    NetAddr addr;
+    NetAddr addr{};
     while(true)
     {
         const GHandle handle = co_await m_socket->Accept(&addr);
@@ -204,7 +204,7 @@ inline coroutine::Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection
 template<>
 inline coroutine::Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(EventEngine* engine)
 {
-    NetAddr addr;
+    NetAddr addr{};
     while (true)
     {
         const auto handle = co_await m_socket->Accept(&addr);

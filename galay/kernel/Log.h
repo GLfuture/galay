@@ -8,34 +8,61 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-namespace galay::details {
-
-#define DEFAULT_LOG_QUEUE_SIZE      8192
-#define DEFAULT_LOG_THREADS         2
-
-#define DEFAULT_LOG_FILE_PATH       "galay.log"
-#define DEFAULT_MAX_LOG_FILE_SIZE   (10 * 1024 * 1024)
-#define DEFAULT_MAX_LOG_FILES       3
-
-
-
+namespace galay {
 class Logger {
-public: 
-    Logger();
-    static Logger* GetInstance();
-    std::shared_ptr<spdlog::logger>& GetLogger();
+public:
+    using ptr = std::shared_ptr<Logger>;
+    static Logger::ptr CreateStdoutLoggerST(const std::string& name);
+    static Logger::ptr CreateStdoutLoggerMT(const std::string& name);
+    
+    static Logger::ptr CreateDailyFileLoggerST(const std::string& name, const std::string& file_path, int hour, int minute);
+    static Logger::ptr CreateDailyFileLoggerMT(const std::string& name, const std::string& file_path, int hour, int minute);
+
+    static Logger::ptr CreateRotingFileLoggerST(const std::string& name, const std::string& file_path, size_t max_size, size_t max_files);
+    static Logger::ptr CreateRotingFileLoggerMT(const std::string& name, const std::string& file_path, size_t max_size, size_t max_files);
+
+    Logger(std::shared_ptr<spdlog::logger> logger);
+    std::shared_ptr<spdlog::logger> SpdLogger();
+    Logger& Pattern(const std::string &pattern);
+    Logger& Level(spdlog::level::level_enum level);
 private:
-    static std::unique_ptr<Logger> m_instance;
     std::shared_ptr<spdlog::logger> m_logger;
 };
 
 }
 
-#define LogTrace(...)       SPDLOG_LOGGER_TRACE(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogDebug(...)       SPDLOG_LOGGER_DEBUG(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogInfo(...)        SPDLOG_LOGGER_INFO(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogWarn(...)        SPDLOG_LOGGER_WARN(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogError(...)       SPDLOG_LOGGER_ERROR(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
-#define LogCritical(...)    SPDLOG_LOGGER_CRITICAL(galay::details::Logger::GetInstance()->GetLogger(), __VA_ARGS__)
+namespace galay::details {
+
+#define DEFAULT_LOG_QUEUE_SIZE      8192
+#define DEFAULT_LOG_THREADS         2
+
+#define DEFAULT_LOG_FILE_PATH       "logs/galay.log"
+#define DEFAULT_MAX_LOG_FILE_SIZE   (10 * 1024 * 1024)
+#define DEFAULT_MAX_LOG_FILES       3
+
+
+
+class InternelLogger {
+public: 
+    InternelLogger();
+    static InternelLogger* GetInstance();
+    void SetLogger(Logger::ptr logger);
+    Logger::ptr GetLogger();
+private:
+    static std::unique_ptr<InternelLogger> m_instance;
+    Logger::ptr m_logger;
+};
+
+
+}
+
+#define LogTrace(...)       SPDLOG_LOGGER_TRACE(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
+#define LogDebug(...)       SPDLOG_LOGGER_DEBUG(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
+#define LogInfo(...)        SPDLOG_LOGGER_INFO(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
+#define LogWarn(...)        SPDLOG_LOGGER_WARN(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
+#define LogError(...)       SPDLOG_LOGGER_ERROR(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
+#define LogCritical(...)    SPDLOG_LOGGER_CRITICAL(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
+
+
 
 #endif

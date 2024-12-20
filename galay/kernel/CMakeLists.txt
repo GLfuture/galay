@@ -3,17 +3,20 @@ project(kernel)
 
 file(GLOB SRC_LIST "*.cc")
 
-set(DEPEND_LIBS ssl crypto)
+find_library(SSL_LIB NAMES ssl)
+find_library(CRYPTO_LIB NAMES crypto)
+
+set(DEPEND_LIBS ${SSL_LIB} ${CRYPTO_LIB})
 
 if (LIBAIO_FOUND)
-    set(DEPEND_LIBS ${DEPEND_LIBS} aio)
+    find_library(LIBAIO_LIB NAMES aio)
+    set(DEPEND_LIBS ${DEPEND_LIBS} ${LIBAIO_LIB})
 endif ()
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
-target_link_libraries(${PROJECT_NAME} ${DEPEND_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${DEPEND_LIBS})
 if(ENABLE_TRACE_LOG)
     message(STATUS "ENABLE_DISPLAY_GALAY_LOG ON")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "ENABLE_DISPLAY_GALAY_LOG")
     target_compile_definitions(${PROJECT_NAME} PRIVATE "ENABLE_DISPLAY_GALAY_LOG")
 endif()
 
