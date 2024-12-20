@@ -2,7 +2,7 @@
 #define GALAY_KAFKA_H
 
 
-namespace galay::middleware::kafka
+namespace galay::kafka
 {
 
 }

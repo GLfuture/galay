@@ -5,6 +5,44 @@
 
 namespace galay::server {
 
+template<>
+inline std::string CodeResponse<HttpStatusCode::BadRequest_400>::DefaultResponseBody()
+{
+    return "<html>Bad Request</html>";
+}
+
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::NotFound_404>::DefaultResponseBody()
+{
+    return "<html>404 Not Found</html>";
+}
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::MethodNotAllowed_405>::DefaultResponseBody()
+{
+    return "<html>405 Method Not Allowed</html>";
+}
+
+template <>
+inline std::string CodeResponse<HttpStatusCode::UriTooLong_414>::DefaultResponseBody()
+{
+    return "<html>Uri Too Long</html>";
+}
+
+template <>
+inline std::string CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::DefaultResponseBody()
+{
+    return "<html>Header Too Long</html>";
+}
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::DefaultResponseBody()
+{
+    return "<html>500 Internal Server Error</html>";
+}
+
+
 template<typename SocketType>
 inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, const std::string& addr, int port) {
     m_is_running = true;
@@ -100,40 +138,19 @@ step1:
                     }
                     case galay::error::HttpErrorCode::kHttpError_BadRequest:
                     {
-                        if(m_error_string.contains(HttpStatusCode::BadRequest_400)) {
-                            std::string body = m_error_string[HttpStatusCode::BadRequest_400];
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::BadRequest_400, std::move(body));
-                        } else {
-                            std::string body = "Bad Request";
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::BadRequest_400, std::move(body));
-                        }
-                        wholder.Reset(session.GetResponse()->EncodePdu());
+                        wholder.Reset(CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1));
                         close_connection = true;
                         goto step2;
                     }
                     case galay::error::HttpErrorCode::kHttpError_HeaderTooLong:
                     {
-                        if(m_error_string.contains(HttpStatusCode::RequestHeaderFieldsTooLarge_431)) {
-                            std::string body = m_error_string[HttpStatusCode::RequestHeaderFieldsTooLarge_431];
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::RequestHeaderFieldsTooLarge_431, std::move(body));
-                        } else {
-                            std::string body = "Header Too Long";
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::RequestHeaderFieldsTooLarge_431, std::move(body));
-                        }
-                        wholder.Reset(session.GetResponse()->EncodePdu());
+                        wholder.Reset(CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::ResponseStr(HttpVersion::Http_Version_1_1));
                         close_connection = true;
                         goto step2;
                     }
                     case galay::error::HttpErrorCode::kHttpError_UriTooLong:
                     {
-                        if(m_error_string.contains(HttpStatusCode::UriTooLong_414)) {
-                            std::string body = m_error_string[HttpStatusCode::UriTooLong_414];
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::UriTooLong_414, std::move(body));
-                        } else {
-                            std::string body = "Uri Too Long";
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::UriTooLong_414, std::move(body));
-                        }
-                        wholder.Reset(session.GetResponse()->EncodePdu());
+                        wholder.Reset(CodeResponse<HttpStatusCode::UriTooLong_414>::ResponseStr(HttpVersion::Http_Version_1_1));
                         close_connection = true;
                         goto step2;
                     }
@@ -142,35 +159,10 @@ step1:
                     }
                 }
                 else { //解析成功
-                    auto it = m_route_map.find(session.GetRequest()->Header()->Method());
-                    if(it != m_route_map.end()) {
-                        auto it2 = it->second.find(session.GetRequest()->Header()->Uri());
-                        if(it2 != it->second.end()) {
-                            it2->second(session, context);
-                            wholder.Reset(session.GetResponse()->EncodePdu());
-                            goto step2;
-                        } else { //没有该URI
-                            if(m_error_string.contains(HttpStatusCode::NotFound_404)) {
-                                std::string body = m_error_string[HttpStatusCode::NotFound_404];
-                                CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::NotFound_404, std::move(body));
-                            } else {
-                                std::string body = "Not Found";
-                                CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::NotFound_404, std::move(body));
-                            }
-                            wholder.Reset(session.GetResponse()->EncodePdu());
-                            goto step2;
-                        }
-                    } else { //没有该方法
-                        if(m_error_string.contains(HttpStatusCode::MethodNotAllowed_405)) {
-                            std::string body = m_error_string[HttpStatusCode::MethodNotAllowed_405];
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::MethodNotAllowed_405, std::move(body));
-                        } else {
-                            std::string body = "Method NotAllowed";
-                            CreateHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1, HttpStatusCode::MethodNotAllowed_405, std::move(body));
-                        }
-                        wholder.Reset(session.GetResponse()->EncodePdu());
-                        goto step2;
-                    }
+                    HttpMethod method = session.GetRequest()->Header()->Method();
+                    std::string res = HttpRouteHandler<SocketType>::GetInstance()->Handle(method, session.GetRequest()->Header()->Uri(), session, context);
+                    wholder.Reset(std::move(res));
+                    goto step2;
                 }
             }
         }

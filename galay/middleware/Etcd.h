@@ -27,7 +27,7 @@ namespace galay::details
     };
 }
 
-namespace galay::middleware::etcd
+namespace galay::etcd
 {
     class EtcdResponse
     {

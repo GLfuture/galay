@@ -8,6 +8,7 @@ set(SRC_LIST
     test_fileio.cc
     test_waitgroup.cc
     test_udp.cc
+    demo.cc
     #tutorial_proxy_server.cc
     #tutorial_ratelimiter.cc
     #tutorial_smtp_client.cc

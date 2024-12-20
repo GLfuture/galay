@@ -4,7 +4,7 @@
 #include <any>
 #include <functional>
 #include "galay/protocol/Http.h"
-#include "galay/utils/ObjectPool.hpp"
+#include "galay/utils/Pool.hpp"
 
 namespace galay::coroutine
 {   
@@ -55,30 +55,29 @@ template <RequestType Request, ResponseType Response>
 struct ProtocolStore
 {
     using ptr = std::shared_ptr<ProtocolStore>;
-    ProtocolStore(utils::ObjectPoolMutiThread<Request>* request_pool, \
-        utils::ObjectPoolMutiThread<Response>* response_pool)
-        :m_request(request_pool->GetObjector()), m_response(response_pool->GetObjector()), m_request_pool(request_pool), m_response_pool(response_pool) {}
+    ProtocolStore(utils::ProtocolPool<Request>* request_pool, \
+        utils::ProtocolPool<Response>* response_pool)
+        :m_request(request_pool->GetProtocol()), m_response(response_pool->GetProtocol()), m_request_pool(request_pool), m_response_pool(response_pool) {}
     ~ProtocolStore() {
-        m_request_pool->ReturnObjector(m_request);
-        m_response_pool->ReturnObjector(m_response);
+        m_request_pool->PutProtocol(std::move(m_request));
+        m_response_pool->PutProtocol(std::move(m_response));
     }
-    Request* m_request;
-    Response* m_response;
-    utils::ObjectPoolMutiThread<Request>* m_request_pool;
-    utils::ObjectPoolMutiThread<Response>* m_response_pool;
+    std::unique_ptr<Request> m_request;
+    std::unique_ptr<Response> m_response;
+    utils::ProtocolPool<Request>* m_request_pool;
+    utils::ProtocolPool<Response>* m_response_pool;
 };
 
 template <typename Socket, RequestType Request, ResponseType Response>
 class Session
 {
 public:
-
-    Session(std::shared_ptr<Connection<Socket>> connection, utils::ObjectPoolMutiThread<Request>* request_pool, \
-        utils::ObjectPoolMutiThread<Response>* response_pool)
+    Session(std::shared_ptr<Connection<Socket>> connection, utils::ProtocolPool<Request>* request_pool, \
+        utils::ProtocolPool<Response>* response_pool)
         :m_connection(connection), m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
 
-    Request* GetRequest() const { return m_proto_store->m_request; }
-    Response* GetResponse() const { return m_proto_store->m_response; }
+    Request* GetRequest() const { return m_proto_store->m_request.get(); }
+    Response* GetResponse() const { return m_proto_store->m_response.get(); }
     std::shared_ptr<Connection<Socket>> GetConnection() { return m_connection; }
     std::shared_ptr<std::any> GetUserData() { return m_userdata; }
     ~Session() = default;

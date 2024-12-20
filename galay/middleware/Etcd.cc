@@ -10,7 +10,7 @@ bool galay::details::EtcdAction::DoAction(coroutine::Coroutine::wptr co, void *c
 
 
 
-namespace galay::middleware::etcd
+namespace galay::etcd
 {
 EtcdResponse::EtcdResponse(::etcd::Response &response)
     : m_response(response)

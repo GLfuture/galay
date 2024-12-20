@@ -33,7 +33,6 @@
 #include "utils/RateLimiter.h"
 #include "utils/Tree.h"
 #include "utils/Thread.h"
-#include "utils/ThreadSefe.hpp"
 
 #ifndef GALAY_VERSION
 #define GALAY_VERSION "0.0.1"

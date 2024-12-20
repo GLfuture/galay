@@ -321,14 +321,14 @@ bool HttpHelper::DefaultRedirect(protocol::http::HttpResponse *response, const s
     return true;
 }
 
-bool HttpHelper::DefaultHttpResponse(protocol::http::HttpResponse *response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string type, std::string &&body)
+bool HttpHelper::DefaultHttpResponse(protocol::http::HttpResponse *response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string type, const std::string &body)
 {
     response->Header()->Version() = version;
     response->Header()->Code() = code;
     response->Header()->HeaderPairs().AddHeaderPair("Server", "galay");
     response->Header()->HeaderPairs().AddHeaderPair("Date", GetCurrentGMTTimeString());
     if(!type.empty()) response->Header()->HeaderPairs().AddHeaderPair("Content-Type", type);
-    if(!body.empty()) response->Body() = std::forward<std::string>(body);
+    if(!body.empty()) response->Body() = body;
     return true;
 }
 }

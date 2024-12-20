@@ -1,11 +1,6 @@
 #include "Kafka.h"
 
-namespace galay::middleware::kafka
+namespace galay::kafka
 {
-    class KafkaClient
-    {
-
-    };
-
 
 }

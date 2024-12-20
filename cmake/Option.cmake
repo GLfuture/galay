@@ -1,4 +1,4 @@
-option(ENABLE_DEBUG "Enable debug" ON)
+option(ENABLE_DEBUG "Enable debug" OFF)
 
 #gtest
 find_path(GTEST_INCLUDE_DIR NAMES gtest)
