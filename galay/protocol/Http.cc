@@ -281,12 +281,13 @@ HeaderPair::SetHeaderPair(const std::string& key, const std::string& value)
 std::string 
 HeaderPair::ToString()
 {
-    std::string res;
     for (auto& [k, v] : m_headerPairs)
     {
-        res = res + k + ": " + v + "\r\n";
+        m_stream << k << ": " << v << "\r\n";
     }
-    return std::move(res);
+    std::string result = m_stream.str();
+    m_stream.str("");
+    return result;
 }
 
 void HeaderPair::Clear()
@@ -294,10 +295,11 @@ void HeaderPair::Clear()
     if(!m_headerPairs.empty()) m_headerPairs.clear();
 }
 
-
-HeaderPair&
-HeaderPair::operator=(const HeaderPair& headerPair)
-= default;
+HeaderPair &HeaderPair::operator=(const HeaderPair &headerPair)
+{
+    m_stream << headerPair.m_stream.str();
+    m_headerPairs = headerPair.m_headerPairs;
+}
 
 HttpMethod& 
 HttpRequestHeader::Method()
@@ -432,21 +434,26 @@ HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, si
 std::string 
 HttpRequestHeader::ToString()
 {
-    std::string res = HttpMethodToString(this->m_method) + " ";
-    std::string url = this->m_uri;
+    m_stream << HttpMethodToString(this->m_method) << " ";
+    std::ostringstream url;
+    url << m_uri;
     if (!m_argList.empty())
     {
-        url += '?';
+        url << '?';
+        int i = 0;
         for (auto& [k, v] : m_argList)
         {
-            url = url + k + '=' + v + '&';
+            url << k << '=' << v ;
+            if(i++ < m_argList.size() - 1) {
+                url << '&';
+            }
         }
-        url.erase(--url.end());
     }
-    res += ConvertToUri(std::move(url));
-    res = res + " " + HttpVersionToString(this->m_version) + "\r\n";
-    res += m_headerPairs.ToString();
-    return std::move(res + "\r\n");
+    m_stream << ConvertToUri(url.str());
+    m_stream << " " << HttpVersionToString(this->m_version) << "\r\n" << m_headerPairs.ToString() << "\r\n";
+    std::string result = m_stream.str();
+    m_stream.str("");
+    return result;
 }
 
 void 
@@ -955,9 +962,11 @@ HttpResponseHeader::HeaderPairs()
 std::string 
 HttpResponseHeader::ToString()
 {
-    std::string res =  HttpVersionToString(m_version) + ' ' + std::to_string(static_cast<int>(this->m_code)) + ' ' + HttpStatusCodeToString(m_code) + "\r\n";
-    res += m_headerPairs.ToString();
-    return std::move(res + "\r\n");
+    m_stream <<  HttpVersionToString(m_version) << ' ' << std::to_string(static_cast<int>(this->m_code)) << ' ' << HttpStatusCodeToString(m_code) << "\r\n" \
+        << m_headerPairs.ToString() << "\r\n";
+    std::string result = m_stream.str();
+    m_stream.str("");
+    return result;
 }
 
 error::HttpErrorCode 

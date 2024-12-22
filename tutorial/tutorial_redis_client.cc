@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "galay/middleware/Redis.h"
+#include "galay/middleware/Redis.hpp"
 
 using namespace galay::redis;
 

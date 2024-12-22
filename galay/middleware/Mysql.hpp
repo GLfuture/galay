@@ -14,6 +14,22 @@
 
 namespace galay::mysql
 {
+
+#define MysqlLogTrace(logger, ...)       SPDLOG_LOGGER_TRACE(logger, __VA_ARGS__)
+#define MysqlLogDebug(logger, ...)       SPDLOG_LOGGER_DEBUG(logger, __VA_ARGS__)
+#define MysqlLogInfo(logger, ...)        SPDLOG_LOGGER_INFO(logger, __VA_ARGS__)
+#define MysqlLogWarn(logger, ...)        SPDLOG_LOGGER_WARN(logger, __VA_ARGS__)
+#define MysqlLogError(logger, ...)       SPDLOG_LOGGER_ERROR(logger, __VA_ARGS__)
+#define MysqlLogCritical(logger, ...)    SPDLOG_LOGGER_CRITICAL(logger, __VA_ARGS__)
+
+enum class MysqlOrderBy : uint8_t {
+    ASC,
+    DESC
+};
+
+typedef std::pair<std::string, MysqlOrderBy> FieldOrderByPair;
+typedef std::pair<std::string, std::string> FieldValuePair;
+
 class MySqlException : public std::exception
 {
 public:
@@ -27,7 +43,7 @@ class MysqlStmtExecutor
 {
 public:
     using ptr = std::shared_ptr<MysqlStmtExecutor>;
-    MysqlStmtExecutor(MYSQL_STMT* stmt);
+    MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger);
     bool Prepare(const std::string& ParamQuery);
     bool BindParam(MYSQL_BIND* params);
     //MysqlStmtValue 类型为blob或string 需要调用
@@ -44,6 +60,7 @@ private:
 private:
     MYSQL_STMT* m_stmt;
     bool m_storeResult;
+    Logger::ptr m_logger;
 };
 
 class MysqlSession;
@@ -110,12 +127,7 @@ public:
     std::string ToString() const;
 private:
     std::string m_name;
-    std::string m_type;
-    bool m_unique = false;
-    bool m_autoincr = false;
-    bool m_notnull = false;
-    std::string m_default;
-    std::string m_comment;
+    std::ostringstream m_stream;
 };
 
 class MysqlTable
@@ -136,6 +148,121 @@ private:
     std::string m_extra_action = "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 };
 
+template <typename T>
+concept FieldNameType = requires () {
+    std::is_same_v<T, std::string>;
+};
+
+template <typename T>
+concept TableNameType = requires () {
+    std::is_same_v<T, std::string>;
+};
+
+
+std::string OrderByToString(MysqlOrderBy orderby);
+
+template <typename T>
+concept OrderByType = requires (T type) {
+    std::is_convertible_v<decltype(type.first), std::string>;
+    std::is_convertible_v<decltype(type.second), MysqlOrderBy>;
+};
+
+template <typename T>
+concept FiledValueType = requires (T type) {
+    std::is_convertible_v<decltype(type.first), std::string>;
+    std::is_convertible_v<decltype(type.second), std::string>;
+};
+
+class MysqlQuery
+{
+public:
+    std::string ToString();
+protected:
+    std::ostringstream m_stream;
+};
+
+class MysqlSelectQuery: public MysqlQuery
+{
+public:
+    using ptr = std::shared_ptr<MysqlSelectQuery>;
+    MysqlSelectQuery() = default;
+    template <FieldNameType ...Field>
+    MysqlSelectQuery& Fields(Field... fields);
+    template <TableNameType ...Table>
+    MysqlSelectQuery& From(Table... tables);
+    MysqlSelectQuery& InnerJoinOn(const std::string& table, const std::string& condition);
+    MysqlSelectQuery& LeftJoinOn(const std::string& table, const std::string& condition);
+    MysqlSelectQuery& RightJoinOn(const std::string& table, const std::string& condition);
+    MysqlSelectQuery& FullJoinOn(const std::string& table, const std::string& condition);
+    MysqlSelectQuery& CrossJoin(const std::string& table);
+    MysqlSelectQuery& Union();
+    MysqlSelectQuery& Where(const std::string& condition);
+    template <FieldNameType ...Field>
+    MysqlSelectQuery& GroupBy(Field... fields);
+    MysqlSelectQuery& Having(const std::string& condition);
+    template <OrderByType ...OrderType>
+    MysqlSelectQuery& OrderBy(OrderType... orders);
+    MysqlSelectQuery& Limit(uint32_t limit);
+};
+
+class MysqlInsertQuery: public MysqlQuery
+{
+public:
+    MysqlInsertQuery() = default;
+    MysqlInsertQuery& Table(const std::string& table);
+    template<FiledValueType... FieldsValue>
+    MysqlInsertQuery& FieldValues(FieldsValue... values);
+};
+
+class MysqlUpdateQuery: public MysqlQuery
+{
+public:
+    MysqlUpdateQuery() = default;
+    MysqlUpdateQuery& Table(const std::string& table);
+    template<FiledValueType... FieldsValue>
+    MysqlUpdateQuery& FieldValues(FieldsValue... values);
+    MysqlUpdateQuery& Where(const std::string& condition);
+};
+
+class MysqlDeleteQuery: public MysqlQuery
+{
+public:
+    MysqlDeleteQuery() = default;
+    MysqlDeleteQuery& Table(const std::string& table);
+    MysqlDeleteQuery& Where(const std::string& condition);
+};
+
+class MysqlAlterQuery: public MysqlQuery
+{
+public:
+    MysqlAlterQuery() = default;
+    MysqlAlterQuery& Table(const std::string& table);
+    MysqlAlterQuery& AddColumn(MysqlField& field);
+    MysqlAlterQuery& DropColumn(const std::string &field_name);
+    MysqlAlterQuery& ModifyColumn(MysqlField& field);
+    MysqlAlterQuery& ChangeColumn(const std::string& ofield_name, MysqlField& field);
+};
+
+
+class MysqlResult
+{
+public:
+    using MysqlResultTable = std::vector<std::vector<std::string>>;
+    MysqlResult(MYSQL* mysql, int result)
+        : m_mysql(mysql), m_result(result) {}
+    /*
+    * select query result
+    */
+    MysqlResultTable ToResultTable();
+    bool IsSuccess();
+    std::string GetError();
+    uint64_t GetAffectedRows();
+    ~MysqlResult() = default;
+private:
+    MYSQL* m_mysql;
+    int m_result;
+};
+
 class MysqlSession
 {
 public:
@@ -143,34 +270,33 @@ public:
     using uptr = std::unique_ptr<MysqlSession>;
 
     MysqlSession(MysqlConfig::ptr config);
-    
+    MysqlSession(MysqlConfig::ptr config, Logger::ptr logger);
+    bool Connect(const std::string& url);
     bool Connect(const std::string &host, const std::string &username, const std::string &password, const std::string &db_name, uint32_t port = 3306);
     void DisConnect();
     GHandle GetSocket();
     //如果断线重连
     bool PingAndReconnect();
 
-    bool CreateTable(const MysqlTable& table);
-    bool DropTable(const std::string& table);
-    std::vector<std::vector<std::string>> Select(const std::string &TableName, const std::vector<std::string> &Fields, const std::string &Cond = "");
-    bool Insert(const std::string &TableName, const std::vector<std::pair<std::string, std::string>> &Field_Value);
-    bool Update(const std::string &TableName, const std::vector<std::pair<std::string, std::string>> &Field_Value, const std::string &Cond = "");
-    bool Delete(const std::string &TableName, const std::string &Cond);
-    bool AddField(const std::string &TableName, const std::pair<std::string, std::string> &Field_Type);
-    bool ModFieldType(const std::string &TableName, const std::pair<std::string, std::string> &Field_Type);
-    bool ModFieldName(const std::string &TableName, const std::string &OldFieldName, const std::pair<std::string, std::string> &Field_Type);
-    bool DelField(const std::string &TableName, const std::string &FieldName);
-    bool StartTransaction();
-    bool Commit();
-    bool Rollback();
-    bool MysqlQuery(const std::string &query);
+    MysqlResult CreateTable(MysqlTable& table);
+    MysqlResult DropTable(const std::string& table);
+    MysqlResult Select(MysqlSelectQuery& query);
+    MysqlResult Insert(MysqlInsertQuery& query);
+    MysqlResult Update(MysqlUpdateQuery& query);
+    MysqlResult Delete(MysqlDeleteQuery& query);
+    MysqlResult Alter(MysqlAlterQuery& query);
+    MysqlResult StartTransaction();
+    MysqlResult Commit();
+    MysqlResult Rollback();
+
+    MysqlResult MysqlQuery(const std::string &query);
 
     MysqlStmtExecutor::ptr GetMysqlStmtExecutor();
-    std::string GetLastError();
 
     ~MysqlSession();
 private:
     MYSQL *m_mysql; 
+    Logger::ptr m_logger;
 };
 
 //To Do
@@ -205,5 +331,7 @@ private:
 };
 
 }
+
+#include "Mysql.tcc"
 
 #endif

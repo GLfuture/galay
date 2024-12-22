@@ -32,12 +32,12 @@ endforeach()
 
 if(ETCD_FOUND)
     add_executable(tutorial_etcd_discover_client tutorial_etcd_discover_client.cc)
-    target_link_libraries(tutorial_etcd_discover_client  galay)
+    target_link_libraries(tutorial_etcd_discover_client galay cpprest etcd-cpp-api)
     set_target_properties(tutorial_etcd_discover_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
     add_executable(tutorial_etcd_register_client tutorial_etcd_register_client.cc)
-    target_link_libraries(tutorial_etcd_register_client  galay)
+    target_link_libraries(tutorial_etcd_register_client galay cpprest etcd-cpp-api)
     set_target_properties(tutorial_etcd_register_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
@@ -46,7 +46,7 @@ endif()
 
 if(MYSQL_FOUND)
     add_executable(tutorial_mysql_client tutorial_mysql_client.cc)
-    target_link_libraries(tutorial_mysql_client galay)
+    target_link_libraries(tutorial_mysql_client galay mysqlclient)
     set_target_properties(tutorial_mysql_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )

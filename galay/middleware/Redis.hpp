@@ -1,9 +1,10 @@
-#ifndef GALAY_REDIS_H
-#define GALAY_REDIS_H
+#ifndef GALAY_REDIS_HPP
+#define GALAY_REDIS_HPP
 
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 #include <any>
+#include <map>
 #include <string>
 #include "galay/kernel/Log.h"
 
@@ -296,6 +297,7 @@ public:
 
     ~RedisSession();
 private:
+	std::ostringstream m_stream;
     redisContext* m_redis;
     RedisConfig::ptr m_config;
 	Logger::ptr m_logger;
@@ -305,8 +307,7 @@ class AsyncRedisSession
 {
 public:
 	AsyncRedisSession(RedisConfig::ptr config);
-	AsyncRedisSession(RedisConfig::ptr config, Logger::ptr logger);
-	
+	AsyncRedisSession(RedisConfig::ptr config, Logger::ptr logger);	
 private:
 	redisAsyncContext* m_redis;
 	RedisConfig::ptr m_config;

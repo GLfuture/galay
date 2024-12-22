@@ -1,13 +1,12 @@
-#ifndef __GALAY_HTTP_H__
-#define __GALAY_HTTP_H__
+#ifndef GALAY_HTTP_H
+#define GALAY_HTTP_H
 
 #include "Protocol.h"
-#include <vector>
-#include <assert.h>
-#include <algorithm>
+#include <map>
 #include <unordered_set>
 #include <string_view>
-#include <map>
+#include <sstream>
+
 
 namespace galay::error
 {
@@ -184,6 +183,7 @@ namespace galay::protocol::http
         void Clear();
         HeaderPair& operator=(const HeaderPair& headerPair);
     private:
+        std::ostringstream m_stream;
         std::map<std::string, std::string> m_headerPairs;
     };
 
@@ -209,6 +209,7 @@ namespace galay::protocol::http
         size_t ToUtf8(int code, char *buff);
         bool FromHexToI(const std::string &s, size_t i, size_t cnt, int &val);
     private:
+        std::ostringstream m_stream;
         HttpMethod m_method;
         std::string m_uri;                                          // uri
         HttpVersion m_version;                                      // 版本号
@@ -257,6 +258,7 @@ namespace galay::protocol::http
         std::string ToString();
         error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, size_t& next_index);
     private:
+        std::ostringstream m_stream;
         HttpStatusCode m_code;
         HttpVersion m_version;
         HeaderPair m_headerPairs;

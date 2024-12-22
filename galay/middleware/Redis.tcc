@@ -1,7 +1,7 @@
 #ifndef GALAY_REDIS_TCC
 #define GALAY_REDIS_TCC
 
-#include "Redis.h"
+#include "Redis.hpp"
 
 namespace galay::redis 
 {
@@ -9,134 +9,136 @@ namespace galay::redis
 template <KVPair... KV>
 inline RedisValue RedisSession::MSet(KV... pairs)
 {
-    std::string command = "MSET";
-    ((command = command + " " + std::get<0>(pairs) + " " + std::get<1>(pairs)), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "MSET";
+    ((m_stream << " " << std::get<0>(pairs) << " " << std::get<1>(pairs)), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template<KeyType... Key>
 inline RedisValue RedisSession::MGet(Key... keys)
 {
-    std::string command = "MGET";
-    ((command = command + " " + keys), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "MGET";
+    ((m_stream << " " << keys), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <KeyType... Key>
 inline RedisValue RedisSession::HDel(const std::string& key, Key... fields)
 {
-    std::string commad = "HDEL ";
-    commad += key;
-    ((commad = commad + " " + fields), ...);
-    auto reply = RedisCommand(commad.c_str());
+    m_stream << "HDEL " << key;
+    ((m_stream << " " << fields), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <KeyType... Key>
 inline RedisValue RedisSession::HMGet(const std::string &key, Key... field)
 {
-    std::string command = "HMGET ";
-    command += key;
-    ((command = command + " " + field), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "HMGET " << key;
+    ((m_stream << " " << field), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <KVPair... KV>
 inline RedisValue RedisSession::HMSet(const std::string& key, KV... pairs)
 {
-    std::string command = "HMSET ";
-    command += key;
-    ((command = command + " " + std::get<0>(pairs) + " " + std::get<1>(pairs)), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "HMSET " << key;
+    ((m_stream << " " << std::get<0>(pairs) << " " << std::get<1>(pairs)), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <ValType... Val>
 inline RedisValue RedisSession::LPush(const std::string& key, Val... values)
 {
-    std::string command = "LPUSH ";
-    command += key;
-    ((command = command + " " + values), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "LPUSH " << key;
+    ((m_stream << " " << values), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <ValType... Val>
 inline RedisValue RedisSession::RPush(const std::string& key, Val... values)
 {
-    std::string command = "RPUSH ";
-    command += key;
-    ((command = command + " " + values), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "RPUSH " << key;
+    ((m_stream << " " << values), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <ValType... Val>
 inline RedisValue RedisSession::SAdd(const std::string &key, Val... members)
 {
-    std::string command = "SADD ";
-    command += key;
-    ((command = command + " " + members), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "SADD " << key;
+    ((m_stream << " " << members), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <ValType... Val>
 inline RedisValue RedisSession::SRem(const std::string &key, Val... members)
 {
-    std::string command = "SREM ";
-    command += key;
-    ((command = command + " " + members), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "SREM " << key;
+    ((m_stream << " " << members), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <KeyType... Key>
 inline RedisValue RedisSession::SInter(Key... keys)
 {
-    std::string command = "SINTER";
-    ((command = command + " " + keys), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "SINTER";
+    ((m_stream << " " << keys), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <KeyType... Key>
 inline RedisValue RedisSession::SUnion(Key... keys)
 {
-    std::string command = "SUNION";
-    ((command = command + " " + keys), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "SUNION";
+    ((m_stream << " " << keys), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <ScoreValType... KV>
 inline RedisValue RedisSession::ZAdd(const std::string &key, KV... values)
 {
-    std::string command = "ZADD ";
-    command += key;
-    ((command = command + " " + std::to_string(std::get<0>(values)) + " " + std::get<1>(values)), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "ZADD " << key;
+    ((m_stream << " " << std::to_string(std::get<0>(values)) << " " << std::get<1>(values)), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <KeyType... Key>
 inline RedisValue RedisSession::ZRem(const std::string &key, Key... members)
 {
-    std::string command = "ZREM ";
-    command += key;
-    ((command = command + " " + members), ...);
-    auto reply = RedisCommand(command.c_str());
+    m_stream << "ZREM " << key;
+    ((m_stream << " " << members), ...);
+    auto reply = RedisCommand(m_stream.str().c_str());
+    m_stream.str("");
     return RedisValue(reply);
 }
 
 template <typename... Args>
 inline redisReply *RedisSession::RedisCommand(const std::string &cmd, Args... args)
 {
-    std::string query = "";
-    RedisLogInfo(m_logger->SpdLogger(), "[redisCommand: cmd is {}]", cmd);
     redisReply* reply = static_cast<redisReply*>(redisCommand(m_redis, cmd.c_str(), args...));
     if (!reply) {
         RedisLogError(m_logger->SpdLogger(), "[redisCommand failed: cmd is {}, error is {}]", cmd, m_redis->errstr);
@@ -146,6 +148,7 @@ inline redisReply *RedisSession::RedisCommand(const std::string &cmd, Args... ar
     }
     return reply;
 }
+
 }
 
 

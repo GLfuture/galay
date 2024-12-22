@@ -1,4 +1,5 @@
 #include "Mysql.hpp"
+#include <regex>
 
 namespace galay::mysql
 {
@@ -57,65 +58,51 @@ MysqlConfig& MysqlConfig::WithSSL(MysqlSSLSettings setting)
 MysqlField &MysqlField::Name(const std::string &name)
 {
     m_name = name;
+    m_stream << name;
     return *this;
 }
 
 MysqlField &MysqlField::Type(const std::string &type)
 {
-    m_type = type;
-    return *this;
-}
-
-MysqlField &MysqlField::AutoIncrement()
-{
-    m_autoincr = true;
+    m_stream << " " << type;
     return *this;
 }
 
 MysqlField &MysqlField::NotNull()
 {
-    m_notnull = true;
+    m_stream << " NOT NULL";
     return *this;
 }
 
+MysqlField &MysqlField::AutoIncrement()
+{
+    m_stream << " AUTO_INCREMENT";
+    return *this;
+}
+
+
 MysqlField &MysqlField::Unique()
 {
-    m_unique = true;
+    m_stream << " UNIQUE";
     return *this;
 }
 
 MysqlField &MysqlField::Default(const std::string &defaultValue)
 {
-    m_default = defaultValue;
+    m_stream << " DEFAULT " << defaultValue;
     return *this;
 }
 
 MysqlField &MysqlField::Comment(const std::string &comment)
 {
-    m_comment = comment;
+    m_stream << " COMMENT \"" << comment << "\"";
     return *this;
 }
 
 
 std::string MysqlField::ToString() const
 {
-    std::string result = m_name + " " + m_type;
-    if (m_notnull) {
-        result += " NOT NULL";
-    }
-    if (m_unique) {
-        result += " UNIQUE";
-    }
-    if (!m_default.empty()) {
-        result += " DEFAULT " + m_default;
-    }
-    if (m_autoincr) {
-        result += " AUTO_INCREMENT";
-    }
-    if (!m_comment.empty()) {
-        result += " COMMENT \"" + m_comment + "\"";
-    }
-    return std::move(result);
+    return m_stream.str();
 }
 
 MysqlTable::MysqlTable(const std::string &name)
@@ -150,38 +137,222 @@ MysqlTable &MysqlTable::ExtraAction(const std::string &action)
 
 std::string MysqlTable::ToString() const
 {
-    std::string query = "CREATE TABLE IF NOT EXISTS ";
-    std::string primaryinfo = "", foreigninfo = "";
-    query = query + m_name + "(";
+    std::ostringstream query, primaryinfo, foreigninfo;
+    query << "CREATE TABLE IF NOT EXISTS ";
+    query << m_name << "(";
     for(int i = 0; i < m_primary_keys.size(); ++i) {
-        query = query + m_primary_keys[i].ToString() + ",";
+        query << m_primary_keys[i].ToString() << ",";
         if(i == 0){
-            primaryinfo = "PRIMARY KEY(";
+            primaryinfo << "PRIMARY KEY(";
         } 
-        primaryinfo = primaryinfo + m_primary_keys[i].m_name + ",";
-        
         if(i == m_primary_keys.size() - 1) {
-            primaryinfo[primaryinfo.length() - 1] = ')';
-            primaryinfo += ',';
-        } 
+            primaryinfo << ')';
+        }
+        primaryinfo << m_primary_keys[i].m_name << ","; 
     }
     for(int i = 0; i < m_foreign_keys.size(); ++i) {
-        query = query + m_foreign_keys[i].first.ToString() + ",";
-        foreigninfo = foreigninfo + "FOREIGN KEY(" + m_foreign_keys[i].first.m_name + ") REFERENCES " \
-            + m_foreign_keys[i].second + " ON DELETE CASCADE ON UPDATE CASCADE,";
+        query << m_foreign_keys[i].first.ToString() << ",";
+        foreigninfo << "FOREIGN KEY(" << m_foreign_keys[i].first.m_name << ") REFERENCES " \
+            << m_foreign_keys[i].second << " ON DELETE CASCADE ON UPDATE CASCADE,";
     }
     for(auto& field :m_other_fields) {
-        query = query + field.ToString() + ",";
+        query << field.ToString() + ",";
     }
-    query = query + primaryinfo + foreigninfo;
-    query[query.length() - 1] = ')';
-    return query + m_extra_action + ";";
+    std::string temp = foreigninfo.str();
+    temp[temp.length() - 1] = ')';
+    query << primaryinfo.str() << temp << m_extra_action << ";";
+    return query.str();
 }
 
-MysqlStmtExecutor::MysqlStmtExecutor(MYSQL_STMT* stmt)
+std::string OrderByToString(MysqlOrderBy orderby)
 {
-    this->m_stmt = stmt;
-    this->m_storeResult = false;
+    switch (orderby)
+    {
+    case MysqlOrderBy::ASC:
+        return "ASC";
+    case MysqlOrderBy::DESC:
+        return "DESC";
+    default:
+        break;
+    }
+    return "";
+}
+
+std::string MysqlQuery::ToString()
+{
+    m_stream << ";";
+    std::string query = m_stream.str();
+    m_stream.str("");
+    return query;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::InnerJoinOn(const std::string &table, const std::string &condition)
+{
+    m_stream << " INNER JOIN " << table << " ON " << condition;
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::LeftJoinOn(const std::string &table, const std::string &condition)
+{
+    m_stream << " LEFT JOIN " << table << " ON " << condition;
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::RightJoinOn(const std::string &table, const std::string &condition)
+{
+    m_stream << " RIGHT JOIN " << table << " ON " << condition;
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::FullJoinOn(const std::string &table, const std::string &condition)
+{
+    m_stream << " FULL JOIN " << table << " ON " << condition;
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::CrossJoin(const std::string &table)
+{
+    m_stream << " CROSS JOIN " << table;
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::Union()
+{
+    m_stream << " UNION ";
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::Where(const std::string &condition)
+{
+    m_stream << " WHERE " << condition;
+    return *this;
+}
+
+
+MysqlSelectQuery &MysqlSelectQuery::Having(const std::string &condition)
+{
+    m_stream << " HAVING " << condition;
+    return *this;
+}
+
+MysqlSelectQuery &MysqlSelectQuery::Limit(uint32_t limit)
+{
+    m_stream << " LIMIT " << limit;
+    return *this;
+}
+
+MysqlInsertQuery &MysqlInsertQuery::Table(const std::string &table)
+{
+    m_stream << "INSERT INTO " << table;
+    return *this;
+}
+
+
+MysqlUpdateQuery &MysqlUpdateQuery::Table(const std::string &table)
+{
+    m_stream << "UPDATE " << table;
+    return *this;
+}
+
+MysqlUpdateQuery &MysqlUpdateQuery::Where(const std::string &condition)
+{
+    m_stream << " WHERE " << condition;
+    return *this;
+}
+
+MysqlDeleteQuery &MysqlDeleteQuery::Table(const std::string &table)
+{
+    m_stream << "DELETE FROM " << table;
+    return *this;
+}
+
+MysqlDeleteQuery &MysqlDeleteQuery::Where(const std::string &condition)
+{
+    m_stream << " WHERE " << condition;
+    return *this;
+}
+
+MysqlAlterQuery &MysqlAlterQuery::Table(const std::string &table)
+{
+    m_stream << "ALTER TABLE " << table;
+    return *this;
+}
+
+MysqlAlterQuery &MysqlAlterQuery::AddColumn(MysqlField& field)
+{
+    m_stream << " ADD COLUMN " << field.ToString();
+    return *this;
+}
+
+MysqlAlterQuery &MysqlAlterQuery::DropColumn(const std::string &field_name)
+{
+    m_stream << " DROP COLUMN " << field_name;
+    return *this;
+}
+
+MysqlAlterQuery &MysqlAlterQuery::ModifyColumn(MysqlField& field)
+{
+    m_stream << " MODIFY COLUMN " << field.ToString();
+    return *this;
+}
+
+MysqlAlterQuery &MysqlAlterQuery::ChangeColumn(const std::string &ofield_name, MysqlField& field)
+{
+    m_stream << " CHANGE COLUMN " << ofield_name << " " << field.ToString();
+    return *this;
+}
+
+MysqlResult::MysqlResultTable MysqlResult::ToResultTable()
+{
+    MYSQL_RES *m_res = mysql_store_result(m_mysql);
+    if(m_res == nullptr) {
+        return {};
+    }
+    int field_num = mysql_num_fields(m_res); // 列数
+    int row_num = mysql_num_rows(m_res);
+    MYSQL_FIELD *fields; // 列名
+    std::vector<std::vector<std::string>> result(row_num + 1,std::vector<std::string>(field_num));
+    int col_start = 0;
+    while ((fields = mysql_fetch_field(m_res)) != nullptr)
+    {
+        result[0][col_start++] = std::string(fields->name);
+    }
+    MYSQL_ROW row;
+    int row_start = 1;
+    while ((row = mysql_fetch_row(m_res)) != nullptr)
+    {
+        for (int i = 0; i < field_num; ++i)
+        {
+            if (row[i] == nullptr) {
+                result[row_start][i] = "NULL";
+            } else {
+                result[row_start][i] = row[i];
+            }
+        }
+        ++row_start;
+    }
+    mysql_free_result(m_res);
+    return result;
+}
+
+bool MysqlResult::IsSuccess()
+{
+    return m_result == 0;
+}
+
+std::string MysqlResult::GetError()
+{
+    return mysql_error(m_mysql);
+}
+
+uint64_t MysqlResult::GetAffectedRows()
+{
+    return mysql_affected_rows(m_mysql);
+}
+
+MysqlStmtExecutor::MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger)
+    : m_stmt(stmt), m_storeResult(false), m_logger(logger)
+{
 }
 
 bool 
@@ -190,7 +361,7 @@ MysqlStmtExecutor::Prepare(const std::string& ParamQuery)
     int ret = mysql_stmt_prepare(this->m_stmt, ParamQuery.c_str(), ParamQuery.length());
     if (ret)
     {
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     return true;
@@ -202,7 +373,7 @@ MysqlStmtExecutor::BindParam(MYSQL_BIND* params)
     int ret = mysql_stmt_bind_param(this->m_stmt, params);
     if (ret)
     {
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     return 0;
@@ -218,7 +389,7 @@ MysqlStmtExecutor::StringToParam(const std::string& data, unsigned int index)
         unsigned long remaining = data.size() - offset;
         unsigned long bytesToSend = remaining < chunkSize? remaining : chunkSize;
         if (mysql_stmt_send_long_data(m_stmt, index, data.c_str() + offset, bytesToSend)!= 0) {
-            LogError("[Error: {}]", this->m_stmt->last_error);
+            MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
             return false;
         }
         offset += bytesToSend;
@@ -232,7 +403,7 @@ MysqlStmtExecutor::BindResult(MYSQL_BIND* result)
     int ret = mysql_stmt_bind_result(this->m_stmt, result);
     if (ret)
     {
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     return true;
@@ -244,7 +415,7 @@ MysqlStmtExecutor::Execute()
     int ret = mysql_stmt_execute(this->m_stmt);
     if (ret)
     {
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     return true;
@@ -256,7 +427,7 @@ MysqlStmtExecutor::StoreResult()
     int ret = mysql_stmt_store_result(this->m_stmt);
     if (ret)
     {
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     return true;
@@ -269,7 +440,7 @@ MysqlStmtExecutor::GetARow(MYSQL_BIND* result)
     {
         if(!StoreResult())
         {
-            LogError("[Error: {}]", this->m_stmt->last_error);
+            MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
             return false;
         }
         m_storeResult = true;
@@ -283,7 +454,7 @@ MysqlStmtExecutor::GetARow(MYSQL_BIND* result)
     if(ret != 0)
     {
         m_storeResult = false;
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     for(int i = 0 ; i < mysql_stmt_param_count(this->m_stmt); ++i)
@@ -297,7 +468,7 @@ MysqlStmtExecutor::GetARow(MYSQL_BIND* result)
             result[i].buffer_length = *result[i].length;
             if(mysql_stmt_fetch_column(this->m_stmt, &result[i], i, 0))
             {
-                LogError("[Error: {}]", this->m_stmt->last_error);
+                MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
                 return false;
             }
         }
@@ -317,7 +488,7 @@ MysqlStmtExecutor::Close()
     this->m_stmt = nullptr;
     if (ret)
     {
-        LogError("[Error: {}]", this->m_stmt->last_error);
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
     return true;
@@ -336,29 +507,36 @@ MysqlStmtExecutor::~MysqlStmtExecutor()
 
 MysqlSession::MysqlSession(MysqlConfig::ptr config)
 {
+    auto logger = Logger::CreateStdoutLoggerMT("MysqlLogger");
+    MysqlSession(config, logger);
+}
+
+MysqlSession::MysqlSession(MysqlConfig::ptr config, Logger::ptr logger)
+    : m_logger(logger)
+{
     this->m_mysql = mysql_init(nullptr);
     if(this->m_mysql==nullptr) {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException(mysql_error(this->m_mysql));
     }
     if(mysql_options(this->m_mysql, MYSQL_SET_CHARSET_NAME, config->m_charset.c_str()) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException( mysql_error(this->m_mysql));
     }
     if(config->m_connectTimeout != -1 && mysql_options(this->m_mysql,MYSQL_OPT_CONNECT_TIMEOUT,&(config->m_connectTimeout)) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException( mysql_error(this->m_mysql));
     }
     if(config->m_readTimeout != -1 && mysql_options(this->m_mysql,MYSQL_OPT_READ_TIMEOUT,&(config->m_readTimeout)) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException( mysql_error(this->m_mysql));
     }
     if(config->m_writeTimeout != -1 && mysql_options(this->m_mysql,MYSQL_OPT_WRITE_TIMEOUT,&(config->m_writeTimeout)) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException( mysql_error(this->m_mysql));
     }
     if(config->m_compress && mysql_options(this->m_mysql, MYSQL_OPT_COMPRESS, nullptr)) {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException( mysql_error(this->m_mysql));
     }
     if(config->m_enableSSL) {
@@ -370,18 +548,55 @@ MysqlSession::MysqlSession(MysqlConfig::ptr config)
         ret |= mysql_options(this->m_mysql, MYSQL_OPT_SSL_CAPATH, capath);
         ret |= mysql_options(this->m_mysql, MYSQL_OPT_SSL_CIPHER, cipher);
         if(ret) {
-            LogError("[Error: {}]", mysql_error(this->m_mysql));
+            MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
             throw MySqlException( mysql_error(this->m_mysql));
         }
     }
 }
 
+bool MysqlSession::Connect(const std::string &url)
+{
+    std::regex re(R"(mysql://([^:@]+)(?::([^@]+))?@([^:/?]+)(?::(\d+))?(?:/([^?]*))?)");
+    std::smatch matches;
+    std::string username, password, host, database;
+    uint32_t port = 3306;
+    if (std::regex_search(url, matches, re)) {
+        if (matches.size() > 1 && matches[1].matched) {
+            username = matches[1].str();
+        }
+        if (matches.size() > 2 && matches[2].matched) {
+            password = matches[2].str();
+        }
+        if (matches.size() > 3 && matches[3].matched) {
+            host = matches[3].str();
+        }
+        if (matches.size() > 4 && matches[4].matched) {
+            try
+            {
+                port = std::stoi(matches[4].str());
+            }
+            catch(const std::exception& e)
+            {
+                MysqlLogError(m_logger->SpdLogger(), "mysql url port error");
+                return false;
+            }
+        }
+        if (matches[5].matched) {
+            database = matches[5].str();
+        }
+    } else {
+        MysqlLogError(m_logger->SpdLogger(), "URL format is incorrect");
+        return false;
+    }
+    return Connect(host, username, password, database, port);
+}
+
 bool 
-MysqlSession::Connect(const std::string& host,const std::string& username,const std::string& password,const std::string& db_name, uint32_t port)
+MysqlSession::Connect(const std::string& host, const std::string& username, const std::string& password, const std::string& db_name, uint32_t port)
 {
     if (!mysql_real_connect(this->m_mysql, host.c_str(), username.c_str(), password.c_str(), db_name.c_str(), port, nullptr, 0))
     {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         return false;
     }
     return true;
@@ -409,197 +624,54 @@ bool MysqlSession::PingAndReconnect()
     {
         if(mysql_errno(this->m_mysql) == CR_SERVER_GONE_ERROR || mysql_errno(this->m_mysql) == CR_SERVER_LOST) {
             if(!Connect(this->m_mysql->host,this->m_mysql->user,this->m_mysql->passwd,this->m_mysql->db,this->m_mysql->port)){
-                LogError("[Error: {}]", mysql_error(this->m_mysql));
+                MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
                 return false;
             }
         } else {
-            LogError("[Error: {}]", mysql_error(this->m_mysql));
+            MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
             return false;
         }
     }
     return true;
 }
 
-bool MysqlSession::CreateTable(const MysqlTable &table)
+MysqlResult MysqlSession::CreateTable(MysqlTable &table)
 {
-    std::string query = table.ToString();
-    if(query.empty()){
-        LogError("[Arg: table empty]");
-        return false;
-    }
-    return MysqlQuery(query);
+    return MysqlQuery(table.ToString());
 }
 
-bool MysqlSession::DropTable(const std::string &table)
+MysqlResult MysqlSession::DropTable(const std::string &table)
 {
-    if(table.empty()){
-        LogError("[Arg: table name empty]");
-        return false;
-    }
     std::string query = "DROP TABLE IF EXISTS " + table + ";";
     return MysqlQuery(query);
 }
 
-std::vector<std::vector<std::string>> 
-MysqlSession::Select(const std::string& TableName,const std::vector<std::string> &Fields,const std::string& Cond)
+MysqlResult MysqlSession::Select(MysqlSelectQuery &query)
 {
-    if (Fields.empty() || TableName.empty())
-    {
-        LogError("[Arg: [Fields] or [TableName] empty]");
-        return {};
-    }
-    std::string query = "SELECT " ;
-    int n = Fields.size();
-    for (int i = 0; i < n; i++)
-    {
-        query += Fields[i];
-        if (i != n - 1) query += ",";
-    }
-    query = query + " FROM " + TableName;
-    if (!Cond.empty())
-    {
-        query += " WHERE " + Cond;
-    }
-    query += ";";
-    if(!MysqlQuery(query)) {
-        return {};
-    }
-    MYSQL_RES *m_res = mysql_store_result(this->m_mysql);
-    if(m_res == nullptr) {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        return {};
-    }
-    int field_num = mysql_num_fields(m_res); // 列数
-    int row_num = mysql_num_rows(m_res);
-    MYSQL_FIELD *fields; // 列名
-    std::vector<std::vector<std::string>> result(row_num + 1,std::vector<std::string>(field_num));
-    int col_start = 0;
-    while ((fields = mysql_fetch_field(m_res)) != nullptr)
-    {
-        result[0][col_start++] = std::string(fields->name);
-    }
-    MYSQL_ROW row;
-    int row_start = 1;
-    while ((row = mysql_fetch_row(m_res)) != nullptr)
-    {
-        for (int i = 0; i < field_num; ++i)
-        {
-            if (row[i] == nullptr)
-            {
-                result[row_start][i] = "nullptr";
-            }
-            else
-            {
-                result[row_start][i] = row[i];
-            }
-        }
-        ++row_start;
-    }
-    mysql_free_result(m_res);
-    return result;
+    return MysqlResult(MysqlQuery(query.ToString()));
 }
 
-bool 
-MysqlSession::Insert(const std::string& TableName , const std::vector<std::pair<std::string,std::string>>& Field_Value)
+MysqlResult 
+MysqlSession::Insert(MysqlInsertQuery &query)
 {
-    if (TableName.empty() || Field_Value.empty())
-    {
-        LogError("[Arg: [TableName] or [Field_Value] empty]");
-        return false;
-    }
-    int n = Field_Value.size();
-    std::string fields = "(", values = "(";
-    for(int i = 0 ; i < n ; ++i ) {
-        fields += Field_Value[i].first;
-        values += Field_Value[i].second;
-        if(i != n - 1) {
-            fields += ',';
-            values += ',';
-        }else {
-            fields += ')';
-            values += ')';
-        }
-    }
-    std::string query = "INSERT INTO " + TableName + fields + " values " + values + ";";
-    return MysqlQuery(query);
+    return MysqlQuery(query.ToString());
 }
 
-bool
-MysqlSession::Update(const std::string& TableName,const std::vector<std::pair<std::string,std::string>>& Field_Value,const std::string& Cond)
+MysqlResult
+MysqlSession::Update(MysqlUpdateQuery& query)
 {
-    if(TableName.empty() || Field_Value.empty()){
-        LogError("[Arg: [TableName] or [Field_Value] empty]");
-        return false;
-    }
-    std::string query = "UPDATE " + TableName + " SET ";
-    int n = Field_Value.size();
-    for (int i = 0; i < n; ++i)
-    {
-        query = query + Field_Value[i].first + "=" + Field_Value[i].second;
-        if (i != n - 1) query += ",";
-    }
-    query = query + " WHERE " + Cond + ";";
-    return MysqlQuery(query);
+    return MysqlQuery(query.ToString());
 }
 
-bool 
-MysqlSession::Delete(const std::string& TableName, const std::string& Cond)
+MysqlResult 
+MysqlSession::Delete(MysqlDeleteQuery& query)
 {
-    if(TableName.empty() || Cond.empty())
-    {
-        LogError("[Arg: [TableName] or [Field_Value] empty]");
-        return false;
-    }
-    std::string query = "DELETE FROM " + TableName + " WHERE " + Cond + ";";
-    return MysqlQuery(query);
+    return MysqlQuery(query.ToString());
 }
 
-
-bool 
-MysqlSession::AddField(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
+MysqlResult MysqlSession::Alter(MysqlAlterQuery &query)
 {
-    if (TableName.empty())
-    {
-        LogError("Arg: [TableName] empty");
-        return false;
-    }
-    std::string query = "ALTER TABLE " + TableName + " ADD COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
-    return MysqlQuery(query);
-}
-
-bool 
-MysqlSession::ModFieldType(const std::string& TableName, const std::pair<std::string,std::string>& Field_Type)
-{
-    if (TableName.empty())
-    {
-        LogError("[Arg: [TableName] empty]");
-        return false;
-    }
-    std::string query = "ALTER TABLE " + TableName + " MODIFY COLUMN " + Field_Type.first + " " + Field_Type.second + ';';
-    return MysqlQuery(query);
-}
-
-bool 
-MysqlSession::ModFieldName(const std::string& TableName,const std::string& OldFieldName, const std::pair<std::string,std::string>& Field_Type)
-{
-    if(TableName.empty() || OldFieldName.empty() ){
-        LogError("[Arg: [TableName] of [OldFieldName] empty]");
-        return false;
-    }
-    std::string query = "ALTER TABLE " + TableName + " CHANGE COLUMN " + OldFieldName + " " + Field_Type.first + " " + Field_Type.second + ';';
-    return MysqlQuery(query);
-}
-
-
-bool 
-MysqlSession::DelField(const std::string& TableName,const std::string& FieldName)
-{
-    if(TableName.empty() || FieldName.empty()){
-        LogError("[Arg: [TableName] of [OldFieldName] empty]");
-        return false;
-    }
-    std::string query = "ALTER TABLE " + TableName + "DROP COLUMN " + FieldName + ";";
-    return MysqlQuery(query);
+    return MysqlQuery(query.ToString());
 }
 
 MysqlStmtExecutor::ptr 
@@ -607,51 +679,41 @@ MysqlSession::GetMysqlStmtExecutor()
 {
     if (mysql_ping(this->m_mysql))
     {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         return nullptr;
     }
     MYSQL_STMT *stmt = mysql_stmt_init(this->m_mysql);
     if(stmt == nullptr) {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         return nullptr;
     }
-    MysqlStmtExecutor::ptr params = std::make_shared<MysqlStmtExecutor>(stmt);
+    MysqlStmtExecutor::ptr params = std::make_shared<MysqlStmtExecutor>(stmt, m_logger);
     return params;
 }
 
-bool 
+MysqlResult 
 MysqlSession::StartTransaction()
 {
     return MysqlQuery("start transaction;");
 }
 
-bool 
+MysqlResult 
 MysqlSession::Commit()
 {
     return MysqlQuery("commit;");
 }
 
-bool 
+MysqlResult 
 MysqlSession::Rollback()
 {
     return MysqlQuery("rollback;");
 }
 
-bool MysqlSession::MysqlQuery(const std::string &query)
+MysqlResult MysqlSession::MysqlQuery(const std::string &query)
 {
-    LogInfo("[Query: {}]", query);
-    int ret = mysql_real_query(this->m_mysql,query.c_str(),query.size());
-    if(ret){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        return false;
-    }
-    return true;
-}
-
-std::string 
-MysqlSession::GetLastError()
-{
-    return mysql_error(this->m_mysql);
+    MysqlLogInfo(m_logger->SpdLogger(), "[Mysql query: {}]", query);
+    int ret = mysql_real_query(m_mysql, query.c_str(), query.size());
+    return MysqlResult{m_mysql, ret};
 }
 
 MysqlSession::~MysqlSession()
@@ -665,27 +727,6 @@ MysqlSession::~MysqlSession()
 
 AsyncMysqlSession::AsyncMysqlSession(MysqlConfig::ptr config)
 {
-    this->m_mysql = mysql_init(nullptr);
-    if(this->m_mysql==nullptr) {
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        throw MySqlException(mysql_error(this->m_mysql));
-    }
-    if(mysql_options(this->m_mysql, MYSQL_SET_CHARSET_NAME, config->m_charset.c_str()) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        throw MySqlException( mysql_error(this->m_mysql));
-    }
-    if(config->m_connectTimeout != -1 && mysql_options(this->m_mysql,MYSQL_OPT_CONNECT_TIMEOUT,&(config->m_connectTimeout)) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        throw MySqlException( mysql_error(this->m_mysql));
-    }
-    if(config->m_readTimeout != -1 && mysql_options(this->m_mysql,MYSQL_OPT_READ_TIMEOUT,&(config->m_readTimeout)) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        throw MySqlException( mysql_error(this->m_mysql));
-    }
-    if(config->m_writeTimeout != -1 && mysql_options(this->m_mysql,MYSQL_OPT_WRITE_TIMEOUT,&(config->m_writeTimeout)) == -1){
-        LogError("[Error: {}]", mysql_error(this->m_mysql));
-        throw MySqlException( mysql_error(this->m_mysql));
-    }
 }
 
 
@@ -708,6 +749,7 @@ AsyncMysqlSession::~AsyncMysqlSession()
         this->m_mysql = nullptr;
     }
 }
+
 
 
 }
