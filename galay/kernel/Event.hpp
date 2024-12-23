@@ -1,5 +1,5 @@
-#ifndef GALAY_EVENT_H
-#define GALAY_EVENT_H
+#ifndef GALAY_EVENT_HPP
+#define GALAY_EVENT_HPP
 
 #include "galay/common/Base.h"
 #include "concurrentqueue/moodycamel/concurrentqueue.h"
@@ -115,123 +115,21 @@ template <typename SocketType>
 class ListenEvent final : public Event
 {
 public:
-    ListenEvent(EventEngine* engine, SocketType* socket, CallbackStore<SocketType>* store)
-        : m_socket(socket), m_store(store), m_engine(engine)
-    {
-        engine->AddEvent(this, nullptr);
-    }
-
-    void HandleEvent(EventEngine* engine) override
-    {
-        engine->ModEvent(this, nullptr);
-        CreateConnection(engine);
-    }
-
-    std::string Name() override { return "UnkownEvent"; }
-    EventType GetEventType() override { return kEventTypeRead; }
-    GHandle GetHandle() override
-    {
-        return m_socket->GetHandle();
-    }
-
-    bool SetEventEngine(EventEngine* engine) override
-    {
-        details::EventEngine* t = m_engine.load();
-        if(!m_engine.compare_exchange_strong(t, engine)) {
-            return false;
-        }
-        return true;
-    }
-
-    EventEngine* BelongEngine() override
-    {
-        return m_engine.load();
-    }
-
-    ~ListenEvent() override
-    {
-        if(m_engine) m_engine.load()->DelEvent(this, nullptr);
-        delete m_socket;
-    }
+    ListenEvent(EventEngine* engine, SocketType* socket, CallbackStore<SocketType>* store);
+    void HandleEvent(EventEngine* engine) override;
+    std::string Name() override;
+    EventType GetEventType() override;
+    GHandle GetHandle() override;
+    bool SetEventEngine(EventEngine* engine) override;
+    EventEngine* BelongEngine() override;
+    ~ListenEvent() override;
 private:
-    Coroutine CreateConnection(EventEngine* engine) {
-        LogError("[not support [SocketType]]");
-        co_return;
-    }
+    Coroutine CreateConnection(EventEngine* engine);
 private:
     std::atomic<EventEngine*> m_engine;
     SocketType* m_socket;
     CallbackStore<SocketType>* m_store;
 };
-
-template<>
-inline std::string ListenEvent<galay::AsyncTcpSocket>::Name()
-{
-    return "TcpListenEvent";
-}
-
-template<>
-inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
-{
-    return "TcpSslListenEvent";
-}
-
-template<>
-inline Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection(EventEngine* engine)
-{
-    NetAddr addr{};
-    while(true)
-    {
-        const GHandle handle = co_await m_socket->Accept(&addr);
-        if( handle.fd == -1 ){
-            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                LogError("[{}]", error::GetErrorString(error));
-            }
-            co_return;
-        }
-        galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(engine);
-        if( !socket->Socket(handle) ) {
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, Acceot Success]", socket->GetHandle().fd);
-        engine->ResetMaxEventSize(handle.fd);
-        this->m_store->Execute(socket);
-    }
-    co_return;
-}
-
-template<>
-inline Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(EventEngine* engine)
-{
-    NetAddr addr{};
-    while (true)
-    {
-        const auto handle = co_await m_socket->Accept(&addr);
-        if( handle.fd == -1 ){
-            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                LogError("[{}]", error::GetErrorString(error));
-            }
-            co_return;
-        }
-        AsyncTcpSslSocket* socket = new AsyncTcpSslSocket(engine);
-        if( bool res = socket->Socket(handle); !res ) {
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
-        if(const bool success = co_await socket->SSLAccept(); !success ){
-            LogError("[{}]", error::GetErrorString(socket->GetErrorCode()));
-            close(handle.fd);
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, SSL_Acceot Success]", socket->GetHandle().fd);
-        engine->ResetMaxEventSize(handle.fd);
-        this->m_store->Execute(socket);
-    }
-    
-}
 
 
 class WaitEvent: public Event
@@ -410,4 +308,7 @@ private:
 //#endif
     
 }
+
+#include "Event.tcc"
+
 #endif
