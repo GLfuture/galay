@@ -7,12 +7,9 @@
 #include "galay/utils/Pool.hpp"
 
 namespace galay
-{   
-    class Coroutine;
-};
-
-namespace galay
 {
+
+class Coroutine;
 
 template <typename Socket>
 class Connection

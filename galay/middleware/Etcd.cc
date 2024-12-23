@@ -1,6 +1,6 @@
 #include "Etcd.h"
 #include "galay/kernel/Scheduler.h"
-#include "galay/kernel/ExternApi.h"
+#include "galay/kernel/ExternApi.hpp"
 
 bool galay::details::EtcdAction::DoAction(Coroutine::wptr co, void *ctx)
 {

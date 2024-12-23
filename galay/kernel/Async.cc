@@ -1,7 +1,7 @@
 #include "Async.h"
 #include "Event.h"
 #include "WaitAction.h"
-#include "ExternApi.h"
+#include "ExternApi.hpp"
 #include "Internal.h"
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     #include <sys/socket.h>

@@ -7,15 +7,12 @@
 #include <concurrentqueue/moodycamel/blockingconcurrentqueue.h>
 #include "galay/common/Base.h"
 
-namespace galay {
-    class Coroutine;
-};
-
 namespace galay::thread {
     class ThreadWaiters;
 }
 
 namespace galay {
+    class Coroutine;
     class Timer;
 }
 

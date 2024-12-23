@@ -2,7 +2,7 @@
 #include "Event.h"
 #include "Scheduler.h"
 #include "WaitAction.h"
-#include "ExternApi.h"
+#include "ExternApi.hpp"
 #include "Log.h"
 
 namespace galay

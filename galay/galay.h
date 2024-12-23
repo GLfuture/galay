@@ -15,7 +15,7 @@
 #include "kernel/Scheduler.h"
 #include "kernel/Session.hpp"
 #include "kernel/Server.hpp"
-#include "kernel/ExternApi.h"
+#include "kernel/ExternApi.hpp"
 #include "kernel/Log.h"
 #include "kernel/Time.h"
 

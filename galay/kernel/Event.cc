@@ -3,7 +3,7 @@
 #include "Scheduler.h"
 #include "Session.hpp"
 #include "Time.h"
-#include "ExternApi.h"
+#include "ExternApi.hpp"
 #include <cstring>
 #if defined(__linux__)
 #include <sys/timerfd.h>

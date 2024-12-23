@@ -16,17 +16,12 @@ namespace galay::details
     class ListenEvent;
 };
 
-
-namespace galay
-{
-    class Coroutine;
-    class RoutineContext;
-}
-
 namespace galay
 {
     using HttpSession = Session<AsyncTcpSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
     using HttpsSession = Session<AsyncTcpSslSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
+    class Coroutine;
+    class RoutineContext;
 }
 
 namespace galay::server 

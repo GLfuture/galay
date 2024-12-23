@@ -1,5 +1,5 @@
-#ifndef GALAY_EXTERNAPI_H
-#define GALAY_EXTERNAPI_H
+#ifndef GALAY_EXTERNAPI_HPP
+#define GALAY_EXTERNAPI_HPP
 
 
 #include "Strategy.hpp"
@@ -49,24 +49,10 @@ class  IOVecHolder
 {
 public:
     IOVecHolder() = default;
-    IOVecHolder(size_t size) { VecMalloc(&m_vec, size); }
-    IOVecHolder(std::string&& buffer) {
-        if(!buffer.empty()) {
-            Reset(std::move(buffer));
-        }
-    }
-    bool Realloc(size_t size)
-    {
-        return VecRealloc(&m_vec, size);
-    }
-
-    void ClearBuffer(){
-        if(m_vec.m_buffer == nullptr) return;
-        memset(m_vec.m_buffer, 0, m_vec.m_size);
-        m_vec.m_offset = 0;
-        m_vec.m_length = 0;
-    }
-
+    IOVecHolder(size_t size);
+    IOVecHolder(std::string&& buffer);
+    bool Realloc(size_t size);
+    void ClearBuffer();
     bool Reset(const IOVecType& iov)
     {
         if(iov.m_buffer == nullptr) return false;
@@ -284,5 +270,7 @@ void DestroyGalayEnv();
 }
 #endif
 }
+
+#include "ExternApi.tcc"
 
 #endif
