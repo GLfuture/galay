@@ -299,6 +299,7 @@ HeaderPair &HeaderPair::operator=(const HeaderPair &headerPair)
 {
     m_stream << headerPair.m_stream.str();
     m_headerPairs = headerPair.m_headerPairs;
+    return *this;
 }
 
 HttpMethod& 

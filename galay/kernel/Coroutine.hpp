@@ -1,5 +1,5 @@
-#ifndef GALAY_COROUTINE_H
-#define GALAY_COROUTINE_H
+#ifndef GALAY_COROUTINE_HPP
+#define GALAY_COROUTINE_HPP
 
 #include <any>
 #include <memory>
@@ -15,27 +15,32 @@
 #include "galay/common/Base.h"
 #include "Log.h"
 
+namespace galay {
+    class Timer;
+}
+
+namespace galay {
+    class Coroutine;
+}
+
 namespace galay::details
 {
-    class CoroutineScheduler;
+class CoroutineScheduler;
+
+class WaitAction
+{
+public:
+    using Coroutine_wptr = std::weak_ptr<Coroutine>;
+    virtual ~WaitAction() = default;
+    virtual bool HasEventToDo() = 0;
+    virtual bool DoAction(Coroutine_wptr co, void* ctx) = 0;
+};
 }
 
 namespace galay
 {
-    class Timer;
-}
-
-namespace galay::coroutine
+class AwaiterBase
 {
-class Coroutine;
-class Awaiter_void;
-class Awaiter_bool; 
-
-class Awaiter
-{
-public:
-    virtual ~Awaiter() = default;
-    virtual void SetResult(const std::variant<std::monostate, int, bool, void*, std::string, GHandle>& result) = 0;
 };
 
 #define DEFAULT_COROUTINE_STORE_HASH_SIZE       2048
@@ -90,8 +95,8 @@ public:
     void Destroy() { m_handle.destroy(); }
     bool Done() const { return m_handle.done(); }
     void Resume() const { return m_handle.resume(); }
-    bool SetAwaiter(Awaiter* awaiter);
-    Awaiter* GetAwaiter() const;
+    bool SetAwaiter(AwaiterBase* awaiter);
+    AwaiterBase* GetAwaiter() const;
 
     void AppendExitCallback(const std::function<void()>& callback);
     ~Coroutine() = default;
@@ -99,10 +104,103 @@ private:
     void ToExit();
 private:
     std::atomic<details::CoroutineScheduler*> m_scheduler;
-    std::atomic<Awaiter*> m_awaiter = nullptr;
+    std::atomic<AwaiterBase*> m_awaiter = nullptr;
     std::coroutine_handle<promise_type> m_handle;
     std::list<std::function<void()>> m_exit_cbs;
 };
+
+template<typename T>
+class Awaiter: public AwaiterBase
+{
+public:
+    Awaiter(details::WaitAction* action, void* ctx) 
+        : m_ctx(ctx), m_action(action), m_handle(nullptr) {}
+    Awaiter(T result) 
+        : m_result(result), m_ctx(nullptr), m_action(nullptr), m_handle(nullptr){}
+    bool await_ready() const noexcept {
+        return m_action == nullptr || !m_action->HasEventToDo();
+    }
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept {
+        m_handle = handle;
+        Coroutine::wptr co = handle.promise().GetCoroutine();
+        if(co.expired()) {
+            LogError("[Coroutine expired]");
+            return false;
+        }
+        while(!co.lock()->SetAwaiter(this)){
+            LogError("[Set awaiter failed]");
+        }
+        return m_action->DoAction(co, m_ctx);
+    }
+    T await_resume() const noexcept {
+        if( m_handle ) {
+            while(!m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
+                LogError("[Set awaiter failed]");
+            }
+        }
+        return m_result;
+    }
+    void SetResult(T result) {
+        m_result = result;
+    }
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const {
+        if(m_handle) return m_handle.promise().GetCoroutine();
+        return {};
+    }
+private:
+    void* m_ctx;
+    T m_result;
+    details::WaitAction* m_action;
+    std::coroutine_handle<Coroutine::promise_type> m_handle;
+};
+
+
+template<>
+class Awaiter<void>: public AwaiterBase
+{
+public:
+    Awaiter(details::WaitAction* action, void* ctx) 
+        : m_ctx(ctx), m_action(action), m_handle(nullptr) {}
+    Awaiter() 
+        : m_ctx(nullptr), m_action(nullptr), m_handle(nullptr){}
+    bool await_ready() const noexcept {
+        return m_action == nullptr || !m_action->HasEventToDo();
+    }
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<Coroutine::promise_type> handle) noexcept {
+        m_handle = handle;
+        Coroutine::wptr co = handle.promise().GetCoroutine();
+        if(co.expired()) {
+            LogError("[Coroutine expired]");
+            return false;
+        }
+        while(!co.lock()->SetAwaiter(this)){
+            LogError("[Set awaiter failed]");
+        }
+        return m_action->DoAction(co, m_ctx);
+    }
+    void await_resume() const noexcept {
+        if( m_handle ) {
+            while(!m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
+                LogError("[Set awaiter failed]");
+            }
+        }
+    }
+
+    [[nodiscard]] Coroutine::wptr GetCoroutine() const {
+        if( m_handle ) {
+            return m_handle.promise().GetCoroutine();
+        }
+        return {};
+    }
+private:
+    void* m_ctx;
+    details::WaitAction* m_action;
+    std::coroutine_handle<Coroutine::promise_type> m_handle;
+};
+
+
 
 //线程安全
 class WaitGroup
@@ -111,7 +209,7 @@ public:
     WaitGroup(uint32_t count);
     void Done();
     void Reset(uint32_t count = 0);
-    Awaiter_bool Wait();
+    Awaiter<bool> Wait();
 private:
     std::shared_mutex m_mutex;
     Coroutine::wptr m_coroutine;
@@ -130,7 +228,7 @@ public:
     /*
         子协程需要进入即调用
     */
-    virtual Awaiter_void DeferDone();
+    virtual Awaiter<void> DeferDone();
     virtual ~RoutineContext() = default;
 protected:
     virtual void BeCanceled();
@@ -155,11 +253,11 @@ public:
     using ptr = std::shared_ptr<RoutineContextWithWaitGroup>;
     using wptr = std::weak_ptr<RoutineContextWithWaitGroup>;
     RoutineContextWithWaitGroup(uint32_t count) : m_wait_group(count) {}
-    Awaiter_bool Wait();
+    Awaiter<bool> Wait();
     /*
         子协程需要进入即调用
     */
-    virtual Awaiter_void DeferDone();
+    virtual Awaiter<void> DeferDone();
     virtual ~RoutineContextWithWaitGroup() = default;
 protected:
     virtual void BeCanceled();
@@ -171,7 +269,7 @@ private:
 
 }
 
-namespace galay::coroutine
+namespace galay
 {
 
 extern CoroutineStore* GetCoroutineStore();
@@ -190,21 +288,21 @@ namespace galay::this_coroutine
     /*
         父协程一定需要加入到协程存储
     */
-    extern coroutine::Awaiter_void AddToCoroutineStore();
-    extern coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine::wptr& coroutine);
+    extern Awaiter<void> AddToCoroutineStore();
+    extern Awaiter<Coroutine::wptr> GetThisCoroutine();
     /*
         return false only when TimeScheduler is not running
         [ms] : ms
         [timer] : timer
         [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
     */
-    extern coroutine::Awaiter_void Sleepfor(int64_t ms);
+    extern Awaiter<void> Sleepfor(int64_t ms);
 
     /*
         注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
         注意和AutoDestructor的回调区别，DeferExit的callback会在协程正常和非正常退出时调用
     */
-    extern coroutine::Awaiter_void DeferExit(const std::function<void(void)>& callback);
+    extern Awaiter<void> DeferExit(const std::function<void(void)>& callback);
     
     #define MIN_REMAIN_TIME     10
     /*用在father 协程中，通过father销毁child*/
@@ -217,7 +315,7 @@ namespace galay::this_coroutine
     public:
         using ptr = std::shared_ptr<AutoDestructor>;
         AutoDestructor();
-        coroutine::Awaiter_void Start(uint64_t ms);
+        Awaiter<void> Start(uint64_t ms);
         void SetCallback(const std::function<void(void)>& callback) { this->m_callback = callback; }
         bool Reflush();
         ~AutoDestructor() = default;

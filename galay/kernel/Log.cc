@@ -71,6 +71,7 @@ InternelLogger::InternelLogger() {
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%f][%L][%t][%25!s:%4!#][%20!!] %v");
     logger->set_level(spdlog::level::debug);
     logger->flush_on(spdlog::level::debug);
+    m_logger = std::make_shared<Logger>(logger);
 }
 
 InternelLogger *InternelLogger::GetInstance()

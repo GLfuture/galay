@@ -118,7 +118,7 @@ public:
     bool PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
     bool PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
 
-    coroutine::Awaiter_int Commit();
+    Awaiter<int> Commit();
     
     GHandle GetEventHandle() { return m_event_handle; }
     io_context_t GetIoContext() { return m_ioctx; }
@@ -147,11 +147,11 @@ public:
     bool Socket(GHandle handle);
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
-    coroutine::Awaiter_bool Connect(NetAddr* addr);
-    coroutine::Awaiter_GHandle Accept(NetAddr* addr);
-    coroutine::Awaiter_int Recv(TcpIOVec* iov, size_t length);
-    coroutine::Awaiter_int Send(TcpIOVec* iov, size_t length);
-    coroutine::Awaiter_bool Close();
+    Awaiter<bool> Connect(NetAddr* addr);
+    Awaiter<GHandle> Accept(NetAddr* addr);
+    Awaiter<int> Recv(TcpIOVec* iov, size_t length);
+    Awaiter<int> Send(TcpIOVec* iov, size_t length);
+    Awaiter<bool> Close();
 
     GHandle GetHandle() const { return m_io->GetHandle(); }
     uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
@@ -171,14 +171,14 @@ public:
     bool Socket(GHandle handle);
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
-    coroutine::Awaiter_bool Connect(NetAddr* addr);
-    coroutine::Awaiter_bool AsyncSSLConnect();
-    coroutine::Awaiter_GHandle Accept(NetAddr* addr);
-    coroutine::Awaiter_bool SSLAccept();
-    coroutine::Awaiter_int Recv(TcpIOVec* iov, size_t length);
+    Awaiter<bool> Connect(NetAddr* addr);
+    Awaiter<bool> AsyncSSLConnect();
+    Awaiter<GHandle> Accept(NetAddr* addr);
+    Awaiter<bool> SSLAccept();
+    Awaiter<int> Recv(TcpIOVec* iov, size_t length);
 
-    coroutine::Awaiter_int Send(TcpIOVec* iov, size_t length);
-    coroutine::Awaiter_bool Close();
+    Awaiter<int> Send(TcpIOVec* iov, size_t length);
+    Awaiter<bool> Close();
 
     GHandle GetHandle() const { return m_io->GetHandle(); }
     uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
@@ -195,9 +195,9 @@ public:
     explicit AsyncUdpSocket(GHandle handle, details::EventEngine* engine);
     bool Socket() const;
     bool Bind(const std::string& addr, int port);
-    coroutine::Awaiter_int RecvFrom(UdpIOVec* iov, size_t length);
-    coroutine::Awaiter_int SendTo(UdpIOVec* iov, size_t length);
-    coroutine::Awaiter_bool Close();
+    Awaiter<int> RecvFrom(UdpIOVec* iov, size_t length);
+    Awaiter<int> SendTo(UdpIOVec* iov, size_t length);
+    Awaiter<bool> Close();
     GHandle GetHandle() const { return m_io->GetHandle(); }
     uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
     ~AsyncUdpSocket() = default;
@@ -213,9 +213,9 @@ public:
     explicit AsyncFileDescriptor(details::EventEngine* engine);
     explicit AsyncFileDescriptor(GHandle handle, details::EventEngine* engine);
     bool Open(const char* path, int flags, mode_t mode);
-    coroutine::Awaiter_int Read(FileIOVec* iov, size_t length);
-    coroutine::Awaiter_int Write(FileIOVec* iov, size_t length);
-    coroutine::Awaiter_bool Close();
+    Awaiter<int> Read(FileIOVec* iov, size_t length);
+    Awaiter<int> Write(FileIOVec* iov, size_t length);
+    Awaiter<bool> Close();
     GHandle GetHandle() const { return m_io->GetHandle(); }
     uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
 private:
@@ -238,8 +238,8 @@ public:
     bool PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
     bool PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
 
-    coroutine::Awaiter_int Commit();
-    coroutine::Awaiter_bool Close();
+    Awaiter<int> Commit();
+    Awaiter<bool> Close();
 
     GHandle GetEventHandle() { return m_io->GetEventHandle(); }
     GHandle GetHandle() const { return m_io->GetHandle(); }

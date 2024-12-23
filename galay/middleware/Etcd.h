@@ -6,24 +6,18 @@
 #include <etcd/Watcher.hpp> 
 #include <shared_mutex>
 #include <unordered_map>
-#include "galay/kernel/Awaiter.h"
-
-namespace galay::coroutine
-{
-    class Awaiter_bool;
-    class Awaiter_string;
-}
+#include "galay/kernel/Coroutine.hpp"
 
 namespace galay::details
 {
     class EtcdAction: public WaitAction
     {
     public:
-        virtual bool DoAction(coroutine::Coroutine::wptr co, void* ctx) override;
+        virtual bool DoAction(Coroutine::wptr co, void* ctx) override;
         inline virtual bool HasEventToDo() override { return true; }
-        void ResetCallback(std::function<void(coroutine::Coroutine::wptr, void*)>&& callback) { m_callback = std::forward<std::function<void(coroutine::Coroutine::wptr,void*)>>(callback); }
+        void ResetCallback(std::function<void(Coroutine::wptr, void*)>&& callback) { m_callback = std::forward<std::function<void(Coroutine::wptr,void*)>>(callback); }
     private:
-        std::function<void(coroutine::Coroutine::wptr, void*)> m_callback;
+        std::function<void(Coroutine::wptr, void*)> m_callback;
     };
 }
 
@@ -44,10 +38,10 @@ namespace galay::etcd
     {
     public:
         EtcdClient(const std::string& EtcdAddrs, int co_sche_index);
-        coroutine::Awaiter_bool RegisterService(const std::string& ServiceName, const std::string& ServiceAddr);
-        coroutine::Awaiter_bool RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL);
-        coroutine::Awaiter_bool DiscoverService(const std::string& ServiceName);
-        coroutine::Awaiter_bool DiscoverServicePrefix(const std::string& Prefix);
+        Awaiter<bool> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr);
+        Awaiter<bool> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL);
+        Awaiter<bool> DiscoverService(const std::string& ServiceName);
+        Awaiter<bool> DiscoverServicePrefix(const std::string& Prefix);
         EtcdResponse GetResponse();
         //监视一个key
         void Watch(const std::string& key, std::function<void(::etcd::Response)> handle);

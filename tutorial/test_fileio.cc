@@ -7,7 +7,7 @@
 
 #define PEER_SIZE 512
 
-using galay::coroutine::Coroutine;
+using galay::Coroutine;
 
 #ifdef __linux__
 Coroutine test()
@@ -47,7 +47,7 @@ Coroutine test()
     co_return;
 }
 #else
-galay::coroutine::Coroutine test()
+galay::Coroutine test()
 {
     galay::AsyncFileDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     bool sunccess = descriptor.Open("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);

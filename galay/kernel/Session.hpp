@@ -6,7 +6,7 @@
 #include "galay/protocol/Http.h"
 #include "galay/utils/Pool.hpp"
 
-namespace galay::coroutine
+namespace galay
 {   
     class Coroutine;
 };
@@ -34,14 +34,14 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    explicit CallbackStore(const std::function<coroutine::Coroutine(std::shared_ptr<Connection<Socket>>)>& callback) 
+    explicit CallbackStore(const std::function<Coroutine(std::shared_ptr<Connection<Socket>>)>& callback) 
         : m_callback(callback) {}
     void Execute(Socket* socket) {
         auto connection = std::make_shared<Connection<Socket>>(socket);
         m_callback(connection);
     }
 private:
-    std::function<coroutine::Coroutine(std::shared_ptr<Connection<Socket>>)> m_callback;
+    std::function<Coroutine(std::shared_ptr<Connection<Socket>>)> m_callback;
 };
 
 

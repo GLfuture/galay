@@ -1,12 +1,11 @@
-#include "Coroutine.h"
+#include "Coroutine.hpp"
 #include "Event.h"
-#include "Awaiter.h"
 #include "Scheduler.h"
 #include "WaitAction.h"
 #include "ExternApi.h"
 #include "Log.h"
 
-namespace galay::coroutine
+namespace galay
 {
 CoroutineStore::CoroutineStore()
 {
@@ -104,9 +103,9 @@ Coroutine::operator=(Coroutine&& other) noexcept
     return *this;
 }
 
-bool Coroutine::SetAwaiter(Awaiter *awaiter)
+bool Coroutine::SetAwaiter(AwaiterBase* awaiter)
 {
-    if(Awaiter* t = m_awaiter.load(); !m_awaiter.compare_exchange_strong(t, awaiter)) {
+    if(AwaiterBase* t = m_awaiter.load(); !m_awaiter.compare_exchange_strong(t, awaiter)) {
         return false;
     }
     return true;
@@ -117,7 +116,7 @@ void Coroutine::AppendExitCallback(const std::function<void()>& callback)
     m_exit_cbs.emplace_front(callback);
 }
 
-Awaiter *Coroutine::GetAwaiter() const
+AwaiterBase *Coroutine::GetAwaiter() const
 {
     return m_awaiter.load();
 }
@@ -142,7 +141,7 @@ void WaitGroup::Done()
     --m_count;
     if(m_count == 0) {
         if(!m_coroutine.expired()) {
-            m_coroutine.lock()->GetAwaiter()->SetResult(true);
+            static_cast<Awaiter<bool>*>(m_coroutine.lock()->GetAwaiter())->SetResult(true);
             m_coroutine.lock()->BelongScheduler()->ToResumeCoroutine(m_coroutine);
         }
     }
@@ -155,12 +154,12 @@ void WaitGroup::Reset(uint32_t count)
     m_coroutine = {};
 }
 
-Awaiter_bool WaitGroup::Wait()
+Awaiter<bool> WaitGroup::Wait()
 {
-    auto* action = new details::CoroutineHandleAction([this](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([this](Coroutine::wptr co, void* ctx)->bool{
         std::unique_lock lk(m_mutex);
         if(m_count == 0) {
-            if(!co.expired()) co.lock()->GetAwaiter()->SetResult(false);
+            if(!co.expired()) static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter())->SetResult(false);
             return false;
         }
         m_coroutine = co;
@@ -169,9 +168,9 @@ Awaiter_bool WaitGroup::Wait()
     return {action, nullptr};
 }
 
-Awaiter_void RoutineContext::DeferDone()
+Awaiter<void> RoutineContext::DeferDone()
 {
-    auto* action = new details::CoroutineHandleAction([this](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([this](Coroutine::wptr co, void* ctx)->bool{
         m_coroutine = co;
         co.lock()->AppendExitCallback([this](){
             m_coroutine = {};
@@ -193,14 +192,14 @@ void RoutineContextCancel::operator()()
     if(!m_context.expired()) m_context.lock()->BeCanceled();
 }
 
-Awaiter_bool RoutineContextWithWaitGroup::Wait()
+Awaiter<bool> RoutineContextWithWaitGroup::Wait()
 {
     return m_wait_group.Wait();
 }
 
-Awaiter_void RoutineContextWithWaitGroup::DeferDone()
+Awaiter<void> RoutineContextWithWaitGroup::DeferDone()
 {
-    auto* action = new details::CoroutineHandleAction([this](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([this](Coroutine::wptr co, void* ctx)->bool{
         m_coroutine = co;
         co.lock()->AppendExitCallback([this](){
             m_wait_group.Done();
@@ -222,11 +221,11 @@ void RoutineContextWithWaitGroup::BeCanceled()
 }
 }
 
-namespace galay::coroutine
+namespace galay
 {
-coroutine::CoroutineStore g_coroutine_store;
+CoroutineStore g_coroutine_store;
 
-coroutine::CoroutineStore* GetCoroutineStore()
+CoroutineStore* GetCoroutineStore()
 {
     return &g_coroutine_store;
 }
@@ -249,30 +248,30 @@ std::pair<RoutineContextWithWaitGroup::ptr, RoutineContextCancel::ptr> ContextFa
 
 namespace galay::this_coroutine
 {
-coroutine::Awaiter_void AddToCoroutineStore()
+Awaiter<void> AddToCoroutineStore()
 {
-    auto* action = new details::CoroutineHandleAction([](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([](Coroutine::wptr co, void* ctx)->bool{
         co.lock()->AppendExitCallback([co](){
-            coroutine::GetCoroutineStore()->RemoveCoroutine(co);
+            GetCoroutineStore()->RemoveCoroutine(co);
         });
-        coroutine::GetCoroutineStore()->AddCoroutine(co);
+        GetCoroutineStore()->AddCoroutine(co);
         return false;
     });
     return {action, nullptr};
 }
 
-coroutine::Awaiter_void GetThisCoroutine(coroutine::Coroutine::wptr& coroutine)
+Awaiter<Coroutine::wptr> GetThisCoroutine()
 {
-    auto* action = new details::CoroutineHandleAction([&coroutine](coroutine::Coroutine::wptr co, void* ctx)->bool{
-        coroutine = co;
+    auto* action = new details::CoroutineHandleAction([](Coroutine::wptr co, void* ctx)->bool{
+        static_cast<Awaiter<Coroutine::wptr>*>(co.lock()->GetAwaiter())->SetResult(co);
         return false;
     });
     return {action, nullptr};
 }
 
-coroutine::Awaiter_void Sleepfor(int64_t ms)
+Awaiter<void> Sleepfor(int64_t ms)
 {
-    auto func = [ms](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto func = [ms](Coroutine::wptr co, void* ctx)->bool{
         if(ms <= 0) return false;
         auto timecb = [co](details::TimeEvent::wptr event, Timer::ptr timer){
             if(!co.expired()) co.lock()->BelongScheduler()->ToResumeCoroutine(co);
@@ -290,9 +289,9 @@ coroutine::Awaiter_void Sleepfor(int64_t ms)
 }
 
 
-coroutine::Awaiter_void DeferExit(const std::function<void(void)>& callback)
+Awaiter<void> DeferExit(const std::function<void(void)>& callback)
 {
-    auto* action = new details::CoroutineHandleAction([callback](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto* action = new details::CoroutineHandleAction([callback](Coroutine::wptr co, void* ctx)->bool{
         co.lock()->AppendExitCallback(std::move(callback));
         return false;
     });
@@ -303,10 +302,10 @@ AutoDestructor::AutoDestructor()
 {
 }
 
-coroutine::Awaiter_void AutoDestructor::Start(uint64_t ms)
+Awaiter<void> AutoDestructor::Start(uint64_t ms)
 {
     auto weak_this = weak_from_this();
-    auto func = [weak_this, ms](coroutine::Coroutine::wptr co, void* ctx)->bool{
+    auto func = [weak_this, ms](Coroutine::wptr co, void* ctx)->bool{
         auto timecb = [co, weak_this](details::TimeEvent::wptr event, Timer::ptr timer){
             if(timer->GetDeadline() > GetCurrentTimeMs() + MIN_REMAIN_TIME){
                 if(!event.expired()) event.lock()->AddTimer(timer->GetDeadline() - GetCurrentTimeMs(),  timer);

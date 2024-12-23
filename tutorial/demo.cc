@@ -43,27 +43,27 @@
 //     return 0;
 // }
 
-#include <galay/middleware/Mysql.hpp>
+//#include <galay/middleware/Mysql.hpp>
 #include <iostream>
 
-using namespace galay::mysql;
+//using namespace galay::mysql;
 
 int main()
 {
-    MysqlSelectQuery select;
-    select.Fields("*").From("test").FullJoinOn("mvp", "mvp.id = test.id").Where("id > 1").GroupBy("id").OrderBy(FieldOrderByPair("id", MysqlOrderBy::ASC))\
-        .Limit(100);
-    std::cout << select.ToString() << std::endl;
-    MysqlInsertQuery insert;
-    insert.Table("test").FieldValues(FieldValuePair("id", "1"), FieldValuePair("name", "\"gong\""));
-    std::cout << insert.ToString() << std::endl;
-    MysqlUpdateQuery update;
-    update.Table("test").FieldValues(FieldValuePair("id", "1"), FieldValuePair("name", "\"gong\"")).Where("id > 1");
-    std::cout << update.ToString() << std::endl;
-    MysqlField field;
-    field.Name("comment").Type("varchar(10)").NotNull().Default("\"hello\"");
-    MysqlAlterQuery alter;
-    alter.Table("test").AddColumn(field);
-    std::cout << alter.ToString() << std::endl;
-    return 0;
+    // MysqlSelectQuery select;
+    // select.Fields("*").From("test").FullJoinOn("mvp", "mvp.id = test.id").Where("id > 1").GroupBy("id").OrderBy(FieldOrderByPair("id", MysqlOrderBy::ASC))\
+    //     .Limit(100);
+    // std::cout << select.ToString() << std::endl;
+    // MysqlInsertQuery insert;
+    // insert.Table("test").FieldValues(FieldValuePair("id", "1"), FieldValuePair("name", "\"gong\""));
+    // std::cout << insert.ToString() << std::endl;
+    // MysqlUpdateQuery update;
+    // update.Table("test").FieldValues(FieldValuePair("id", "1"), FieldValuePair("name", "\"gong\"")).Where("id > 1");
+    // std::cout << update.ToString() << std::endl;
+    // MysqlField field;
+    // field.Name("comment").Type("varchar(10)").NotNull().Default("\"hello\"");
+    // MysqlAlterQuery alter;
+    // alter.Table("test").AddColumn(field);
+    // std::cout << alter.ToString() << std::endl;
+    // return 0;
 }

@@ -386,7 +386,7 @@ bool NetWaitEvent::OnTcpAcceptWaitPrepare(const Coroutine_wptr co, void *ctx)
     netaddr->m_ip = inet_ntoa(((sockaddr_in*)&addr)->sin_addr);
     netaddr->m_port = ntohs(((sockaddr_in*)&addr)->sin_port);
     LogTrace("[Accept Address: {}:{}]", netaddr->m_ip, netaddr->m_port);
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<GHandle>*>(co.lock()->GetAwaiter());
     if( handle.fd < 0 ) {
         if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
             
@@ -405,7 +405,7 @@ bool NetWaitEvent::OnTcpRecvWaitPrepare(const Coroutine_wptr co, void* ctx)
     if( recvBytes == eCommonNonBlocking ) {
         return true;
     }
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(co.lock()->GetAwaiter());
     awaiter->SetResult(recvBytes);
     return false;
 }
@@ -417,7 +417,7 @@ bool NetWaitEvent::OnTcpSendWaitPrepare(const Coroutine_wptr co, void* ctx)
     if( sendBytes == eCommonNonBlocking){
         return true;
     }
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(co.lock()->GetAwaiter());
     awaiter->SetResult(sendBytes);
     return false;
 }
@@ -436,7 +436,7 @@ bool NetWaitEvent::OnTcpConnectWaitPrepare(Coroutine_wptr co, void* ctx)
             return true;
         }
     }
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(co.lock()->GetAwaiter());
     if( ret == 0 ){
         awaiter->SetResult(true);
     } else {
@@ -448,7 +448,7 @@ bool NetWaitEvent::OnTcpConnectWaitPrepare(Coroutine_wptr co, void* ctx)
 
 bool NetWaitEvent::OnCloseWaitPrepare(const Coroutine_wptr co, void* ctx)
 {
-    coroutine::Awaiter* awaiter = co.lock()->GetAwaiter(); 
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(co.lock()->GetAwaiter()); 
     if (m_engine) {
         if( m_engine.load()->DelEvent(this, nullptr) != 0 ) {
             awaiter->SetResult(false);
@@ -473,7 +473,7 @@ bool NetWaitEvent::OnUdpRecvfromWaitPrepare(const Coroutine_wptr co, void *ctx)
     if( recvBytes == eCommonNonBlocking ) {
         return true;
     }
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(co.lock()->GetAwaiter());
     awaiter->SetResult(recvBytes);
     return false;
 }
@@ -485,7 +485,7 @@ bool NetWaitEvent::OnUdpSendtoWaitPrepare(const Coroutine_wptr co, void *ctx)
     if( sendBytes == eCommonNonBlocking){
         return true;
     }
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(co.lock()->GetAwaiter());
     awaiter->SetResult(sendBytes);
     return false;
 }
@@ -501,7 +501,7 @@ void NetWaitEvent::HandleTcpAcceptEvent(EventEngine *engine)
 void NetWaitEvent::HandleTcpRecvEvent(EventEngine *engine)
 {
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(m_ctx));
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
@@ -510,14 +510,14 @@ void NetWaitEvent::HandleTcpRecvEvent(EventEngine *engine)
 void NetWaitEvent::HandleTcpSendEvent(EventEngine *engine)
 {
     int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(m_ctx));
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(sendBytes);
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
 
 void NetWaitEvent::HandleTcpConnectEvent(EventEngine *engine)
 {
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(true);
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
@@ -530,7 +530,7 @@ void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
 void NetWaitEvent::HandleUdpRecvfromEvent(EventEngine *engine)
 {
     int recvBytes = UdpDealRecvfrom(static_cast<UdpIOVec*>(m_ctx));
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
@@ -539,7 +539,7 @@ void NetWaitEvent::HandleUdpRecvfromEvent(EventEngine *engine)
 void NetWaitEvent::HandleUdpSendtoEvent(EventEngine *engine)
 {
     int sendBytes = UdpDealSendto(static_cast<UdpIOVec*>(m_ctx));
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(sendBytes);
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
@@ -776,7 +776,7 @@ NetSslWaitEvent::~NetSslWaitEvent()
 
 bool NetSslWaitEvent::OnTcpSslAcceptWaitPrepare(const Coroutine_wptr co, void* ctx)
 {
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(co.lock()->GetAwaiter());
     SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_set_accept_state(ssl);
     int r = SSL_do_handshake(ssl);
@@ -797,7 +797,7 @@ bool NetSslWaitEvent::OnTcpSslAcceptWaitPrepare(const Coroutine_wptr co, void* c
 bool NetSslWaitEvent::OnTcpSslConnectWaitPrepare(const Coroutine_wptr co, void* ctx)
 {
     
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(co.lock()->GetAwaiter());
     SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     SSL_set_connect_state(ssl);
     int r = SSL_do_handshake(ssl);
@@ -819,7 +819,7 @@ bool NetSslWaitEvent::OnTcpSslRecvWaitPrepare(const Coroutine_wptr co, void* ctx
 {
     
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(ctx));
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(co.lock()->GetAwaiter());
     if(recvBytes == eCommonNonBlocking) {
         return true;
     }
@@ -832,7 +832,7 @@ bool NetSslWaitEvent::OnTcpSslSendWaitPrepare(const Coroutine_wptr co, void* ctx
     
     auto* iov = static_cast<TcpIOVec*>(m_ctx);
     int sendBytes = TcpDealSend(iov);
-    galay::coroutine::Awaiter* awaiter = co.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(co.lock()->GetAwaiter());
     if( sendBytes == eCommonNonBlocking){
         return true;
     }
@@ -842,7 +842,7 @@ bool NetSslWaitEvent::OnTcpSslSendWaitPrepare(const Coroutine_wptr co, void* ctx
 
 bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const Coroutine_wptr co, void* ctx)
 {
-    coroutine::Awaiter* awaiter = co.lock()->GetAwaiter(); 
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(co.lock()->GetAwaiter()); 
     if (m_engine) {
         if( m_engine.load()->DelEvent(this, nullptr) != 0 ) {
             awaiter->SetResult(false);
@@ -868,7 +868,7 @@ bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const Coroutine_wptr co, void* ct
 
 void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 {
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(m_waitco.lock()->GetAwaiter());
     SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     const int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
@@ -890,7 +890,7 @@ void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 
 void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
 {
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<bool>*>(m_waitco.lock()->GetAwaiter());
     SSL* ssl = dynamic_cast<AsyncSslNetIo*>(m_socket)->GetSSL();
     const int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", m_socket->GetHandle().fd);
@@ -912,7 +912,7 @@ void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
 void NetSslWaitEvent::HandleTcpSslRecvEvent(EventEngine *engine)
 {
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(m_ctx));
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(recvBytes);
     //2.唤醒协程
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
@@ -921,7 +921,7 @@ void NetSslWaitEvent::HandleTcpSslRecvEvent(EventEngine *engine)
 void NetSslWaitEvent::HandleTcpSslSendEvent(EventEngine *engine)
 {
     int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(m_ctx));
-    galay::coroutine::Awaiter* awaiter = m_waitco.lock()->GetAwaiter();
+    auto awaiter = static_cast<galay::Awaiter<int>*>(m_waitco.lock()->GetAwaiter());
     awaiter->SetResult(sendBytes);
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
@@ -1136,7 +1136,7 @@ bool FileIoWaitEvent::OnKReadWaitPrepare(const Coroutine_wptr co, void *ctx)
         }        
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
-    co.lock()->GetAwaiter()->SetResult(length);
+    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(length);
     iov->m_offset += length;
     return false;
 }
@@ -1156,7 +1156,7 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
-    m_waitco.lock()->GetAwaiter()->SetResult(length);
+    static_cast<Awaiter<int>*>(m_waitco.lock()->GetAwaiter())->SetResult(length);
     iov->m_offset += length;
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
@@ -1176,7 +1176,7 @@ bool FileIoWaitEvent::OnKWriteWaitPrepare(Coroutine_wptr co, void *ctx)
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
     iov->m_offset += length;
-    co.lock()->GetAwaiter()->SetResult(length);
+    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(length);
     return false;
 }
 
@@ -1195,14 +1195,14 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
-    m_waitco.lock()->GetAwaiter()->SetResult(length);
+    static_cast<Awaiter<int>*>(m_waitco.lock()->GetAwaiter())->SetResult(length);
     iov->m_offset += length;
     m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
 }
 
 bool FileIoWaitEvent::OnCloseWaitPrepare(const Coroutine_wptr co, void *ctx)
 {
-    coroutine::Awaiter* awaiter = co.lock()->GetAwaiter(); 
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter()); 
     if (m_engine) {
         if( m_engine.load()->DelEvent(this, nullptr) != 0 ) {
             awaiter->SetResult(false);

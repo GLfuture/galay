@@ -154,7 +154,7 @@ public:
         delete m_socket;
     }
 private:
-    coroutine::Coroutine CreateConnection(EventEngine* engine) {
+    Coroutine CreateConnection(EventEngine* engine) {
         LogError("[not support [SocketType]]");
         co_return;
     }
@@ -177,7 +177,7 @@ inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
 }
 
 template<>
-inline coroutine::Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection(EventEngine* engine)
+inline Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection(EventEngine* engine)
 {
     NetAddr addr{};
     while(true)
@@ -202,7 +202,7 @@ inline coroutine::Coroutine ListenEvent<galay::AsyncTcpSocket>::CreateConnection
 }
 
 template<>
-inline coroutine::Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(EventEngine* engine)
+inline Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(EventEngine* engine)
 {
     NetAddr addr{};
     while (true)
@@ -237,7 +237,7 @@ inline coroutine::Coroutine ListenEvent<AsyncTcpSslSocket>::CreateConnection(Eve
 class WaitEvent: public Event
 {
 public:
-    using Coroutine_wptr = std::weak_ptr<coroutine::Coroutine>;
+    using Coroutine_wptr = std::weak_ptr<Coroutine>;
     WaitEvent();
     /*
         OnWaitPrepare() return false coroutine will not suspend, else suspend

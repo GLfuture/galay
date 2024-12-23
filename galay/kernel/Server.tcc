@@ -99,15 +99,15 @@ inline void TcpServer<SocketType>::Stop()
 
 
 template<typename SocketType>
-inline coroutine::Coroutine HttpServer<SocketType>::HttpRoute(std::shared_ptr<Connection<SocketType>> connection)
+inline Coroutine HttpServer<SocketType>::HttpRoute(std::shared_ptr<Connection<SocketType>> connection)
 {
     co_await this_coroutine::AddToCoroutineStore();
     size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size;
     SocketType* socket = connection->GetSocket();
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
     Session session(connection, &RequestPool, &ResponsePool);
-    auto [context, cancel] = coroutine::ContextFactory::WithWaitGroupContext();
-    co_await this_coroutine::DeferExit(std::bind([](coroutine::RoutineContextCancel::ptr cancel){
+    auto [context, cancel] = ContextFactory::WithWaitGroupContext();
+    co_await this_coroutine::DeferExit(std::bind([](RoutineContextCancel::ptr cancel){
         (*cancel)();
     }, cancel));
     bool close_connection = false;

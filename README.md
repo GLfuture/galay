@@ -48,7 +48,7 @@ using galay::protocol::http::HttpVersion;
 
 class Handler {
 public:
-    static galay::coroutine::Coroutine GetHelloWorldHandler(galay::HttpConnectionManager manager, galay::coroutine::RoutineContext::ptr context) 
+    static galay::Coroutine GetHelloWorldHandler(galay::HttpConnectionManager manager, galay::RoutineContext::ptr context) 
     {
         co_await context->DeferDone();
         galay::helper::http::HttpHelper::DefaultHttpResponse(manager.GetResponse(), HttpVersion::Http_Version_1_1 , HttpStatusCode::OK_200, "text/html", "<html> <h1> Hello World </h1> </html>");

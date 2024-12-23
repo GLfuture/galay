@@ -730,7 +730,7 @@ AsyncMysqlSession::AsyncMysqlSession(MysqlConfig::ptr config)
 }
 
 
-coroutine::Awaiter_bool 
+Awaiter<bool> 
 AsyncMysqlSession::AsyncConnect(const std::string &host, const std::string &username, const std::string &password, const std::string &db_name, uint32_t port)
 {
     net_async_status status = mysql_real_connect_nonblocking(this->m_mysql, host.c_str(), username.c_str(), password.c_str(), db_name.c_str(), port, nullptr, 0);

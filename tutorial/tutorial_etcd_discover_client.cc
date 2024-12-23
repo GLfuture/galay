@@ -2,7 +2,7 @@
 #include "galay/galay.h"
 #include <iostream>
 
-galay::coroutine::Coroutine func()
+galay::Coroutine func()
 {
     galay::etcd::EtcdClient client("http://127.0.0.1:2379", 0);
     auto res = co_await client.DiscoverServicePrefix("/app/api/login");

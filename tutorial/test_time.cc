@@ -5,7 +5,7 @@
 #define TEST_AUTO_DESTROY
 
 #ifdef TEST_SLEEP
-galay::coroutine::Coroutine test()
+galay::Coroutine test()
 {
     std::cout << "start" << std::endl;
     co_await galay::this_coroutine::Sleepfor(5000);
@@ -47,9 +47,9 @@ int main()
 }
 #elif defined(TEST_DEADLINE)
 
-galay::coroutine::Coroutine::wptr p;
+galay::Coroutine::wptr p;
 
-galay::coroutine::Coroutine test()
+galay::Coroutine test()
 {
     co_await galay::this_coroutine::GetThisCoroutine(p);
     co_await galay::this_coroutine::DeferExit([](){
@@ -84,7 +84,7 @@ int main()
 
 #elif defined(TEST_AUTO_DESTROY)
 
-galay::coroutine::Coroutine test()
+galay::Coroutine test()
 {
     co_await galay::this_coroutine::AddToCoroutineStore();
     co_await galay::this_coroutine::DeferExit([](){

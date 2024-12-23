@@ -276,12 +276,12 @@ bool AsyncFileNativeAio::PrepareWriteV(iovec* iov, int count, long long offset, 
     return true;
 }
 
-coroutine::Awaiter_int AsyncFileNativeAio::Commit()
+Awaiter<int> AsyncFileNativeAio::Commit()
 {
     int ret = io_submit(m_ioctx, m_unfinished_io, m_iocb_ptrs.data());
     if( ret < 0 ) {
         GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSubmitError, -ret);
-        return coroutine::Awaiter_int(-1);
+        return Awaiter<int>(-1);
     }
     m_current_index = 0;
     dynamic_cast<details::FileIoWaitEvent*>(GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
@@ -336,27 +336,27 @@ bool AsyncTcpSocket::Listen(int backlog)
     return details::Listen(m_io, backlog);
 }
 
-coroutine::Awaiter_bool AsyncTcpSocket::Connect(NetAddr *addr)
+Awaiter<bool> AsyncTcpSocket::Connect(NetAddr *addr)
 {
     return details::AsyncConnect(m_io, addr);
 }
 
-coroutine::Awaiter_GHandle AsyncTcpSocket::Accept(NetAddr *addr)
+Awaiter<GHandle> AsyncTcpSocket::Accept(NetAddr *addr)
 {
     return details::AsyncAccept(m_io, addr);
 }
 
-coroutine::Awaiter_int AsyncTcpSocket::Recv(TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncTcpSocket::Recv(TcpIOVec *iov, size_t length)
 {
     return details::AsyncRecv(m_io, iov, length);
 }
 
-coroutine::Awaiter_int AsyncTcpSocket::Send(TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncTcpSocket::Send(TcpIOVec *iov, size_t length)
 {
     return details::AsyncSend(m_io, iov, length);
 }
 
-coroutine::Awaiter_bool AsyncTcpSocket::Close()
+Awaiter<bool> AsyncTcpSocket::Close()
 {
     return details::AsyncNetClose(m_io);
 }
@@ -416,37 +416,37 @@ bool AsyncTcpSslSocket::Listen(int backlog)
     return details::Listen(m_io, backlog);
 }
 
-coroutine::Awaiter_bool AsyncTcpSslSocket::Connect(NetAddr *addr)
+Awaiter<bool> AsyncTcpSslSocket::Connect(NetAddr *addr)
 {
     return details::AsyncConnect(m_io, addr);
 }
 
-coroutine::Awaiter_bool AsyncTcpSslSocket::AsyncSSLConnect()
+Awaiter<bool> AsyncTcpSslSocket::AsyncSSLConnect()
 {
     return details::AsyncSSLConnect(m_io);
 }
 
-coroutine::Awaiter_GHandle AsyncTcpSslSocket::Accept(NetAddr *addr)
+Awaiter<GHandle> AsyncTcpSslSocket::Accept(NetAddr *addr)
 {
     return details::AsyncAccept(m_io, addr);
 }
 
-coroutine::Awaiter_bool AsyncTcpSslSocket::SSLAccept()
+Awaiter<bool> AsyncTcpSslSocket::SSLAccept()
 {
     return details::AsyncSSLAccept(m_io);
 }
 
-coroutine::Awaiter_int AsyncTcpSslSocket::Recv(TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncTcpSslSocket::Recv(TcpIOVec *iov, size_t length)
 {
     return details::AsyncSSLRecv(m_io, iov, length);
 }
 
-coroutine::Awaiter_int AsyncTcpSslSocket::Send(TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncTcpSslSocket::Send(TcpIOVec *iov, size_t length)
 {
     return details::AsyncSSLSend(m_io, iov, length);
 }
 
-coroutine::Awaiter_bool AsyncTcpSslSocket::Close()
+Awaiter<bool> AsyncTcpSslSocket::Close()
 {
     return details::AsyncSSLClose(m_io);
 }
@@ -471,17 +471,17 @@ bool AsyncUdpSocket::Bind(const std::string& addr, int port)
     return details::Bind(m_io, addr, port);
 }
 
-coroutine::Awaiter_int AsyncUdpSocket::RecvFrom(UdpIOVec *iov, size_t length)
+Awaiter<int> AsyncUdpSocket::RecvFrom(UdpIOVec *iov, size_t length)
 {
     return details::AsyncRecvFrom(m_io, iov, length);
 }
 
-coroutine::Awaiter_int AsyncUdpSocket::SendTo(UdpIOVec *iov, size_t length)
+Awaiter<int> AsyncUdpSocket::SendTo(UdpIOVec *iov, size_t length)
 {
     return details::AsyncSendTo(m_io, iov, length);
 }
 
-coroutine::Awaiter_bool AsyncUdpSocket::Close()
+Awaiter<bool> AsyncUdpSocket::Close()
 {
     return details::AsyncNetClose(m_io);
 }
@@ -503,19 +503,19 @@ bool AsyncFileDescriptor::Open(const char *path, int flags, mode_t mode)
 }
 
 
-coroutine::Awaiter_int AsyncFileDescriptor::Read(FileIOVec* iov, size_t length)
+Awaiter<int> AsyncFileDescriptor::Read(FileIOVec* iov, size_t length)
 {
     return details::AsyncFileRead(m_io, iov, length);
 }
 
 
-coroutine::Awaiter_int AsyncFileDescriptor::Write(FileIOVec* iov, size_t length)
+Awaiter<int> AsyncFileDescriptor::Write(FileIOVec* iov, size_t length)
 {
     return details::AsyncFileWrite(m_io, iov, length);
 }
 
 
-coroutine::Awaiter_bool AsyncFileDescriptor::Close()
+Awaiter<bool> AsyncFileDescriptor::Close()
 {
     return details::AsyncFileClose(m_io);
 }
@@ -562,12 +562,12 @@ bool AsyncFileNativeAioDescriptor::PrepareWriteV(iovec *iov, int count, long lon
     return m_io->PrepareWriteV(iov, count, offset, callback);
 }
 
-coroutine::Awaiter_int AsyncFileNativeAioDescriptor::Commit()
+Awaiter<int> AsyncFileNativeAioDescriptor::Commit()
 {
     return m_io->Commit();
 }
 
-coroutine::Awaiter_bool AsyncFileNativeAioDescriptor::Close()
+Awaiter<bool> AsyncFileNativeAioDescriptor::Close()
 {
     return details::AsyncFileClose(m_io);
 }

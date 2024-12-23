@@ -57,21 +57,21 @@ bool Listen(AsyncNetIo_wptr asocket, int backlog)
     return true;
 }
 
-coroutine::Awaiter_GHandle AsyncAccept(AsyncNetIo_wptr asocket, NetAddr* addr)
+Awaiter<GHandle> AsyncAccept(AsyncNetIo_wptr asocket, NetAddr* addr)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket.lock()->GetAction(), addr};
 }
 
-coroutine::Awaiter_bool AsyncConnect(AsyncNetIo_wptr asocket, NetAddr* addr)
+Awaiter<bool> AsyncConnect(AsyncNetIo_wptr asocket, NetAddr* addr)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket.lock()->GetAction(), addr};
 }
 
-coroutine::Awaiter_int AsyncRecv(AsyncNetIo_wptr asocket, TcpIOVec* iov, size_t length)
+Awaiter<int> AsyncRecv(AsyncNetIo_wptr asocket, TcpIOVec* iov, size_t length)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeRecv);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -79,7 +79,7 @@ coroutine::Awaiter_int AsyncRecv(AsyncNetIo_wptr asocket, TcpIOVec* iov, size_t 
     return {asocket.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSend(AsyncNetIo_wptr asocket, TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncSend(AsyncNetIo_wptr asocket, TcpIOVec *iov, size_t length)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSend);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -87,23 +87,23 @@ coroutine::Awaiter_int AsyncSend(AsyncNetIo_wptr asocket, TcpIOVec *iov, size_t 
     return {asocket.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncRecvFrom(AsyncNetIo_wptr asocket, UdpIOVec *iov, size_t length)
+Awaiter<int> AsyncRecvFrom(AsyncNetIo_wptr asocket, UdpIOVec *iov, size_t length)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeRecvFrom);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return coroutine::Awaiter_int(asocket.lock()->GetAction(), iov);
+    return {asocket.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSendTo(AsyncNetIo_wptr asocket, UdpIOVec *iov, size_t length)
+Awaiter<int> AsyncSendTo(AsyncNetIo_wptr asocket, UdpIOVec *iov, size_t length)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeSendTo);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return coroutine::Awaiter_int(asocket.lock()->GetAction(), iov);
+    return {asocket.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_bool AsyncNetClose(AsyncNetIo_wptr asocket)
+Awaiter<bool> AsyncNetClose(AsyncNetIo_wptr asocket)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeClose);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -122,21 +122,21 @@ bool AsyncSSLSocket(AsyncSslNetIo_wptr asocket, SSL_CTX *ctx)
     return false;
 }
 
-coroutine::Awaiter_bool AsyncSSLAccept(AsyncSslNetIo_wptr asocket)
+Awaiter<bool> AsyncSSLAccept(AsyncSslNetIo_wptr asocket)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslAccept);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket.lock()->GetAction(), nullptr};
 }
 
-coroutine::Awaiter_bool AsyncSSLConnect(AsyncSslNetIo_wptr asocket)
+Awaiter<bool> AsyncSSLConnect(AsyncSslNetIo_wptr asocket)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslConnect);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {asocket.lock()->GetAction(), nullptr};
 }
 
-coroutine::Awaiter_int AsyncSSLRecv(AsyncSslNetIo_wptr asocket, TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncSSLRecv(AsyncSslNetIo_wptr asocket, TcpIOVec *iov, size_t length)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslRecv);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -144,7 +144,7 @@ coroutine::Awaiter_int AsyncSSLRecv(AsyncSslNetIo_wptr asocket, TcpIOVec *iov, s
     return {asocket.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncSSLSend(AsyncSslNetIo_wptr asocket, TcpIOVec *iov, size_t length)
+Awaiter<int> AsyncSSLSend(AsyncSslNetIo_wptr asocket, TcpIOVec *iov, size_t length)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslSend);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -152,7 +152,7 @@ coroutine::Awaiter_int AsyncSSLSend(AsyncSslNetIo_wptr asocket, TcpIOVec *iov, s
     return {asocket.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_bool AsyncSSLClose(AsyncSslNetIo_wptr asocket)
+Awaiter<bool> AsyncSSLClose(AsyncSslNetIo_wptr asocket)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeSslClose);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -173,7 +173,7 @@ bool AsyncFileOpen(AsyncFileIo_wptr afile, const char *path, const int flags, mo
     return true;
 }
 
-coroutine::Awaiter_int AsyncFileRead(AsyncFileIo_wptr afile, FileIOVec *iov,  size_t length)
+Awaiter<int> AsyncFileRead(AsyncFileIo_wptr afile, FileIOVec *iov,  size_t length)
 {
     dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeRead);
     afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -181,7 +181,7 @@ coroutine::Awaiter_int AsyncFileRead(AsyncFileIo_wptr afile, FileIOVec *iov,  si
     return {afile.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_int AsyncFileWrite(AsyncFileIo_wptr afile, FileIOVec *iov, size_t length)
+Awaiter<int> AsyncFileWrite(AsyncFileIo_wptr afile, FileIOVec *iov, size_t length)
 {
     dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeWrite);
     afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -189,7 +189,7 @@ coroutine::Awaiter_int AsyncFileWrite(AsyncFileIo_wptr afile, FileIOVec *iov, si
     return {afile.lock()->GetAction(), iov};
 }
 
-coroutine::Awaiter_bool AsyncFileClose(AsyncFileIo_wptr afile)
+Awaiter<bool> AsyncFileClose(AsyncFileIo_wptr afile)
 {
     dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeClose);
     afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);

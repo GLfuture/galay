@@ -9,7 +9,7 @@
 #include "common/Reflection.h"
 
 //kernel
-#include "kernel/Coroutine.h"
+#include "kernel/Coroutine.hpp"
 #include "kernel/Async.h"
 #include "kernel/Event.h"
 #include "kernel/Scheduler.h"

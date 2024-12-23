@@ -1,9 +1,9 @@
 #include "galay/galay.h"
 #include <iostream>
-using galay::coroutine::Coroutine;
-using galay::coroutine::WaitGroup;
-using galay::coroutine::RoutineContext;
-using galay::coroutine::RoutineContextCancel;
+using galay::Coroutine;
+using galay::WaitGroup;
+using galay::RoutineContext;
+using galay::RoutineContextCancel;
 
 #define TEST_ROUTINE_CONTEXT_WITH_WAIT_GROUP
 
@@ -48,7 +48,7 @@ Coroutine cfunc(RoutineContext::ptr context)
 
 Coroutine pfunc()
 {
-    auto [context, cancle] = galay::coroutine::ContextFactory::WithNewContext();
+    auto [context, cancle] = galay::ContextFactory::WithNewContext();
     co_await galay::this_coroutine::GetThisCoroutine(p);
     std::cout << "pfunc start" << std::endl;
     cfunc(context);
@@ -87,8 +87,8 @@ Coroutine cfunc(RoutineContext::ptr context)
 
 Coroutine pfunc()
 {
-    auto [context, cancle] = galay::coroutine::ContextFactory::WithWaitGroupContext();
-    co_await galay::this_coroutine::GetThisCoroutine(p);
+    auto [context, cancle] = galay::ContextFactory::WithWaitGroupContext();
+    p = co_await galay::this_coroutine::GetThisCoroutine();
     std::cout << "pfunc start" << std::endl;
     cfunc(context);
     co_await galay::this_coroutine::DeferExit([cancle]{

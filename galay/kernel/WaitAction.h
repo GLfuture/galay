@@ -1,11 +1,12 @@
-#ifndef __GALAY_AWAITERACTION_H__
-#define __GALAY_AWAITERACTION_H__
+#ifndef GALAY_WAITACTION_H
+#define GALAY_WAITACTION_H
 
-#include "Awaiter.h"
+#include "Coroutine.hpp"
 #include <functional>
 
 namespace galay::details {
 
+class WaitEvent;
 class EventEngine;
 
 /*
@@ -19,7 +20,7 @@ public:
     IOEventAction(details::EventEngine* engine, details::WaitEvent* event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
-    bool DoAction(coroutine::Coroutine::wptr co, void* ctx) override;
+    bool DoAction(Coroutine::wptr co, void* ctx) override;
     void ResetEvent(details::WaitEvent* event);
     [[nodiscard]] details::WaitEvent* GetBindEvent() const { return m_event; };
     ~IOEventAction() override;
@@ -32,11 +33,11 @@ private:
 class CoroutineHandleAction: public WaitAction
 {
 public:
-    CoroutineHandleAction(std::function<bool(coroutine::Coroutine::wptr, void*)>&& callback);
+    CoroutineHandleAction(std::function<bool(Coroutine::wptr, void*)>&& callback);
     virtual bool HasEventToDo() override;
-    virtual bool DoAction(coroutine::Coroutine::wptr co, void* ctx) override;
+    virtual bool DoAction(Coroutine::wptr co, void* ctx) override;
 private:
-    std::function<bool(coroutine::Coroutine::wptr, void*)> m_callback;
+    std::function<bool(Coroutine::wptr, void*)> m_callback;
 };
 
 }

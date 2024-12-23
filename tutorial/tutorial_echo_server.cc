@@ -5,7 +5,7 @@ using galay::protocol::http::HttpVersion;
 
 class Handler {
 public:
-    static galay::coroutine::Coroutine GetHelloWorldHandler(galay::HttpSession session, galay::coroutine::RoutineContext::ptr context) {
+    static galay::Coroutine GetHelloWorldHandler(galay::HttpSession session, galay::RoutineContext::ptr context) {
         co_await context->DeferDone();
         galay::helper::http::HttpHelper::DefaultHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1 , HttpStatusCode::OK_200, "text/html", "<html> <h1> Hello World </h1> </html>");
         session.GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");

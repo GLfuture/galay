@@ -7,7 +7,7 @@
 #include <concurrentqueue/moodycamel/blockingconcurrentqueue.h>
 #include "galay/common/Base.h"
 
-namespace galay::coroutine {
+namespace galay {
     class Coroutine;
 };
 
@@ -44,7 +44,7 @@ public:
     };
     using ptr = std::shared_ptr<CoroutineScheduler>;
     using uptr = std::unique_ptr<CoroutineScheduler>;
-    using Coroutine_wptr = std::weak_ptr<coroutine::Coroutine>; 
+    using Coroutine_wptr = std::weak_ptr<Coroutine>; 
     CoroutineScheduler();
     std::string Name() override { return "CoroutineScheduler"; }
     void ToResumeCoroutine(Coroutine_wptr coroutine);

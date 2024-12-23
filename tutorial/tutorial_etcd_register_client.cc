@@ -1,7 +1,7 @@
 #include "galay/galay.h"
 #include "galay/middleware/Etcd.h"
 
-galay::coroutine::Coroutine func()
+galay::Coroutine func()
 {
     galay::etcd::EtcdClient client("http://127.0.0.1:2379", 0);
     bool res = co_await client.RegisterService("/app/api/login/node","127.0.0.1:7070");

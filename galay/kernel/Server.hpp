@@ -17,7 +17,7 @@ namespace galay::details
 };
 
 
-namespace galay::coroutine
+namespace galay
 {
     class Coroutine;
     class RoutineContext;
@@ -147,8 +147,8 @@ std::string CodeResponse<Code>::m_responseStr = "";
 template<typename SocketType>
 class HttpRouteHandler 
 {
-    using Coroutine = galay::coroutine::Coroutine;
-    using RoutineContext_ptr = std::shared_ptr<galay::coroutine::RoutineContext>;
+    using Coroutine = galay::Coroutine;
+    using RoutineContext_ptr = std::shared_ptr<galay::RoutineContext>;
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 public:
     void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine(Session, RoutineContext_ptr)>&& handler)
@@ -193,20 +193,19 @@ template<typename SocketType>
 class HttpServer
 {
 public:
-    using Coroutine = coroutine::Coroutine;
-    using RoutineContext_ptr = std::shared_ptr<coroutine::RoutineContext>;
+    using RoutineContext_ptr = std::shared_ptr<RoutineContext>;
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 private:
     static utils::ProtocolPool<HttpRequest> RequestPool;
     static utils::ProtocolPool<HttpResponse> ResponsePool;
 public:
     explicit HttpServer(HttpServerConfig::ptr config): m_server(config), 
-        m_store(std::make_unique<CallbackStore<SocketType>>([this](std::shared_ptr<Connection<SocketType>> connection)->coroutine::Coroutine {
+        m_store(std::make_unique<CallbackStore<SocketType>>([this](std::shared_ptr<Connection<SocketType>> connection)->Coroutine {
             return HttpRoute(connection);
         })) {}
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<galay::coroutine::Coroutine(galay::Session<SocketType, HttpRequest, HttpResponse>, std::shared_ptr<galay::coroutine::RoutineContext>)>&& handler)
+    void RouteHandler(const std::string& path, std::function<galay::Coroutine(galay::Session<SocketType, HttpRequest, HttpResponse>, std::shared_ptr<galay::RoutineContext>)>&& handler)
     {
          ([&](){
             HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));

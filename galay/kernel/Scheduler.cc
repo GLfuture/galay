@@ -1,7 +1,7 @@
 #include "Scheduler.h"
 #include "Event.h"
 #include "EventEngine.h"
-#include "Coroutine.h"
+#include "Coroutine.hpp"
 #include "ExternApi.h"
 #include "galay/utils/Thread.h"
 #include "Log.h"
@@ -105,7 +105,7 @@ bool CoroutineScheduler::Stop()
     if(!m_running) {
         return false;
     }
-    coroutine::GetCoroutineStore()->Clear(); 
+    GetCoroutineStore()->Clear(); 
     m_coroutines_queue.enqueue({});
     return m_waiter->Wait(5000);
 }

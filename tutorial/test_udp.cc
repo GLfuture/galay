@@ -1,6 +1,6 @@
 #include "galay/galay.h"
 
-galay::coroutine::Coroutine test_dns()
+galay::Coroutine test_dns()
 {
     galay::AsyncUdpSocket socket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler()->GetEngine());
     if (!socket.Socket())

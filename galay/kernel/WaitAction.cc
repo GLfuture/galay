@@ -20,7 +20,7 @@ bool IOEventAction::HasEventToDo()
     return m_event != nullptr;
 }
 
-bool IOEventAction::DoAction(coroutine::Coroutine::wptr co, void* ctx)
+bool IOEventAction::DoAction(Coroutine::wptr co, void* ctx)
 {
     if( !m_event ) return false;
     if (m_event->OnWaitPrepare(co, ctx) == false) return false;
@@ -52,8 +52,8 @@ IOEventAction::~IOEventAction()
 }
 
 
-CoroutineHandleAction::CoroutineHandleAction(std::function<bool(coroutine::Coroutine::wptr, void*)>&& callback)
-    : m_callback(std::forward<std::function<bool(coroutine::Coroutine::wptr, void*)>>(callback))
+CoroutineHandleAction::CoroutineHandleAction(std::function<bool(Coroutine::wptr, void*)>&& callback)
+    : m_callback(std::forward<std::function<bool(Coroutine::wptr, void*)>>(callback))
 {
     
 }
@@ -63,7 +63,7 @@ bool CoroutineHandleAction::HasEventToDo()
     return true;
 }
 
-bool CoroutineHandleAction::DoAction(coroutine::Coroutine::wptr co, void* ctx)
+bool CoroutineHandleAction::DoAction(Coroutine::wptr co, void* ctx)
 {
     bool res = m_callback(co, ctx);
     delete this;

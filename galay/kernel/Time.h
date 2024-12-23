@@ -11,11 +11,6 @@ namespace galay::details {
     class TimeEvent;
 }
 
-namespace galay::coroutine {
-    class Awaiter_bool;
-    class Awaiter_void;
-}
-
 namespace galay {
 
 extern int64_t GetCurrentTimeMs(); 
