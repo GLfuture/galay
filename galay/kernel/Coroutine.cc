@@ -64,6 +64,10 @@ Coroutine Coroutine::promise_type::get_return_object() noexcept
 Coroutine::promise_type::~promise_type()
 {
     //防止协程运行时resume创建出新的协程，析构时重复析构
+    bool origin = false;
+    if(!m_coroutine->m_is_done->compare_exchange_strong(origin, true)) {
+        return;
+    }
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
@@ -71,6 +75,7 @@ Coroutine::promise_type::~promise_type()
 
 Coroutine::Coroutine(const std::coroutine_handle<promise_type> handle, details::CoroutineScheduler* scheduler) noexcept
 {
+    m_is_done = std::make_shared<std::atomic_bool>(false);
     m_handle = handle;
     m_awaiter = nullptr;
     m_scheduler = scheduler;
@@ -83,6 +88,10 @@ Coroutine::Coroutine(Coroutine&& other) noexcept
     m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
     m_exit_cbs.splice(m_exit_cbs.begin(), other.m_exit_cbs);
+    m_is_done = other.m_is_done;
+    other.m_is_done.reset();
+    m_scheduler.store(other.m_scheduler);
+    other.m_scheduler = nullptr;
 }
 
 Coroutine::Coroutine(const Coroutine& other) noexcept
@@ -90,15 +99,21 @@ Coroutine::Coroutine(const Coroutine& other) noexcept
     m_awaiter.store(other.m_awaiter);
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
+    m_is_done = other.m_is_done;
+    m_scheduler.store(other.m_scheduler);
 }
 
 Coroutine&
 Coroutine::operator=(Coroutine&& other) noexcept
 {
+    m_scheduler.store(other.m_scheduler);
+    other.m_scheduler = nullptr;
     m_handle = other.m_handle;
     other.m_handle = nullptr;
     m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
+    m_is_done = other.m_is_done;
+    other.m_is_done.reset();
     m_exit_cbs.splice(m_exit_cbs.begin(), other.m_exit_cbs);
     return *this;
 }
@@ -167,58 +182,6 @@ Awaiter<bool> WaitGroup::Wait()
     });
     return {action, nullptr};
 }
-
-Awaiter<void> RoutineContext::DeferDone()
-{
-    auto* action = new details::CoroutineHandleAction([this](Coroutine::wptr co, void* ctx)->bool{
-        m_coroutine = co;
-        co.lock()->AppendExitCallback([this](){
-            m_coroutine = {};
-        });
-        return false;
-    });
-    return {action, nullptr};
-}
-
-void RoutineContext::BeCanceled()
-{
-    if(!m_coroutine.expired()) {
-        m_coroutine.lock()->BelongScheduler()->ToDestroyCoroutine(m_coroutine);
-    }
-}
-
-void RoutineContextCancel::operator()()
-{
-    if(!m_context.expired()) m_context.lock()->BeCanceled();
-}
-
-Awaiter<bool> RoutineContextWithWaitGroup::Wait()
-{
-    return m_wait_group.Wait();
-}
-
-Awaiter<void> RoutineContextWithWaitGroup::DeferDone()
-{
-    auto* action = new details::CoroutineHandleAction([this](Coroutine::wptr co, void* ctx)->bool{
-        m_coroutine = co;
-        co.lock()->AppendExitCallback([this](){
-            m_wait_group.Done();
-        });
-        co.lock()->AppendExitCallback([this](){
-            m_coroutine = {};
-        });
-        return false;
-    });
-    return {action, nullptr};
-}
-
-void RoutineContextWithWaitGroup::BeCanceled()
-{
-    m_wait_group.Reset(0);
-    if(!m_coroutine.expired()) {
-        m_coroutine.lock()->BelongScheduler()->ToDestroyCoroutine(m_coroutine);
-    }
-}
 }
 
 namespace galay
@@ -230,19 +193,6 @@ CoroutineStore* GetCoroutineStore()
     return &g_coroutine_store;
 }
 
-std::pair<RoutineContext::ptr, RoutineContextCancel::ptr> ContextFactory::WithNewContext()
-{
-    RoutineContext::ptr context = std::make_shared<RoutineContext>();
-    RoutineContextCancel::ptr cancel = std::make_shared<RoutineContextCancel>(context);
-    return {context, cancel};
-}
-
-std::pair<RoutineContextWithWaitGroup::ptr, RoutineContextCancel::ptr> ContextFactory::WithWaitGroupContext()
-{
-    RoutineContextWithWaitGroup::ptr context = std::make_shared<RoutineContextWithWaitGroup>(1);
-    RoutineContextCancel::ptr cancel = std::make_shared<RoutineContextCancel>(context);
-    return {context, cancel};
-}
 }
 
 
@@ -269,6 +219,12 @@ Awaiter<Coroutine::wptr> GetThisCoroutine()
     return {action, nullptr};
 }
 
+Awaiter<void> WaitAsyncExecute(const Coroutine &co)
+{
+    
+    return Awaiter<void>{};
+}
+
 Awaiter<void> Sleepfor(int64_t ms)
 {
     auto func = [ms](Coroutine::wptr co, void* ctx)->bool{
@@ -277,10 +233,10 @@ Awaiter<void> Sleepfor(int64_t ms)
             if(!co.expired()) co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         };
         auto timer = std::make_shared<Timer>(ms, std::move(timecb));
-        auto coexitcb = [timer]() {
-            timer->Cancle();
-        };
-        co.lock()->AppendExitCallback(coexitcb);
+        // auto coexitcb = [timer]() {
+        //     timer->Cancle();
+        // };
+        // co.lock()->AppendExitCallback(coexitcb);
         TimerSchedulerHolder::GetInstance()->GetScheduler()->AddTimer(ms,  timer);
         return true;
     };

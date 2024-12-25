@@ -106,10 +106,10 @@ inline Coroutine HttpServer<SocketType>::HttpRoute(std::shared_ptr<Connection<So
     SocketType* socket = connection->GetSocket();
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
     Session session(connection, &RequestPool, &ResponsePool);
-    auto [context, cancel] = ContextFactory::WithWaitGroupContext();
-    co_await this_coroutine::DeferExit(std::bind([](RoutineContextCancel::ptr cancel){
-        (*cancel)();
-    }, cancel));
+    // auto [context, cancel] = ContextFactory::WithWaitGroupContext();
+    // co_await this_coroutine::DeferExit(std::bind([](RoutineContextCancel::ptr cancel){
+    //     (*cancel)();
+    // }, cancel));
     bool close_connection = false;
     while(true)
     {
@@ -160,7 +160,7 @@ step1:
                 }
                 else { //解析成功
                     HttpMethod method = session.GetRequest()->Header()->Method();
-                    std::string res = HttpRouteHandler<SocketType>::GetInstance()->Handle(method, session.GetRequest()->Header()->Uri(), session, context);
+                    std::string res = HttpRouteHandler<SocketType>::GetInstance()->Handle(method, session.GetRequest()->Header()->Uri(), session);
                     wholder.Reset(std::move(res));
                     goto step2;
                 }

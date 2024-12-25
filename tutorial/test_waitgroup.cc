@@ -2,8 +2,6 @@
 #include <iostream>
 using galay::Coroutine;
 using galay::WaitGroup;
-using galay::RoutineContext;
-using galay::RoutineContextCancel;
 
 #define TEST_ROUTINE_CONTEXT_WITH_WAIT_GROUP
 
@@ -75,35 +73,10 @@ int main()
 
 Coroutine::wptr p{};
 
-Coroutine cfunc(RoutineContext::ptr context)
-{
-    co_await context->DeferDone();
-    co_await galay::this_coroutine::DeferExit([]{
-        std::cout << "cfunc exit" << std::endl;
-    });
-    co_await std::suspend_always{};
-    co_return;
-}
-
-Coroutine pfunc()
-{
-    auto [context, cancle] = galay::ContextFactory::WithWaitGroupContext();
-    p = co_await galay::this_coroutine::GetThisCoroutine();
-    std::cout << "pfunc start" << std::endl;
-    cfunc(context);
-    co_await galay::this_coroutine::DeferExit([cancle]{
-        std::cout << "pfunc exit" << std::endl;
-        (*cancle)();
-    });
-    bool res = co_await context->Wait();
-    std::cout << "pfunc end: " << std::boolalpha << res  << std::endl;
-    co_return;
-}
 
 int main()
 {
     galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
-    pfunc();
     getchar();
     p.lock()->Destroy();
     getchar();

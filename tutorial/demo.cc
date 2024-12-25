@@ -45,8 +45,16 @@
 
 //#include <galay/middleware/Mysql.hpp>
 #include <iostream>
+#include <galay/galay.h>
 
 //using namespace galay::mysql;
+using namespace galay;
+
+
+Coroutine test()
+{
+    co_return;
+}
 
 int main()
 {
@@ -66,4 +74,11 @@ int main()
     // alter.Table("test").AddColumn(field);
     // std::cout << alter.ToString() << std::endl;
     // return 0;
+    InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    std::cout << std::boolalpha << test().Done() << std::endl;
+    std::cout << sizeof(std::weak_ptr<std::atomic_bool>) << std::endl;
+    std::cout << sizeof(std::shared_ptr<Coroutine>) << std::endl;
+    getchar();
+    DestroyGalayEnv();
+    return 0;
 }

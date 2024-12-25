@@ -24,7 +24,6 @@ namespace galay::details
 extern std::string ToString(EventType type);
 
 class EventEngine;
-class IOEventAction;
 class CoroutineScheduler;
 
 //must be alloc at heap

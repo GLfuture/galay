@@ -34,9 +34,24 @@
 #include "utils/Tree.h"
 #include "utils/Thread.h"
 
+namespace galay 
+{
 #ifndef GALAY_VERSION
-#define GALAY_VERSION "0.0.1"
+#define GALAY_VERSION "0.0.2"
 #endif
+
+#define HTTPGET protocol::http::HttpMethod::Http_Method_Get
+#define HTTPPOST protocol::http::HttpMethod::Http_Method_Post
+#define HTTPDELETE protocol::http::HttpMethod::Http_Method_Delete
+#define HTTPPUT protocol::http::HttpMethod::Http_Method_Put
+#define HTTPPATCH protocol::http::HttpMethod::Http_Method_Patch
+#define HTTPHEAD protocol::http::HttpMethod::Http_Method_Head
+#define HTTPOPTIONS protocol::http::HttpMethod::Http_Method_Options
+#define HTTPTRACE protocol::http::HttpMethod::Http_Method_Trace
+#define HTTPCONNECT protocol::http::HttpMethod::Http_Method_Connect
+
+
+}
 
 #define GALAY_APP_MAIN(custom_code) \
 { \

@@ -56,6 +56,8 @@ private:
 
 }
 
+namespace galay {
+
 #define LogTrace(...)       SPDLOG_LOGGER_TRACE(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
 #define LogDebug(...)       SPDLOG_LOGGER_DEBUG(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
 #define LogInfo(...)        SPDLOG_LOGGER_INFO(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
@@ -63,6 +65,6 @@ private:
 #define LogError(...)       SPDLOG_LOGGER_ERROR(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
 #define LogCritical(...)    SPDLOG_LOGGER_CRITICAL(galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger(), __VA_ARGS__)
 
-
+}
 
 #endif

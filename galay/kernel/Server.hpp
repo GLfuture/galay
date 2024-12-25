@@ -143,10 +143,9 @@ template<typename SocketType>
 class HttpRouteHandler 
 {
     using Coroutine = galay::Coroutine;
-    using RoutineContext_ptr = std::shared_ptr<galay::RoutineContext>;
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 public:
-    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine(Session, RoutineContext_ptr)>&& handler)
+    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine(Session)>&& handler)
     {
         m_handler_map[method][path] = std::move(handler);
     }
@@ -159,7 +158,7 @@ public:
         return m_instance.get();
     }
 
-    std::string Handle(HttpMethod method, const std::string& path, Session session, RoutineContext_ptr context) {
+    std::string Handle(HttpMethod method, const std::string& path, Session session) {
         auto it = m_handler_map.find(method);
         auto version = session.GetRequest()->Header()->Version();
         if(it == m_handler_map.end()) {
@@ -167,7 +166,7 @@ public:
         }
         auto uriit = it->second.find(path);
         if(uriit != it->second.end()) {
-            uriit->second(session, context);
+            uriit->second(session);
             return session.GetResponse()->EncodePdu();
         } else {
             return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);
@@ -177,7 +176,7 @@ public:
 
 private:
     static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
-    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine(Session, RoutineContext_ptr)>>> m_handler_map;
+    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine(Session)>>> m_handler_map;
 };
 
 template<typename SocketType>
@@ -200,7 +199,7 @@ public:
         })) {}
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<galay::Coroutine(galay::Session<SocketType, HttpRequest, HttpResponse>, std::shared_ptr<galay::RoutineContext>)>&& handler)
+    void RouteHandler(const std::string& path, std::function<galay::Coroutine(galay::Session<SocketType, HttpRequest, HttpResponse>)>&& handler)
     {
          ([&](){
             HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));

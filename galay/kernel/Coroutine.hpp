@@ -61,7 +61,6 @@ private:
     std::unordered_map<Coroutine*, std::weak_ptr<Coroutine>> m_coroutines;
 };
 
-//如果上一个协程还在执行过程中没有到达暂停点，resume会从第一个暂停点重新执行
 class Coroutine
 {
 public:
@@ -90,10 +89,10 @@ public:
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
     
-    std::coroutine_handle<promise_type> GetHandle() { return this->m_handle; }
-    details::CoroutineScheduler* BelongScheduler() { return this->m_scheduler; }
+    std::coroutine_handle<promise_type> GetHandle() const { return this->m_handle; }
+    details::CoroutineScheduler* BelongScheduler() const { return this->m_scheduler; }
     void Destroy() { m_handle.destroy(); }
-    bool Done() const { return m_handle.done(); }
+    bool Done() const { return *m_is_done; }
     void Resume() const { return m_handle.resume(); }
     bool SetAwaiter(AwaiterBase* awaiter);
     AwaiterBase* GetAwaiter() const;
@@ -103,10 +102,11 @@ public:
 private:
     void ToExit();
 private:
-    std::atomic<details::CoroutineScheduler*> m_scheduler;
-    std::atomic<AwaiterBase*> m_awaiter = nullptr;
-    std::coroutine_handle<promise_type> m_handle;
+    std::shared_ptr<std::atomic_bool> m_is_done;
     std::list<std::function<void()>> m_exit_cbs;
+    std::coroutine_handle<promise_type> m_handle;
+    std::atomic<AwaiterBase*> m_awaiter = nullptr;
+    std::atomic<details::CoroutineScheduler*> m_scheduler;
 };
 
 template<typename T>
@@ -143,56 +143,6 @@ private:
     uint32_t m_count = 0;
 };
 
-class RoutineContextCancel;
-
-class RoutineContext
-{
-    friend class RoutineContextCancel;
-public:
-    using ptr = std::shared_ptr<RoutineContext>;
-    using wptr = std::weak_ptr<RoutineContext>;
-    RoutineContext() = default;
-    /*
-        子协程需要进入即调用
-    */
-    virtual Awaiter<void> DeferDone();
-    virtual ~RoutineContext() = default;
-protected:
-    virtual void BeCanceled();
-protected:
-    Coroutine::wptr m_coroutine;
-};
-
-class RoutineContextCancel
-{
-public:
-    using ptr = std::shared_ptr<RoutineContextCancel>;
-    RoutineContextCancel(RoutineContext::wptr context) : m_context(context) {}
-    void operator()();
-    virtual ~RoutineContextCancel() = default;
-private:
-    RoutineContext::wptr m_context;
-};
-
-class RoutineContextWithWaitGroup: public RoutineContext
-{
-public:
-    using ptr = std::shared_ptr<RoutineContextWithWaitGroup>;
-    using wptr = std::weak_ptr<RoutineContextWithWaitGroup>;
-    RoutineContextWithWaitGroup(uint32_t count) : m_wait_group(count) {}
-    Awaiter<bool> Wait();
-    /*
-        子协程需要进入即调用
-    */
-    virtual Awaiter<void> DeferDone();
-    virtual ~RoutineContextWithWaitGroup() = default;
-protected:
-    virtual void BeCanceled();
-private:
-    WaitGroup m_wait_group;
-};
-
-
 
 }
 
@@ -200,13 +150,6 @@ namespace galay
 {
 
 extern CoroutineStore* GetCoroutineStore();
-
-class ContextFactory
-{
-public:
-    static std::pair<RoutineContext::ptr, RoutineContextCancel::ptr> WithNewContext();
-    static std::pair<RoutineContextWithWaitGroup::ptr, RoutineContextCancel::ptr> WithWaitGroupContext();
-};
 
 }
 
@@ -217,6 +160,9 @@ namespace galay::this_coroutine
     */
     extern Awaiter<void> AddToCoroutineStore();
     extern Awaiter<Coroutine::wptr> GetThisCoroutine();
+
+    extern Awaiter<void> WaitAsyncExecute(const Coroutine& co);
+
     /*
         return false only when TimeScheduler is not running
         [ms] : ms
