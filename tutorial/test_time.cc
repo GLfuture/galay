@@ -84,16 +84,16 @@ int main()
 
 #elif defined(TEST_AUTO_DESTROY)
 
-galay::Coroutine test()
+galay::Coroutine<void> test()
 {
-    co_await galay::this_coroutine::AddToCoroutineStore();
-    co_await galay::this_coroutine::DeferExit([](){
+    //co_await galay::this_coroutine::AddToCoroutineStore();
+    co_await galay::this_coroutine::DeferExit<void>([](){
         std::cout << "defer exit" << std::endl;
     });
-    galay::this_coroutine::AutoDestructor::ptr auto_destructor = std::make_shared<galay::this_coroutine::AutoDestructor>();
-    co_await auto_destructor->Start(1000);
-    std::cout << "sleep start" << std::endl;
-    co_await galay::this_coroutine::Sleepfor(10000);
+    // galay::this_coroutine::AutoDestructor::ptr auto_destructor = std::make_shared<galay::this_coroutine::AutoDestructor>();
+    // co_await auto_destructor->Start(1000);
+    // std::cout << "sleep start" << std::endl;
+    // co_await galay::this_coroutine::Sleepfor(10000);
     std::cout << "sleep end" << std::endl;
     co_return ;
 }

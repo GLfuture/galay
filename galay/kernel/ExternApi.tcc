@@ -153,69 +153,102 @@ inline bool IOVecHolder<UdpIOVec>::Reset(const UdpIOVec& iov)
     return true;
 }
 
-template<LoadBalancerType Type>
-inline void SchedulerHolder<Type>::Initialize(uint32_t scheduler_size, int timeout)
+
+template<typename CoRtn>
+WaitGroup<CoRtn>::WaitGroup(uint32_t count)
+    :m_count(count)
 {
-    if(scheduler_size == 0) scheduler_size = 1;
-    std::vector<typename Type::value_type*> scheduler_ptrs;
-    for (int i = 0; i < scheduler_size; ++i)
-    {
-        int try_count = MAX_START_SCHEDULERS_RETRY;
-        m_schedulers.emplace_back(std::make_unique<typename Type::value_type>());
-        scheduler_ptrs.emplace_back(m_schedulers[i].get());
-        m_schedulers[i]->Loop(timeout);
-        while(!m_schedulers[i]->IsRunning() && try_count-- >= 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+}
+
+template<typename CoRtn>
+void WaitGroup<CoRtn>::Done()
+{
+    std::shared_lock lk(m_mutex);
+    if(m_count == 0) return;
+    --m_count;
+    if(m_count == 0) {
+        if(!m_coroutine.expired()) {
+            static_cast<AsyncResult<bool, CoRtn>*>(m_coroutine.lock()->GetAwaiter())->SetResult(true);
+            m_coroutine.lock()->BelongScheduler()->ToResumeCoroutine(m_coroutine);
         }
-        if(try_count <= 0) {
-            LogTrace("Start coroutine scheduler failed, index: {}", i);
-            exit(-1);
+    }
+}
+
+template<typename CoRtn>
+void WaitGroup<CoRtn>::Reset(uint32_t count)
+{
+    std::unique_lock lk(m_mutex);
+    m_count = count;
+    m_coroutine = {};
+}
+
+template<typename CoRtn>
+AsyncResult<bool, CoRtn> WaitGroup<CoRtn>::Wait()
+{
+    auto* action = new details::CoroutineHandleAction([this](CoroutineBase::wptr co, void* ctx)->bool{
+        std::unique_lock lk(m_mutex);
+        if(m_count == 0) {
+            if(!co.expired()) static_cast<AsyncResult<bool, CoRtn>*>(co.lock()->GetAwaiter())->SetResult(false);
+            return false;
         }
-    }
-    SchedulerLoadBalancer = std::make_unique<Type>(scheduler_ptrs);
+        m_coroutine = co;
+        return true;
+    });
+    return {action, nullptr};
 }
 
 
-template<LoadBalancerType Type>
-inline void SchedulerHolder<Type>::Initialize(std::vector<std::unique_ptr<typename Type::value_type>>&& schedulers)
+}
+
+namespace galay::this_coroutine 
 {
-    m_schedulers = std::forward<decltype(schedulers)>(schedulers);
-    std::vector<typename Type::value_type*> scheduler_ptrs;
-    scheduler_ptrs.reserve(m_schedulers.size());
-    for(auto& scheduler : m_schedulers) {
-        scheduler_ptrs.push_back(scheduler.get());
-    }
-    SchedulerLoadBalancer = std::make_unique<Type>(scheduler_ptrs);
+
+template<typename CoRtn>
+AsyncResult<CoroutineBase::wptr, CoRtn> GetThisCoroutine()
+{
+    auto action = new details::CoroutineHandleAction([](CoroutineBase::wptr co, void* ctx)->bool{
+        static_cast<AsyncResult<CoroutineBase::wptr, CoRtn>*>(co.lock()->GetAwaiter())->SetResult(co);
+        return false;
+    });
+    return {action, nullptr};
 }
 
-template<LoadBalancerType Type>
-inline void SchedulerHolder<Type>::Destroy()
+template<typename CoRtn>
+AsyncResult<void, CoRtn> WaitAsyncExecute(const Coroutine<CoRtn> &co)
 {
-    for( auto& scheduler : m_schedulers) {
-        scheduler->Stop();
-    }
+    return AsyncResult<void, CoRtn>{};
 }
 
-template<LoadBalancerType Type>
-inline SchedulerHolder<Type>* SchedulerHolder<Type>::GetInstance()
+template<typename CoRtn>
+AsyncResult<void, CoRtn> Sleepfor(int64_t ms)
 {
-    if(!Instance) {
-        Instance = std::make_unique<SchedulerHolder>();
-    }
-    return Instance.get();
+    auto func = [ms](typename Coroutine<CoRtn>::wptr co, void* ctx)->bool{
+        if(ms <= 0) return false;
+        auto timecb = [co](details::TimeEvent::wptr event, Timer::ptr timer){
+            if(!co.expired()) co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+        };
+        auto timer = std::make_shared<Timer>(ms, std::move(timecb));
+        // auto coexitcb = [timer]() {
+        //     timer->Cancle();
+        // };
+        // co.lock()->AppendExitCallback(coexitcb);
+        TimerSchedulerHolder::GetInstance()->GetScheduler()->AddTimer(ms,  timer);
+        return true;
+    };
+    auto* action = new details::CoroutineHandleAction(std::move(func));
+    return {action , nullptr};
 }
 
-template<LoadBalancerType Type>
-inline typename Type::value_type* SchedulerHolder<Type>::GetScheduler()
+template<typename CoRtn>
+AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback)
 {
-    return SchedulerLoadBalancer.get()->Select();
+    auto* action = new details::CoroutineHandleAction([callback](CoroutineBase::wptr co, void* ctx)->bool{
+        co.lock()->AppendExitCallback(std::move(callback));
+        return false;
+    });
+    return {action, nullptr};
 }
 
-template<LoadBalancerType Type>
-inline typename Type::value_type* SchedulerHolder<Type>::GetScheduler(uint32_t index)
-{
-    return m_schedulers[index].get();
-}
 
 }
 

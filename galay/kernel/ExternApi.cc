@@ -1,7 +1,5 @@
 #include "ExternApi.hpp"
 #include "Scheduler.h"
-#include "Async.h"
-#include "Event.hpp"
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     #include <fcntl.h>
 #endif

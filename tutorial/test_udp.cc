@@ -1,12 +1,12 @@
 #include "galay/galay.h"
 
-galay::Coroutine test_dns()
+galay::Coroutine<int> test_dns()
 {
     galay::AsyncUdpSocket socket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler()->GetEngine());
     if (!socket.Socket())
     {
         printf("create socket failed\n");
-        co_return;
+        co_return -1;
     }
     printf("create socket success\n");
     galay::protocol::dns::DnsHeader header;
@@ -25,9 +25,9 @@ galay::Coroutine test_dns()
         .m_ip = "8.8.8.8",
         .m_port = 53
     };
-    int length = co_await socket.SendTo(&sholder, 1500);
+    int length = co_await socket.SendTo<int>(&sholder, 1500);
     printf("sendto success %d\n", length);
-    length = co_await socket.RecvFrom(&rholder, 1500);
+    length = co_await socket.RecvFrom<int>(&rholder, 1500);
     galay::protocol::dns::DnsResponse response;
     size_t size = length;
     response.DecodePdu({rholder->m_buffer, size});
@@ -39,13 +39,13 @@ galay::Coroutine test_dns()
         answers.pop();
     }
 
-    co_return;
+    co_return 1;
 }
 
 int main()
 {
     GALAY_APP_MAIN(
-        test_dns();
+        int a = test_dns()().value();
         getchar();
     );
     return 0;

@@ -51,7 +51,7 @@
 using namespace galay;
 
 
-Coroutine test()
+Coroutine<void> test()
 {
     co_return;
 }
@@ -77,7 +77,9 @@ int main()
     InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
     std::cout << std::boolalpha << test().Done() << std::endl;
     std::cout << sizeof(std::weak_ptr<std::atomic_bool>) << std::endl;
-    std::cout << sizeof(std::shared_ptr<Coroutine>) << std::endl;
+    std::cout << sizeof(std::shared_ptr<Coroutine<void>>) << std::endl;
+    std::cout << sizeof(galay::protocol::dns::DnsFlags) << std::endl;
+    //std::cout << sizeof(galay::protocol::http::Http2FrameHeader) << std::endl;
     getchar();
     DestroyGalayEnv();
     return 0;

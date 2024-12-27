@@ -4,13 +4,17 @@
 
 #include "Strategy.hpp"
 #include "Scheduler.h"
+#include "Coroutine.hpp"
+#include "WaitAction.h"
+#include "Time.h"
 #include "Log.h"
 #include <thread>
 #include <concepts>
 #include <openssl/ssl.h>
 
 
-namespace galay {
+namespace galay 
+{
 struct NetAddr
 {
     std::string m_ip;
@@ -69,44 +73,9 @@ private:
     std::string m_temp;
 };
 
-
-template<typename T>
-concept LoadBalancerType = requires(T t)
-{
-    typename T::value_type;
-    requires std::is_constructible_v<T, const std::vector<typename T::value_type*>&>;
-    requires std::is_same_v<decltype(t.Select()), typename T::value_type*>;
-};
-
-#define MAX_START_SCHEDULERS_RETRY   50
-
-template<LoadBalancerType Type>
-class SchedulerHolder
-{
-    static std::unique_ptr<Type> SchedulerLoadBalancer;
-    static std::unique_ptr<SchedulerHolder> Instance;
-public:
-
-    //最少为1
-    void Initialize(uint32_t scheduler_size, int timeout);
-    void Initialize(std::vector<std::unique_ptr<typename Type::value_type>>&& schedulers);
-    void Destroy();
-    static SchedulerHolder* GetInstance();
-    Type::value_type* GetScheduler();
-    Type::value_type* GetScheduler(uint32_t index);
-private:
-    std::vector<std::unique_ptr<typename Type::value_type>> m_schedulers;
-};
-
-template<LoadBalancerType Type>
-std::unique_ptr<Type> SchedulerHolder<Type>::SchedulerLoadBalancer;
-
-template<LoadBalancerType Type>
-std::unique_ptr<SchedulerHolder<Type>> SchedulerHolder<Type>::Instance;
-
-using EeventSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
-using CoroutineSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
-using TimerSchedulerHolder = SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
+using EeventSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
+using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
+using TimerSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
 
 #ifdef __cplusplus
 extern "C" {
@@ -121,9 +90,78 @@ void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32
 void DestroyGalayEnv();
 
 
+
 #ifdef __cplusplus
 }
 #endif
+
+//线程安全
+template<typename CoRtn>
+class WaitGroup
+{
+public:
+    WaitGroup(uint32_t count);
+    void Done();
+    void Reset(uint32_t count = 0);
+    AsyncResult<bool, CoRtn> Wait();
+private:
+    std::shared_mutex m_mutex;
+    Coroutine<CoRtn>::wptr m_coroutine;
+    uint32_t m_count = 0;
+};
+
+
+}
+
+
+namespace galay::this_coroutine
+{
+/*
+    父协程一定需要加入到协程存储
+*/
+//extern AsyncResult<void> AddToCoroutineStore();
+template<typename CoRtn>
+extern AsyncResult<typename CoroutineBase::wptr, CoRtn> GetThisCoroutine();
+
+template<typename CoRtn>
+extern AsyncResult<void, CoRtn> WaitAsyncExecute(const Coroutine<CoRtn>& co);
+
+/*
+    return false only when TimeScheduler is not running
+    [ms] : ms
+    [timer] : timer
+    [scheduler] : coroutine_scheduler, this coroutine will resume at this scheduler
+*/
+template<typename CoRtn>
+extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
+
+/*
+    注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
+    注意和AutoDestructor的回调区别，DeferExit的callback会在协程正常和非正常退出时调用
+*/
+template<typename CoRtn>
+extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback);
+
+#define MIN_REMAIN_TIME     10
+/*用在father 协程中，通过father销毁child*/
+/*
+    注意使用shared_ptr分配
+    AutoDestructor的回调只会在超时时调用, 剩余时间小于MIN_REMAIN_TIME就会调用
+*/
+// class AutoDestructor: public std::enable_shared_from_this<AutoDestructor>
+// {
+// public:
+//     using ptr = std::shared_ptr<AutoDestructor>;
+//     AutoDestructor();
+//     AsyncResult<void> Start(uint64_t ms);
+//     void SetCallback(const std::function<void(void)>& callback) { this->m_callback = callback; }
+//     bool Reflush();
+//     ~AutoDestructor() = default;
+// private:
+//     std::shared_ptr<Timer> m_timer = nullptr;
+//     std::atomic_uint64_t m_last_active_time = 0;
+//     std::function<void(void)> m_callback;
+// };
 }
 
 #include "ExternApi.tcc"

@@ -3,13 +3,13 @@
 
 #include <any>
 #include <functional>
+#include "Coroutine.hpp"
 #include "galay/protocol/Http.h"
 #include "galay/utils/Pool.hpp"
 
 namespace galay
 {
 
-class Coroutine;
 
 template <typename Socket>
 class Connection
@@ -31,14 +31,14 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    explicit CallbackStore(const std::function<Coroutine(std::shared_ptr<Connection<Socket>>)>& callback) 
+    explicit CallbackStore(const std::function<Coroutine<void>(std::shared_ptr<Connection<Socket>>)>& callback) 
         : m_callback(callback) {}
     void Execute(Socket* socket) {
         auto connection = std::make_shared<Connection<Socket>>(socket);
         m_callback(connection);
     }
 private:
-    std::function<Coroutine(std::shared_ptr<Connection<Socket>>)> m_callback;
+    std::function<Coroutine<void>(std::shared_ptr<Connection<Socket>>)> m_callback;
 };
 
 
@@ -54,7 +54,8 @@ struct ProtocolStore
     using ptr = std::shared_ptr<ProtocolStore>;
     ProtocolStore(utils::ProtocolPool<Request>* request_pool, \
         utils::ProtocolPool<Response>* response_pool)
-        :m_request(request_pool->GetProtocol()), m_response(response_pool->GetProtocol()), m_request_pool(request_pool), m_response_pool(response_pool) {}
+        :m_request(request_pool->GetProtocol()), m_response(response_pool->GetProtocol()), \
+            m_request_pool(request_pool), m_response_pool(response_pool) {}
     ~ProtocolStore() {
         m_request_pool->PutProtocol(std::move(m_request));
         m_response_pool->PutProtocol(std::move(m_response));
@@ -71,7 +72,8 @@ class Session
 public:
     Session(std::shared_ptr<Connection<Socket>> connection, utils::ProtocolPool<Request>* request_pool, \
         utils::ProtocolPool<Response>* response_pool)
-        :m_connection(connection), m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
+        :m_connection(connection), \
+            m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
 
     Request* GetRequest() const { return m_proto_store->m_request.get(); }
     Response* GetResponse() const { return m_proto_store->m_response.get(); }

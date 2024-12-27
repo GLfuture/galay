@@ -7,21 +7,38 @@
 #include <string_view>
 #include <unordered_map>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
-#include "Event.hpp"
+#include "Async.hpp"
 #include "galay/helper/HttpHelper.h"
 
 namespace galay::details
 {
-    template<typename SocketType>
-    class ListenEvent;
+
+template <typename SocketType>
+class ListenEvent: public Event
+{
+public:
+    ListenEvent(EventEngine* engine, SocketType* socket, CallbackStore<SocketType>* store);
+    void HandleEvent(EventEngine* engine) override;
+    std::string Name() override;
+    EventType GetEventType() override;
+    GHandle GetHandle() override;
+    bool SetEventEngine(EventEngine* engine) override;
+    EventEngine* BelongEngine() override;
+    ~ListenEvent() override;
+private:
+    Coroutine<void> CreateConnection(EventEngine* engine);
+private:
+    SocketType* m_socket;
+    std::atomic<EventEngine*> m_engine;
+    CallbackStore<SocketType>* m_store;
+};
+
 };
 
 namespace galay
 {
-    using HttpSession = Session<AsyncTcpSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
-    using HttpsSession = Session<AsyncTcpSslSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
-    class Coroutine;
-    class RoutineContext;
+using HttpSession = Session<AsyncTcpSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
+using HttpsSession = Session<AsyncTcpSslSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
 }
 
 namespace galay::server 
@@ -142,10 +159,9 @@ std::string CodeResponse<Code>::m_responseStr = "";
 template<typename SocketType>
 class HttpRouteHandler 
 {
-    using Coroutine = galay::Coroutine;
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 public:
-    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine(Session)>&& handler)
+    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(Session)>&& handler)
     {
         m_handler_map[method][path] = std::move(handler);
     }
@@ -176,7 +192,7 @@ public:
 
 private:
     static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
-    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine(Session)>>> m_handler_map;
+    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(Session)>>> m_handler_map;
 };
 
 template<typename SocketType>
@@ -187,19 +203,18 @@ template<typename SocketType>
 class HttpServer
 {
 public:
-    using RoutineContext_ptr = std::shared_ptr<RoutineContext>;
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 private:
     static utils::ProtocolPool<HttpRequest> RequestPool;
     static utils::ProtocolPool<HttpResponse> ResponsePool;
 public:
     explicit HttpServer(HttpServerConfig::ptr config): m_server(config), 
-        m_store(std::make_unique<CallbackStore<SocketType>>([this](std::shared_ptr<Connection<SocketType>> connection)->Coroutine {
+        m_store(std::make_unique<CallbackStore<SocketType>>([this](std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
             return HttpRoute(connection);
         })) {}
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<galay::Coroutine(galay::Session<SocketType, HttpRequest, HttpResponse>)>&& handler)
+    void RouteHandler(const std::string& path, std::function<galay::Coroutine<void>(galay::Session<SocketType, HttpRequest, HttpResponse>)>&& handler)
     {
          ([&](){
             HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));
@@ -215,7 +230,7 @@ public:
 
     bool IsRunning() const { return m_server.IsRunning(); }
 private:
-    Coroutine HttpRoute(std::shared_ptr<Connection<SocketType>> connection);
+    Coroutine<void> HttpRoute(std::shared_ptr<Connection<SocketType>> connection);
     void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body)
     {
         helper::http::HttpHelper::DefaultHttpResponse(response, version, code, "text/html", std::move(body));

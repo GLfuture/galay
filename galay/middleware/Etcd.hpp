@@ -1,5 +1,5 @@
-#ifndef GALAY_ETCD_H
-#define GALAY_ETCD_H
+#ifndef GALAY_ETCD_HPP
+#define GALAY_ETCD_HPP
 
 #include <etcd/Client.hpp>
 #include <etcd/KeepAlive.hpp>
@@ -10,15 +10,16 @@
 
 namespace galay::details
 {
-    class EtcdAction: public WaitAction
-    {
-    public:
-        virtual bool DoAction(Coroutine::wptr co, void* ctx) override;
-        inline virtual bool HasEventToDo() override { return true; }
-        void ResetCallback(std::function<void(Coroutine::wptr, void*)>&& callback) { m_callback = std::forward<std::function<void(Coroutine::wptr,void*)>>(callback); }
-    private:
-        std::function<void(Coroutine::wptr, void*)> m_callback;
-    };
+class EtcdAction: public WaitAction
+{
+public:
+    virtual bool DoAction(CoroutineBase::wptr co, void* ctx) override;
+    inline virtual bool HasEventToDo() override { return true; }
+    void ResetCallback(std::function<void(CoroutineBase::wptr, void*)>&& callback) { m_callback = std::move(callback); }
+private:
+    std::function<void(CoroutineBase::wptr, void*)> m_callback;
+};
+
 }
 
 namespace galay::etcd
@@ -38,10 +39,14 @@ namespace galay::etcd
     {
     public:
         EtcdClient(const std::string& EtcdAddrs, int co_sche_index);
-        Awaiter<bool> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr);
-        Awaiter<bool> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL);
-        Awaiter<bool> DiscoverService(const std::string& ServiceName);
-        Awaiter<bool> DiscoverServicePrefix(const std::string& Prefix);
+        template<typename CoRtn>
+        AsyncResult<bool, CoRtn> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr);
+        template<typename CoRtn>
+        AsyncResult<bool, CoRtn> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr, int TTL);
+        template<typename CoRtn>
+        AsyncResult<bool, CoRtn> DiscoverService(const std::string& ServiceName);
+        template<typename CoRtn>
+        AsyncResult<bool, CoRtn> DiscoverServicePrefix(const std::string& Prefix);
         EtcdResponse GetResponse();
         //监视一个key
         void Watch(const std::string& key, std::function<void(::etcd::Response)> handle);
@@ -62,5 +67,5 @@ namespace galay::etcd
     };
 }
 
-
+#include "Etcd.tcc"
 #endif

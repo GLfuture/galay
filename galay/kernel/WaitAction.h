@@ -2,44 +2,59 @@
 #define GALAY_WAITACTION_H
 
 #include "Coroutine.hpp"
-#include <functional>
 
-namespace galay::details {
-
-class WaitEvent;
-class EventEngine;
+namespace galay::details
+{
+class WaitEvent: public Event
+{
+public:
+    WaitEvent();
+    /*
+        OnWaitPrepare() return false coroutine will not suspend, else suspend
+    */
+    virtual bool OnWaitPrepare(CoroutineBase::wptr co, void* ctx) = 0;
+    bool SetEventEngine(EventEngine* engine) override;
+    EventEngine* BelongEngine() override;
+    ~WaitEvent() override = default;
+protected:
+    std::atomic<EventEngine*> m_engine;
+    CoroutineBase::wptr m_waitco;
+};
 
 /*
     one net event be triggered will resume this coroutine
 */
+
 class IOEventAction: public WaitAction
 {
 public:
     using ptr = std::shared_ptr<IOEventAction>;
 
-    IOEventAction(details::EventEngine* engine, details::WaitEvent* event);
+    IOEventAction(EventEngine* engine, WaitEvent* event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
-    bool DoAction(Coroutine::wptr co, void* ctx) override;
+    bool DoAction(CoroutineBase::wptr co, void* ctx) override;
     void ResetEvent(details::WaitEvent* event);
     [[nodiscard]] details::WaitEvent* GetBindEvent() const { return m_event; };
     ~IOEventAction() override;
 private:
-    details::EventEngine* m_engine;
-    details::WaitEvent* m_event;
+    EventEngine* m_engine;
+    WaitEvent* m_event;
 };
 
 
 class CoroutineHandleAction: public WaitAction
 {
 public:
-    CoroutineHandleAction(std::function<bool(Coroutine::wptr, void*)>&& callback);
+    CoroutineHandleAction(std::function<bool(CoroutineBase::wptr, void*)>&& callback);
     virtual bool HasEventToDo() override;
-    virtual bool DoAction(Coroutine::wptr co, void* ctx) override;
+    virtual bool DoAction(CoroutineBase::wptr co, void* ctx) override;
 private:
-    std::function<bool(Coroutine::wptr, void*)> m_callback;
+    std::function<bool(CoroutineBase::wptr, void*)> m_callback;
 };
 
+
 }
+
 
 #endif

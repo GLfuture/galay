@@ -1,7 +1,5 @@
 #include "EventEngine.h"
-#include "Event.hpp"
 #include "ExternApi.hpp"
-#include "galay/common/Error.h"
 #if defined(__linux__)
     #include <sys/eventfd.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)

@@ -23,7 +23,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
-    target_link_libraries(${EXECUTABLE_NAME} galay)
+    target_link_libraries(${EXECUTABLE_NAME} galay ssl crypto aio)
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )

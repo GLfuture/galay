@@ -1,6 +1,6 @@
 #include "galay/galay.h"
 #include <iostream>
-using galay::Coroutine;
+using galay::CoroutineBase;
 using galay::WaitGroup;
 
 #define TEST_ROUTINE_CONTEXT_WITH_WAIT_GROUP
@@ -71,7 +71,7 @@ int main()
 
 #elif defined(TEST_ROUTINE_CONTEXT_WITH_WAIT_GROUP)
 
-Coroutine::wptr p{};
+CoroutineBase::wptr p{};
 
 
 int main()

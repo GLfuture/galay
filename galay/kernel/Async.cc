@@ -1,8 +1,4 @@
-#include "Async.h"
-#include "Event.hpp"
-#include "WaitAction.h"
-#include "ExternApi.hpp"
-#include "Internal.h"
+#include "Async.hpp"
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     #include <sys/socket.h>
     #include <arpa/inet.h>
@@ -17,6 +13,7 @@
 
 namespace galay
 {
+
 
 HandleOption::HandleOption(const GHandle handle)
     : m_handle(handle), m_error_code(0)
@@ -93,490 +90,1025 @@ uint32_t& HandleOption::GetErrorCode()
     return m_error_code;
 }
 
-AsyncNetIo::AsyncNetIo(details::EventEngine* engine)
-    : m_handle({}), m_err_code(0), m_action(new details::IOEventAction(engine, new details::NetWaitEvent(this)))
+
+}
+
+namespace galay::details
+{
+
+NetWaitEvent::NetWaitEvent(AsyncNetIo *socket)
+    :m_type(kWaitEventTypeError), m_socket(socket)
 {
 }
 
-AsyncNetIo::AsyncNetIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_err_code(0)
+std::string NetWaitEvent::Name()
 {
-    ActionInit(engine);
-}
-
-HandleOption
-AsyncNetIo::GetOption() const
-{
-    return HandleOption(m_handle);
-}
-
-AsyncNetIo::~AsyncNetIo()
-{
-    delete m_action;
-}
-
-void AsyncNetIo::ActionInit(details::EventEngine *engine)
-{
-    m_action = new details::IOEventAction(engine, new details::NetWaitEvent(this));
-}
-
-uint32_t &AsyncNetIo::GetErrorCode()
-{
-    return m_err_code;
-}
-
-AsyncSslNetIo::AsyncSslNetIo(details::EventEngine *engine)
-    : AsyncNetIo(engine), m_ssl(nullptr)
-{
-    ActionInit(engine);
-}
-
-AsyncSslNetIo::AsyncSslNetIo(GHandle handle, details::EventEngine *engine)
-    :AsyncNetIo(handle, engine), m_ssl(nullptr)
-{
-}
-
-AsyncSslNetIo::AsyncSslNetIo(SSL *ssl, details::EventEngine *engine)
-    :AsyncNetIo({SSL_get_fd(ssl)}, engine), m_ssl(ssl)
-{
-}
-
-AsyncSslNetIo::~AsyncSslNetIo()
-{
-    if(m_ssl) {
-        SSL_shutdown(m_ssl);
-        SSL_free(m_ssl);
+    switch (m_type)
+    {
+    case kWaitEventTypeError:
+        return "ErrorEvent";
+    case kTcpWaitEventTypeAccept:
+        return "TcpAcceptEvent";
+    case kTcpWaitEventTypeRecv:
+        return "TcpRecvEvent";
+    case kTcpWaitEventTypeSend:
+        return "TcpSendEvent";
+    case kTcpWaitEventTypeConnect:
+        return "TcpConnectEvent";
+    case kWaitEventTypeClose:
+        return "CloseEvent";
+    case kUdpWaitEventTypeRecvFrom:
+        return "UdpRecvFromEvent";
+    case kUdpWaitEventTypeSendTo:
+        return "UdpSendToEvent";
+    default:
+        break;
     }
+    return "UnknownEvent";
 }
 
-void AsyncSslNetIo::ActionInit(details::EventEngine *engine)
+bool NetWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void* ctx)
 {
-    m_action = new details::IOEventAction(engine, new details::NetSslWaitEvent(this));
+    this->m_waitco = co;
+    this->m_ctx = ctx;
+    switch (m_type)
+    {
+    case kWaitEventTypeError:
+        return false;
+    case kTcpWaitEventTypeAccept:
+        return OnTcpAcceptWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeRecv:
+        return OnTcpRecvWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeSend:
+        return OnTcpSendWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeConnect:
+        return OnTcpConnectWaitPrepare(co, ctx);
+    case kWaitEventTypeClose:
+        return OnCloseWaitPrepare(co, ctx);
+    case kUdpWaitEventTypeRecvFrom:
+        return OnUdpRecvfromWaitPrepare(co, ctx);
+    case kUdpWaitEventTypeSendTo:
+        return OnUdpSendtoWaitPrepare(co, ctx);
+    default:
+        break;
+    }
+    return false;
 }
 
-AsyncFileIo::AsyncFileIo(details::EventEngine* engine)
-    :m_handle({}), m_error_code(0), m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
+void NetWaitEvent::HandleEvent(EventEngine *engine)
 {
-
-}
-
-AsyncFileIo::AsyncFileIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_error_code(0), m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
-{
-}
-
-HandleOption AsyncFileIo::GetOption() const
-{
-    return HandleOption(m_handle);
-}
-
-AsyncFileIo::~AsyncFileIo()
-{
-    delete m_action;
-}
-
-
-#ifdef __linux__ 
-
-AsyncFileNativeAio::AsyncFileNativeAio(details::EventEngine *engine, int maxevents)
-    :AsyncFileIo(engine), m_current_index(0), m_unfinished_io(0)
-{
-    int ret = io_setup(maxevents, &m_ioctx);
-    if(ret) {
-        GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
+    switch (m_type)
+    {
+    case kWaitEventTypeError:
+        HandleErrorEvent(engine);
+        return;
+    case kTcpWaitEventTypeAccept:
+        HandleTcpAcceptEvent(engine);
+        return;
+    case kTcpWaitEventTypeRecv:
+        HandleTcpRecvEvent(engine);
+        return;
+    case kTcpWaitEventTypeSend:
+        HandleTcpSendEvent(engine);
+        return;
+    case kTcpWaitEventTypeConnect:
+        HandleTcpConnectEvent(engine);
+        return;
+    case kWaitEventTypeClose:
+        HandleCloseEvent(engine);
+        return;
+    case kUdpWaitEventTypeRecvFrom:
+        HandleUdpRecvfromEvent(engine);
+        return;
+    case kUdpWaitEventTypeSendTo:
+        HandleUdpSendtoEvent(engine);
+        return;
+    default: 
         return;
     }
-    m_iocbs.resize(maxevents);
-    m_iocb_ptrs.resize(maxevents); 
-    for (int i = 0 ; i < maxevents; ++i) {
-        m_iocb_ptrs[i] = &m_iocbs[i];   
-    }
 }
-AsyncFileNativeAio::AsyncFileNativeAio(GHandle handle, details::EventEngine *engine, int maxevents)
-    :AsyncFileIo(handle, engine), m_current_index(0), m_unfinished_io(0)
+
+EventType NetWaitEvent::GetEventType()
 {
-    int ret = io_setup(maxevents, &m_ioctx);
-    if(ret) {
-        GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
+    switch (m_type)
+    {
+    case kWaitEventTypeError:
+        return kEventTypeError;
+    case kTcpWaitEventTypeAccept:
+    case kTcpWaitEventTypeRecv:
+        return kEventTypeRead;
+    case kTcpWaitEventTypeSend:
+    case kTcpWaitEventTypeConnect:
+        return kEventTypeWrite;
+    case kWaitEventTypeClose:
+        return kEventTypeNone;
+    case kUdpWaitEventTypeRecvFrom:
+        return kEventTypeRead;
+    case kUdpWaitEventTypeSendTo:
+        return kEventTypeWrite;
+    default:
+        break;
+    }
+    return kEventTypeNone;
+}
+
+GHandle NetWaitEvent::GetHandle()
+{
+    return m_socket->GetHandle();
+}
+
+NetWaitEvent::~NetWaitEvent()
+{
+    if(this->m_engine) this->m_engine.load()->DelEvent(this, nullptr);
+}
+
+bool NetWaitEvent::OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void *ctx)
+{
+    NetAddr* netaddr = static_cast<NetAddr*>(ctx);
+    sockaddr addr{};
+    socklen_t addrlen = sizeof(addr);
+    GHandle handle {
+        .fd = accept(m_socket->GetHandle().fd, &addr, &addrlen),
+    };
+    netaddr->m_ip = inet_ntoa(((sockaddr_in*)&addr)->sin_addr);
+    netaddr->m_port = ntohs(((sockaddr_in*)&addr)->sin_port);
+    LogTrace("[Accept Address: {}:{}]", netaddr->m_ip, netaddr->m_port);
+    auto awaiter = static_cast<Awaiter<GHandle>*>(co.lock()->GetAwaiter());
+    if( handle.fd < 0 ) {
+        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
+            
+        }else{
+            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_AcceptError, errno);
+        }
+    }
+    awaiter->SetResult(handle);
+    return false;
+}
+
+bool NetWaitEvent::OnTcpRecvWaitPrepare(const CoroutineBase::wptr co, void* ctx)
+{
+    auto* iov = static_cast<TcpIOVec*>(ctx);
+    int recvBytes = TcpDealRecv(iov);
+    if( recvBytes == eCommonNonBlocking ) {
+        return true;
+    }
+    auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    awaiter->SetResult(recvBytes);
+    return false;
+}
+
+bool NetWaitEvent::OnTcpSendWaitPrepare(const CoroutineBase::wptr co, void* ctx)
+{
+    auto* iov = static_cast<TcpIOVec*>(ctx);
+    int sendBytes = TcpDealSend(iov);
+    if( sendBytes == eCommonNonBlocking){
+        return true;
+    }
+    auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    awaiter->SetResult(sendBytes);
+    return false;
+}
+
+bool NetWaitEvent::OnTcpConnectWaitPrepare(CoroutineBase::wptr co, void* ctx)
+{
+    auto* addr = static_cast<NetAddr*>(ctx);
+    LogTrace("[Connect to {}:{}]", addr->m_ip, addr->m_port);
+    sockaddr_in saddr{};
+    saddr.sin_family = AF_INET;
+    saddr.sin_addr.s_addr = inet_addr(addr->m_ip.c_str());
+    saddr.sin_port = htons(addr->m_port);
+    const int ret = connect(m_socket->GetHandle().fd, reinterpret_cast<sockaddr*>(&saddr), sizeof(sockaddr_in));
+    if( ret != 0) {
+        if( errno == EWOULDBLOCK || errno == EINTR || errno == EAGAIN || errno == EINPROGRESS) {
+            return true;
+        }
+    }
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter());
+    if( ret == 0 ){
+        awaiter->SetResult(true);
+    } else {
+        m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_ConnectError, errno);
+        awaiter->SetResult(false);
+    }
+    return false;
+}
+
+
+bool NetWaitEvent::OnCloseWaitPrepare(const CoroutineBase::wptr co, void* ctx)
+{
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter()); 
+    if (this->m_engine) {
+        if( this->m_engine.load()->DelEvent(this, nullptr) != 0 ) {
+            awaiter->SetResult(false);
+            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
+            return false;
+        }
+    }
+    LogTrace("[Close {}]", m_socket->GetHandle().fd);
+    if(const int ret = close(m_socket->GetHandle().fd); ret < 0 ) {
+        m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
+        awaiter->SetResult(false);
+    } else {
+        awaiter->SetResult(true);
+    }
+    return false;
+}
+
+
+bool NetWaitEvent::OnUdpRecvfromWaitPrepare(const CoroutineBase::wptr co, void *ctx)
+{
+    auto iov = static_cast<UdpIOVec*>(ctx);
+    int recvBytes = UdpDealRecvfrom(iov);
+    if( recvBytes == eCommonNonBlocking ) {
+        return true;
+    }
+    auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    awaiter->SetResult(recvBytes);
+    return false;
+}
+
+
+bool NetWaitEvent::OnUdpSendtoWaitPrepare(const CoroutineBase::wptr co, void *ctx)
+{
+    auto iov = static_cast<UdpIOVec*>(ctx);
+    int sendBytes = UdpDealSendto(iov);
+    if( sendBytes == eCommonNonBlocking){
+        return true;
+    }
+    auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    awaiter->SetResult(sendBytes);
+    return false;
+}
+
+
+void NetWaitEvent::HandleErrorEvent(EventEngine *engine)
+{
+}
+
+
+void NetWaitEvent::HandleTcpAcceptEvent(EventEngine *engine)
+{
+}
+
+
+void NetWaitEvent::HandleTcpRecvEvent(EventEngine *engine)
+{
+    int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(m_ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(recvBytes);
+    //2.唤醒协程
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco.lock());
+}
+
+
+void NetWaitEvent::HandleTcpSendEvent(EventEngine *engine)
+{
+    int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(m_ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(sendBytes);
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+void NetWaitEvent::HandleTcpConnectEvent(EventEngine *engine)
+{
+    auto awaiter = static_cast<Awaiter<bool>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(true);
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
+{ 
+    //doing nothing
+}
+
+
+void NetWaitEvent::HandleUdpRecvfromEvent(EventEngine *engine)
+{
+    int recvBytes = UdpDealRecvfrom(static_cast<UdpIOVec*>(m_ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(recvBytes);
+    //2.唤醒协程
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+void NetWaitEvent::HandleUdpSendtoEvent(EventEngine *engine)
+{
+    int sendBytes = UdpDealSendto(static_cast<UdpIOVec*>(this->m_ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(sendBytes);
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+int NetWaitEvent::TcpDealRecv(TcpIOVec* iov)
+{
+    auto [fd] = this->m_socket->GetHandle();
+    size_t recvBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    int length = recv(fd, iov->m_buffer + iov->m_offset, recvBytes, 0);
+    if( length == -1 ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
+            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
+            return eCommonOtherFailed;
+        } else {
+            return eCommonNonBlocking;
+        }
+    }
+    LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(iov->m_buffer + iov->m_offset, length));
+    iov->m_offset += length;
+    return length;
+}
+
+
+int NetWaitEvent::TcpDealSend(TcpIOVec* iov)
+{
+    auto [fd] = this->m_socket->GetHandle();
+    size_t writeBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    const int length = send(fd, iov->m_buffer + iov->m_offset, writeBytes, 0);
+    if( length == -1 ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
+            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
+            return eCommonOtherFailed;
+        } else {
+            return eCommonNonBlocking;
+        }
+    }
+    LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(iov->m_buffer + iov->m_offset, length));
+    iov->m_offset += length;
+    return length;
+}
+
+
+int NetWaitEvent::UdpDealRecvfrom(UdpIOVec *iov)
+{
+    auto [fd] = this->m_socket->GetHandle();
+    size_t recvBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    sockaddr addr;
+    socklen_t addrlen = sizeof(addr);
+    int length = recvfrom(fd, iov->m_buffer + iov->m_offset, recvBytes, 0, &addr, &addrlen);
+    if( length == -1 ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
+            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
+            return eCommonOtherFailed;
+        } else {
+            return eCommonNonBlocking;
+        }
+    }
+    LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(iov->m_buffer + iov->m_offset, length));
+    iov->m_offset += length;
+    iov->m_addr.m_ip = std::string(inet_ntoa(reinterpret_cast<sockaddr_in*>(&addr)->sin_addr));
+    iov->m_addr.m_ip = ntohs(reinterpret_cast<sockaddr_in*>(&addr)->sin_port);
+    return length;
+}
+
+
+int NetWaitEvent::UdpDealSendto(UdpIOVec *iov)
+{
+    auto [fd] = this->m_socket->GetHandle();
+    size_t writeBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr(iov->m_addr.m_ip.c_str());
+    addr.sin_port = htons(iov->m_addr.m_port);
+    int length = sendto(fd, iov->m_buffer + iov->m_offset, writeBytes, 0, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr));
+    if( length == -1 ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
+            m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
+            return eCommonOtherFailed;
+        } else {
+            spdlog::info("{}", strerror(errno));
+            return eCommonNonBlocking;
+        }
+    }
+    LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", fd, length, std::string_view(iov->m_buffer + iov->m_offset, length));
+    iov->m_offset += length;
+    return length;
+}
+
+
+NetSslWaitEvent::NetSslWaitEvent(AsyncSslNetIo *socket)
+    :NetWaitEvent(socket)
+{
+}
+
+
+std::string NetSslWaitEvent::Name()
+{
+    switch (this->m_type)
+    {
+    case kWaitEventTypeError:
+        return "ErrorEvent";
+    case kTcpWaitEventTypeAccept:
+        return "AcceptEvent";
+    case kTcpWaitEventTypeSslAccept:
+        return "SslAcceptEvent";
+    case kTcpWaitEventTypeRecv:
+        return "RecvEvent";
+    case kTcpWaitEventTypeSslRecv:
+        return "SslRecvEvent";
+    case kTcpWaitEventTypeSend:
+        return "SendEvent";
+    case kTcpWaitEventTypeSslSend:
+        return "SslSendEvent";
+    case kTcpWaitEventTypeConnect:
+        return "ConnectEvent";
+    case kTcpWaitEventTypeSslConnect:
+        return "SslConnectEvent";
+    case kWaitEventTypeClose:
+        return "CloseEvent";
+    case kWaitEventTypeSslClose:
+        return "SslCloseEvent";
+    default:
+        break;
+    }
+    return "UnknownEvent";
+}
+
+
+EventType NetSslWaitEvent::GetEventType()
+{
+    switch (this->m_type)
+    {
+    case kWaitEventTypeError:
+        return kEventTypeError;
+    case kTcpWaitEventTypeAccept:
+        return kEventTypeRead;
+    case kTcpWaitEventTypeSslAccept:
+        return CovertSSLErrorToEventType();
+    case kTcpWaitEventTypeRecv:
+    case kTcpWaitEventTypeSslRecv:
+        return kEventTypeRead;
+    case kTcpWaitEventTypeSend:
+    case kTcpWaitEventTypeSslSend:
+    case kTcpWaitEventTypeConnect:
+        return kEventTypeWrite;
+    case kTcpWaitEventTypeSslConnect:
+        return CovertSSLErrorToEventType();
+    case kWaitEventTypeClose:
+    case kWaitEventTypeSslClose:
+        return kEventTypeNone;
+    default:
+        break;
+    }
+    return kEventTypeNone;
+}
+
+
+bool NetSslWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void* ctx)
+{
+    this->m_waitco = co;
+    this->m_ctx = ctx;
+    switch (this->m_type)
+    {
+    case kWaitEventTypeError:
+        return false;
+    case kTcpWaitEventTypeAccept:
+        return OnTcpAcceptWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeSslAccept:
+        return OnTcpSslAcceptWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeRecv:
+        return OnTcpRecvWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeSslRecv:
+        return OnTcpSslRecvWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeSend:
+        return OnTcpSendWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeSslSend:
+        return OnTcpSslSendWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeConnect:
+        return OnTcpConnectWaitPrepare(co, ctx);
+    case kTcpWaitEventTypeSslConnect:
+        return OnTcpSslConnectWaitPrepare(co, ctx);
+    case kWaitEventTypeClose:
+        return OnCloseWaitPrepare(co, ctx);
+    case kWaitEventTypeSslClose:
+        return OnTcpSslCloseWaitPrepare(co, ctx);
+    default:
+        break;
+    }
+    return false;
+}
+
+
+void NetSslWaitEvent::HandleEvent(EventEngine *engine)
+{
+    switch (this->m_type)
+    {
+    case kWaitEventTypeError:
+        this->HandleErrorEvent(engine);
+        return;
+    case kTcpWaitEventTypeAccept:
+        this->HandleTcpAcceptEvent(engine);
+        return;
+    case kTcpWaitEventTypeSslAccept:
+        this->HandleTcpSslAcceptEvent(engine);
+        return;
+    case kTcpWaitEventTypeRecv:
+        this->HandleTcpRecvEvent(engine);
+        return;
+    case kTcpWaitEventTypeSslRecv:
+        this->HandleTcpSslRecvEvent(engine);
+        return;
+    case kTcpWaitEventTypeSend:
+        this->HandleTcpSendEvent(engine);
+        return;
+    case kTcpWaitEventTypeSslSend:
+        this->HandleTcpSslSendEvent(engine);
+        return;
+    case kTcpWaitEventTypeConnect:
+        this->HandleTcpConnectEvent(engine);
+        return;
+    case kTcpWaitEventTypeSslConnect:
+        this->HandleTcpSslConnectEvent(engine);
+        return;
+    case kWaitEventTypeClose:
+        this->HandleCloseEvent(engine);
+        return;
+    case kWaitEventTypeSslClose:
+        this->HandleTcpSslCloseEvent(engine);
+        return;
+    default:
         return;
     }
-    m_iocbs.resize(maxevents);
-    m_iocb_ptrs.resize(maxevents); 
-    for (int i = 0 ; i < maxevents; ++i) {
-        m_iocb_ptrs[i] = &m_iocbs[i];   
+}
+
+
+AsyncSslNetIo* NetSslWaitEvent::GetAsyncTcpSocket() const
+{
+    return dynamic_cast<AsyncSslNetIo*>(this->m_socket);
+}
+
+
+bool NetSslWaitEvent::OnTcpSslAcceptWaitPrepare(const CoroutineBase::wptr co, void* ctx)
+{
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter());
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(this->m_socket)->GetSSL();
+    SSL_set_accept_state(ssl);
+    int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", this->m_socket->GetHandle().fd);
+    if( r == 1 ){
+        awaiter->SetResult(true);
+        return false;
     }
+    this->m_ssl_error = SSL_get_error(ssl, r);
+    if( this->m_ssl_error == SSL_ERROR_WANT_READ || this->m_ssl_error == SSL_ERROR_WANT_WRITE ){
+        return true;
+    }
+    awaiter->SetResult(false);
+    this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLAcceptError, errno);
+    return false;
 }
 
-bool AsyncFileNativeAio::InitialEventHandle()
+
+bool NetSslWaitEvent::OnTcpSslConnectWaitPrepare(const CoroutineBase::wptr co, void* ctx)
 {
-    m_event_handle.fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
-    if(m_event_handle.fd < 0) return false;
-    return true;
+    
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter());
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(this->m_socket)->GetSSL();
+    SSL_set_connect_state(ssl);
+    int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", this->m_socket->GetHandle().fd);
+    if( r == 1 ){
+        awaiter->SetResult(true);
+        return false;
+    }
+    this->m_ssl_error = SSL_get_error(ssl, r);
+    if( this->m_ssl_error == SSL_ERROR_WANT_READ || this->m_ssl_error == SSL_ERROR_WANT_WRITE ){
+        return true;
+    }
+    awaiter->SetResult(false);
+    this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLConnectError, errno);
+    return false;
 }
 
-bool AsyncFileNativeAio::InitialEventHandle(GHandle handle)
+
+bool NetSslWaitEvent::OnTcpSslRecvWaitPrepare(const CoroutineBase::wptr co, void* ctx)
 {
-    m_event_handle.fd = handle.fd;
-    return true;
+    
+    int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    if(recvBytes == eCommonNonBlocking) {
+        return true;
+    }
+    awaiter->SetResult(recvBytes);
+    return false;
 }
 
-bool AsyncFileNativeAio::CloseEventHandle()
+
+bool NetSslWaitEvent::OnTcpSslSendWaitPrepare(const CoroutineBase::wptr co, void* ctx)
 {
-    int ret = close(m_event_handle.fd);
-    if(ret < 0) return false;
-    m_event_handle.fd = 0;
-    return true;
+    
+    auto* iov = static_cast<TcpIOVec*>(this->m_ctx);
+    int sendBytes = TcpDealSend(iov);
+    auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    if( sendBytes == eCommonNonBlocking){
+        return true;
+    }
+    awaiter->SetResult(sendBytes);
+    return false;
 }
 
-bool AsyncFileNativeAio::PrepareRead(char *buf, size_t len, long long offset, AioCallback* callback)
-{
-    uint32_t num = m_current_index.load();
-    if(num >= m_iocbs.size()) return false;
-    if(!m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_pread(m_iocb_ptrs[num], m_handle.fd, buf, len, offset);
-    io_set_eventfd(m_iocb_ptrs[num], m_event_handle.fd);
-    m_iocb_ptrs[num]->data = callback;
-    return true;
-}
 
-bool AsyncFileNativeAio::PrepareWrite(char *buf, size_t len, long long offset, AioCallback* callback)
+bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const CoroutineBase::wptr co, void* ctx)
 {
-    uint32_t num = m_current_index.load();
-    if(num >= m_iocbs.size()) return false;
-    if(!m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_pwrite(m_iocb_ptrs[num], m_handle.fd, buf, len, offset);
-    io_set_eventfd(m_iocb_ptrs[num], m_event_handle.fd);
-    m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-bool AsyncFileNativeAio::PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback)
-{
-    uint32_t num = m_current_index.load();
-    if(num >= m_iocbs.size()) return false;
-    if(!m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_preadv(m_iocb_ptrs[num], m_handle.fd, iov, count, offset);
-    io_set_eventfd(m_iocb_ptrs[num], m_event_handle.fd);
-    m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-bool AsyncFileNativeAio::PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback)
-{
-    uint32_t num = m_current_index.load();
-    if(num >= m_iocbs.size()) return false;
-    if(!m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_pwritev(m_iocb_ptrs[num], m_handle.fd, iov, count, offset);
-    io_set_eventfd(m_iocb_ptrs[num], m_event_handle.fd);
-    m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-Awaiter<int> AsyncFileNativeAio::Commit()
-{
-    int ret = io_submit(m_ioctx, m_unfinished_io, m_iocb_ptrs.data());
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter()); 
+    if (this->m_engine) {
+        if( this->m_engine.load()->DelEvent(this, nullptr) != 0 ) {
+            awaiter->SetResult(false);
+            this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_DelEventError, errno);
+            return false;
+        }
+    }
+    LogTrace("[Close {}]", this->m_socket->GetHandle().fd);
+    int ret = close(this->m_socket->GetHandle().fd);
     if( ret < 0 ) {
-        GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSubmitError, -ret);
-        return Awaiter<int>(-1);
+        this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLCloseError, errno);
+        awaiter->SetResult(false);
+        return false;
+    } else {
+        awaiter->SetResult(true);
     }
-    m_current_index = 0;
-    dynamic_cast<details::FileIoWaitEvent*>(GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
-    return {GetAction(), nullptr};
+    SSL*& ssl = dynamic_cast<AsyncSslNetIo*>(this->m_socket)->GetSSL();
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    ssl = nullptr;
+    return false;
 }
 
-bool AsyncFileNativeAio::IoFinished(uint64_t finished_io)
+
+void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 {
-    uint32_t num = m_unfinished_io.load();
-    if(!m_unfinished_io.compare_exchange_strong(num, num - finished_io)) return false;
-    return m_unfinished_io == 0;
+    auto awaiter = static_cast<Awaiter<bool>*>(this->m_waitco.lock()->GetAwaiter());
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(this->m_socket)->GetSSL();
+    const int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", this->m_socket->GetHandle().fd);
+    if( r == 1 ){
+        awaiter->SetResult(true);
+        this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+        return;
+    }
+    this->m_ssl_error = SSL_get_error(ssl, r);
+    if( this->m_ssl_error == SSL_ERROR_WANT_READ || this->m_ssl_error == SSL_ERROR_WANT_WRITE ){
+        engine->ModEvent(this, nullptr);
+    } else {
+        awaiter->SetResult(false);
+        this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLAcceptError, errno);
+        this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+    }
+    
 }
 
-AsyncFileNativeAio::~AsyncFileNativeAio()
+
+void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
 {
-    io_destroy(m_ioctx);
-    close(m_event_handle.fd);
+    auto awaiter = static_cast<Awaiter<bool>*>(this->m_waitco.lock()->GetAwaiter());
+    SSL* ssl = dynamic_cast<AsyncSslNetIo*>(this->m_socket)->GetSSL();
+    const int r = SSL_do_handshake(ssl);
+    LogTrace("[SSL_do_handshake, handle: {}]", this->m_socket->GetHandle().fd);
+    if( r == 1 ){
+        awaiter->SetResult(true);
+        this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+    }
+    this->m_ssl_error = SSL_get_error(ssl, r);
+    if( this->m_ssl_error == SSL_ERROR_WANT_READ || this->m_ssl_error == SSL_ERROR_WANT_WRITE ){
+        engine->ModEvent(this, nullptr);
+    } else {
+        awaiter->SetResult(false);
+        this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SSLConnectError, errno);
+        this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+    }
+    
 }
 
+
+void NetSslWaitEvent::HandleTcpSslRecvEvent(EventEngine *engine)
+{
+    int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(this->m_ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(recvBytes);
+    //2.唤醒协程
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+void NetSslWaitEvent::HandleTcpSslSendEvent(EventEngine *engine)
+{
+    int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(this->m_ctx));
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    awaiter->SetResult(sendBytes);
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+void NetSslWaitEvent::HandleTcpSslCloseEvent(EventEngine *engine)
+{
+    //doing nothing
+}
+
+
+EventType NetSslWaitEvent::CovertSSLErrorToEventType() const
+{
+    switch (m_ssl_error)
+    {
+    case SSL_ERROR_NONE:
+        return kEventTypeNone;
+    case SSL_ERROR_WANT_READ:
+        return kEventTypeRead;
+    case SSL_ERROR_WANT_WRITE:
+        return kEventTypeWrite;
+    default: ;
+    }
+    return kEventTypeNone;
+}
+
+
+int NetSslWaitEvent::TcpDealRecv(TcpIOVec* iov)
+{
+    SSL* ssl = GetAsyncTcpSocket()->GetSSL();
+    size_t recvBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    int length = SSL_read(ssl, iov->m_buffer + iov->m_offset, recvBytes);
+    if( length == -1 ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
+            this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_RecvError, errno);
+            return eCommonOtherFailed;
+        } else {
+            return eCommonNonBlocking;
+        }
+    }
+    LogTrace("[Recv, Handle: {}, Byte: {}\nData: {}]", GetAsyncTcpSocket()->GetHandle().fd, length, std::string_view(iov->m_buffer + iov->m_offset, length));
+    iov->m_offset += length;
+    return length;
+}
+
+
+int NetSslWaitEvent::TcpDealSend(TcpIOVec* iov)
+{
+    SSL* ssl = GetAsyncTcpSocket()->GetSSL();
+    size_t writeBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    const int length = SSL_write(ssl, iov->m_buffer + iov->m_offset, writeBytes);
+    if( length == -1 ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
+            this->m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_SendError, errno);
+            return eCommonOtherFailed;
+        } else {
+            return eCommonNonBlocking;
+        }
+    }
+    LogTrace("[Send, Handle: {}, Byte: {}\nData: {}]", GetAsyncTcpSocket()->GetHandle().fd, length, std::string_view(iov->m_buffer + iov->m_offset, length));
+    iov->m_offset += length;
+    return length;
+}
+//#endif
+
+
+FileIoWaitEvent::FileIoWaitEvent(AsyncFileIo *fileio)
+    :m_fileio(fileio), m_type(kFileIoWaitEventTypeError)
+{
+    
+}
+
+
+std::string FileIoWaitEvent::Name()
+{
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return "LinuxAioEvent";
 #endif
-
-
-AsyncTcpSocket::AsyncTcpSocket(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(engine))
-{
-}
-
-AsyncTcpSocket::AsyncTcpSocket(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(handle, engine))
-{
-}
-
-bool AsyncTcpSocket::Socket() const
-{
-    return details::AsyncTcpSocket(m_io);
-}
-
-bool AsyncTcpSocket::Socket(GHandle handle)
-{
-    m_io->GetHandle() = handle;
-    HandleOption option(handle);
-    return option.HandleNonBlock();
-}
-
-bool AsyncTcpSocket::Bind(const std::string& addr, int port)
-{
-    return details::Bind(m_io, addr, port);
-}
-
-bool AsyncTcpSocket::Listen(int backlog)
-{
-    return details::Listen(m_io, backlog);
-}
-
-Awaiter<bool> AsyncTcpSocket::Connect(NetAddr *addr)
-{
-    return details::AsyncConnect(m_io, addr);
-}
-
-Awaiter<GHandle> AsyncTcpSocket::Accept(NetAddr *addr)
-{
-    return details::AsyncAccept(m_io, addr);
-}
-
-Awaiter<int> AsyncTcpSocket::Recv(TcpIOVec *iov, size_t length)
-{
-    return details::AsyncRecv(m_io, iov, length);
-}
-
-Awaiter<int> AsyncTcpSocket::Send(TcpIOVec *iov, size_t length)
-{
-    return details::AsyncSend(m_io, iov, length);
-}
-
-Awaiter<bool> AsyncTcpSocket::Close()
-{
-    return details::AsyncNetClose(m_io);
+    case kFileIoWaitEventTypeRead:
+        return "KReadEvent";
+    case kFileIoWaitEventTypeWrite:
+        return "KWriteEvent";
+    case kFileIoWaitEventTypeClose:
+        return "CloseEvent";
+    default:
+        break;
+    }
+    return "Unknown";
 }
 
 
-AsyncTcpSslSocket::AsyncTcpSslSocket(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncSslNetIo>(engine))
+bool FileIoWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void *ctx)
 {
-    if(!SslCtx) {
-        SslCtx = GetGlobalSSLCtx();
+    this->m_waitco = co;
+    this->m_ctx = ctx;
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return OnAioWaitPrepare(co, ctx);
+#endif
+    case kFileIoWaitEventTypeRead:
+        return OnKReadWaitPrepare(co, ctx);
+    case kFileIoWaitEventTypeWrite:
+        return OnKWriteWaitPrepare(co, ctx);
+    case kFileIoWaitEventTypeClose:
+        return OnCloseWaitPrepare(co, ctx);
+    default:
+        break;
+    }
+    return false;
+}
+
+
+void FileIoWaitEvent::HandleEvent(EventEngine *engine)
+{
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        this->HandleAioEvent(engine);
+        break;
+#endif
+    case kFileIoWaitEventTypeRead:
+        this->HandleKReadEvent(engine);
+        break;
+    case kFileIoWaitEventTypeWrite:
+        this->HandleKWriteEvent(engine);
+        break;
+    case kFileIoWaitEventTypeClose:
+        break;
+    default:
+        break;
     }
 }
 
-AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncSslNetIo>(handle, engine))
+
+EventType FileIoWaitEvent::GetEventType()
 {
-    if(!SslCtx) {
-        SslCtx = GetGlobalSSLCtx();
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return kEventTypeRead;
+#endif
+    case kFileIoWaitEventTypeRead:
+        return kEventTypeRead;
+    case kFileIoWaitEventTypeWrite:
+        return kEventTypeWrite;
+    case kFileIoWaitEventTypeClose:
+        return kEventTypeNone;
+    default: ;
+    }
+    return kEventTypeNone;
+}
+
+
+GHandle FileIoWaitEvent::GetHandle()
+{
+    switch (m_type)
+    {
+#ifdef __linux__
+    case kFileIoWaitEventTypeLinuxAio:
+        return static_cast<AsyncFileNativeAio*>(this->m_fileio)->GetEventHandle();
+#endif
+    default:
+        break;
+    }
+    return m_fileio->GetHandle();
+}
+
+
+FileIoWaitEvent::~FileIoWaitEvent()
+{
+    if(this->m_engine) {
+        this->m_engine.load()->DelEvent(this, nullptr);
     }
 }
-
-SSL_CTX* AsyncTcpSslSocket::SslCtx = nullptr;
-
-AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncSslNetIo>(ssl, engine))
-{
-    if(!SslCtx) {
-        SslCtx = GetGlobalSSLCtx();
-    }
-}
-
-bool AsyncTcpSslSocket::Socket() const
-{
-    if(!details::AsyncTcpSocket(m_io)){
-        return false;
-    }
-    return details::AsyncSSLSocket(m_io, SslCtx);
-}
-
-bool AsyncTcpSslSocket::Socket(GHandle handle)
-{
-    m_io->GetHandle() = handle;
-    HandleOption option(handle);
-    if(!option.HandleNonBlock()) {
-        return false;
-    }
-    return details::AsyncSSLSocket(m_io, SslCtx);;
-}
-
-bool AsyncTcpSslSocket::Bind(const std::string& addr, int port)
-{
-    return details::Bind(m_io, addr, port);
-}
-
-bool AsyncTcpSslSocket::Listen(int backlog)
-{
-    return details::Listen(m_io, backlog);
-}
-
-Awaiter<bool> AsyncTcpSslSocket::Connect(NetAddr *addr)
-{
-    return details::AsyncConnect(m_io, addr);
-}
-
-Awaiter<bool> AsyncTcpSslSocket::AsyncSSLConnect()
-{
-    return details::AsyncSSLConnect(m_io);
-}
-
-Awaiter<GHandle> AsyncTcpSslSocket::Accept(NetAddr *addr)
-{
-    return details::AsyncAccept(m_io, addr);
-}
-
-Awaiter<bool> AsyncTcpSslSocket::SSLAccept()
-{
-    return details::AsyncSSLAccept(m_io);
-}
-
-Awaiter<int> AsyncTcpSslSocket::Recv(TcpIOVec *iov, size_t length)
-{
-    return details::AsyncSSLRecv(m_io, iov, length);
-}
-
-Awaiter<int> AsyncTcpSslSocket::Send(TcpIOVec *iov, size_t length)
-{
-    return details::AsyncSSLSend(m_io, iov, length);
-}
-
-Awaiter<bool> AsyncTcpSslSocket::Close()
-{
-    return details::AsyncSSLClose(m_io);
-}
-
-AsyncUdpSocket::AsyncUdpSocket(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(engine))
-{
-}
-
-AsyncUdpSocket::AsyncUdpSocket(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(handle, engine))
-{
-}
-
-bool AsyncUdpSocket::Socket() const
-{
-    return details::AsyncUdpSocket(m_io);
-}
-
-bool AsyncUdpSocket::Bind(const std::string& addr, int port)
-{
-    return details::Bind(m_io, addr, port);
-}
-
-Awaiter<int> AsyncUdpSocket::RecvFrom(UdpIOVec *iov, size_t length)
-{
-    return details::AsyncRecvFrom(m_io, iov, length);
-}
-
-Awaiter<int> AsyncUdpSocket::SendTo(UdpIOVec *iov, size_t length)
-{
-    return details::AsyncSendTo(m_io, iov, length);
-}
-
-Awaiter<bool> AsyncUdpSocket::Close()
-{
-    return details::AsyncNetClose(m_io);
-}
-
-
-AsyncFileDescriptor::AsyncFileDescriptor(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncFileIo>(engine))
-{
-}
-
-AsyncFileDescriptor::AsyncFileDescriptor(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncFileIo>(handle, engine))
-{
-}
-
-bool AsyncFileDescriptor::Open(const char *path, int flags, mode_t mode)
-{
-    return details::AsyncFileOpen(m_io, path, flags, mode);
-}
-
-
-Awaiter<int> AsyncFileDescriptor::Read(FileIOVec* iov, size_t length)
-{
-    return details::AsyncFileRead(m_io, iov, length);
-}
-
-
-Awaiter<int> AsyncFileDescriptor::Write(FileIOVec* iov, size_t length)
-{
-    return details::AsyncFileWrite(m_io, iov, length);
-}
-
-
-Awaiter<bool> AsyncFileDescriptor::Close()
-{
-    return details::AsyncFileClose(m_io);
-}
-
 
 #ifdef __linux__
 
-AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(details::EventEngine *engine, int maxevents)
-    :m_io(std::make_shared<AsyncFileNativeAio>(engine, maxevents))
+bool FileIoWaitEvent::OnAioWaitPrepare(CoroutineBase::wptr co, void *ctx)
 {
-    m_io->InitialEventHandle();
-}
-
-AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, details::EventEngine *engine, int maxevents)
-    :m_io(std::make_shared<AsyncFileNativeAio>(handle, engine, maxevents))
-{
-    m_io->InitialEventHandle();
-}
-
-bool AsyncFileNativeAioDescriptor::Open(const char *path, int flags, mode_t mode)
-{
-    return details::AsyncFileOpen(m_io, path, flags, mode);
-}
-
-bool AsyncFileNativeAioDescriptor::PrepareRead(char *buf, size_t len, long long offset, AioCallback *callback)
-{
-    return m_io->PrepareRead(buf, len, offset, callback);
+    return true;
 }
 
 
-bool AsyncFileNativeAioDescriptor::PrepareWrite(char *buf, size_t len, long long offset, AioCallback *callback)
+void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
 {
-    return m_io->PrepareWrite(buf, len, offset, callback);
+    uint64_t finish_nums = 0;
+    auto fileio = static_cast<AsyncFileNativeAio*>(this->m_fileio);
+    int ret = read(fileio->GetEventHandle().fd, &finish_nums, sizeof(uint64_t));
+    io_event events[DEFAULT_IO_EVENTS_SIZE] = {0};
+    int r = io_getevents(fileio->GetIoContext(), 1, DEFAULT_IO_EVENTS_SIZE, events, nullptr);
+    LogTrace("[io_getevents return {} events]", r);
+    while (r --> 0)
+    {
+        auto& event = events[r];
+        if(event.data != nullptr) {
+            static_cast<AioCallback*>(event.data)->OnAioComplete(&event);
+        }
+    }
+    if( fileio->IoFinished(finish_nums) ){
+        engine->DelEvent(this, nullptr);
+        this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+    }
 }
-
-bool AsyncFileNativeAioDescriptor::PrepareReadV(iovec *iov, int count, long long offset, AioCallback *callback)
-{
-    return m_io->PrepareReadV(iov, count, offset, callback);
-}
-
-
-bool AsyncFileNativeAioDescriptor::PrepareWriteV(iovec *iov, int count, long long offset, AioCallback *callback)
-{
-    return m_io->PrepareWriteV(iov, count, offset, callback);
-}
-
-Awaiter<int> AsyncFileNativeAioDescriptor::Commit()
-{
-    return m_io->Commit();
-}
-
-Awaiter<bool> AsyncFileNativeAioDescriptor::Close()
-{
-    return details::AsyncFileClose(m_io);
-}
-
-
-AsyncFileNativeAioDescriptor::~AsyncFileNativeAioDescriptor()
-{
-    m_io->CloseEventHandle();
-}
-
 #endif
+
+
+bool FileIoWaitEvent::OnKReadWaitPrepare(const CoroutineBase::wptr co, void *ctx)
+{
+    auto* iov = static_cast<FileIOVec*>(ctx);
+    size_t readBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    int length = read(m_fileio->GetHandle().fd, iov->m_buffer + iov->m_offset, readBytes);
+    if(length < 0){
+        if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            return true;
+        } else {
+            m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+            length = eCommonOtherFailed;
+        }        
+    }
+    LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
+    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(length);
+    iov->m_offset += length;
+    return false;
+}
+
+
+void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
+{
+    auto* iov = static_cast<FileIOVec*>(m_ctx);
+    size_t readBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    int length = read(m_fileio->GetHandle().fd, iov->m_buffer + iov->m_offset, readBytes);
+    if( length < 0 ) {
+        if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            length = eCommonNonBlocking;
+        } else {
+            m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+            length = eCommonOtherFailed;
+        }
+    }
+    LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
+    engine->DelEvent(this, nullptr);
+    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(length);
+    iov->m_offset += length;
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+bool FileIoWaitEvent::OnKWriteWaitPrepare(CoroutineBase::wptr co, void *ctx)
+{
+    auto* iov = static_cast<FileIOVec*>(ctx);
+    size_t writeBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    int length = write(m_fileio->GetHandle().fd, iov->m_buffer + iov->m_offset, writeBytes);
+    if(length < 0){
+         if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            return true;
+        }else {
+            m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+            length = eCommonOtherFailed;
+        }
+    }
+    LogTrace("[Handle: {}, WriteBytes: {}]", this->m_fileio->GetHandle().fd, length);
+    iov->m_offset += length;
+    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(length);
+    return false;
+}
+
+
+void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
+{
+    auto* iov = static_cast<FileIOVec*>(m_ctx);
+    size_t writeBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
+    int length = write(this->m_fileio->GetHandle().fd, iov->m_buffer + iov->m_offset, writeBytes);
+    if(length < 0){
+         if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            length = eCommonNonBlocking;
+        }else {
+            this->m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_FileReadError, errno);
+            length = eCommonOtherFailed;
+        }
+    }
+    LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
+    engine->DelEvent(this, nullptr);
+    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(length);
+    iov->m_offset += length;
+    this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
+}
+
+
+bool FileIoWaitEvent::OnCloseWaitPrepare(const CoroutineBase::wptr co, void *ctx)
+{
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter()); 
+    if (this->m_engine) {
+        if( this->m_engine.load()->DelEvent(this, nullptr) != 0 ) {
+            awaiter->SetResult(false);
+            this->m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
+            return false;
+        }
+    }
+    LogTrace("[Close {}]", this->m_fileio->GetHandle().fd);
+    if(const int ret = close(this->m_fileio->GetHandle().fd); ret < 0 ) {
+        this->m_fileio->GetErrorCode() = error::MakeErrorCode(error::Error_CloseError, errno);
+        awaiter->SetResult(false);
+    } else {
+        awaiter->SetResult(true);
+    }
+    return false;
+}
+
 }

@@ -10,7 +10,7 @@
 using galay::Coroutine;
 
 #ifdef __linux__
-Coroutine test()
+Coroutine<void> test()
 {
     galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger()->set_level(spdlog::level::trace);
     galay::AsyncFileNativeAioDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(),1024);

@@ -12,7 +12,7 @@ namespace galay::thread {
 }
 
 namespace galay {
-    class Coroutine;
+    class CoroutineBase;
     class Timer;
 }
 
@@ -41,7 +41,7 @@ public:
     };
     using ptr = std::shared_ptr<CoroutineScheduler>;
     using uptr = std::unique_ptr<CoroutineScheduler>;
-    using Coroutine_wptr = std::weak_ptr<Coroutine>; 
+    using Coroutine_wptr = std::weak_ptr<CoroutineBase>; 
     CoroutineScheduler();
     std::string Name() override { return "CoroutineScheduler"; }
     void ToResumeCoroutine(Coroutine_wptr coroutine);
