@@ -8,10 +8,16 @@
 #include <unordered_map>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include "Async.hpp"
+#include "Session.hpp"
 #include "galay/helper/HttpHelper.h"
 
 namespace galay::details
 {
+
+Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket* socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine);
+Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket* socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine);
+
+
 
 template <typename SocketType>
 class ListenEvent: public Event
@@ -26,12 +32,15 @@ public:
     EventEngine* BelongEngine() override;
     ~ListenEvent() override;
 private:
-    Coroutine<void> CreateConnection(EventEngine* engine);
+    void CreateConnection(RoutineCtx ctx, EventEngine* engine);
 private:
     SocketType* m_socket;
+    CoroutineScheduler* m_scheduler;
     std::atomic<EventEngine*> m_engine;
     CallbackStore<SocketType>* m_store;
 };
+
+
 
 };
 

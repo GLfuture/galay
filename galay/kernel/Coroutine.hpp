@@ -14,7 +14,6 @@
 #include "Scheduler.h"
 #include "EventEngine.h"
 #include "Internal.hpp"
-#include <iostream>
 
 namespace galay::details 
 {
@@ -24,10 +23,42 @@ class CoroutineScheduler;
 class WaitEvent;
 class WaitAction;
 
+template<typename T>
+class Awaiter: public AwaiterBase
+{
+public:
+    Awaiter(details::WaitAction* action, void* ctx);
+    Awaiter(T result);
+    void SetResult(T result);
+protected:
+    void* m_ctx;
+    T m_result;
+    details::WaitAction* m_action;
+};
+
 }
 
-namespace galay {
+namespace galay 
+{
+template<typename T>
+class PromiseType;
 
+template<>
+class PromiseType<void>;
+
+class RoutineCtx
+{
+    template<typename CoRtn>
+    friend class PromiseType;
+    friend class PromiseType<void>;
+public:
+    RoutineCtx(details::CoroutineScheduler* scheduler);
+    RoutineCtx(const RoutineCtx& ctx);
+    RoutineCtx(RoutineCtx&& ctx);
+    details::CoroutineScheduler* GetScheduler();
+private:
+    std::atomic<details::CoroutineScheduler*> m_scheduler;
+};
 
 class CoroutineBase
 {
@@ -47,12 +78,17 @@ public:
 template<typename T>
 class Coroutine;
 
+class RoutineCtx;
+
 template<typename T>
 class PromiseType
 {
     friend class Coroutine<T>;
     using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
+    template<typename ...Args>
+    PromiseType(RoutineCtx ctx, Args&&... agrs);
+    PromiseType();
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<T> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -63,6 +99,7 @@ public:
     std::weak_ptr<Coroutine<T>> GetCoroutine() { return m_coroutine; }
     ~PromiseType();
 private:
+    RoutineCtx m_ctx;
     std::shared_ptr<Coroutine<T>> m_coroutine;
 };
 
@@ -72,6 +109,9 @@ class PromiseType<void>
     friend class Coroutine<void>;
     using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
+    template<typename ...Args>
+    PromiseType(RoutineCtx ctx, Args&&... agrs);
+    PromiseType();
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<void> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -82,6 +122,7 @@ public:
     std::weak_ptr<Coroutine<void>> GetCoroutine() { return m_coroutine; }
     ~PromiseType();
 private:
+    RoutineCtx m_ctx;
     std::shared_ptr<Coroutine<void>> m_coroutine;
 };
 
@@ -98,13 +139,12 @@ public:
     using wptr = std::weak_ptr<Coroutine>;
     using promise_type = PromiseType<T>;
     
-    explicit Coroutine(std::coroutine_handle<promise_type> handle, details::CoroutineScheduler* scheduler) noexcept;
+    explicit Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
     Coroutine(Coroutine&& other) noexcept;
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
     
-    std::coroutine_handle<promise_type> GetHandle() const { return this->m_handle; }
-    details::CoroutineScheduler* BelongScheduler() const override { return this->m_scheduler; }
+    details::CoroutineScheduler* BelongScheduler() const override;
     void Destroy() override { m_handle.destroy(); }
     bool Done() const  override { return *m_is_done; }
     void Resume() const override { return m_handle.resume(); }
@@ -119,10 +159,9 @@ private:
 private:
     std::shared_ptr<std::optional<T>> m_result;
     std::shared_ptr<std::atomic_bool> m_is_done;
-    std::list<std::function<void()>> m_exit_cbs;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;
-    std::atomic<details::CoroutineScheduler*> m_scheduler;
+    std::shared_ptr<std::list<std::function<void()>>> m_exit_cbs;
 };
 
 template<>
@@ -137,13 +176,12 @@ public:
     using wptr = std::weak_ptr<Coroutine>;
     using promise_type = PromiseType<void>;
     
-    explicit Coroutine(std::coroutine_handle<promise_type> handle, details::CoroutineScheduler* scheduler) noexcept;
+    explicit Coroutine(std::coroutine_handle<promise_type> handle) noexcept;
     Coroutine(Coroutine&& other) noexcept;
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
     
-    std::coroutine_handle<promise_type> GetHandle() const { return this->m_handle; }
-    details::CoroutineScheduler* BelongScheduler() const override { return this->m_scheduler; }
+    details::CoroutineScheduler* BelongScheduler() const override;
     void Destroy() override { m_handle.destroy(); }
     bool Done() const  override { return *m_is_done; }
     void Resume() const override { return m_handle.resume(); }
@@ -157,28 +195,16 @@ private:
     void ToExit();
 private:
     std::shared_ptr<std::atomic_bool> m_is_done;
-    std::list<std::function<void()>> m_exit_cbs;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;
-    std::atomic<details::CoroutineScheduler*> m_scheduler;
+    std::shared_ptr<std::list<std::function<void()>>> m_exit_cbs;
 };
 
-template<typename T>
-class Awaiter: public AwaiterBase
-{
-public:
-    Awaiter(details::WaitAction* action, void* ctx);
-    Awaiter(T result);
-    void SetResult(T result);
-protected:
-    void* m_ctx;
-    T m_result;
-    details::WaitAction* m_action;
-};
+
 
 
 template<typename T, typename CoRtn>
-class AsyncResult: public Awaiter<T>
+class AsyncResult: public details::Awaiter<T>
 {
 public:
     AsyncResult(details::WaitAction* action, void* ctx);
@@ -192,7 +218,50 @@ private:
     std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> m_handle;
 };
 
+template<typename CoRtn>
+class AsyncResult<void, CoRtn>: public AwaiterBase
+{
+public:
+    AsyncResult(details::WaitAction* action, void* ctx);
+    AsyncResult() ;
+    bool await_ready() const noexcept;
+    //true will suspend, false will not
+    bool await_suspend(std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> handle) noexcept;
+    void await_resume() const noexcept;
+    [[nodiscard]] typename Coroutine<CoRtn>::wptr GetCoroutine() const;
+private:
+    void* m_ctx;
+    details::WaitAction* m_action;
+    std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> m_handle;
+};
+
+
+
 }
+
+template<typename CoRtn, typename ...Args>
+struct std::coroutine_traits<galay::Coroutine<CoRtn>, Args...> {
+    using promise_type = galay::Coroutine<CoRtn>::promise_type;
+    static promise_type get_promise(galay::RoutineCtx ctx, Args&&... args) noexcept {
+        return promise_type(ctx, std::forward<Args>(args)...);
+    }
+
+    static promise_type get_promise(Args&&... args) {
+        return promise_type();
+    }
+};
+
+template<typename ...Args>
+struct std::coroutine_traits<galay::Coroutine<void>, Args...> {
+    using promise_type = galay::Coroutine<void>::promise_type;
+    static promise_type get_promise(galay::RoutineCtx ctx, Args&&... args) noexcept {
+        return promise_type(ctx, std::forward<Args>(args)...);
+    }
+
+    static promise_type get_promise(Args&&... args) {
+        return promise_type();
+    }
+};
 
 namespace galay::details
 {
@@ -206,31 +275,6 @@ public:
 };
 
 }
-
-namespace galay
-{
-
-
-#define DEFAULT_COROUTINE_STORE_HASH_SIZE       2048
-
-// class CoroutineStore
-// {
-// public:
-//     CoroutineStore();
-//     void Reserve(size_t size);
-//     void AddCoroutine(std::weak_ptr<Coroutine> co);
-//     void RemoveCoroutine(std::weak_ptr<Coroutine> co);
-//     bool Exist(std::weak_ptr<Coroutine> co);
-//     void Clear();
-// private:
-//     std::shared_mutex m_mutex;
-//     std::unordered_map<Coroutine*, std::weak_ptr<Coroutine>> m_coroutines;
-// };
-
-
-
-}
-
 
 
 #include "Coroutine.tcc"

@@ -5,9 +5,11 @@
 
 namespace galay::details
 {
+
+
 template <typename SocketType>
 inline ListenEvent<SocketType>::ListenEvent(EventEngine* engine, SocketType* socket, CallbackStore<SocketType>* store)
-    : m_socket(socket), m_store(store), m_engine(engine)
+    : m_socket(socket), m_store(store), m_engine(engine), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
 {
     engine->AddEvent(this, nullptr);
 }
@@ -17,7 +19,7 @@ template <typename SocketType>
 inline void ListenEvent<SocketType>::HandleEvent(EventEngine *engine)
 {
     engine->ModEvent(this, nullptr);
-    CreateConnection(engine);
+    this->CreateConnection({m_scheduler}, engine);
 }
 
 
@@ -56,9 +58,8 @@ inline EventEngine* ListenEvent<SocketType>::BelongEngine()
 }
 
 template <typename SocketType>
-inline Coroutine<void> ListenEvent<SocketType>::CreateConnection(EventEngine* engine) {
-    LogError("[not support [SocketType]]");
-    co_return;
+inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventEngine* engine) {
+    galay::details::CreateConnection(ctx, m_socket, m_store, engine);
 }
 
 template <typename SocketType>
@@ -79,64 +80,6 @@ inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
 {
     return "TcpSslListenEvent";
 }
-
-template<>
-inline Coroutine<void> ListenEvent<galay::AsyncTcpSocket>::CreateConnection(EventEngine* engine)
-{
-    NetAddr addr{};
-    while(true)
-    {
-        const GHandle handle = co_await m_socket->Accept(&addr);
-        if( handle.fd == -1 ){
-            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                LogError("[{}]", error::GetErrorString(error));
-            }
-            co_return;
-        }
-        auto socket = new galay::AsyncTcpSocket(engine);
-        if( !socket->Socket(handle) ) {
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, Acceot Success]", socket->GetHandle().fd);
-        engine->ResetMaxEventSize(handle.fd);
-        this->m_store->Execute(socket);
-    }
-    co_return;
-}
-
-template<>
-inline Coroutine<void> ListenEvent<AsyncTcpSslSocket>::CreateConnection(EventEngine* engine)
-{
-    NetAddr addr{};
-    while (true)
-    {
-        const auto handle = co_await m_socket->Accept(&addr);
-        if( handle.fd == -1 ){
-            if(const uint32_t error = m_socket->GetErrorCode(); error != error::Error_NoError ) {
-                LogError("[{}]", error::GetErrorString(error));
-            }
-            co_return;
-        }
-        auto socket = new AsyncTcpSslSocket(engine);
-        if( bool res = socket->Socket(handle); !res ) {
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, Accept Success]", socket->GetHandle().fd);
-        if(const bool success = co_await socket->SSLAccept(); !success ){
-            LogError("[{}]", error::GetErrorString(socket->GetErrorCode()));
-            close(handle.fd);
-            delete socket;
-            co_return;
-        }
-        LogTrace("[Handle:{}, SSL_Acceot Success]", socket->GetHandle().fd);
-        engine->ResetMaxEventSize(handle.fd);
-        this->m_store->Execute(socket);
-    }
-    
-}
-
 
 }
 

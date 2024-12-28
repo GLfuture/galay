@@ -124,7 +124,7 @@ template<typename CoRtn>
 extern AsyncResult<typename CoroutineBase::wptr, CoRtn> GetThisCoroutine();
 
 template<typename CoRtn>
-extern AsyncResult<void, CoRtn> WaitAsyncExecute(const Coroutine<CoRtn>& co);
+extern AsyncResult<CoRtn, CoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co);
 
 /*
     return false only when TimeScheduler is not running
@@ -142,26 +142,25 @@ extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback);
 
-#define MIN_REMAIN_TIME     10
-/*用在father 协程中，通过father销毁child*/
 /*
-    注意使用shared_ptr分配
-    AutoDestructor的回调只会在超时时调用, 剩余时间小于MIN_REMAIN_TIME就会调用
+    协程内部同步接口
 */
-// class AutoDestructor: public std::enable_shared_from_this<AutoDestructor>
-// {
-// public:
-//     using ptr = std::shared_ptr<AutoDestructor>;
-//     AutoDestructor();
-//     AsyncResult<void> Start(uint64_t ms);
-//     void SetCallback(const std::function<void(void)>& callback) { this->m_callback = callback; }
-//     bool Reflush();
-//     ~AutoDestructor() = default;
-// private:
-//     std::shared_ptr<Timer> m_timer = nullptr;
-//     std::atomic_uint64_t m_last_active_time = 0;
-//     std::function<void(void)> m_callback;
-// };
+template<typename T, typename ...Args>
+concept AsyncFuncType = requires(T func, galay::RoutineCtx ctx, Args... args) {
+    func(ctx, args...); // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
+};
+
+template<AsyncFuncType Func, typename ...Args>
+extern galay::AsyncResult<void, void> WaitAsyncExecute(Func func, Args&&... args);
+
+template<typename T>
+concept RoutineCtxType = requires() {
+    std::is_same_v<T, galay::RoutineCtx> ;
+};
+
+template<typename Class, typename Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
+extern galay::AsyncResult<void, void> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, Args&&... args);
+
 }
 
 #include "ExternApi.tcc"

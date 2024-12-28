@@ -9,12 +9,6 @@ set(SRC_LIST
     test_waitgroup.cc
     test_udp.cc
     demo.cc
-    #tutorial_proxy_server.cc
-    #tutorial_ratelimiter.cc
-    #tutorial_smtp_client.cc
-    #tutorial_dns_client.cc
-    #tutorial_https_server.cc
-    #demo.cc
     )
 
 set(INSTALL_BIN)

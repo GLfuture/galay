@@ -1,86 +1,81 @@
-#include <iostream>
-#include <string>
-#include <regex>
+// #include <iostream>
+// #include <string>
+// #include <regex>
+// #include <iostream>
+// #include <galay/galay.h>
 
-// void ParseMysqlUrl(const std::string &url) {
-//     // 简化并修正正则表达式
-//     std::regex re(R"(mysql://([^:@]+)(?::([^@]+))?@([^:/?]+)(?::(\d+))?(?:/([^?]*))?)");
-//     std::smatch matches;
+// using namespace galay::mysql;
+// using namespace galay;
 
-//     if (std::regex_search(url, matches, re)) {
-//         if (matches[1].matched) {
-//             std::cout << "username: " << matches[1].str() << std::endl;
-//         }
-//         if (matches[2].matched) {
-//             std::cout << "password: " << matches[2].str() << std::endl;
-//         }
-//         if (matches[3].matched) {
-//             std::cout << "host: " << matches[3].str() << std::endl;
-//         }
-//         if (matches[4].matched) {
-//             std::cout << "port: " << matches[4].str() << std::endl;
-//         }
-//         if (matches[5].matched) {
-//             std::cout << "database: " << matches[5].str() << std::endl;
-//         }
-//     } else {
-//         std::cerr << "URL format is incorrect." << std::endl;
-//     }
+
+// Coroutine<void> test()
+// {
+//     co_return;
 // }
 
-// int main() {
-//     try {
-//         ParseMysqlUrl("mysql://root:123456@127.0.0.1:3306/test");
-//     } catch (const std::exception& e) {
-//         std::cerr << e.what() << std::endl;
-//     }
-//     try {
-//         ParseMysqlUrl("mysql://root:123456@127.0.0.1/test");
-//     } catch (const std::exception& e) {
-//         std::cerr << e.what() << std::endl;
-//     }
-    
+// int main()
+// {
+//     InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+//     auto func = []() -> galay::Coroutine<int> {
+//         co_await galay::this_coroutine::DeferExit<int>([](){
+//             std::cout << "exit\n";
+//         });
+//         co_await galay::this_coroutine::Sleepfor<int>(1000);
+//         std::cout << "sleep 1s" << std::endl;
+//         co_return 1;
+//     };
+//     auto coroutine = func();
+//     std::cout << sizeof(galay::protocol::http::Http2FrameHeader) << std::endl;
+//     getchar();
+//     std::cout << coroutine().value() << std::endl;
+//     DestroyGalayEnv();
 //     return 0;
 // }
 
-//#include <galay/middleware/Mysql.hpp>
+#include "galay/galay.h"
 #include <iostream>
-#include <galay/galay.h>
 
-//using namespace galay::mysql;
-using namespace galay;
+// template<typename CoRtn, typename ...Args>
+// struct std::coroutine_traits<galay::Coroutine<CoRtn>, Args...> {
+//     using promise_type = galay::Coroutine<CoRtn>::promise_type;
+//     static promise_type get_promise(galay::details::CoroutineScheduler* scheduler) noexcept {
+//         return promise_type(scheduler);
+//     }
+// };
 
 
-Coroutine<void> test()
+class A 
 {
+public:
+    galay::Coroutine<void> func(galay::RoutineCtx ct)
+    {
+        co_await galay::this_coroutine::Sleepfor<void>(2000);
+        std::cout << "sleep 2s" << std::endl;
+        co_return;
+    }
+};
+
+
+
+
+galay::Coroutine<void> test()
+{
+    int p = 10;
+    A a;
+    co_await galay::this_coroutine::WaitAsyncExecute(&A::func, &a);
+    std::cout << "end" << std::endl;
     co_return;
 }
 
+
+
+
 int main()
 {
-    // MysqlSelectQuery select;
-    // select.Fields("*").From("test").FullJoinOn("mvp", "mvp.id = test.id").Where("id > 1").GroupBy("id").OrderBy(FieldOrderByPair("id", MysqlOrderBy::ASC))\
-    //     .Limit(100);
-    // std::cout << select.ToString() << std::endl;
-    // MysqlInsertQuery insert;
-    // insert.Table("test").FieldValues(FieldValuePair("id", "1"), FieldValuePair("name", "\"gong\""));
-    // std::cout << insert.ToString() << std::endl;
-    // MysqlUpdateQuery update;
-    // update.Table("test").FieldValues(FieldValuePair("id", "1"), FieldValuePair("name", "\"gong\"")).Where("id > 1");
-    // std::cout << update.ToString() << std::endl;
-    // MysqlField field;
-    // field.Name("comment").Type("varchar(10)").NotNull().Default("\"hello\"");
-    // MysqlAlterQuery alter;
-    // alter.Table("test").AddColumn(field);
-    // std::cout << alter.ToString() << std::endl;
-    // return 0;
-    InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
-    std::cout << std::boolalpha << test().Done() << std::endl;
-    std::cout << sizeof(std::weak_ptr<std::atomic_bool>) << std::endl;
-    std::cout << sizeof(std::shared_ptr<Coroutine<void>>) << std::endl;
-    std::cout << sizeof(galay::protocol::dns::DnsFlags) << std::endl;
-    //std::cout << sizeof(galay::protocol::http::Http2FrameHeader) << std::endl;
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    auto co = test();
+    std::cout << "start" << std::endl;
     getchar();
-    DestroyGalayEnv();
+    galay::DestroyGalayEnv();
     return 0;
 }
