@@ -51,7 +51,9 @@ class RoutineCtx
     template<typename CoRtn>
     friend class PromiseType;
     friend class PromiseType<void>;
+    using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
+    RoutineCtx();
     RoutineCtx(details::CoroutineScheduler* scheduler);
     RoutineCtx(const RoutineCtx& ctx);
     RoutineCtx(RoutineCtx&& ctx);
@@ -84,11 +86,9 @@ template<typename T>
 class PromiseType
 {
     friend class Coroutine<T>;
-    using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
     template<typename ...Args>
     PromiseType(RoutineCtx ctx, Args&&... agrs);
-    PromiseType();
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<T> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -107,11 +107,9 @@ template<>
 class PromiseType<void>
 {
     friend class Coroutine<void>;
-    using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
     template<typename ...Args>
     PromiseType(RoutineCtx ctx, Args&&... agrs);
-    PromiseType();
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<void> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -245,10 +243,6 @@ struct std::coroutine_traits<galay::Coroutine<CoRtn>, Args...> {
     static promise_type get_promise(galay::RoutineCtx ctx, Args&&... args) noexcept {
         return promise_type(ctx, std::forward<Args>(args)...);
     }
-
-    static promise_type get_promise(Args&&... args) {
-        return promise_type();
-    }
 };
 
 template<typename ...Args>
@@ -256,10 +250,6 @@ struct std::coroutine_traits<galay::Coroutine<void>, Args...> {
     using promise_type = galay::Coroutine<void>::promise_type;
     static promise_type get_promise(galay::RoutineCtx ctx, Args&&... args) noexcept {
         return promise_type(ctx, std::forward<Args>(args)...);
-    }
-
-    static promise_type get_promise(Args&&... args) {
-        return promise_type();
     }
 };
 

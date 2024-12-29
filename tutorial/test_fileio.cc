@@ -10,7 +10,7 @@
 using galay::Coroutine;
 
 #ifdef __linux__
-Coroutine<void> test()
+Coroutine<void> test(galay::RoutineCtx ctx)
 {
     galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger()->set_level(spdlog::level::trace);
     galay::AsyncFileNativeAioDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(),1024);
@@ -47,7 +47,7 @@ Coroutine<void> test()
     co_return;
 }
 #else
-galay::Coroutine test()
+galay::Coroutine test(galay::RoutineCtx ctx)
 {
     galay::AsyncFileDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     bool sunccess = descriptor.Open("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -114,7 +114,7 @@ int main()
 {
 GALAY_APP_MAIN(
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    test();
+    test({});
     getchar();
     galay::DestroyGalayEnv();
     remove("test.txt");

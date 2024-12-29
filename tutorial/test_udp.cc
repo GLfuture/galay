@@ -1,6 +1,6 @@
 #include "galay/galay.h"
 
-galay::Coroutine<int> test_dns()
+galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
 {
     galay::AsyncUdpSocket socket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler()->GetEngine());
     if (!socket.Socket())
@@ -45,7 +45,7 @@ galay::Coroutine<int> test_dns()
 int main()
 {
     GALAY_APP_MAIN(
-        int a = test_dns()().value();
+        int a = test_dns({})().value();
         getchar();
     );
     return 0;

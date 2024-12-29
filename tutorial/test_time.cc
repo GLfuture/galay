@@ -84,7 +84,7 @@ int main()
 
 #elif defined(TEST_AUTO_DESTROY)
 
-galay::Coroutine<void> test()
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
     //co_await galay::this_coroutine::AddToCoroutineStore();
     co_await galay::this_coroutine::DeferExit<void>([](){
@@ -101,7 +101,7 @@ galay::Coroutine<void> test()
 int main()
 {
     GALAY_APP_MAIN(
-        test();
+        test({});
         std::cout << "main thread wait..." << std::endl;
         getchar();
     )

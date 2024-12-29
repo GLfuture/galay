@@ -43,22 +43,27 @@
 //     }
 // };
 
+galay::Coroutine<void> func(galay::RoutineCtx ct)
+{
+    co_await galay::this_coroutine::Sleepfor<void>(2000);
+    std::cout << "sleep 2s" << std::endl;
+    co_return;
+}
+
 
 class A 
 {
 public:
-    galay::Coroutine<void> func(galay::RoutineCtx ct)
-    {
-        co_await galay::this_coroutine::Sleepfor<void>(2000);
-        std::cout << "sleep 2s" << std::endl;
-        co_return;
+    galay::Coroutine<void> func(galay::RoutineCtx ctx) {
+        return ::func(ctx);
     }
 };
 
 
 
 
-galay::Coroutine<void> test()
+
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
     int p = 10;
     A a;
@@ -73,7 +78,7 @@ galay::Coroutine<void> test()
 int main()
 {
     galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
-    auto co = test();
+    auto co = test({});
     std::cout << "start" << std::endl;
     getchar();
     galay::DestroyGalayEnv();

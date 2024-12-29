@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 
 uint32_t g_port = 8080;
-galay::Coroutine<void> test(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
+galay::Coroutine<void> test(galay::RoutineCtx ctx, galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
     int64_t start = galay::GetCurrentTimeMs();
     int i = 0;
@@ -41,7 +41,7 @@ galay::Coroutine<void> test(galay::details::EventEngine* engine, std::vector<gal
 
 void pack(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
-    test(engine, sockets, begin, end);
+    test({}, engine, sockets, begin, end);
 }
 
 galay::AsyncTcpSocket* initSocket()

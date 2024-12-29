@@ -88,6 +88,97 @@ inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
 namespace galay::server 
 {
 
+template<typename SocketType>
+inline Coroutine<void> HttpRoute(galay::RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
+{
+    //co_await this_coroutine::AddToCoroutineStore();
+    SocketType* socket = connection->GetSocket();
+    IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
+    Session session(connection, &HttpServer<SocketType>::RequestPool, &HttpServer<SocketType>::ResponsePool);
+    bool close_connection = false;
+    while(true)
+    {
+step1:
+        while(true) {
+            int length = co_await socket->Recv(&rholder, max_header_size);
+            if( length <= 0 ) {
+                if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
+                    bool res = co_await socket->Close();
+                    co_return;
+                }
+            } 
+            else { 
+                std::string_view data(rholder->m_buffer, rholder->m_offset);
+                auto result = session.GetRequest()->DecodePdu(data);
+                if(!result.first) { //解析失败
+                    switch (session.GetRequest()->GetErrorCode())
+                    {
+                    case error::HttpErrorCode::kHttpError_HeaderInComplete:
+                    case error::HttpErrorCode::kHttpError_BodyInComplete:
+                    {
+                        if( rholder->m_offset >= rholder->m_size) {
+                            rholder.Realloc(rholder->m_size * 2);
+                        }
+                        break;
+                    }
+                    case galay::error::HttpErrorCode::kHttpError_BadRequest:
+                    {
+                        wholder.Reset(CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1));
+                        close_connection = true;
+                        goto step2;
+                    }
+                    case galay::error::HttpErrorCode::kHttpError_HeaderTooLong:
+                    {
+                        wholder.Reset(CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::ResponseStr(HttpVersion::Http_Version_1_1));
+                        close_connection = true;
+                        goto step2;
+                    }
+                    case galay::error::HttpErrorCode::kHttpError_UriTooLong:
+                    {
+                        wholder.Reset(CodeResponse<HttpStatusCode::UriTooLong_414>::ResponseStr(HttpVersion::Http_Version_1_1));
+                        close_connection = true;
+                        goto step2;
+                    }
+                    default:
+                        break;
+                    }
+                }
+                else { //解析成功
+                    HttpMethod method = session.GetRequest()->Header()->Method();
+                    std::string res = HttpRouteHandler<SocketType>::GetInstance()->Handle(method, session.GetRequest()->Header()->Uri(), session);
+                    wholder.Reset(std::move(res));
+                    goto step2;
+                }
+            }
+        }
+
+step2:
+        while (true)
+        {
+            int length = co_await socket->Send(&wholder, wholder->m_size);
+            if( length <= 0 ) {
+                close_connection = true;
+                break;
+            } else {
+                if(wholder->m_offset >= wholder->m_size) {
+                    break;
+                }
+            }
+        }
+        if(session.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "Close" || session.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "close") {
+            close_connection = true;
+        }
+        // clear
+        rholder.ClearBuffer(), wholder.ClearBuffer();
+        session.GetRequest()->Reset(), session.GetResponse()->Reset();
+        if(close_connection) {
+            bool res = co_await socket->Close();
+            break;
+        }
+    }
+    co_return;
+}
+
 template<>
 inline std::string CodeResponse<HttpStatusCode::BadRequest_400>::DefaultResponseBody()
 {
@@ -181,97 +272,12 @@ inline void TcpServer<SocketType>::Stop()
 }
 
 
-template<typename SocketType>
-inline Coroutine<void> HttpServer<SocketType>::HttpRoute(std::shared_ptr<Connection<SocketType>> connection)
+template <typename SocketType>
+inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(galay::RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection)
 {
-    //co_await this_coroutine::AddToCoroutineStore();
-    size_t max_header_size = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size;
-    SocketType* socket = connection->GetSocket();
-    IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
-    Session session(connection, &RequestPool, &ResponsePool);
-    bool close_connection = false;
-    while(true)
-    {
-step1:
-        while(true) {
-            int length = co_await socket->Recv(&rholder, max_header_size);
-            if( length <= 0 ) {
-                if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
-                    bool res = co_await socket->Close();
-                    co_return;
-                }
-            } 
-            else { 
-                std::string_view data(rholder->m_buffer, rholder->m_offset);
-                auto result = session.GetRequest()->DecodePdu(data);
-                if(!result.first) { //解析失败
-                    switch (session.GetRequest()->GetErrorCode())
-                    {
-                    case error::HttpErrorCode::kHttpError_HeaderInComplete:
-                    case error::HttpErrorCode::kHttpError_BodyInComplete:
-                    {
-                        if( rholder->m_offset >= rholder->m_size) {
-                            rholder.Realloc(rholder->m_size * 2);
-                        }
-                        break;
-                    }
-                    case galay::error::HttpErrorCode::kHttpError_BadRequest:
-                    {
-                        wholder.Reset(CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1));
-                        close_connection = true;
-                        goto step2;
-                    }
-                    case galay::error::HttpErrorCode::kHttpError_HeaderTooLong:
-                    {
-                        wholder.Reset(CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::ResponseStr(HttpVersion::Http_Version_1_1));
-                        close_connection = true;
-                        goto step2;
-                    }
-                    case galay::error::HttpErrorCode::kHttpError_UriTooLong:
-                    {
-                        wholder.Reset(CodeResponse<HttpStatusCode::UriTooLong_414>::ResponseStr(HttpVersion::Http_Version_1_1));
-                        close_connection = true;
-                        goto step2;
-                    }
-                    default:
-                        break;
-                    }
-                }
-                else { //解析成功
-                    HttpMethod method = session.GetRequest()->Header()->Method();
-                    std::string res = HttpRouteHandler<SocketType>::GetInstance()->Handle(method, session.GetRequest()->Header()->Uri(), session);
-                    wholder.Reset(std::move(res));
-                    goto step2;
-                }
-            }
-        }
-
-step2:
-        while (true)
-        {
-            int length = co_await socket->Send(&wholder, wholder->m_size);
-            if( length <= 0 ) {
-                close_connection = true;
-                break;
-            } else {
-                if(wholder->m_offset >= wholder->m_size) {
-                    break;
-                }
-            }
-        }
-        if(session.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "Close" || session.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "close") {
-            close_connection = true;
-        }
-        // clear
-        rholder.ClearBuffer(), wholder.ClearBuffer();
-        session.GetRequest()->Reset(), session.GetResponse()->Reset();
-        if(close_connection) {
-            bool res = co_await socket->Close();
-            break;
-        }
-    }
-    co_return;
+    return HttpRoute(ctx, std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
 }
+
 
 }
 

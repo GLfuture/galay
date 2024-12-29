@@ -2,6 +2,10 @@
 
 namespace galay
 {
+RoutineCtx::RoutineCtx()
+    :m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
+{
+}
 
 RoutineCtx::RoutineCtx(details::CoroutineScheduler *scheduler)
     :m_scheduler(scheduler)

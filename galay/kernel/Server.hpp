@@ -60,6 +60,10 @@ namespace galay::server
 
 
 #define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
+
+template<typename SocketType>
+extern Coroutine<void> HttpRoute(galay::RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection);
+
     
 struct TcpServerConfig
 {
@@ -170,7 +174,7 @@ class HttpRouteHandler
 {
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 public:
-    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(Session)>&& handler)
+    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(galay::RoutineCtx,Session)>&& handler)
     {
         m_handler_map[method][path] = std::move(handler);
     }
@@ -191,7 +195,7 @@ public:
         }
         auto uriit = it->second.find(path);
         if(uriit != it->second.end()) {
-            uriit->second(session);
+            uriit->second({}, session);
             return session.GetResponse()->EncodePdu();
         } else {
             return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);
@@ -201,7 +205,7 @@ public:
 
 private:
     static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
-    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(Session)>>> m_handler_map;
+    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(galay::RoutineCtx,Session)>>> m_handler_map;
 };
 
 template<typename SocketType>
@@ -213,17 +217,17 @@ class HttpServer
 {
 public:
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
-private:
+
     static utils::ProtocolPool<HttpRequest> RequestPool;
     static utils::ProtocolPool<HttpResponse> ResponsePool;
 public:
     explicit HttpServer(HttpServerConfig::ptr config): m_server(config), 
-        m_store(std::make_unique<CallbackStore<SocketType>>([this](std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
-            return HttpRoute(connection);
+        m_store(std::make_unique<CallbackStore<SocketType>>([this](galay::RoutineCtx ctx,std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
+            return HttpRouteForward(ctx, connection);
         })) {}
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<galay::Coroutine<void>(galay::Session<SocketType, HttpRequest, HttpResponse>)>&& handler)
+    void RouteHandler(const std::string& path, std::function<galay::Coroutine<void>(galay::RoutineCtx,galay::Session<SocketType, HttpRequest, HttpResponse>)>&& handler)
     {
          ([&](){
             HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));
@@ -239,7 +243,7 @@ public:
 
     bool IsRunning() const { return m_server.IsRunning(); }
 private:
-    Coroutine<void> HttpRoute(std::shared_ptr<Connection<SocketType>> connection);
+    Coroutine<void> HttpRouteForward(galay::RoutineCtx ctx,std::shared_ptr<Connection<SocketType>> connection);
     void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body)
     {
         helper::http::HttpHelper::DefaultHttpResponse(response, version, code, "text/html", std::move(body));
@@ -253,7 +257,6 @@ template<typename SocketType>
 inline utils::ProtocolPool<HttpRequest> HttpServer<SocketType>::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
 template<typename SocketType>
 inline utils::ProtocolPool<HttpResponse> HttpServer<SocketType>::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
-
 
 }
 

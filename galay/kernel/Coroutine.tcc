@@ -39,12 +39,6 @@ inline PromiseType<T>::PromiseType(RoutineCtx ctx, Args&&...args)
 }
 
 template <typename T>
-inline PromiseType<T>::PromiseType()
-    : m_ctx({CoroutineSchedulerHolder::GetInstance()->GetScheduler()})
-{
-}
-
-template <typename T>
 inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
@@ -80,11 +74,6 @@ inline PromiseType<T>::~PromiseType()
 template<typename ...Args>
 inline PromiseType<void>::PromiseType(RoutineCtx ctx, Args&&... agrs)
     : m_ctx(ctx)
-{
-}
-
-inline PromiseType<void>::PromiseType()
-    : m_ctx({CoroutineSchedulerHolder::GetInstance()->GetScheduler()})
 {
 }
 
