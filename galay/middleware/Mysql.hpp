@@ -9,7 +9,7 @@
 #include <memory>
 #include <string.h>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
-#include "galay/kernel/AsyncResult.h"
+#include "galay/kernel/Coroutine.hpp"
 #include "galay/utils/Pool.hpp"
 
 namespace galay::mysql
@@ -306,7 +306,8 @@ public:
     using ptr = std::shared_ptr<AsyncMysqlSession>;
     using uptr = std::unique_ptr<AsyncMysqlSession>;
     AsyncMysqlSession(MysqlConfig::ptr config);
-    AsyncResult<bool> AsyncConnect(const std::string &host, const std::string &username, const std::string &password, const std::string &db_name, uint32_t port = 3306);
+    template<typename CoRtn>
+    AsyncResult<bool, CoRtn> AsyncConnect(const std::string &host, const std::string &username, const std::string &password, const std::string &db_name, uint32_t port = 3306);
 
     ~AsyncMysqlSession();
 private:

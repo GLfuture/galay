@@ -1,11 +1,11 @@
-#include "galay/middleware/Etcd.h"
+#include "galay/middleware/Etcd.hpp"
 #include "galay/galay.h"
 #include <iostream>
 
-galay::Coroutine func()
+galay::Coroutine<void> func(galay::RoutineCtx ctx)
 {
     galay::etcd::EtcdClient client("http://127.0.0.1:2379", 0);
-    auto res = co_await client.DiscoverServicePrefix("/app/api/login");
+    auto res = co_await client.DiscoverServicePrefix<void>("/app/api/login");
     auto resp = client.GetResponse();
     auto result = resp.GetKeyValues();
     for(auto& item : result)
@@ -23,7 +23,7 @@ galay::Coroutine func()
 int main()
 {
     galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
-    func();
+    func({});
     getchar();
     galay::DestroyGalayEnv();
     return 0;

@@ -26,12 +26,12 @@ endforeach()
 
 if(ETCD_FOUND)
     add_executable(tutorial_etcd_discover_client tutorial_etcd_discover_client.cc)
-    target_link_libraries(tutorial_etcd_discover_client galay cpprest etcd-cpp-api)
+    target_link_libraries(tutorial_etcd_discover_client PRIVATE galay cpprest etcd-cpp-api ssl crypto aio)
     set_target_properties(tutorial_etcd_discover_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
     add_executable(tutorial_etcd_register_client tutorial_etcd_register_client.cc)
-    target_link_libraries(tutorial_etcd_register_client galay cpprest etcd-cpp-api)
+    target_link_libraries(tutorial_etcd_register_client PRIVATE galay cpprest etcd-cpp-api ssl crypto aio)
     set_target_properties(tutorial_etcd_register_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
@@ -40,7 +40,7 @@ endif()
 
 if(MYSQL_FOUND)
     add_executable(tutorial_mysql_client tutorial_mysql_client.cc)
-    target_link_libraries(tutorial_mysql_client galay mysqlclient)
+    target_link_libraries(tutorial_mysql_client PRIVATE galay mysqlclient ssl crypto aio)
     set_target_properties(tutorial_mysql_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
@@ -50,7 +50,7 @@ endif()
 if(REDIS_FOUND)
     add_executable(tutorial_redis_client tutorial_redis_client.cc)
     find_package(Hiredis REQUIRED)
-    target_link_libraries(tutorial_redis_client PRIVATE galay ${Hiredis})
+    target_link_libraries(tutorial_redis_client PRIVATE galay ${Hiredis} ssl crypto aio)
     set_target_properties(tutorial_redis_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )

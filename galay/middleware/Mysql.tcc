@@ -111,6 +111,17 @@ inline MysqlUpdateQuery &MysqlUpdateQuery::FieldValues(FieldsValue... values)
     return *this;
 }
 
+template<typename CoRtn>
+AsyncResult<bool, CoRtn> 
+AsyncMysqlSession::AsyncConnect(const std::string &host, const std::string &username, const std::string &password, const std::string &db_name, uint32_t port)
+{
+    net_async_status status = mysql_real_connect_nonblocking(this->m_mysql, host.c_str(), username.c_str(), password.c_str(), db_name.c_str(), port, nullptr, 0);
+    if (status )
+    {
+    }
+
+    return {true};
+}
 
 }
 

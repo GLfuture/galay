@@ -233,25 +233,7 @@ private:
     std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> m_handle;
 };
 
-
-
 }
-
-template<typename CoRtn, typename ...Args>
-struct std::coroutine_traits<galay::Coroutine<CoRtn>, Args...> {
-    using promise_type = galay::Coroutine<CoRtn>::promise_type;
-    static promise_type get_promise(galay::RoutineCtx ctx, Args&&... args) noexcept {
-        return promise_type(ctx, std::forward<Args>(args)...);
-    }
-};
-
-template<typename ...Args>
-struct std::coroutine_traits<galay::Coroutine<void>, Args...> {
-    using promise_type = galay::Coroutine<void>::promise_type;
-    static promise_type get_promise(galay::RoutineCtx ctx, Args&&... args) noexcept {
-        return promise_type(ctx, std::forward<Args>(args)...);
-    }
-};
 
 namespace galay::details
 {
