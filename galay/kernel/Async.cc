@@ -224,7 +224,7 @@ NetWaitEvent::~NetWaitEvent()
 
 bool NetWaitEvent::OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void *ctx)
 {
-    NetAddr* netaddr = static_cast<NetAddr*>(ctx);
+    THost* netaddr = static_cast<THost*>(ctx);
     sockaddr addr{};
     socklen_t addrlen = sizeof(addr);
     GHandle handle {
@@ -271,7 +271,7 @@ bool NetWaitEvent::OnTcpSendWaitPrepare(const CoroutineBase::wptr co, void* ctx)
 
 bool NetWaitEvent::OnTcpConnectWaitPrepare(CoroutineBase::wptr co, void* ctx)
 {
-    auto* addr = static_cast<NetAddr*>(ctx);
+    auto* addr = static_cast<THost*>(ctx);
     LogTrace("[Connect to {}:{}]", addr->m_ip, addr->m_port);
     sockaddr_in saddr{};
     saddr.sin_family = AF_INET;

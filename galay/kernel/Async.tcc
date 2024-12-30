@@ -65,7 +65,7 @@ inline bool Listen(AsyncNetIo::wptr asocket, int backlog)
 }
 
 template<typename CoRtn>
-inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr asocket, NetAddr* addr)
+inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr asocket, THost* addr)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -73,7 +73,7 @@ inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr asocket, NetAddr
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr asocket, NetAddr* addr)
+inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr asocket, THost* addr)
 {
     dynamic_cast<NetWaitEvent*>(asocket.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
     asocket.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
@@ -503,13 +503,13 @@ inline bool AsyncTcpSocket::Listen(int backlog)
 }
 
 template <typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Connect(NetAddr *addr)
+inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Connect(THost *addr)
 {
     return details::AsyncConnect<CoRtn>(m_io, addr);
 }
 
 template <typename CoRtn>
-inline AsyncResult<GHandle, CoRtn> AsyncTcpSocket::Accept(NetAddr *addr)
+inline AsyncResult<GHandle, CoRtn> AsyncTcpSocket::Accept(THost *addr)
 {
     return details::AsyncAccept<CoRtn>(m_io, addr);
 }
@@ -595,7 +595,7 @@ inline bool AsyncTcpSslSocket::Listen(int backlog)
 }
 
 template <typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Connect(NetAddr *addr)
+inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Connect(THost *addr)
 {
     return details::AsyncConnect<CoRtn>(m_io, addr);
 }
@@ -607,7 +607,7 @@ inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::AsyncSSLConnect()
 }
 
 template <typename CoRtn>
-inline AsyncResult<GHandle, CoRtn> AsyncTcpSslSocket::Accept(NetAddr *addr)
+inline AsyncResult<GHandle, CoRtn> AsyncTcpSslSocket::Accept(THost *addr)
 {
     return details::AsyncAccept<CoRtn>(m_io, addr);
 }

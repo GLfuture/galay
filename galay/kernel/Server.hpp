@@ -96,7 +96,7 @@ class TcpServer
 public:
     explicit TcpServer(TcpServerConfig::ptr config) :m_config(config) {}
     //no block
-    void Start(CallbackStore<SocketType>* store, const std::string& addr, int port);
+    void Start(CallbackStore<SocketType>* store, THost host);
     void Stop() ;
     TcpServerConfig::ptr GetConfig() { return m_config; }
     inline bool IsRunning() { return m_is_running; }
@@ -234,8 +234,8 @@ public:
         }(), ...);
     }
 
-    void Start(const std::string& addr, int port) {
-        m_server.Start(m_store.get(), addr, port);
+    void Start(THost host) {
+        m_server.Start(m_store.get(), host);
     }
     void Stop() {
         m_server.Stop();

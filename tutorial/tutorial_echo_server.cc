@@ -19,7 +19,7 @@ int main()
     galay::InitializeGalayEnv(config->m_coroutineConf, config->m_netSchedulerConf, config->m_timerSchedulerConf);
     galay::server::HttpServer<galay::AsyncTcpSocket> server(config);
     server.RouteHandler<galay::HTTPGET>("/", Handler::GetHelloWorldHandler);
-    server.Start("", 8060);
+    server.Start({"", 8060});
     getchar();
     server.Stop();
     galay::DestroyGalayEnv();

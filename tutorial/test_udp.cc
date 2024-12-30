@@ -21,7 +21,7 @@ galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
     question.m_class = 1;
     request.SetQuestion(std::move(question));
     galay::IOVecHolder<galay::UdpIOVec> sholder(request.EncodePdu()), rholder(1500);
-    sholder->m_addr = galay::NetAddr{
+    sholder->m_addr = galay::THost{
         .m_ip = "8.8.8.8",
         .m_port = 53
     };

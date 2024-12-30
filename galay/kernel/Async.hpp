@@ -148,9 +148,9 @@ public:
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
     template<typename CoRtn = void>
-    AsyncResult<bool, CoRtn> Connect(NetAddr* addr);
+    AsyncResult<bool, CoRtn> Connect(THost* addr);
     template<typename CoRtn = void>
-    AsyncResult<GHandle, CoRtn> Accept(NetAddr* addr);
+    AsyncResult<GHandle, CoRtn> Accept(THost* addr);
     template<typename CoRtn = void>
     AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length);
     template<typename CoRtn = void>
@@ -178,11 +178,11 @@ public:
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
     template<typename CoRtn = void>
-    AsyncResult<bool, CoRtn> Connect(NetAddr* addr);
+    AsyncResult<bool, CoRtn> Connect(THost* addr);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> AsyncSSLConnect();
     template<typename CoRtn = void>
-    AsyncResult<GHandle, CoRtn> Accept(NetAddr* addr);
+    AsyncResult<GHandle, CoRtn> Accept(THost* addr);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> SSLAccept();
     template<typename CoRtn = void>
@@ -453,9 +453,9 @@ bool Bind(AsyncNetIo::wptr asocket, const std::string& addr, int port);
 
 bool Listen(AsyncNetIo::wptr asocket, int backlog);
 template<typename CoRtn = void>
-AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr asocket, NetAddr* addr);
+AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr asocket, THost* addr);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr async_socket, NetAddr* addr);
+AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr async_socket, THost* addr);
 /*
     return: 
         >0   bytes read

@@ -15,7 +15,7 @@
 
 namespace galay 
 {
-struct NetAddr
+struct THost
 {
     std::string m_ip;
     uint32_t m_port;
@@ -40,7 +40,7 @@ struct FileIOVec: public IOVec
 
 struct UdpIOVec: public IOVec
 {
-    NetAddr m_addr;
+    THost m_addr;
 };
 
 template<typename T>

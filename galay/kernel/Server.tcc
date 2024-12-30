@@ -218,7 +218,7 @@ inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::Defaul
 
 
 template<typename SocketType>
-inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, const std::string& addr, int port) {
+inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost host) {
     m_is_running = true;
     m_listen_events.resize(m_config->m_netSchedulerConf.first);
     for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
@@ -237,7 +237,7 @@ inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, const
         option.HandleReuseAddr();
         option.HandleReusePort();
         
-        if(!socket->Bind(addr, port)) {
+        if(!socket->Bind(host.m_ip, host.m_port)) {
             LogError("[Bind failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
             delete socket;
             for(int j = 0; j < i; ++j ){
