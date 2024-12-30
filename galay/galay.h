@@ -39,15 +39,15 @@ namespace galay
 #define GALAY_VERSION "0.0.2"
 #endif
 
-#define HTTPGET protocol::http::HttpMethod::Http_Method_Get
-#define HTTPPOST protocol::http::HttpMethod::Http_Method_Post
-#define HTTPDELETE protocol::http::HttpMethod::Http_Method_Delete
-#define HTTPPUT protocol::http::HttpMethod::Http_Method_Put
-#define HTTPPATCH protocol::http::HttpMethod::Http_Method_Patch
-#define HTTPHEAD protocol::http::HttpMethod::Http_Method_Head
-#define HTTPOPTIONS protocol::http::HttpMethod::Http_Method_Options
-#define HTTPTRACE protocol::http::HttpMethod::Http_Method_Trace
-#define HTTPCONNECT protocol::http::HttpMethod::Http_Method_Connect
+#define HTTPGET http::HttpMethod::Http_Method_Get
+#define HTTPPOST http::HttpMethod::Http_Method_Post
+#define HTTPDELETE http::HttpMethod::Http_Method_Delete
+#define HTTPPUT http::HttpMethod::Http_Method_Put
+#define HTTPPATCH http::HttpMethod::Http_Method_Patch
+#define HTTPHEAD http::HttpMethod::Http_Method_Head
+#define HTTPOPTIONS http::HttpMethod::Http_Method_Options
+#define HTTPTRACE http::HttpMethod::Http_Method_Trace
+#define HTTPCONNECT http::HttpMethod::Http_Method_Connect
 
 
 }

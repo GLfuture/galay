@@ -5,7 +5,7 @@ using namespace galay;
 
 TEST(HttpFormParser, RequestParser)
 {
-    auto request = std::make_shared<protocol::http::HttpRequest>();
+    auto request = std::make_shared<http::HttpRequest>();
     std::string msg = "POST /forms HTTP/1.1\r\n\
 Content-Length: 624\r\n\
 Content-Type: multipart/form-data; boundary=--------------------------225416638845415405984661\r\n\
@@ -52,18 +52,18 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     ASSERT_EQ(values[3].Name(), "status"); 
     ASSERT_TRUE(values[3].IsNumber());
     ASSERT_EQ(values[3].ToNumber(), 1);
-    protocol::http::HttpRequest::ptr request2 = std::make_shared<protocol::http::HttpRequest>();
+    http::HttpRequest::ptr request2 = std::make_shared<http::HttpRequest>();
     helper::http::HttpFormDataHelper::FormDataToString(request2, "--------------------------225416638845415405984661", values);
-    request2->Header()->Method() = protocol::http::HttpMethod::Http_Method_Post;
+    request2->Header()->Method() = http::HttpMethod::Http_Method_Post;
     request2->Header()->Uri() = "/forms";
-    request2->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
+    request2->Header()->Version() = http::HttpVersion::Http_Version_1_1;
     request2->Header()->HeaderPairs().AddHeaderPair("Content-Type", "multipart/form-data; boundary=--------------------------225416638845415405984661");
     ASSERT_EQ(request2->EncodePdu(), msg);
 }
 
 TEST(HttpFormParser, ResponseParser)
 {
-    auto response = std::make_shared<protocol::http::HttpResponse>();
+    auto response = std::make_shared<http::HttpResponse>();
     std::string msg = "HTTP/1.1 200 OK\r\n\
 Content-Length: 624\r\n\
 Content-Type: multipart/form-data; boundary=--------------------------225416638845415405984661\r\n\
@@ -94,7 +94,7 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     ASSERT_TRUE(result.first);
     ASSERT_EQ(result.second, (int)msg.length());
     ASSERT_EQ(response->Header()->HeaderPairs().GetValue("Content-Length"), std::string("624"));
-    ASSERT_EQ(response->Header()->Version(), protocol::http::HttpVersion::Http_Version_1_1);
+    ASSERT_EQ(response->Header()->Version(), http::HttpVersion::Http_Version_1_1);
     ASSERT_EQ(msg, response->EncodePdu());
 }
 
@@ -103,6 +103,6 @@ TEST(HttpFormDataHelper, ParseHeadData)
 {
     std::string msg = "GET / HTTP/1.1\r\n\
 Host: localhost:8080\r\n\r\n";
-    protocol::http::HttpRequest request;
+    http::HttpRequest request;
     request.DecodePdu(msg);
 }

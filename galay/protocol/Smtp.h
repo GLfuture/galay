@@ -28,7 +28,7 @@ namespace galay::error
     };
 }
 
-namespace galay::protocol::smtp
+namespace galay::smtp
 {
     struct SmtpMsgInfo
     {

@@ -42,7 +42,7 @@ HttpError::ToString(const HttpErrorCode code) const
 
 }
 
-namespace galay::protocol::http
+namespace galay::http
 {
 
 std::vector<std::string> 
@@ -467,7 +467,7 @@ HttpRequestHeader::CopyFrom(const HttpRequestHeader::ptr& header)
     this->m_headerPairs = header->m_headerPairs;
 }
 
-void protocol::http::HttpRequestHeader::Reset()
+void HttpRequestHeader::Reset()
 {
     m_version = HttpVersion::Http_Version_Unknown;
     m_method = HttpMethod::Http_Method_Unknown;

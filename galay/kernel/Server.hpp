@@ -46,8 +46,8 @@ private:
 
 namespace galay
 {
-using HttpSession = Session<AsyncTcpSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
-using HttpsSession = Session<AsyncTcpSslSocket, protocol::http::HttpRequest, protocol::http::HttpResponse>;
+using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
+using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
 }
 
 namespace galay::server 
@@ -123,7 +123,7 @@ concept ProtoType = std::default_initializable<T> && requires(T type, const std:
 #define DEFAULT_HTTP_RESPONSE_POOL_SIZE              2048
 #define DEFAULT_HTTP_KEEPALIVE_TIME_MS          (7500 * 1000)
 
-using namespace galay::protocol::http;
+using namespace galay::http;
 
 template<HttpStatusCode Code>
 class CodeResponse

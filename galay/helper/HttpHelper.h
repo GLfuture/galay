@@ -78,21 +78,21 @@ namespace galay::helper::http
     class HttpFormDataHelper
     {
     public:
-        static bool IsFormData(protocol::http::HttpRequest::ptr request);
-        static bool ParseFormData(protocol::http::HttpRequest::ptr request, std::vector<FormDataValue>& values);
-        static void FormDataToString(protocol::http::HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values);
+        static bool IsFormData(http::HttpRequest::ptr request);
+        static bool ParseFormData(http::HttpRequest::ptr request, std::vector<FormDataValue>& values);
+        static void FormDataToString(http::HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values);
     };
 
     class HttpHelper
     {
     public:
-        using HttpResponseCode = protocol::http::HttpStatusCode;
+        using HttpResponseCode = http::HttpStatusCode;
         //request
-        static bool DefaultGet(protocol::http::HttpRequest* request, const std::string& url, bool keepalive = true);
-        static bool DefaultPost(protocol::http::HttpRequest* request, const std::string& url, bool keepalive = true);
+        static bool DefaultGet(http::HttpRequest* request, const std::string& url, bool keepalive = true);
+        static bool DefaultPost(http::HttpRequest* request, const std::string& url, bool keepalive = true);
         //response
-        static bool DefaultRedirect(protocol::http::HttpResponse* response, const std::string& url, HttpResponseCode code);
-        static bool DefaultHttpResponse(protocol::http::HttpResponse* response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string type, const std::string &body);
+        static bool DefaultRedirect(http::HttpResponse* response, const std::string& url, HttpResponseCode code);
+        static bool DefaultHttpResponse(http::HttpResponse* response, http::HttpVersion version, http::HttpStatusCode code, std::string type, const std::string &body);
     };
     
 }

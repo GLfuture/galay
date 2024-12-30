@@ -44,12 +44,12 @@ namespace galay
             using uptr = std::unique_ptr<RequestFactory>;
             using wptr = std::weak_ptr<RequestFactory>;
             static RequestFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Request>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::Request> Create(const std::string &typeName, Targs &&...args);
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::Request>(Targs &&...args)> func);
+            std::shared_ptr<galay::Request> Create(const std::string &typeName, Targs &&...args);
             virtual ~RequestFactory() = default;
         private:
             static RequestFactory* m_ReqFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::Request>(Targs &&...)>> m_mapCreateFunction;
+            std::unordered_map<std::string, std::function<std::shared_ptr<galay::Request>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename... Targs>
@@ -60,12 +60,12 @@ namespace galay
             using uptr = std::unique_ptr<ResponseFactory>;
             using wptr = std::weak_ptr<ResponseFactory>;
             static ResponseFactory<Targs...> *GetInstance();
-            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Response>(Targs &&...args)> func);
-            std::shared_ptr<galay::protocol::Response> Create(const std::string &typeName, Targs &&...args);
+            bool Regist(const std::string &typeName, std::function<std::shared_ptr<galay::Response>(Targs &&...args)> func);
+            std::shared_ptr<galay::Response> Create(const std::string &typeName, Targs &&...args);
             virtual ~ResponseFactory() = default;
         private:
             static ResponseFactory* m_RespFactory;
-            std::unordered_map<std::string, std::function<std::shared_ptr<galay::protocol::Response>(Targs &&...)>> m_mapCreateFunction;
+            std::unordered_map<std::string, std::function<std::shared_ptr<galay::Response>(Targs &&...)>> m_mapCreateFunction;
         };
 
         template <typename... Targs>
@@ -113,7 +113,7 @@ namespace galay
 
         //偏特化
         template <typename T, typename... Targs>
-        class Register<protocol::Request,T,Targs...>
+        class Register<Request,T,Targs...>
         {
         public:
             explicit Register();
@@ -121,7 +121,7 @@ namespace galay
         };
 
         template <typename T, typename... Targs>
-        class Register<protocol::Response,T,Targs...>
+        class Register<Response,T,Targs...>
         {
         public:
             explicit Register();

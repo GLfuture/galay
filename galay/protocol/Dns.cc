@@ -33,7 +33,7 @@ DnsError::ToString(DnsErrorCode code) const
 }
 }
 
-namespace galay::protocol::dns
+namespace galay::dns
 {
 
 std::string GetDnsAnswerTypeString(unsigned short type)

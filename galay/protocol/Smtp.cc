@@ -29,7 +29,7 @@ std::string SmtpError::ToString(SmtpErrorCode code) const
 }
 }
 
-namespace galay::protocol::smtp
+namespace galay::smtp
 {
 std::string 
 SmtpHelper::Hello(SmtpRequest& request)
@@ -148,17 +148,18 @@ bool SmtpRequest::HasError() const
     return m_error->HasError();
 }
 
-int protocol::smtp::SmtpRequest::GetErrorCode() const
+int SmtpRequest::GetErrorCode() const
 {
     return m_error->Code();
 }
 
-std::string protocol::smtp::SmtpRequest::GetErrorString()
+std::string 
+SmtpRequest::GetErrorString()
 {
     return m_error->ToString(m_error->Code());
 }
 
-void protocol::smtp::SmtpRequest::Reset()
+void SmtpRequest::Reset()
 {
     m_error->Reset();
     m_content.clear();
@@ -202,22 +203,26 @@ SmtpResponse::EncodePdu() const
     return m_content + "\r\n";
 }
 
-bool protocol::smtp::SmtpResponse::HasError() const
+bool 
+SmtpResponse::HasError() const
 {
     return m_error->HasError();
 }
 
-int protocol::smtp::SmtpResponse::GetErrorCode() const
+int 
+SmtpResponse::GetErrorCode() const
 {
     return m_error->Code();
 }
 
-std::string protocol::smtp::SmtpResponse::GetErrorString()
+std::string 
+SmtpResponse::GetErrorString()
 {
     return m_error->ToString(m_error->Code());
 }
 
-void protocol::smtp::SmtpResponse::Reset()
+void 
+SmtpResponse::Reset()
 {
     m_error->Reset();
     m_content.clear();
