@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     galay::InitializeGalayEnv(config->m_coroutineConf, config->m_netSchedulerConf, config->m_timerSchedulerConf);
     galay::InitializeSSLServerEnv(argv[1], argv[2]);
     galay::server::HttpServer<galay::AsyncTcpSslSocket> server(config);
-    server.Start("", 2333);
+    server.Start({"", 2333});
     getchar();
     server.Stop();
     galay::DestroySSLEnv();

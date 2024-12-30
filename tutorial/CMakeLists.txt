@@ -11,13 +11,19 @@ set(SRC_LIST
     demo.cc
     )
 
+
+set(COMMON_LIB ssl crypto)
+if(LINUX)
+    list(APPEND COMMON_LIB aio)
+endif()
+
 set(INSTALL_BIN)
 include_directories(${CMAKE_SOURCE_DIR})    
 
 foreach(SRC ${SRC_LIST})
     string(REPLACE ".cc" "" EXECUTABLE_NAME ${SRC})
     add_executable(${EXECUTABLE_NAME} ${SRC})
-    target_link_libraries(${EXECUTABLE_NAME} galay ssl crypto aio)
+    target_link_libraries(${EXECUTABLE_NAME} galay ${COMMON_LIB})
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
@@ -26,12 +32,12 @@ endforeach()
 
 if(ETCD_FOUND)
     add_executable(tutorial_etcd_discover_client tutorial_etcd_discover_client.cc)
-    target_link_libraries(tutorial_etcd_discover_client PRIVATE galay cpprest etcd-cpp-api ssl crypto aio)
+    target_link_libraries(tutorial_etcd_discover_client PRIVATE galay cpprest etcd-cpp-api ${COMMON_LIB})
     set_target_properties(tutorial_etcd_discover_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
     add_executable(tutorial_etcd_register_client tutorial_etcd_register_client.cc)
-    target_link_libraries(tutorial_etcd_register_client PRIVATE galay cpprest etcd-cpp-api ssl crypto aio)
+    target_link_libraries(tutorial_etcd_register_client PRIVATE galay cpprest etcd-cpp-api ${COMMON_LIB})
     set_target_properties(tutorial_etcd_register_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
@@ -40,7 +46,7 @@ endif()
 
 if(MYSQL_FOUND)
     add_executable(tutorial_mysql_client tutorial_mysql_client.cc)
-    target_link_libraries(tutorial_mysql_client PRIVATE galay mysqlclient ssl crypto aio)
+    target_link_libraries(tutorial_mysql_client PRIVATE galay mysqlclient ${COMMON_LIB})
     set_target_properties(tutorial_mysql_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )
@@ -50,7 +56,7 @@ endif()
 if(REDIS_FOUND)
     add_executable(tutorial_redis_client tutorial_redis_client.cc)
     find_package(Hiredis REQUIRED)
-    target_link_libraries(tutorial_redis_client PRIVATE galay ${Hiredis} ssl crypto aio)
+    target_link_libraries(tutorial_redis_client PRIVATE galay ${Hiredis} ${COMMON_LIB})
     set_target_properties(tutorial_redis_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )

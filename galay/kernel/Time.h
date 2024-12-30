@@ -8,6 +8,7 @@
 #include <queue>
 #include <functional>
 #include <shared_mutex>
+#include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include "Internal.hpp"
 
 namespace galay::details {

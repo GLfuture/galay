@@ -34,9 +34,9 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     auto result = request->DecodePdu(msg);
     ASSERT_TRUE(result.first);
     ASSERT_EQ(result.second, (int)msg.length());
-    ASSERT_TRUE(helper::http::HttpFormDataHelper::IsFormData(request));
-    std::vector<helper::http::FormDataValue> values;
-    helper::http::HttpFormDataHelper::ParseFormData(request, values);
+    ASSERT_TRUE(http::HttpFormDataHelper::IsFormData(request));
+    std::vector<http::FormDataValue> values;
+    http::HttpFormDataHelper::ParseFormData(request, values);
     ASSERT_EQ(values.size(), 4);
     ASSERT_EQ(values[0].Name(), "name");
     ASSERT_TRUE(values[0].IsString());
@@ -53,7 +53,7 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     ASSERT_TRUE(values[3].IsNumber());
     ASSERT_EQ(values[3].ToNumber(), 1);
     http::HttpRequest::ptr request2 = std::make_shared<http::HttpRequest>();
-    helper::http::HttpFormDataHelper::FormDataToString(request2, "--------------------------225416638845415405984661", values);
+    http::HttpFormDataHelper::FormDataToString(request2, "--------------------------225416638845415405984661", values);
     request2->Header()->Method() = http::HttpMethod::Http_Method_Post;
     request2->Header()->Uri() = "/forms";
     request2->Header()->Version() = http::HttpVersion::Http_Version_1_1;
