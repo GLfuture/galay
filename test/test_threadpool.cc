@@ -1,4 +1,4 @@
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 #include <iostream>
 
 galay::thread::ScrambleThreadPool::ptr tp;

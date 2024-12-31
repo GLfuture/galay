@@ -1,4 +1,4 @@
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 #include "galay/middleware/Etcd.hpp"
 
 galay::Coroutine<void> func(galay::RoutineCtx ctx)

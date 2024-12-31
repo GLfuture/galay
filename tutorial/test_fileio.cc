@@ -1,4 +1,4 @@
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 #include "galay/utils/Io.h"
 #include <fcntl.h>
 #include <unistd.h>
@@ -112,12 +112,10 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
 
 int main()
 {
-GALAY_APP_MAIN(
+    galay::GalayEnv env({1, -1}, {1, -1}, {1, -1});
     std::this_thread::sleep_for(std::chrono::seconds(1));
     test({});
     getchar();
-    galay::DestroyGalayEnv();
     remove("test.txt");
-);
     return 0;
 }

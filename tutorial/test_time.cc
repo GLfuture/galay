@@ -1,4 +1,4 @@
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 #include "galay/kernel/EventEngine.h"
 #include <iostream>
 
@@ -100,11 +100,11 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
  
 int main()
 {
-    GALAY_APP_MAIN(
-        test({});
-        std::cout << "main thread wait..." << std::endl;
-        getchar();
-    )
+    galay::GalayEnv env;
+    test({});
+    std::cout << "main thread wait..." << std::endl;
+    getchar();
+    
     return 0;
 }
 

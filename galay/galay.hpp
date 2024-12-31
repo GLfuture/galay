@@ -1,5 +1,5 @@
-#ifndef GALAY_H
-#define GALAY_H
+#ifndef GALAY_HPP
+#define GALAY_HPP
 
 #include "helper/HttpHelper.h"
 
@@ -39,26 +39,20 @@ namespace galay
 #define GALAY_VERSION "0.0.2"
 #endif
 
-#define HTTPGET http::HttpMethod::Http_Method_Get
-#define HTTPPOST http::HttpMethod::Http_Method_Post
-#define HTTPDELETE http::HttpMethod::Http_Method_Delete
-#define HTTPPUT http::HttpMethod::Http_Method_Put
-#define HTTPPATCH http::HttpMethod::Http_Method_Patch
-#define HTTPHEAD http::HttpMethod::Http_Method_Head
-#define HTTPOPTIONS http::HttpMethod::Http_Method_Options
-#define HTTPTRACE http::HttpMethod::Http_Method_Trace
-#define HTTPCONNECT http::HttpMethod::Http_Method_Connect
+
+class GalayEnv
+{
+public:
+    GalayEnv(std::pair<uint32_t, int> coroutineConf = DEFAULT_COROUTINE_SCHEDULER_CONF, \
+                std::pair<uint32_t, int> eventConf = DEFAULT_NETWORK_SCHEDULER_CONF, \
+                std::pair<uint32_t, int> timerConf = DEFAULT_TIMER_SCHEDULER_CONF);
+    ~GalayEnv();
+};
 
 
 }
 
-#define GALAY_APP_MAIN(custom_code) \
-{ \
-    galay::InitializeGalayEnv(DEFAULT_COROUTINE_SCHEDULER_CONF, DEFAULT_NETWORK_SCHEDULER_CONF, DEFAULT_TIMER_SCHEDULER_CONF ); \
-    custom_code; \
-    galay::DestroyGalayEnv(); \
-}
 
-
+#include "galay.inl"
 
 #endif

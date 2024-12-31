@@ -2,7 +2,7 @@
 // #include <string>
 // #include <regex>
 // #include <iostream>
-// #include <galay/galay.h>
+// #include <galay/galay.hpp>
 
 // using namespace galay::mysql;
 // using namespace galay;
@@ -32,7 +32,7 @@
 //     return 0;
 // }
 
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 #include <iostream>
 
 // template<typename CoRtn, typename ...Args>
@@ -79,8 +79,8 @@ int main()
 {
     galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
     auto co = test({});
-    std::cout << "start" << std::endl;
     getchar();
+    std::cout << "getchar " << co().value() << std::endl;
     galay::DestroyGalayEnv();
     return 0;
 }

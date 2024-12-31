@@ -1,4 +1,4 @@
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 
 galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
 {
@@ -44,9 +44,7 @@ galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
 
 int main()
 {
-    GALAY_APP_MAIN(
-        int a = test_dns({})().value();
-        getchar();
-    );
+    int a = test_dns({})().value();
+    getchar();
     return 0;
 }

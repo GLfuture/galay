@@ -1,4 +1,4 @@
-#include "galay/galay.h"
+#include "galay/galay.hpp"
 
 using galay::http::HttpStatusCode;
 using galay::http::HttpVersion;   
