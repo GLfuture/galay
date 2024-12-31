@@ -1,8 +1,8 @@
-option(ENABLE_DEBUG "Enable debug" ON)
-option(ENABLE_INSTALL_SYSTEM "Enable install system" OFF) 
-option(ENABLE_BUILD_ETCD "Enable build mysql" ON)
-option(ENABLE_BUILD_MYSQL "Enable build mysql" ON)
-option(ENABLE_BUILD_REDIS "Enable build redis" ON)
+option(ENABLE_DEBUG "Enable debug" OFF)
+option(ENABLE_INSTALL_SYSTEM "Enable install system" ON) 
+option(ENABLE_BUILD_ETCD "Enable build mysql" OFF)
+option(ENABLE_BUILD_MYSQL "Enable build mysql" OFF)
+option(ENABLE_BUILD_REDIS "Enable build redis" OFF)
 
 
 #gtest

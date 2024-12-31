@@ -88,6 +88,205 @@ inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
 namespace galay::server 
 {
 
+template <HttpStatusCode Code>
+inline std::string CodeResponse<Code>::ResponseStr(HttpVersion version)
+{
+    if(m_responseStr.empty()) {
+        m_responseStr = DefaultResponse(version);
+    }
+    return m_responseStr;
+}
+
+template <HttpStatusCode Code>
+inline bool server::CodeResponse<Code>::RegisterResponse(HttpResponse response)
+{
+    static_assert(response.Header()->Code() == Code , "HttpStatusCode not match");
+    m_responseStr = response.EncodePdu();
+    return true;
+}
+
+template <HttpStatusCode Code>
+inline std::string server::CodeResponse<Code>::DefaultResponse(HttpVersion version)
+{
+    HttpResponse response;
+    response.Header()->Code() = Code;
+    response.Header()->Version() = version;
+    response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
+    response.Header()->HeaderPairs().AddHeaderPair("Server", "galay");
+    response.Header()->HeaderPairs().AddHeaderPair("Date", galay::GetCurrentGMTTimeString());
+    response.Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+    response.Body() = DefaultResponseBody();
+    return response.EncodePdu();
+}
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::BadRequest_400>::DefaultResponseBody()
+{
+    return "<html>Bad Request</html>";
+}
+
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::NotFound_404>::DefaultResponseBody()
+{
+    return "<html>404 Not Found</html>";
+}
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::MethodNotAllowed_405>::DefaultResponseBody()
+{
+    return "<html>405 Method Not Allowed</html>";
+}
+
+template <>
+inline std::string CodeResponse<HttpStatusCode::UriTooLong_414>::DefaultResponseBody()
+{
+    return "<html>Uri Too Long</html>";
+}
+
+template <>
+inline std::string CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::DefaultResponseBody()
+{
+    return "<html>Header Too Long</html>";
+}
+
+template<>
+inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::DefaultResponseBody()
+{
+    return "<html>500 Internal Server Error</html>";
+}
+
+
+template<typename SocketType>
+inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost host) {
+    m_is_running = true;
+    m_listen_events.resize(m_config->m_netSchedulerConf.first);
+    for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
+    {
+        SocketType* socket = new SocketType(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
+        if(const bool res = socket->Socket(); !res ) {
+            delete socket;
+            for(int j = 0; j < i; ++j ){
+                delete m_listen_events[j];
+            }
+            m_listen_events.clear();
+            LogError("[SocketType Init failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
+            return;
+        }
+        HandleOption option(socket->GetHandle());
+        option.HandleReuseAddr();
+        option.HandleReusePort();
+        
+        if(!socket->Bind(host.m_ip, host.m_port)) {
+            LogError("[Bind failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
+            delete socket;
+            for(int j = 0; j < i; ++j ){
+                delete m_listen_events[j];
+            }
+            m_listen_events.clear();
+            return;
+        }
+        if(!socket->Listen(m_config->m_backlog)) {
+            LogError("[Listen failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
+            delete socket;
+            for(int j = 0; j < i; ++j ){
+                delete m_listen_events[j];
+            }
+            m_listen_events.clear();
+            return;
+        }
+        m_listen_events[i] = new details::ListenEvent<SocketType>(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
+    } 
+}
+
+template<typename SocketType>
+inline void TcpServer<SocketType>::Stop() 
+{
+    if(!m_is_running) return;
+    for(const auto & m_listen_event : m_listen_events)
+    {
+        delete m_listen_event;
+    }
+    m_is_running = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+template <typename SocketType>
+inline void server::HttpRouteHandler<SocketType>::AddHandler(HttpMethod method, const std::string &path, std::function<Coroutine<void>(galay::RoutineCtx, Session)> &&handler)
+{
+    m_handler_map[method][path] = std::move(handler);
+}
+
+template <typename SocketType>
+inline HttpRouteHandler<SocketType> *server::HttpRouteHandler<SocketType>::GetInstance()
+{
+    if(m_instance == nullptr) {
+        m_instance = std::make_unique<HttpRouteHandler<SocketType>>();
+    }
+    return m_instance.get();
+}
+
+template <typename SocketType>
+inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, galay::Session<SocketType, HttpRequest, HttpResponse> session)
+{
+    return Handle(ctx, method, path, session, m_handler_map);
+}
+
+template <typename SocketType>
+inline server::HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config)
+: m_server(config), 
+        m_store(std::make_unique<CallbackStore<SocketType>>([this](galay::RoutineCtx ctx,std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
+                                                                    return HttpRouteForward(ctx, connection);
+                                                                })) 
+{
+
+}
+
+template <typename SocketType>
+inline void server::HttpServer<SocketType>::Start(THost host)
+{
+    m_server.Start(m_store.get(), host);
+}
+
+template <typename SocketType>
+inline void server::HttpServer<SocketType>::Stop()
+{
+    m_server.Stop();
+}
+
+template <typename SocketType>
+inline bool server::HttpServer<SocketType>::IsRunning() const
+{
+    return m_server.IsRunning();
+}
+
+template <typename SocketType>
+template <HttpMethod... Methods>
+inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::function<galay::Coroutine<void>(galay::RoutineCtx, galay::Session<SocketType, HttpRequest, HttpResponse>)> &&handler)
+{
+    ([&](){
+        HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));
+    }(), ...);
+}
+
+template <typename SocketType>
+inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(galay::RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection)
+{
+    return HttpRoute(ctx, std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
+}
+
+template <typename SocketType> 
+inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body)
+{
+    http::HttpHelper::DefaultHttpResponse(response, version, code, "text/html", std::move(body));
+}
+
+
+
+
+
+
+
 template<typename SocketType>
 inline Coroutine<void> HttpRoute(galay::RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
 {
@@ -145,8 +344,9 @@ step1:
                 }
                 else { //解析成功
                     HttpMethod method = session.GetRequest()->Header()->Method();
-                    std::string res = HttpRouteHandler<SocketType>::GetInstance()->Handle(method, session.GetRequest()->Header()->Uri(), session);
-                    wholder.Reset(std::move(res));
+                    auto co = co_await this_coroutine::WaitAsyncExecute<std::string, void>(HttpRouteHandler<SocketType>::GetInstance()->Handler(ctx, method, session.GetRequest()->Header()->Uri(), session));
+                    std::string resp = (*co)().value();
+                    wholder.Reset(std::move(resp));
                     goto step2;
                 }
             }
@@ -179,103 +379,25 @@ step2:
     co_return;
 }
 
-template<>
-inline std::string CodeResponse<HttpStatusCode::BadRequest_400>::DefaultResponseBody()
-{
-    return "<html>Bad Request</html>";
-}
-
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::NotFound_404>::DefaultResponseBody()
-{
-    return "<html>404 Not Found</html>";
-}
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::MethodNotAllowed_405>::DefaultResponseBody()
-{
-    return "<html>405 Method Not Allowed</html>";
-}
-
-template <>
-inline std::string CodeResponse<HttpStatusCode::UriTooLong_414>::DefaultResponseBody()
-{
-    return "<html>Uri Too Long</html>";
-}
-
-template <>
-inline std::string CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::DefaultResponseBody()
-{
-    return "<html>Header Too Long</html>";
-}
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::DefaultResponseBody()
-{
-    return "<html>500 Internal Server Error</html>";
-}
-
-
-template<typename SocketType>
-inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, const std::string& addr, int port) {
-    m_is_running = true;
-    m_listen_events.resize(m_config->m_netSchedulerConf.first);
-    for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
-    {
-        SocketType* socket = new SocketType(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
-        if(const bool res = socket->Socket(); !res ) {
-            delete socket;
-            for(int j = 0; j < i; ++j ){
-                delete m_listen_events[j];
-            }
-            m_listen_events.clear();
-            LogError("[SocketType Init failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
-            return;
-        }
-        HandleOption option(socket->GetHandle());
-        option.HandleReuseAddr();
-        option.HandleReusePort();
-        
-        if(!socket->Bind(addr, port)) {
-            LogError("[Bind failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
-            delete socket;
-            for(int j = 0; j < i; ++j ){
-                delete m_listen_events[j];
-            }
-            m_listen_events.clear();
-            return;
-        }
-        if(!socket->Listen(m_config->m_backlog)) {
-            LogError("[Listen failed, error:{}]", error::GetErrorString(socket->GetErrorCode()));
-            delete socket;
-            for(int j = 0; j < i; ++j ){
-                delete m_listen_events[j];
-            }
-            m_listen_events.clear();
-            return;
-        }
-        m_listen_events[i] = new details::ListenEvent<SocketType>(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
-    } 
-}
-
-template<typename SocketType>
-inline void TcpServer<SocketType>::Stop() 
-{
-    if(!m_is_running) return;
-    for(const auto & m_listen_event : m_listen_events)
-    {
-        delete m_listen_event;
-    }
-    m_is_running = false;
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-}
-
 
 template <typename SocketType>
-inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(galay::RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection)
+inline Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string &path, \
+                                    galay::Session<SocketType, http::HttpRequest, http::HttpResponse> session, \
+                                    typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap)
 {
-    return HttpRoute(ctx, std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
+    auto it = handlerMap.find(method);
+    auto version = session.GetRequest()->Header()->Version();
+    if(it == handlerMap.end()) {
+        co_return CodeResponse<HttpStatusCode::MethodNotAllowed_405>::ResponseStr(version);
+    }
+    auto uriit = it->second.find(path);
+    if(uriit != it->second.end()) {
+        co_await this_coroutine::WaitAsyncExecute<void, std::string>(uriit->second(ctx, session));
+        co_return session.GetResponse()->EncodePdu();
+    } else {
+        co_return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);
+    }
+    co_return CodeResponse<HttpStatusCode::InternalServerError_500>::ResponseStr(version);
 }
 
 

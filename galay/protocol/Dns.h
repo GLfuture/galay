@@ -31,7 +31,7 @@ namespace galay::error
     };
 }
 
-namespace galay::protocol::dns
+namespace galay::dns
 {
     #pragma pack(push, 1)
     #define MAX_UDP_LENGTH 1500

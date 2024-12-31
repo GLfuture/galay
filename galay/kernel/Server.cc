@@ -7,7 +7,7 @@ namespace galay::details
 
 Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine)
 {
-    NetAddr addr{};
+    THost addr{};
     while(true)
     {
         const GHandle handle = co_await socket->Accept(&addr);
@@ -31,7 +31,7 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, 
 
 Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine)
 {
-    NetAddr addr{};
+    THost addr{};
     while (true)
     {
         const auto handle = co_await socket->Accept(&addr);

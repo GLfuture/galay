@@ -25,7 +25,7 @@
 //         co_return 1;
 //     };
 //     auto coroutine = func();
-//     std::cout << sizeof(galay::protocol::http::Http2FrameHeader) << std::endl;
+//     std::cout << sizeof(galay::http::Http2FrameHeader) << std::endl;
 //     getchar();
 //     std::cout << coroutine().value() << std::endl;
 //     DestroyGalayEnv();
@@ -43,18 +43,18 @@
 //     }
 // };
 
-galay::Coroutine<void> func(galay::RoutineCtx ct)
+galay::Coroutine<int> func(galay::RoutineCtx ct)
 {
-    co_await galay::this_coroutine::Sleepfor<void>(2000);
+    co_await galay::this_coroutine::Sleepfor<int>(2000);
     std::cout << "sleep 2s" << std::endl;
-    co_return;
+    co_return 1;
 }
 
 
 class A 
 {
 public:
-    galay::Coroutine<void> func(galay::RoutineCtx ctx) {
+    galay::Coroutine<int> func(galay::RoutineCtx ctx) {
         return ::func(ctx);
     }
 };
@@ -63,13 +63,13 @@ public:
 
 
 
-galay::Coroutine<void> test(galay::RoutineCtx ctx)
+galay::Coroutine<int> test(galay::RoutineCtx ctx)
 {
     int p = 10;
     A a;
-    co_await galay::this_coroutine::WaitAsyncExecute(&A::func, &a);
+    auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a);
     std::cout << "end" << std::endl;
-    co_return;
+    co_return (*co)().value();
 }
 
 

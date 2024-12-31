@@ -130,9 +130,6 @@ class Coroutine: public CoroutineBase
 {
     friend class PromiseType<T>;
 public:
-    Coroutine& operator=(Coroutine& other) = delete;
-    Coroutine& operator=(const Coroutine& other) = delete;
-public:
     using ptr = std::shared_ptr<Coroutine>;
     using wptr = std::weak_ptr<Coroutine>;
     using promise_type = PromiseType<T>;
@@ -141,13 +138,14 @@ public:
     Coroutine(Coroutine&& other) noexcept;
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
+    Coroutine& operator=(const Coroutine& other) noexcept;
     
     details::CoroutineScheduler* BelongScheduler() const override;
     void Destroy() override { m_handle.destroy(); }
     bool Done() const  override { return *m_is_done; }
     void Resume() const override { return m_handle.resume(); }
-    bool SetAwaiter(AwaiterBase* awaiter);
-    AwaiterBase* GetAwaiter() const;
+    bool SetAwaiter(AwaiterBase* awaiter) override;
+    AwaiterBase* GetAwaiter() const override;
 
     void AppendExitCallback(const std::function<void()>& callback) override;
     std::optional<T> operator()() { return *m_result; }
@@ -167,9 +165,6 @@ class Coroutine<void>: public CoroutineBase
 {
     friend class PromiseType<void>;
 public:
-    Coroutine& operator=(Coroutine& other) = delete;
-    Coroutine& operator=(const Coroutine& other) = delete;
-public:
     using ptr = std::shared_ptr<Coroutine>;
     using wptr = std::weak_ptr<Coroutine>;
     using promise_type = PromiseType<void>;
@@ -178,13 +173,14 @@ public:
     Coroutine(Coroutine&& other) noexcept;
     Coroutine(const Coroutine& other) noexcept;
     Coroutine& operator=(Coroutine&& other) noexcept;
+    Coroutine& operator=(const Coroutine& other) noexcept;
     
     details::CoroutineScheduler* BelongScheduler() const override;
     void Destroy() override { m_handle.destroy(); }
     bool Done() const  override { return *m_is_done; }
     void Resume() const override { return m_handle.resume(); }
-    bool SetAwaiter(AwaiterBase* awaiter);
-    AwaiterBase* GetAwaiter() const;
+    bool SetAwaiter(AwaiterBase* awaiter) override;
+    AwaiterBase* GetAwaiter() const override;
 
     void AppendExitCallback(const std::function<void()>& callback) override;
     void operator()() {}
@@ -232,6 +228,8 @@ private:
     details::WaitAction* m_action;
     std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> m_handle;
 };
+
+
 
 }
 

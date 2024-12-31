@@ -42,7 +42,7 @@ protected:
 
 }
 
-namespace galay::protocol::http
+namespace galay::http
 {
 
 #define HTTP_HEADER_MAX_LEN         4096    // 头部最大长度4k
@@ -297,6 +297,25 @@ private:
     size_t m_next_index;
     error::HttpError::ptr m_error;
 };
+
+
+
+
+#define GET HttpMethod::Http_Method_Get
+#define POST HttpMethod::Http_Method_Post
+#define PUT HttpMethod::Http_Method_Put
+#define DELETE HttpMethod::Http_Method_Delete
+#define HEAD HttpMethod::Http_Method_Head
+#define OPTIONS HttpMethod::Http_Method_Options
+#define CONNECT HttpMethod::Http_Method_Connect
+#define TRACE HttpMethod::Http_Method_Trace
+
+
+#define HTTP_1_0 HttpVersion::Http_Version_1_0
+#define HTTP_1_1 HttpVersion::Http_Version_1_1
+#define HTTP_2_0 HttpVersion::Http_Version_2_0
+
+
 
 }
     

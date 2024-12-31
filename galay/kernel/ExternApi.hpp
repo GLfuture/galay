@@ -15,7 +15,7 @@
 
 namespace galay 
 {
-struct NetAddr
+struct THost
 {
     std::string m_ip;
     uint32_t m_port;
@@ -40,7 +40,7 @@ struct FileIOVec: public IOVec
 
 struct UdpIOVec: public IOVec
 {
-    NetAddr m_addr;
+    THost m_addr;
 };
 
 template<typename T>
@@ -116,15 +116,10 @@ private:
 
 namespace galay::this_coroutine
 {
-/*
-    父协程一定需要加入到协程存储
-*/
 //extern AsyncResult<void> AddToCoroutineStore();
 template<typename CoRtn>
 extern AsyncResult<typename CoroutineBase::wptr, CoRtn> GetThisCoroutine();
 
-template<typename CoRtn>
-extern AsyncResult<CoRtn, CoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co);
 
 /*
     return false only when TimeScheduler is not running
@@ -142,24 +137,32 @@ extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback);
 
+
+template<typename CoRtn>
+extern AsyncResult<typename Coroutine<CoRtn>::ptr, CoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co);
 /*
     协程内部同步接口
 */
-template<typename T, typename ...Args>
+template<typename CoRtn, typename T, typename ...Args>
 concept AsyncFuncType = requires(T func, galay::RoutineCtx ctx, Args... args) {
-    func(ctx, args...); // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
+    std::is_same_v<decltype(func(ctx, args...)), Coroutine<CoRtn>>; // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
 };
 
-template<AsyncFuncType Func, typename ...Args>
-extern galay::AsyncResult<void, void> WaitAsyncExecute(Func func, Args&&... args);
+template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, typename ...Args>
+extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func func, Args&&... args);
 
 template<typename T>
 concept RoutineCtxType = requires() {
-    std::is_same_v<T, galay::RoutineCtx> ;
+    std::is_same_v<T, galay::RoutineCtx>;
 };
 
-template<typename Class, typename Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
-extern galay::AsyncResult<void, void> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, Args&&... args);
+template<typename CoRtn, typename T>
+concept CoroutineType = requires() {
+    std::is_same_v<T, galay::Coroutine<CoRtn>>;
+};
+
+template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
+extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, Args&&... args);
 
 }
 

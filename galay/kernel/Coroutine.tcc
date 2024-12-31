@@ -147,6 +147,17 @@ inline Coroutine<T>& Coroutine<T>::operator=(Coroutine&& other) noexcept
 }
 
 template<typename T>
+Coroutine<T>& Coroutine<T>::operator=(const Coroutine& other) noexcept
+{
+    m_awaiter.store(other.m_awaiter);
+    m_is_done = other.m_is_done;
+    m_handle = other.m_handle;
+    m_exit_cbs = other.m_exit_cbs;
+    m_result = other.m_result;
+    return *this;
+}
+
+template<typename T>
 inline details::CoroutineScheduler* Coroutine<T>::BelongScheduler() const
 {
     if(m_is_done->load()) {
@@ -223,6 +234,15 @@ inline Coroutine<void>& Coroutine<void>::operator=(Coroutine&& other) noexcept
     other.m_is_done.reset();
     m_exit_cbs = other.m_exit_cbs;
     other.m_exit_cbs.reset();
+    return *this;
+}
+
+inline Coroutine<void>& Coroutine<void>::operator=(const Coroutine &other) noexcept
+{
+    m_awaiter.store(other.m_awaiter);
+    m_handle = other.m_handle;
+    m_exit_cbs = other.m_exit_cbs;
+    m_is_done = other.m_is_done;
     return *this;
 }
 

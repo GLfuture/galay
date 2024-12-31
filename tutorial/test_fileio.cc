@@ -47,7 +47,7 @@ Coroutine<void> test(galay::RoutineCtx ctx)
     co_return;
 }
 #else
-galay::Coroutine test(galay::RoutineCtx ctx)
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
     galay::AsyncFileDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     bool sunccess = descriptor.Open("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);

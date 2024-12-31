@@ -2,7 +2,7 @@
 #define GALAY_RAFT_H
 #include <vector>
 
-namespace galay::protocol::raft
+namespace galay::raft
 {
 
 class Raft

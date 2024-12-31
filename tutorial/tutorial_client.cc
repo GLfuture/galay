@@ -11,7 +11,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx, galay::details::EventEngine* 
     for (i = begin; i < end; ++ i)
     {
         galay::AsyncTcpSocket* socket = sockets[i]; 
-        galay::NetAddr addr{
+        galay::THost addr{
             .m_ip = "127.0.0.1",
             .m_port = g_port
         };

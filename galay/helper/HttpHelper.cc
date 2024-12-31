@@ -3,7 +3,7 @@
 #include "galay/kernel/Time.h"
 #include <regex>
 
-namespace galay::helper::http
+namespace galay::http
 {
 
 bool 
@@ -155,7 +155,7 @@ FormDataValue::SetName(const std::string& name)
 }
 
 bool
-HttpFormDataHelper::IsFormData(protocol::http::HttpRequest::ptr request)
+HttpFormDataHelper::IsFormData(HttpRequest::ptr request)
 {
     std::string contentType = request->Header()->HeaderPairs().GetValue("Content-Type");
     int pos = contentType.find("multipart/form-data");
@@ -164,7 +164,7 @@ HttpFormDataHelper::IsFormData(protocol::http::HttpRequest::ptr request)
 }
 
 bool 
-HttpFormDataHelper::ParseFormData(protocol::http::HttpRequest::ptr request, std::vector<FormDataValue>& values)
+HttpFormDataHelper::ParseFormData(HttpRequest::ptr request, std::vector<FormDataValue>& values)
 {
     std::string contentType = request->Header()->HeaderPairs().GetValue("Content-Type");
     int begin = contentType.find("boundary=");
@@ -250,7 +250,7 @@ HttpFormDataHelper::ParseFormData(protocol::http::HttpRequest::ptr request, std:
 
 
 void 
-HttpFormDataHelper::FormDataToString(protocol::http::HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values)
+HttpFormDataHelper::FormDataToString(HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values)
 {
     if(request->Header()->HeaderPairs().HasKey("Content-Type"))
     {
@@ -290,7 +290,7 @@ HttpFormDataHelper::FormDataToString(protocol::http::HttpRequest::ptr request, c
     request->Body() += "--" + boundary + "--\r\n\r\n";
 }
 
-bool HttpHelper::DefaultGet(protocol::http::HttpRequest *request, const std::string &url, bool keepalive)
+bool HttpHelper::DefaultGet(HttpRequest *request, const std::string &url, bool keepalive)
 {
     std::regex urlPattern("^(https?://)?([^:/]+)(?::(\\d+))?(/.*)?$");
     std::smatch match;
@@ -305,8 +305,8 @@ bool HttpHelper::DefaultGet(protocol::http::HttpRequest *request, const std::str
     std::string domain = match[2].str();
     int port = match[3].matched? stoi(match[3].str()) : (protocol == "http://"? 80 : 443);
     std::string path = match[4].matched? match[4].str() : "/";
-    request->Header()->Version() = protocol::http::HttpVersion::Http_Version_1_1;
-    request->Header()->Method() = protocol::http::HttpMethod::Http_Method_Get;
+    request->Header()->Version() = HttpVersion::Http_Version_1_1;
+    request->Header()->Method() = HttpMethod::Http_Method_Get;
     
     request->Header()->HeaderPairs().AddHeaderPair("Host", domain);
     if(!keepalive) request->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
@@ -314,14 +314,14 @@ bool HttpHelper::DefaultGet(protocol::http::HttpRequest *request, const std::str
     return true;
 }
 
-bool HttpHelper::DefaultRedirect(protocol::http::HttpResponse *response, const std::string &url, HttpResponseCode code)
+bool HttpHelper::DefaultRedirect(HttpResponse *response, const std::string &url, HttpResponseCode code)
 {
-    DefaultHttpResponse(response, protocol::http::HttpVersion::Http_Version_1_1, code, "text/html", "");
+    DefaultHttpResponse(response, HttpVersion::Http_Version_1_1, code, "text/html", "");
     response->Header()->HeaderPairs().AddHeaderPair("Location", url);
     return true;
 }
 
-bool HttpHelper::DefaultHttpResponse(protocol::http::HttpResponse *response, protocol::http::HttpVersion version, protocol::http::HttpStatusCode code, std::string type, const std::string &body)
+bool HttpHelper::DefaultHttpResponse(HttpResponse *response, HttpVersion version, HttpStatusCode code, std::string type, const std::string &body)
 {
     response->Header()->Version() = version;
     response->Header()->Code() = code;

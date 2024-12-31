@@ -213,21 +213,6 @@ AsyncResult<CoroutineBase::wptr, CoRtn> GetThisCoroutine()
     return {action, nullptr};
 }
 
-template<typename CoRtn>
-AsyncResult<CoRtn, CoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co)
-{
-    auto action = new details::CoroutineHandleAction([co](CoroutineBase::wptr fco, void* ctx)->bool{
-        if(co.Done()) {
-            static_cast<AsyncResult<CoRtn, CoRtn>*>(co.lock()->GetAwaiter())->SetResult(co().value());
-            return false;
-        }
-        co.AppendExitCallback([](){
-
-        });
-        return true;
-    });
-    return {action, nullptr};
-}
 
 template<typename CoRtn>
 AsyncResult<void, CoRtn> Sleepfor(int64_t ms)
@@ -259,12 +244,30 @@ AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback)
     return {action, nullptr};
 }
 
-template<AsyncFuncType Func, typename ...Args>
-galay::AsyncResult<void, void> WaitAsyncExecute(Func func, Args&&... args)
+template<typename CoRtn, typename FCoRtn>
+AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co)
+{
+    auto action = new details::CoroutineHandleAction([co](CoroutineBase::wptr fco, void* ctx)->bool {
+        auto child = co;
+        auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(fco.lock())->GetAwaiter());
+        awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(child));
+        if(child.Done()) return false;
+        child.AppendExitCallback([fco](){
+            fco.lock()->BelongScheduler()->ToResumeCoroutine(fco);
+        });
+        return true;
+    });
+    return {action, nullptr};
+}
+
+template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, typename ...Args>
+galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func func, Args&&... args)
 {
     auto async_func = std::bind(func, std::placeholders::_1, std::forward<Args>(args)...);
     auto action = new galay::details::CoroutineHandleAction([async_func](galay::CoroutineBase::wptr co, void *ctx){
         auto coro = async_func(galay::RoutineCtx(co.lock()->BelongScheduler()));
+        auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(co.lock())->GetAwaiter());
+        awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
         if(coro.Done()) return false;
         coro.AppendExitCallback([co](){
             co.lock()->BelongScheduler()->ToResumeCoroutine(co);
@@ -275,12 +278,14 @@ galay::AsyncResult<void, void> WaitAsyncExecute(Func func, Args&&... args)
 }
 
 
-template<typename Class, typename Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
-galay::AsyncResult<void, void> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, Args&&... args)
+template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
+galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, Args&&... args)
 {
     auto async_func = std::bind(func, obj, std::placeholders::_1, std::forward<Args>(args)...);
     auto action = new galay::details::CoroutineHandleAction([async_func](galay::CoroutineBase::wptr co, void *ctx){
         auto coro = async_func(galay::RoutineCtx(co.lock()->BelongScheduler()));
+        auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(co.lock())->GetAwaiter());
+        awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
         if(coro.Done()) return false;
         coro.AppendExitCallback([co](){
             co.lock()->BelongScheduler()->ToResumeCoroutine(co);

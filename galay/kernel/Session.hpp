@@ -43,10 +43,10 @@ private:
 
 
 template <typename T>
-concept RequestType = std::is_base_of<protocol::Request, T>::value;
+concept RequestType = std::is_base_of<Request, T>::value;
 
 template <typename T>
-concept ResponseType = std::is_base_of<protocol::Response, T>::value;
+concept ResponseType = std::is_base_of<Response, T>::value;
 
 template <RequestType Request, ResponseType Response>
 struct ProtocolStore

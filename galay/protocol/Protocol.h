@@ -6,7 +6,7 @@
 #include <string_view>
 #include "galay/common/Reflection.h"
 
-namespace galay::protocol
+namespace galay
 {
     class SRequest{
     public:

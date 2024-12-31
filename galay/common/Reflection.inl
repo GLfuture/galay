@@ -24,7 +24,7 @@ galay::common::RequestFactory<Targs...>::GetInstance()
 
 template <typename... Targs>
 bool 
-galay::common::RequestFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Request>(Targs &&...args)> func)
+galay::common::RequestFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::Request>(Targs &&...args)> func)
 {
     if (nullptr == func)
         return false;
@@ -33,7 +33,7 @@ galay::common::RequestFactory<Targs...>::Regist(const std::string &typeName, std
 }
 
 template <typename... Targs>
-std::shared_ptr<galay::protocol::Request>
+std::shared_ptr<galay::Request>
 galay::common::RequestFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
 {
     if (m_mapCreateFunction.contains(typeName))
@@ -68,7 +68,7 @@ galay::common::ResponseFactory<Targs...>::GetInstance()
 
 template <typename... Targs>
 bool 
-galay::common::ResponseFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::protocol::Response>(Targs &&...args)> func)
+galay::common::ResponseFactory<Targs...>::Regist(const std::string &typeName, std::function<std::shared_ptr<galay::Response>(Targs &&...args)> func)
 {
     if (nullptr == func)
         return false;
@@ -77,7 +77,7 @@ galay::common::ResponseFactory<Targs...>::Regist(const std::string &typeName, st
 }
 
 template <typename... Targs>
-std::shared_ptr<galay::protocol::Response>
+std::shared_ptr<galay::Response>
 galay::common::ResponseFactory<Targs...>::Create(const std::string &typeName, Targs &&...args)
 {
     if (m_mapCreateFunction.contains(typeName))
@@ -176,17 +176,17 @@ galay::common::DynamicCreator<BaseClass, T, Targs...>::~DynamicCreator()
 }
 
 template <typename T, typename... Targs>
-galay::common::Register<galay::protocol::Request,T,Targs...>::Register()
+galay::common::Register<galay::Request,T,Targs...>::Register()
 {
     std::string typeName = utils::GetTypeName<T>();
-    galay::common::RequestFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::protocol::Request, T, Targs...>::CreateObject);
+    galay::common::RequestFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::Request, T, Targs...>::CreateObject);
 }
 
 template <typename T, typename... Targs>
-galay::common::Register<galay::protocol::Response,T,Targs...>::Register()
+galay::common::Register<galay::Response,T,Targs...>::Register()
 {
     std::string typeName = utils::GetTypeName<T>();
-    galay::common::ResponseFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::protocol::Response, T, Targs...>::CreateObject);
+    galay::common::ResponseFactory<Targs...>::GetInstance()->Regist(typeName, galay::common::DynamicCreator<galay::Response, T, Targs...>::CreateObject);
 }
 
 template <typename T, typename... Targs>
