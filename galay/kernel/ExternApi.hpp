@@ -148,13 +148,13 @@ concept AsyncFuncType = requires(T func, galay::RoutineCtx ctx, Args... args) {
     std::is_same_v<decltype(func(ctx, args...)), Coroutine<CoRtn>>; // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
 };
 
-template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, typename ...Args>
-extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func func, Args&&... args);
-
 template<typename T>
 concept RoutineCtxType = requires() {
     std::is_same_v<T, galay::RoutineCtx>;
 };
+
+template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, RoutineCtxType FirstArg, typename ...Args>
+extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func func, FirstArg first, Args&&... args);
 
 template<typename CoRtn, typename T>
 concept CoroutineType = requires() {
@@ -162,7 +162,7 @@ concept CoroutineType = requires() {
 };
 
 template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
-extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, Args&&... args);
+extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
 
 }
 

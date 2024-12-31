@@ -67,7 +67,7 @@ galay::Coroutine<int> test(galay::RoutineCtx ctx)
 {
     int p = 10;
     A a;
-    auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a);
+    auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a, std::move(ctx));
     std::cout << "end" << std::endl;
     co_return (*co)().value();
 }
@@ -77,10 +77,10 @@ galay::Coroutine<int> test(galay::RoutineCtx ctx)
 
 int main()
 {
-    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
     auto co = test({});
+    std::cout << "start" << std::endl;
     getchar();
     std::cout << "getchar " << co().value() << std::endl;
-    galay::DestroyGalayEnv();
     return 0;
 }
