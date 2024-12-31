@@ -14,14 +14,13 @@ public:
 
 };
 
-int main()
+int main(int argc, char* argv[])
 {
     galay::GalayEnv env({});
     auto config = galay::server::HttpServerConfig::Create();
     galay::server::HttpServer<galay::AsyncTcpSocket> server(config);
     server.RouteHandler<galay::http::GET>("/", Handler::GetHelloWorldHandler);
     server.Start({"", 8060});
-    getchar();
     server.Stop();
     return 0;
 }

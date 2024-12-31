@@ -86,6 +86,11 @@ private:
     ProtocolStore<Request, Response>::ptr m_proto_store;
 };
 
+
+
+using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
+using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
+
 }
 
 

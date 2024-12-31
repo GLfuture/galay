@@ -44,11 +44,6 @@ private:
 
 };
 
-namespace galay
-{
-using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
-using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
-}
 
 namespace galay::server 
 {
