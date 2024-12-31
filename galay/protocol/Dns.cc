@@ -243,7 +243,7 @@ void DnsRequest::Reset()
 std::string 
 DnsRequest::ModifyHostname(std::string hostname) const
 {
-    std::vector<std::string> temp = string::StringSplitter::SpiltWithChar(hostname, '.');
+    std::vector<std::string> temp = utils::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {
@@ -417,7 +417,7 @@ void DnsResponse::Reset()
 std::string 
 DnsResponse::ModifyHostname(std::string hostname)
 {
-    std::vector<std::string> temp = string::StringSplitter::SpiltWithChar(hostname, '.');
+    std::vector<std::string> temp = utils::StringSplitter::SpiltWithChar(hostname, '.');
     std::string res;
     for (auto &v : temp)
     {

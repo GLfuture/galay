@@ -7,7 +7,8 @@ namespace galay::protocol::raft
 
 class Raft
 {
-
+public:
+    
 };
 
 }

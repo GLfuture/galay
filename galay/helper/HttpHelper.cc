@@ -172,7 +172,7 @@ HttpFormDataHelper::ParseFormData(protocol::http::HttpRequest::ptr request, std:
     {
         std::string boundary = contentType.substr(begin + 9);
         std::string_view body = request->Body();
-        std::vector<std::string_view> parts = string::StringSplitter::SpiltWithStr(body, "--" + boundary + "\r\n");
+        std::vector<std::string_view> parts = utils::StringSplitter::SpiltWithStr(body, "--" + boundary + "\r\n");
         size_t len = parts[parts.size() - 1].find("--" + boundary + "--");
         parts[parts.size() - 1] = parts[parts.size() - 1].substr(0, len);
         for(auto &part : parts)
