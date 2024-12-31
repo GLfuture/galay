@@ -2,6 +2,11 @@
 
 namespace galay
 {
+RoutineCtx::ptr RoutineCtx::Create()
+{
+    return std::make_shared<RoutineCtx>();
+}
+
 RoutineCtx::RoutineCtx()
     :m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
 {

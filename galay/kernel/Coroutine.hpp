@@ -53,6 +53,8 @@ class RoutineCtx
     friend class PromiseType<void>;
     using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
+    using ptr = std::shared_ptr<RoutineCtx>;
+    static RoutineCtx::ptr Create();
     RoutineCtx();
     RoutineCtx(details::CoroutineScheduler* scheduler);
     RoutineCtx(const RoutineCtx& ctx);
@@ -88,7 +90,7 @@ class PromiseType
     friend class Coroutine<T>;
 public:
     template<typename ...Args>
-    PromiseType(RoutineCtx ctx, Args&&... agrs);
+    PromiseType(RoutineCtx::ptr ctx, Args&&... agrs);
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<T> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -99,7 +101,7 @@ public:
     std::weak_ptr<Coroutine<T>> GetCoroutine() { return m_coroutine; }
     ~PromiseType();
 private:
-    RoutineCtx m_ctx;
+    RoutineCtx::ptr m_ctx;
     std::shared_ptr<Coroutine<T>> m_coroutine;
 };
 
@@ -109,7 +111,7 @@ class PromiseType<void>
     friend class Coroutine<void>;
 public:
     template<typename ...Args>
-    PromiseType(RoutineCtx ctx, Args&&... agrs);
+    PromiseType(RoutineCtx::ptr ctx, Args&&... agrs);
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<void> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -120,7 +122,7 @@ public:
     std::weak_ptr<Coroutine<void>> GetCoroutine() { return m_coroutine; }
     ~PromiseType();
 private:
-    RoutineCtx m_ctx;
+    RoutineCtx::ptr m_ctx;
     std::shared_ptr<Coroutine<void>> m_coroutine;
 };
 

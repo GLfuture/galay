@@ -84,7 +84,7 @@ int main()
 
 #elif defined(TEST_AUTO_DESTROY)
 
-galay::Coroutine<void> test(galay::RoutineCtx ctx)
+galay::Coroutine<void> test(galay::RoutineCtx::ptr ctx)
 {
     //co_await galay::this_coroutine::AddToCoroutineStore();
     co_await galay::this_coroutine::DeferExit<void>([](){

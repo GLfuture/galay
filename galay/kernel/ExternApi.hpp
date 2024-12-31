@@ -144,13 +144,13 @@ extern AsyncResult<typename Coroutine<CoRtn>::ptr, CoRtn> WaitAsyncExecute(Corou
     协程内部同步接口
 */
 template<typename CoRtn, typename T, typename ...Args>
-concept AsyncFuncType = requires(T func, galay::RoutineCtx ctx, Args... args) {
+concept AsyncFuncType = requires(T func, galay::RoutineCtx::ptr ctx, Args... args) {
     std::is_same_v<decltype(func(ctx, args...)), Coroutine<CoRtn>>; // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
 };
 
 template<typename T>
 concept RoutineCtxType = requires() {
-    std::is_same_v<T, galay::RoutineCtx>;
+    std::is_same_v<T, galay::RoutineCtx::ptr>;
 };
 
 template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, RoutineCtxType FirstArg, typename ...Args>

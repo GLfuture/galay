@@ -31,14 +31,14 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    explicit CallbackStore(const std::function<Coroutine<void>(galay::RoutineCtx,std::shared_ptr<Connection<Socket>>)>& callback) 
+    explicit CallbackStore(const std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)>& callback) 
         : m_callback(callback) {}
     void Execute(Socket* socket) {
         auto connection = std::make_shared<Connection<Socket>>(socket);
-        m_callback({}, connection);
+        m_callback(nullptr, connection);
     }
 private:
-    std::function<Coroutine<void>(galay::RoutineCtx,std::shared_ptr<Connection<Socket>>)> m_callback;
+    std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)> m_callback;
 };
 
 

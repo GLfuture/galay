@@ -43,7 +43,7 @@
 //     }
 // };
 
-galay::Coroutine<int> func(galay::RoutineCtx ct)
+galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx)
 {
     co_await galay::this_coroutine::Sleepfor<int>(2000);
     std::cout << "sleep 2s" << std::endl;
@@ -54,7 +54,7 @@ galay::Coroutine<int> func(galay::RoutineCtx ct)
 class A 
 {
 public:
-    galay::Coroutine<int> func(galay::RoutineCtx ctx) {
+    galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx) {
         return ::func(ctx);
     }
 };
@@ -63,7 +63,7 @@ public:
 
 
 
-galay::Coroutine<int> test(galay::RoutineCtx ctx)
+galay::Coroutine<int> test(galay::RoutineCtx::ptr ctx)
 {
     int p = 10;
     A a;
@@ -78,7 +78,7 @@ galay::Coroutine<int> test(galay::RoutineCtx ctx)
 int main()
 {
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
-    auto co = test({});
+    auto co = test(nullptr);
     std::cout << "start" << std::endl;
     getchar();
     std::cout << "getchar " << co().value() << std::endl;

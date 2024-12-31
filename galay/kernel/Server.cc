@@ -5,7 +5,7 @@
 namespace galay::details
 {
 
-Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine)
+Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, galay::AsyncTcpSocket *socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine)
 {
     THost addr{};
     while(true)
@@ -29,7 +29,7 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, 
     co_return;
 }
 
-Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine)
+Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, AsyncTcpSslSocket *socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine)
 {
     THost addr{};
     while (true)

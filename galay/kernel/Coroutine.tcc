@@ -33,9 +33,10 @@ namespace galay
 
 template <typename T>
 template <typename...Args>
-inline PromiseType<T>::PromiseType(RoutineCtx ctx, Args&&...args)
+inline PromiseType<T>::PromiseType(RoutineCtx::ptr ctx, Args&&...args)
     : m_ctx(ctx)
 {
+    if(m_ctx == nullptr) m_ctx = RoutineCtx::Create();
 }
 
 template <typename T>
@@ -72,9 +73,10 @@ inline PromiseType<T>::~PromiseType()
 }
 
 template<typename ...Args>
-inline PromiseType<void>::PromiseType(RoutineCtx ctx, Args&&... agrs)
+inline PromiseType<void>::PromiseType(RoutineCtx::ptr ctx, Args&&... agrs)
     : m_ctx(ctx)
 {
+    if(m_ctx == nullptr) m_ctx = RoutineCtx::Create();
 }
 
 inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
@@ -163,7 +165,7 @@ inline details::CoroutineScheduler* Coroutine<T>::BelongScheduler() const
     if(m_is_done->load()) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx.GetScheduler();
+    return m_handle.promise().m_ctx->GetScheduler();
 }
 
 template<typename T>
@@ -251,7 +253,7 @@ inline details::CoroutineScheduler* Coroutine<void>::BelongScheduler() const
     if(m_is_done->load()) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx.GetScheduler();
+    return m_handle.promise().m_ctx->GetScheduler();
 }
 
 inline bool Coroutine<void>::SetAwaiter(AwaiterBase* awaiter)
