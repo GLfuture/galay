@@ -1,7 +1,9 @@
-#include "Io.h"
+#include "System.h"
 #include "kernel/Log.h"
 #include <filesystem>
 #include <fstream>
+#include <chrono>
+#include <cstdlib>
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OPenBSD__) || defined(__NetBSD__)
 #include <arpa/inet.h>
@@ -10,10 +12,29 @@
 #endif
 
 
-namespace galay::io::file
+namespace galay::utils
 {
+
+int64_t GetCurrentTimeMs()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+std::string GetCurrentGMTTimeString()
+{
+    std::time_t now = std::time(nullptr);
+    std::tm *gmt_time = std::gmtime(&now);
+    if (gmt_time == nullptr)
+    {
+        return "";
+    }
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
+    return buffer;
+}
+
 std::string 
-SyncFileStream::ReadFile(const std::string& FileName, bool IsBinary)
+ReadFile(const std::string& FileName, bool IsBinary)
 {
     std::ifstream in;
     if(IsBinary){
@@ -36,7 +57,7 @@ SyncFileStream::ReadFile(const std::string& FileName, bool IsBinary)
 }
 
 void 
-SyncFileStream::WriteFile(const std::string& FileName,const std::string& Content, bool IsBinary)
+WriteFile(const std::string& FileName,const std::string& Content, bool IsBinary)
 {
     std::ofstream out;
     if(IsBinary){
@@ -56,7 +77,7 @@ SyncFileStream::WriteFile(const std::string& FileName,const std::string& Content
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 std::string 
-ZeroCopyFile::ReadFile(const std::string &FileName)
+ZeroReadFile(const std::string &FileName)
 {
     int fd = open(FileName.c_str(),O_RDONLY);
     if(fd == -1){
@@ -85,7 +106,7 @@ ZeroCopyFile::ReadFile(const std::string &FileName)
 
 
 void 
-ZeroCopyFile::WriteFile(const std::string &FileName, const std::string &Content,bool IsBinary)
+ZeroWriteFile(const std::string &FileName, const std::string &Content ,bool IsBinary)
 {
     int fd = open(FileName.c_str(),O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if(fd == -1) {
@@ -102,7 +123,7 @@ ZeroCopyFile::WriteFile(const std::string &FileName, const std::string &Content,
         LogError("[mmap {} fail]", FileName);
         return;
     }
-    memcpy(p,Content.c_str(),Content.size());
+    memcpy(p, Content.c_str(), Content.size());
     if (msync(p,Content.size(),MS_SYNC) == -1) {
         LogError("[msync {} fail]", FileName);
         return;
@@ -113,5 +134,12 @@ ZeroCopyFile::WriteFile(const std::string &FileName, const std::string &Content,
     }
     close(fd);
 }
+
 #endif
+
+std::string GetEnvValue(const std::string &name)
+{
+    return std::getenv(name.c_str());;
+}
+
 }

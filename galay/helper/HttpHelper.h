@@ -2,6 +2,7 @@
 #define GALAY_HTTP_HELPER_H
 
 #include "galay/protocol/Http.h"
+#include "galay/utils/System.h"
 #include <variant>
 
 namespace galay::http

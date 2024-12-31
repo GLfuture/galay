@@ -113,7 +113,7 @@ inline std::string server::CodeResponse<Code>::DefaultResponse(HttpVersion versi
     response.Header()->Version() = version;
     response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
     response.Header()->HeaderPairs().AddHeaderPair("Server", "galay");
-    response.Header()->HeaderPairs().AddHeaderPair("Date", galay::GetCurrentGMTTimeString());
+    response.Header()->HeaderPairs().AddHeaderPair("Date", utils::GetCurrentGMTTimeString());
     response.Header()->HeaderPairs().AddHeaderPair("Connection", "close");
     response.Body() = DefaultResponseBody();
     return response.EncodePdu();

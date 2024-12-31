@@ -1,6 +1,6 @@
 #include "Time.h"
 #include "EventEngine.h"
-#include <chrono>
+#include "galay/utils/System.h"
 #if defined(__linux__)
 #include <sys/timerfd.h>
 #elif  defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
@@ -11,24 +11,6 @@
 
 namespace galay
 {
-
-int64_t GetCurrentTimeMs()
-{
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-
-std::string GetCurrentGMTTimeString()
-{
-    std::time_t now = std::time(nullptr);
-    std::tm *gmt_time = std::gmtime(&now);
-    if (gmt_time == nullptr)
-    {
-        return "";
-    }
-    char buffer[80];
-    std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
-    return buffer;
-}
 
 Timer::Timer(const uint64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func)
 {
@@ -51,7 +33,7 @@ Timer::GetDeadline() const
 uint64_t
 Timer::GetRemainTime() const
 {
-    const int64_t time = m_deadline - GetCurrentTimeMs();
+    const int64_t time = m_deadline - utils::GetCurrentTimeMs();
     return time < 0 ? 0 : time;
 }
 
@@ -61,7 +43,7 @@ Timer::ResetTimeout(uint64_t timeout)
     uint64_t old = m_timeout.load();
     if(!m_timeout.compare_exchange_strong(old, timeout)) return false;
     old = m_deadline.load();
-    if(!m_deadline.compare_exchange_strong(old, GetCurrentTimeMs() + timeout)) return false;
+    if(!m_deadline.compare_exchange_strong(old, utils::GetCurrentTimeMs() + timeout)) return false;
     m_success = false;
     return true;
 }

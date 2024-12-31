@@ -15,10 +15,8 @@ namespace galay::details {
 class TimeEvent;
 }
 
-namespace galay {
-
-extern int64_t GetCurrentTimeMs(); 
-extern std::string GetCurrentGMTTimeString();
+namespace galay 
+{
 
 /*
     if timer is cancled and callback is not executed, Success while return false

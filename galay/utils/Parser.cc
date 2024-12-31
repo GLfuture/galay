@@ -1,5 +1,5 @@
 #include "Parser.h"
-#include "Io.h"
+#include "System.h"
 #include "String.h"
 
 namespace galay::utils
@@ -29,7 +29,7 @@ ParserManager::CreateParser(const std::string &filename,bool IsParse)
 int 
 ConfigParser::Parse(const std::string &filename)
 {
-    std::string buffer = galay::io::file::ZeroCopyFile::ReadFile(filename);
+    std::string buffer = galay::utils::ZeroReadFile(filename);
     int ret = ParseContent(buffer);
     return ret;
 }
@@ -84,7 +84,7 @@ ConfigParser::GetValue(const std::string &key)
 int 
 JsonParser::Parse(const std::string &filename)
 {
-    std::string buffer = galay::io::file::ZeroCopyFile::ReadFile(filename);
+    std::string buffer = galay::utils::ZeroReadFile(filename);
     if(!nlohmann::json::accept(buffer)){
         return -1;
     }

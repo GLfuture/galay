@@ -6,7 +6,7 @@
 uint32_t g_port = 8080;
 galay::Coroutine<void> test(galay::RoutineCtx ctx, galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
-    int64_t start = galay::GetCurrentTimeMs();
+    int64_t start = galay::utils::GetCurrentTimeMs();
     int i = 0;
     for (i = begin; i < end; ++ i)
     {
@@ -34,7 +34,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx, galay::details::EventEngine* 
             std::cout << "close failed" << std::endl;
         }
     }
-    int64_t finish = galay::GetCurrentTimeMs();
+    int64_t finish = galay::utils::GetCurrentTimeMs();
     std::cout << i - begin << " requests in " << finish - start << " ms" << std::endl;
     co_return;
 }
