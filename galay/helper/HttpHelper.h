@@ -7,7 +7,7 @@
 
 namespace galay::http
 {
-
+    
     enum FormsType
     {
         kFormsType_NoFrom,
@@ -93,7 +93,9 @@ namespace galay::http
         static bool DefaultPost(HttpRequest* request, const std::string& url, bool keepalive = true);
         //response
         static bool DefaultRedirect(HttpResponse* response, const std::string& url, HttpResponseCode code);
-        static bool DefaultHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string type, const std::string &body);
+        static bool DefaultOK(HttpResponse* response, HttpVersion version);
+
+        static bool DefaultHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string type, std::string &&body);
     };
     
 }

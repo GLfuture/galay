@@ -169,9 +169,9 @@ extern std::string HttpStatusCodeToString(HttpStatusCode code);
 class MimeType
 {
 public:
-    static std::string GetMimeType(const std::string& fileName);
+    static std::string ConvertToMimeType(const std::string& type);
 private:
-    static std::unordered_map<std::string, std::string> g_mimeTypeMap;
+    static std::unordered_map<std::string, std::string> mimeTypeMap;
 };
 
 class HeaderPair
@@ -229,7 +229,8 @@ public:
     
     HttpRequest();
     HttpRequestHeader::ptr Header();
-    std::string& Body();
+    void SetContent(const std::string& type, std::string&& content);
+    std::string_view GetContent();
     std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
     [[nodiscard]] std::string EncodePdu() const override;
     [[nodiscard]] bool HasError() const override;
@@ -275,7 +276,8 @@ public:
     using uptr = std::weak_ptr<HttpResponse>;
     HttpResponse();
     HttpResponseHeader::ptr Header();
-    std::string& Body();
+    void SetContent(const std::string& type, std::string&& content);
+    std::string_view GetContent();
     [[nodiscard]] std::string EncodePdu() const override;
     std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
     [[nodiscard]] bool HasError() const override;

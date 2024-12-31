@@ -115,7 +115,7 @@ inline std::string server::CodeResponse<Code>::DefaultResponse(HttpVersion versi
     response.Header()->HeaderPairs().AddHeaderPair("Server", "galay");
     response.Header()->HeaderPairs().AddHeaderPair("Date", utils::GetCurrentGMTTimeString());
     response.Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-    response.Body() = DefaultResponseBody();
+    response.SetContent("html", DefaultResponseBody());
     return response.EncodePdu();
 }
 
@@ -393,6 +393,7 @@ inline Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, co
     }
     auto uriit = it->second.find(path);
     if(uriit != it->second.end()) {
+        http::HttpHelper::DefaultOK(session.GetResponse(), HttpVersion::Http_Version_1_1);
         co_await this_coroutine::WaitAsyncExecute<void, std::string>(uriit->second(ctx, session));
         co_return session.GetResponse()->EncodePdu();
     } else {

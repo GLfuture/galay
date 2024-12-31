@@ -170,7 +170,7 @@ HttpFormDataHelper::ParseFormData(HttpRequest::ptr request, std::vector<FormData
     if(begin != std::string::npos)
     {
         std::string boundary = contentType.substr(begin + 9);
-        std::string_view body = request->Body();
+        std::string_view body = request->GetContent();
         std::vector<std::string_view> parts = string::StringSplitter::SpiltWithStr(body, "--" + boundary + "\r\n");
         size_t len = parts[parts.size() - 1].find("--" + boundary + "--");
         parts[parts.size() - 1] = parts[parts.size() - 1].substr(0, len);
@@ -251,6 +251,36 @@ HttpFormDataHelper::ParseFormData(HttpRequest::ptr request, std::vector<FormData
 void 
 HttpFormDataHelper::FormDataToString(HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values)
 {
+    std::ostringstream stream;
+    for(int i = 0 ; i < values.size() ; ++ i)
+    {
+        stream << "--" << boundary << "\r\n";
+        if( values[i].IsFile() )
+        {
+            auto file = values[i].ToFile();
+            stream << "Content-Disposition: form-data; name=\"" << values[i].Name() << "\"; filename=\"" << file.m_fileName << "\"\r\n";
+            stream << "Content-Type: application/octet-stream\r\n\r\n";
+            stream << file.m_body << "\r\n";
+        }
+        else if( values[i].IsNumber() )
+        {
+            stream << "Content-Disposition: form-data; name=\"" << values[i].Name() << "\"\r\n\r\n";
+            stream << std::to_string(values[i].ToNumber()) << "\r\n";
+        }
+        else if( values[i].IsDouble() )
+        {
+            stream << "Content-Disposition: form-data; name=\"" << values[i].Name() << "\"\r\n\r\n";
+            std::string num = std::to_string(values[i].ToDouble());
+            stream << num << "\r\n";
+        }
+        else if( values[i].IsString() )
+        {
+            stream << "Content-Disposition: form-data; name=\"" << values[i].Name() << "\"\r\n\r\n";
+            stream << values[i].ToString() << "\r\n";
+        }
+    }
+    stream << "--" << boundary << "--\r\n\r\n";
+    request->SetContent("", stream.str());
     if(request->Header()->HeaderPairs().HasKey("Content-Type"))
     {
         request->Header()->HeaderPairs().SetHeaderPair("Content-Type", "multipart/form-data; boundary=" + boundary);
@@ -259,34 +289,6 @@ HttpFormDataHelper::FormDataToString(HttpRequest::ptr request, const std::string
     {
         request->Header()->HeaderPairs().AddHeaderPair("Content-Type", "multipart/form-data; boundary=" + boundary);
     }
-    for(int i = 0 ; i < values.size() ; ++ i)
-    {
-        request->Body() += "--" + boundary + "\r\n";
-        if( values[i].IsFile() )
-        {
-            auto file = values[i].ToFile();
-            request->Body() += "Content-Disposition: form-data; name=\"" + values[i].Name() + "\"; filename=\"" + file.m_fileName + "\"\r\n";
-            request->Body() += "Content-Type: application/octet-stream\r\n\r\n";
-            request->Body() += file.m_body + "\r\n";
-        }
-        else if( values[i].IsNumber() )
-        {
-            request->Body() += "Content-Disposition: form-data; name=\"" + values[i].Name() + "\"\r\n\r\n";
-            request->Body() += std::to_string(values[i].ToNumber()) + "\r\n";
-        }
-        else if( values[i].IsDouble() )
-        {
-            request->Body() += "Content-Disposition: form-data; name=\"" + values[i].Name() + "\"\r\n\r\n";
-            std::string num = std::to_string(values[i].ToDouble());
-            request->Body() += num.substr(0 , num.find('0')) + "\r\n";
-        }
-        else if( values[i].IsString() )
-        {
-            request->Body()+= "Content-Disposition: form-data; name=\"" + values[i].Name() + "\"\r\n\r\n";
-            request->Body() += values[i].ToString() + "\r\n";
-        }
-    }
-    request->Body() += "--" + boundary + "--\r\n\r\n";
 }
 
 bool HttpHelper::DefaultGet(HttpRequest *request, const std::string &url, bool keepalive)
@@ -320,14 +322,18 @@ bool HttpHelper::DefaultRedirect(HttpResponse *response, const std::string &url,
     return true;
 }
 
-bool HttpHelper::DefaultHttpResponse(HttpResponse *response, HttpVersion version, HttpStatusCode code, std::string type, const std::string &body)
+bool HttpHelper::DefaultOK(HttpResponse *response, HttpVersion version)
+{
+    return DefaultHttpResponse(response, version, HttpStatusCode::OK_200, "", "");
+}
+
+bool HttpHelper::DefaultHttpResponse(HttpResponse *response, HttpVersion version, HttpStatusCode code, std::string type, std::string &&body)
 {
     response->Header()->Version() = version;
     response->Header()->Code() = code;
     response->Header()->HeaderPairs().AddHeaderPair("Server", "galay");
     response->Header()->HeaderPairs().AddHeaderPair("Date", utils::GetCurrentGMTTimeString());
-    if(!type.empty()) response->Header()->HeaderPairs().AddHeaderPair("Content-Type", type);
-    if(!body.empty()) response->Body() = body;
+    if(!body.empty()) response->SetContent(type, std::move(body));
     return true;
 }
 }

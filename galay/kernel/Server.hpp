@@ -116,7 +116,7 @@ concept ProtoType = std::default_initializable<T> && requires(T type, const std:
 
 #define DEFAULT_HTTP_REQUEST_POOL_SIZE               2048
 #define DEFAULT_HTTP_RESPONSE_POOL_SIZE              2048
-#define DEFAULT_HTTP_KEEPALIVE_TIME_MS          (7500 * 1000)
+#define DEFAULT_HTTP_KEEPALIVE_TIME_MS              (7500 * 1000)
 
 using namespace galay::http;
 
