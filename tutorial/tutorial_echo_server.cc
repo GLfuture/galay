@@ -4,8 +4,8 @@ class Handler {
 public:
     static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx::ptr ctx, galay::HttpSession session) {
         auto resp = session.GetResponse();
-        resp->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
         resp->SetContent("html", "<html>Hello World</html>");
+        session.ToClose();
         co_return;
     }
 };

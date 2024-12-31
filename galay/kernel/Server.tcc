@@ -395,6 +395,13 @@ inline Coroutine<std::string> Handle(RoutineCtx::ptr ctx, http::HttpMethod metho
     if(uriit != it->second.end()) {
         http::HttpHelper::DefaultOK(session.GetResponse(), HttpVersion::Http_Version_1_1);
         co_await this_coroutine::WaitAsyncExecute<void, std::string>(uriit->second(ctx, session));
+        if(session.IsClose()) {
+            if(session.GetResponse()->Header()->HeaderPairs().HasKey("Connection")) {
+                session.GetResponse()->Header()->HeaderPairs().SetHeaderPair("Connection", "close");
+            } else {
+                session.GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+            }
+        }
         co_return session.GetResponse()->EncodePdu();
     } else {
         co_return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);

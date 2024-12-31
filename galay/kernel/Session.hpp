@@ -78,10 +78,15 @@ public:
     Request* GetRequest() const { return m_proto_store->m_request.get(); }
     Response* GetResponse() const { return m_proto_store->m_response.get(); }
     std::shared_ptr<Connection<Socket>> GetConnection() { return m_connection; }
-    std::shared_ptr<std::any> GetUserData() { return m_userdata; }
+    void* GetUserData() { return m_userdata; }
+    void SetUserData(void* data) { m_userdata = data; }
+
+    void ToClose() { m_close = true; }
+    bool IsClose() { return m_close; }
     ~Session() = default;
 private:
-    std::shared_ptr<std::any> m_userdata;
+    void* m_userdata;
+    bool m_close = false;
     std::shared_ptr<Connection<Socket>> m_connection;
     ProtocolStore<Request, Response>::ptr m_proto_store;
 };
