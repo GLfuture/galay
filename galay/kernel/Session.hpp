@@ -35,7 +35,7 @@ public:
         : m_callback(callback) {}
     void Execute(Socket* socket) {
         auto connection = std::make_shared<Connection<Socket>>(socket);
-        m_callback(nullptr, connection);
+        m_callback(galay::RoutineCtx::Create(), connection);
     }
 private:
     std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)> m_callback;

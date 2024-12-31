@@ -101,7 +101,7 @@ galay::Coroutine<void> test(galay::RoutineCtx::ptr ctx)
 int main()
 {
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
-    test({});
+    test(galay::RoutineCtx::Create());
     std::cout << "main thread wait..." << std::endl;
     getchar();
     

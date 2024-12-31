@@ -51,6 +51,7 @@ class RoutineCtx
     template<typename CoRtn>
     friend class PromiseType;
     friend class PromiseType<void>;
+    using TimerSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
     using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 public:
     using ptr = std::shared_ptr<RoutineCtx>;
@@ -59,8 +60,10 @@ public:
     RoutineCtx(details::CoroutineScheduler* scheduler);
     RoutineCtx(const RoutineCtx& ctx);
     RoutineCtx(RoutineCtx&& ctx);
+    std::shared_ptr<Timer> WithTimeout(int64_t timeout, std::function<void()>&& callback);
     details::CoroutineScheduler* GetScheduler();
 private:
+    std::weak_ptr<CoroutineBase> m_co;
     std::atomic<details::CoroutineScheduler*> m_scheduler;
 };
 

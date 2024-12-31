@@ -44,7 +44,7 @@ galay::Coroutine<int> test_dns(galay::RoutineCtx::ptr ctx)
 
 int main()
 {
-    int a = test_dns({})().value();
+    int a = test_dns(galay::RoutineCtx::Create())().value();
     getchar();
     return 0;
 }

@@ -114,7 +114,7 @@ int main()
 {
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    test({});
+    test(galay::RoutineCtx::Create());
     getchar();
     remove("test.txt");
     return 0;

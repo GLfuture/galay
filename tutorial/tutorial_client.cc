@@ -41,7 +41,7 @@ galay::Coroutine<void> test(galay::RoutineCtx::ptr ctx, galay::details::EventEng
 
 void pack(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
-    test({}, engine, sockets, begin, end);
+    test(galay::RoutineCtx::Create(), engine, sockets, begin, end);
 }
 
 galay::AsyncTcpSocket* initSocket()

@@ -30,7 +30,7 @@ namespace galay::tools
         //最大可以应对(rate + capity) 的突发流量
 
         //deliveryInteralMs越大，每一次delivery的token越多，但是token更新频率低，性能提升，及时性下降
-        //;反之，每一次delivery的token越多，但是token更新频率低，性能降低，及时性下降
+        //;反之，每一次delivery的token越少，但是token更新频率高，性能降低，及时性提高
         RateLimiter(uint64_t rate, uint64_t capacity,uint64_t deliveryInteralMs);
         void Start();
         void Stop();

@@ -1,4 +1,5 @@
 #include "Coroutine.hpp"
+#include "Time.h"
 
 namespace galay
 {
@@ -28,8 +29,19 @@ RoutineCtx::RoutineCtx(RoutineCtx &&ctx)
     ctx.m_scheduler.store(nullptr);
 }
 
+Timer::ptr RoutineCtx::WithTimeout(int64_t timeout, std::function<void()>&& callback)
+{
+    auto co = m_co;
+    return TimerSchedulerHolder::GetInstance()->GetScheduler()->AddTimer(timeout, [callback, co](details::TimeEvent::wptr event, Timer::ptr timer) {
+        if(co.expired()) return;
+        callback();
+        co.lock()->BelongScheduler()->ToDestroyCoroutine(co);
+    });
+}
+
 details::CoroutineScheduler *RoutineCtx::GetScheduler()
 {
     return m_scheduler.load();
 }
+
 }

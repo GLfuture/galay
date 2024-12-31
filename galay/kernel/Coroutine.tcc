@@ -36,13 +36,16 @@ template <typename...Args>
 inline PromiseType<T>::PromiseType(RoutineCtx::ptr ctx, Args&&...args)
     : m_ctx(ctx)
 {
-    if(m_ctx == nullptr) m_ctx = RoutineCtx::Create();
+    if(!m_ctx) {
+        panic("ctx is nullptr");
+    }
 }
 
 template <typename T>
 inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
+    m_ctx->m_co = m_coroutine;
     return *m_coroutine;
 }
 
@@ -76,12 +79,15 @@ template<typename ...Args>
 inline PromiseType<void>::PromiseType(RoutineCtx::ptr ctx, Args&&... agrs)
     : m_ctx(ctx)
 {
-    if(m_ctx == nullptr) m_ctx = RoutineCtx::Create();
+    if(!m_ctx) {
+        panic("ctx is nullptr");
+    }
 }
 
 inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<void>>(std::coroutine_handle<PromiseType<void>>::from_promise(*this));
+    m_ctx->m_co = m_coroutine;
     return *m_coroutine;
 }
 

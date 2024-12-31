@@ -45,8 +45,10 @@
 
 galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx)
 {
+    auto timer = ctx->WithTimeout(1000, [](){ std::cout << "timeout" << std::endl; });
     co_await galay::this_coroutine::Sleepfor<int>(2000);
     std::cout << "sleep 2s" << std::endl;
+    timer->Cancle();
     co_return 1;
 }
 
@@ -60,16 +62,17 @@ public:
 };
 
 
-
-
-
 galay::Coroutine<int> test(galay::RoutineCtx::ptr ctx)
 {
     int p = 10;
     A a;
-    auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a, std::move(ctx));
+    auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a, ctx);
     std::cout << "end" << std::endl;
-    co_return (*co)().value();
+    auto res = (*co)();
+    if(res.has_value()) {
+        co_return std::move(res.value());
+    }
+    co_return 0;
 }
 
 
@@ -78,7 +81,8 @@ galay::Coroutine<int> test(galay::RoutineCtx::ptr ctx)
 int main()
 {
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
-    auto co = test(nullptr);
+    auto ctx = galay::RoutineCtx::Create();
+    auto co = test(ctx);
     std::cout << "start" << std::endl;
     getchar();
     std::cout << "getchar " << co().value() << std::endl;
