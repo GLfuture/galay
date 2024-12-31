@@ -79,6 +79,7 @@ public:
     static SchedulerHolder* GetInstance();
     Type::value_type* GetScheduler();
     Type::value_type* GetScheduler(uint32_t index);
+    int GetSchedulerSize();
 private:
     std::vector<std::unique_ptr<typename Type::value_type>> m_schedulers;
 };

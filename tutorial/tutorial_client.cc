@@ -46,7 +46,7 @@ void pack(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket
 
 galay::AsyncTcpSocket* initSocket()
 {
-    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
+    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     socket->Socket();
     return socket;
 }
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     std::vector<std::thread> ths;
     for( int i = 0 ; i < 8 ; ++i )
     {
-        ths.push_back(std::thread(std::bind(pack, galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
+        ths.push_back(std::thread(std::bind(pack, galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
         ths[i].detach();
     }
     getchar();

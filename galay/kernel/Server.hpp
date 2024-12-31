@@ -61,30 +61,28 @@ namespace galay::server
 
 #define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
 
+#define DEFAULT_REQUIRED_EVENT_SCHEDULER_NUM            4
 
 struct TcpServerConfig
 {
     using ptr = std::shared_ptr<TcpServerConfig>;
-    TcpServerConfig()
-        : m_backlog(DEFAULT_SERVER_BACKLOG), m_coroutineConf(DEFAULT_COROUTINE_SCHEDULER_CONF), \
-        m_netSchedulerConf(DEFAULT_NETWORK_SCHEDULER_CONF), m_timerSchedulerConf(DEFAULT_TIMER_SCHEDULER_CONF)
-    {
-    }
-
-    int m_backlog;                                  // 半连接队列长度
-    std::pair<uint32_t, int> m_coroutineConf;       // 协程调度器配置
-    std::pair<uint32_t, int> m_netSchedulerConf;    // 网络调度器配置
-    std::pair<uint32_t, int> m_timerSchedulerConf;  // 定时调度器配置
+    static TcpServerConfig::ptr Create();
     virtual ~TcpServerConfig() = default;
+    /*
+        与系统eventScheduler数量有关，取两者较小值
+    */
+    int m_requiredEventSchedulerNum = DEFAULT_REQUIRED_EVENT_SCHEDULER_NUM;     // 占用前m_requiredEventSchedulerNum个框架eventscheduler
+    int m_backlog = DEFAULT_SERVER_BACKLOG;                                     // 半连接队列长度
 };
 
 struct HttpServerConfig final: public TcpServerConfig
 {
     using ptr = std::shared_ptr<HttpServerConfig>;
-    HttpServerConfig() :m_max_header_size(DEFAULT_HTTP_MAX_HEADER_SIZE) {}
-    uint32_t m_max_header_size;
-
+    static HttpServerConfig::ptr Create();
     ~HttpServerConfig() override = default;
+
+    uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
+
 };
 
 template<typename SocketType>

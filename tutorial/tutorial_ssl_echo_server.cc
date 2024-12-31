@@ -9,14 +9,13 @@ int main(int argc, char** argv)
         return -1;
     }
     spdlog::set_level(spdlog::level::debug);
-    galay::server::HttpServerConfig::ptr config = std::make_shared<galay::server::HttpServerConfig>();
-    galay::InitializeGalayEnv(config->m_coroutineConf, config->m_netSchedulerConf, config->m_timerSchedulerConf);
+    auto config = galay::server::HttpServerConfig::Create();
+    galay::GalayEnv env({});
     galay::InitializeSSLServerEnv(argv[1], argv[2]);
     galay::server::HttpServer<galay::AsyncTcpSslSocket> server(config);
     server.Start({"", 2333});
     getchar();
     server.Stop();
     galay::DestroySSLEnv();
-    galay::DestroyGalayEnv();
     return 0;
 }

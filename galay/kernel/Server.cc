@@ -63,3 +63,21 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, Call
 
 
 }
+
+
+namespace galay::server
+{
+
+TcpServerConfig::ptr TcpServerConfig::Create()
+{
+    return std::make_shared<TcpServerConfig>();
+}
+
+
+HttpServerConfig::ptr galay::server::HttpServerConfig::Create()
+{
+    return std::make_shared<HttpServerConfig>();
+}
+
+
+}

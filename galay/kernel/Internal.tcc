@@ -70,8 +70,11 @@ inline typename Type::value_type* SchedulerHolder<Type>::GetScheduler(uint32_t i
     return m_schedulers[index].get();
 }
 
-
-
+template <LoadBalancerType Type>
+inline int SchedulerHolder<Type>::GetSchedulerSize()
+{
+    return m_schedulers.size();
+}
 }
 
 

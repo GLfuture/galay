@@ -100,7 +100,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
  
 int main()
 {
-    galay::GalayEnv env;
+    galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
     test({});
     std::cout << "main thread wait..." << std::endl;
     getchar();

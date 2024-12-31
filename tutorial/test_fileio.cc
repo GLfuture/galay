@@ -13,7 +13,7 @@ using galay::Coroutine;
 Coroutine<void> test(galay::RoutineCtx ctx)
 {
     galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger()->set_level(spdlog::level::trace);
-    galay::AsyncFileNativeAioDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(),1024);
+    galay::AsyncFileNativeAioDescriptor descriptor(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(),1024);
     bool res = descriptor.Open("test.txt", O_RDWR | O_CREAT, 0644);
     if(!res) {
         printf("open file failed\n");
@@ -49,7 +49,7 @@ Coroutine<void> test(galay::RoutineCtx ctx)
 #else
 galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
-    galay::AsyncFileDescriptor descriptor(galay::EeventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
+    galay::AsyncFileDescriptor descriptor(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
     bool sunccess = descriptor.Open("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     galay::IOVecHolder<galay::FileIOVec> holder(10 * 1024 * 1024);
     for(int i = 0; i < 10 * 1024 * 1024; ++i) {
@@ -112,7 +112,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
 
 int main()
 {
-    galay::GalayEnv env({1, -1}, {1, -1}, {1, -1});
+    galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
     std::this_thread::sleep_for(std::chrono::seconds(1));
     test({});
     getchar();

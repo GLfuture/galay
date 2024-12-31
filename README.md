@@ -54,13 +54,12 @@ public:
 int main()
 {
     galay::server::HttpServerConfig::ptr config = std::make_shared<galay::server::HttpServerConfig>();
-    galay::InitializeGalayEnv(config->m_coroutineConf, config->m_netSchedulerConf, config->m_timerSchedulerConf);
+    galay::GalayEnv env;
     galay::server::HttpServer<galay::AsyncTcpSocket> server(config);
     server.RouteHandler<galay::http::GET>("/", Handler::GetHelloWorldHandler);
     server.Start({"", 8060});
     getchar();
     server.Stop();
-    galay::DestroyGalayEnv();
     return 0;
 }
 ```

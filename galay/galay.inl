@@ -7,9 +7,14 @@
 namespace galay
 {
 
-inline GalayEnv::GalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf)
+inline GalayEnvConf::ptr GalayEnvConf::Create()
 {
-    InitializeGalayEnv(coroutineConf, eventConf, timerConf);
+    return std::make_shared<GalayEnvConf>();
+}
+
+inline GalayEnv::GalayEnv(GalayEnvConf conf)
+{
+    InitializeGalayEnv(conf.m_coroutineSchedulerConf, conf.m_eventSchedulerConf, conf.m_timerSchedulerConf);
 }
 
 inline GalayEnv::~GalayEnv()

@@ -160,10 +160,11 @@ inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::Defaul
 template<typename SocketType>
 inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost host) {
     m_is_running = true;
-    m_listen_events.resize(m_config->m_netSchedulerConf.first);
-    for(int i = 0 ; i < m_config->m_netSchedulerConf.first; ++i )
+    int requiredEventSchedulerNum = std::min(m_config->m_requiredEventSchedulerNum, EventSchedulerHolder::GetInstance()->GetSchedulerSize());
+    m_listen_events.resize(requiredEventSchedulerNum);
+    for(int i = 0 ; i < requiredEventSchedulerNum; ++i )
     {
-        SocketType* socket = new SocketType(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
+        SocketType* socket = new SocketType(EventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
         if(const bool res = socket->Socket(); !res ) {
             delete socket;
             for(int j = 0; j < i; ++j ){
@@ -195,7 +196,7 @@ inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost
             m_listen_events.clear();
             return;
         }
-        m_listen_events[i] = new details::ListenEvent<SocketType>(EeventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
+        m_listen_events[i] = new details::ListenEvent<SocketType>(EventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
     } 
 }
 

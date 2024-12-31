@@ -73,7 +73,7 @@ private:
     std::string m_temp;
 };
 
-using EeventSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
+using EventSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
 using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 using TimerSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
 

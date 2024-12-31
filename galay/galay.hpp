@@ -39,14 +39,20 @@ namespace galay
 #define GALAY_VERSION "0.0.2"
 #endif
 
+struct GalayEnvConf 
+{
+    using ptr = std::shared_ptr<GalayEnvConf>;
+    static GalayEnvConf::ptr Create();
+    std::pair<uint32_t, int> m_coroutineSchedulerConf = DEFAULT_COROUTINE_SCHEDULER_CONF;
+    std::pair<uint32_t, int> m_eventSchedulerConf = DEFAULT_NETWORK_SCHEDULER_CONF;
+    std::pair<uint32_t, int> m_timerSchedulerConf = DEFAULT_TIMER_SCHEDULER_CONF;
+};
 
 class GalayEnv
 {
 public:
-    GalayEnv(std::pair<uint32_t, int> coroutineConf = DEFAULT_COROUTINE_SCHEDULER_CONF, \
-                std::pair<uint32_t, int> eventConf = DEFAULT_NETWORK_SCHEDULER_CONF, \
-                std::pair<uint32_t, int> timerConf = DEFAULT_TIMER_SCHEDULER_CONF);
-    ~GalayEnv();
+    GalayEnv(GalayEnvConf conf);
+    virtual ~GalayEnv();
 };
 
 
