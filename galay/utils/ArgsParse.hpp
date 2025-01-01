@@ -21,11 +21,14 @@ public:
     using ptr = std::shared_ptr<Option>;
     Option(const std::string& description, const std::function<void(Command*, const std::string&)>& callback);
     void UseThisOption(Command* appcmds, const std::string& input);
+    void ExecuteCallback();
     bool HasParsed() const;
     ~Option() = default;
 private:
     bool m_hasParsed = false;
     std::string m_description;
+    Command* m_appcmds;
+    std::string m_input;
     std::function<void(Command*, const std::string&)> m_callback;
 };
 
@@ -35,7 +38,7 @@ public:
     using ptr = std::shared_ptr<Command>;
     Command(const std::string& name, const std::string& description);
     std::string Name() const;
-
+    void ToBeFailed();
     void CleanUp();
     /*
         flag: -c,--config,--context
@@ -46,9 +49,10 @@ public:
 
     std::string ToString() const;
     virtual ~Command() = default;
-//protected:
+protected:
     bool IsAllRequiredOptionsParsed() const;
     bool CmdsParse(int argc, const char* argv[]);
+    void OptionsExecute();
 protected:
     std::string m_name;
     std::string m_description;
@@ -59,6 +63,8 @@ protected:
     //short to long
     std::unordered_map<char, std::vector<std::string>> m_flags;
     std::map<std::string, Option::ptr> m_options;
+
+    std::unordered_set<Option::ptr> m_usedOptions;
 };
 
 class AppCmds: public Command
@@ -69,6 +75,7 @@ public:
 
     AppCmds(const std::string& title, const std::string& description);
     bool AppCmdsParse(int argc, const char* argv[]);
+    void ExecuteAllParsedCmds();
 };
 
 }

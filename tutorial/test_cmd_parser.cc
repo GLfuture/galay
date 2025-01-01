@@ -1,6 +1,6 @@
 #include "galay/utils/ArgsParse.hpp"
 #include <iostream>
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     args::AppCmds app("docker", "such as docker's command");
     app.AddOption("-v,--version", "show version", [](args::Command* app, const std::string& input) {
@@ -10,8 +10,5 @@ int main(int argc, const char* argv[])
     app.AddOption("-u,--use", "use tools", [](args::Command* app, const std::string& input) {
         std::cout << "toools: " << input << std::endl;
     });
-    if(app.AppCmdsParse(argc, argv)) {
-        app.ExecuteAllParsedCmds();
-    }
     return 0;
 }
