@@ -2,16 +2,21 @@
 #include <iostream>
 int main(int argc, const char* argv[])
 {
-    args::AppCmds app("docker", "such as docker's command");
-    app.AddOption("-v,--version", "show version", [](args::Command* app, const std::string& input) {
-        std::cout << input << std::endl;
+    args::CmdArgsParser app("docker\n such as docker's command\n  -c <command> [<args>]");
+    app.AddOption<args::CmdType::Output>("-v,--version", [](args::SubCommand* app, args::Option* option) {
+        std::cout << option->GetValue() << std::endl;
         std::cout << "version: 2" << std::endl;
     });
-    app.AddOption("-u,--use", "use tools", [](args::Command* app, const std::string& input) {
-        std::cout << "toools: " << input << std::endl;
+    app.AddOption<args::CmdType::InputAndOutput>("-u,--use", [](args::SubCommand* app, args::Option* option) {
+        std::cout << option->GetValue() << std::endl;
+        std::cout << "Hello To Use This Tool" << std::endl;
+    });
+    app.AddOption<args::CmdType::Output>("-h,--help", [](args::SubCommand* app, args::Option* option) {
     });
     if(app.AppCmdsParse(argc, argv)) {
         app.ExecuteAllParsedCmds();
     }
+    std::cout << app.ToString();
+    app.CleanUp();
     return 0;
 }
