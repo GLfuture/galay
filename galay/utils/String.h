@@ -9,7 +9,7 @@
 #endif
 #include <algorithm>
 
-namespace galay::string
+namespace galay::utils
 {
     class StringSplitter
     {

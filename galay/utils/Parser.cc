@@ -95,7 +95,7 @@ JsonParser::Parse(const std::string &filename)
 std::any 
 JsonParser::GetValue(const std::string &key)
 {
-    std::vector<std::string> path = galay::string::StringSplitter::SpiltWithChar(key, '.');
+    std::vector<std::string> path = galay::utils::StringSplitter::SpiltWithChar(key, '.');
     nlohmann::json j;
     for(auto &p : path){
         if(this->m_json.contains(p)){

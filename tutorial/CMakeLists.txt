@@ -4,6 +4,7 @@ set(SRC_LIST
     tutorial_client.cc
     tutorial_echo_server.cc
     tutorial_ssl_echo_server.cc
+    tutorial_cmd_parser.cc
     test_time.cc
     test_fileio.cc
     test_waitgroup.cc

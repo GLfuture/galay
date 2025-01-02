@@ -1,6 +1,6 @@
 #include "String.h"
 
-namespace galay::string
+namespace galay::utils
 {
 std::vector<std::string> 
 StringSplitter::SpiltWithChar(const std::string &str, const char symbol)
@@ -10,10 +10,12 @@ StringSplitter::SpiltWithChar(const std::string &str, const char symbol)
     {
         int beg = i;
         i = str.find(symbol, beg);
+        if (i == std::string::npos) {
+            result.emplace_back(str.substr(beg));
+            break;
+        }
         std::string temp = str.substr(beg, i - beg);
         if(!temp.empty()) result.emplace_back(std::move(temp));
-        if (i == std::string::npos)
-            break;
     }
     return result;
 }
@@ -118,10 +120,12 @@ StringSplitter::SpiltWithChar(std::string_view str, const char symbol)
     {
         int beg = i;
         i = str.find(symbol, beg);
+        if (i == std::string::npos) {
+            result.emplace_back(str.substr(beg));
+            break;
+        }
         std::string_view temp = str.substr(beg, i - beg);
         if(!temp.empty()) result.emplace_back(std::move(temp));
-        if (i == std::string::npos)
-            break;
     }
     return result;
 }

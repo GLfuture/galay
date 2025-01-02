@@ -170,8 +170,8 @@ HttpFormDataHelper::ParseFormData(HttpRequest::ptr request, std::vector<FormData
     if(begin != std::string::npos)
     {
         std::string boundary = contentType.substr(begin + 9);
-        std::string_view body = request->GetContent();
-        std::vector<std::string_view> parts = string::StringSplitter::SpiltWithStr(body, "--" + boundary + "\r\n");
+        std::string_view body = request->Body();
+        std::vector<std::string_view> parts = utils::StringSplitter::SpiltWithStr(body, "--" + boundary + "\r\n");
         size_t len = parts[parts.size() - 1].find("--" + boundary + "--");
         parts[parts.size() - 1] = parts[parts.size() - 1].substr(0, len);
         for(auto &part : parts)
