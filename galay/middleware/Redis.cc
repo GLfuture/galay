@@ -119,8 +119,11 @@ bool RedisEvent::HandleRedisWrite(EventEngine *engine)
 
 bool RedisEvent::HandleRedisRead(EventEngine *engine)
 {
+#ifdef USE_EPOLL
     m_redisWaitType = RedisWaitEventType_Read;
     engine->ModEvent(this, nullptr);
+#elif defined(USE_KQUEUE)
+#endif
     redisAsyncHandleRead(m_redis->m_redis);
     return true;
 }
