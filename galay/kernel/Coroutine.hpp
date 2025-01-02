@@ -28,8 +28,8 @@ class Awaiter: public AwaiterBase
 {
 public:
     Awaiter(details::WaitAction* action, void* ctx);
-    Awaiter(T result);
-    void SetResult(T result);
+    Awaiter(T&& result);
+    void SetResult(T&& result);
 protected:
     void* m_ctx;
     T m_result;
@@ -207,11 +207,11 @@ class AsyncResult: public details::Awaiter<T>
 {
 public:
     AsyncResult(details::WaitAction* action, void* ctx);
-    AsyncResult(T result);
+    AsyncResult(T&& result);
     bool await_ready() const noexcept;
     //true will suspend, false will not
     bool await_suspend(std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> handle) noexcept;
-    T await_resume() const noexcept;
+    T&& await_resume() const noexcept;
     [[nodiscard]] Coroutine<CoRtn>::wptr GetCoroutine() const;
 private:
     std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> m_handle;

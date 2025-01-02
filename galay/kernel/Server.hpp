@@ -49,10 +49,6 @@ namespace galay::server
 {
 
 #define DEFAULT_SERVER_BACKLOG                          32
-#define DEFAULT_COROUTINE_SCHEDULER_CONF                {4, -1}
-#define DEFAULT_NETWORK_SCHEDULER_CONF                  {4, -1}
-#define DEFAULT_TIMER_SCHEDULER_CONF                    {1, -1}
-
 
 #define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
 

@@ -55,8 +55,8 @@ endif()
 
 if(REDIS_FOUND)
     add_executable(tutorial_redis_client tutorial_redis_client.cc)
-    find_package(Hiredis REQUIRED)
-    target_link_libraries(tutorial_redis_client PRIVATE galay ${Hiredis} ${COMMON_LIB})
+    find_package(hiredis REQUIRED)
+    target_link_libraries(tutorial_redis_client PRIVATE galay ${hiredis} ${COMMON_LIB})
     set_target_properties(tutorial_redis_client PROPERTIES
         INSTALL_RPATH $ORIGIN/../lib
     )

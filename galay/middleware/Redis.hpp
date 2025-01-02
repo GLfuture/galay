@@ -1,12 +1,58 @@
 #ifndef GALAY_REDIS_HPP
 #define GALAY_REDIS_HPP
 
-#include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 #include <any>
 #include <map>
 #include <string>
+#include "galay/kernel/ExternApi.hpp"
 #include "galay/kernel/Log.h"
+
+namespace galay::redis
+{
+	class RedisSession;
+	class RedisAsyncSession;
+}
+
+namespace galay::details
+{
+
+enum RedisWaitEventType
+{
+	RedisWaitEventType_None = 0,
+	RedisWaitEventType_Read, //读完需要重新触发读事件以接收sever那边的disconnect事件
+	RedisWaitEventType_Write,
+};
+
+class RedisEvent: public WaitEvent
+{
+public:
+	RedisEvent(redis::RedisAsyncSession* redis);
+	virtual bool SetEventEngine(EventEngine* engine) override;
+	virtual EventType GetEventType() override;
+	virtual GHandle GetHandle() override;
+	virtual void HandleEvent(EventEngine* engine) override;
+	virtual std::string Name() override;
+	virtual bool OnWaitPrepare(CoroutineBase::wptr co, void* ctx) override;
+
+	AwaiterBase* GetAwaiterBase();
+	void ToResume();
+	void ResetRedisWaitEventType(RedisWaitEventType type) { m_redisWaitType = type; }
+	~RedisEvent();
+private:
+	bool OnWaitReadPrepare(CoroutineBase::wptr co, void* ctx);
+	bool OnWaitWritePrepare(CoroutineBase::wptr co, void* ctx);
+
+	bool HandleRedisRead(EventEngine* engine);
+	bool HandleRedisWrite(EventEngine* engine);
+private:
+	void* m_ctx;
+	redis::RedisAsyncSession* m_redis;
+	RedisWaitEventType m_redisWaitType = RedisWaitEventType_None;
+};
+
+
+}
 
 namespace galay::redis 
 {
@@ -22,12 +68,12 @@ namespace galay::redis
 
 enum class RedisConnectionOption {
     kRedisConnectionWithNull,
-    kRedisConnectionWithTimeout,
+    kRedisConnectionWithTimeout,				//设置超时时间,只适用于RedisSession，异步设置无效
     kRedisConnectionWithBind,                   //绑定本地地址
     kRedisConnectionWithBindAndReuse,           //绑定本地地址并设置SO_REUSEADDR
     kRedisConnectionWithUnix,                   //使用unix域套接字
-    kRedisConnectionWithUnixAndTimeout,
-    kRedisConnectionWithFd,
+    kRedisConnectionWithUnixAndTimeout,			//设置超时时间,只适用于RedisSession，异步设置无效
+    kRedisConnectionWithFd,						//使用文件描述符,异步设置无效
 };
 
 
@@ -56,6 +102,7 @@ private:
 class RedisValue 
 {
 public:
+	RedisValue(): m_replay(nullptr) {}
     RedisValue(redisReply* reply): m_replay(reply) {}
 	RedisValue(RedisValue&& other);
 	RedisValue& operator=(RedisValue&& other);
@@ -92,9 +139,22 @@ public:
     bool IsVerb();
     std::string ToVerb();
 
-    ~RedisValue();
-private:
+    virtual ~RedisValue();
+protected:
     redisReply* m_replay;
+};
+
+class RedisAsyncValue: public RedisValue
+{
+public:
+	RedisAsyncValue(): RedisValue(nullptr) {}
+    RedisAsyncValue(redisReply* reply): RedisValue(reply) {}
+	RedisAsyncValue(RedisAsyncValue&& other);
+	RedisAsyncValue& operator=(RedisAsyncValue&& other);
+	RedisAsyncValue(const RedisAsyncValue&) = delete;
+	RedisAsyncValue& operator=(const RedisAsyncValue&) = delete;
+	~RedisAsyncValue() = default;
+private:
 };
 
 template <typename T>
@@ -128,15 +188,15 @@ public:
     RedisSession(RedisConfig::ptr config);
 	RedisSession(RedisConfig::ptr config, Logger::ptr logger);
     bool Connect(const std::string& url);
-    bool Connect(const std::string& host, uint32_t port, const std::string& username, const std::string& password);
-    bool Connect(const std::string& host, uint32_t port, const std::string& username, const std::string& password, uint32_t db_index);
-    bool Connect(const std::string& host, uint32_t port, const std::string& username, const std::string& password, uint32_t db_index, int version);
+    bool Connect(const std::string& host, int32_t port, const std::string& username, const std::string& password);
+    bool Connect(const std::string& host, int32_t port, const std::string& username, const std::string& password, int32_t db_index);
+    bool Connect(const std::string& host, int32_t port, const std::string& username, const std::string& password, int32_t db_index, int version);
     
 	bool DisConnect();
 	/*
 	* return : status
 	*/
-    RedisValue SelectDB(uint32_t db_index);
+    RedisValue SelectDB(int32_t db_index);
     /*
 	* return : status
 	*/
@@ -297,22 +357,49 @@ public:
 
     ~RedisSession();
 private:
+	Logger::ptr m_logger;
 	std::ostringstream m_stream;
     redisContext* m_redis;
     RedisConfig::ptr m_config;
-	Logger::ptr m_logger;
 };
 
-class AsyncRedisSession 
+class RedisAsyncSession 
 {
+	friend class details::RedisEvent;
 public:
-	AsyncRedisSession(RedisConfig::ptr config);
-	AsyncRedisSession(RedisConfig::ptr config, Logger::ptr logger);	
+	RedisAsyncSession(RedisConfig::ptr config, details::SessionScheduler* scheduler = nullptr);
+	RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::SessionScheduler* scheduler = nullptr);	
+	template<typename CoRtn>
+	AsyncResult<bool, CoRtn> AsyncConnect(THost host);
+
+	template<typename CoRtn>
+	AsyncResult<RedisAsyncValue, CoRtn> AsyncCommand(const std::string& command);
+
+	void BindReConnectCallbackWithRoutineCtx(RoutineCtx::ptr routine);
+
+	~RedisAsyncSession();
 private:
+	static void RedisConnectCallback(const redisAsyncContext *c, int status);
+	static void RedisDisconnectCallback(const redisAsyncContext *c, int status);
+	static void RedisCommandCallback(redisAsyncContext *c, void *r, void *privdata);
+
+	static Coroutine<void> RedisReconnect(RoutineCtx::ptr routine, RedisAsyncSession* session);
+
+	//关闭hiredis自动释放reply
+	bool Connect(const std::string& host, int32_t port);
+	Coroutine<void> ReConnect(RoutineCtx::ptr routine);
+
+	int RedisAsyncCommand(const std::string& command);
+private:
+	THost m_host;
+	Logger::ptr m_logger;
 	redisAsyncContext* m_redis;
 	RedisConfig::ptr m_config;
-	Logger::ptr m_logger;
+	details::IOEventAction* m_action;
+	details::SessionScheduler* m_scheduler;
+	RoutineCtx::ptr m_routine = nullptr;
 };
+
 
 }
 

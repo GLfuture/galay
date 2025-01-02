@@ -14,7 +14,7 @@ inline GalayEnvConf::ptr GalayEnvConf::Create()
 
 inline GalayEnv::GalayEnv(GalayEnvConf conf)
 {
-    InitializeGalayEnv(conf.m_coroutineSchedulerConf, conf.m_eventSchedulerConf, conf.m_timerSchedulerConf);
+    InitializeGalayEnv(conf.m_coroutineSchedulerConf, conf.m_eventSchedulerConf, conf.m_timerSchedulerConf, conf.m_sessionSchedulerConf);
 }
 
 inline GalayEnv::~GalayEnv()

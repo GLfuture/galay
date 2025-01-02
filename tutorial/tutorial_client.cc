@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     g_port = atoi(argv[1]);
-    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1}, {1, -1});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     std::vector<galay::AsyncTcpSocket*> sockets;
     for (size_t i = 0; i < 2048; ++i)

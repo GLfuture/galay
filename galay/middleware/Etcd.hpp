@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include "galay/kernel/Coroutine.hpp"
 
+//To Do 改成enum避免resetcallback浪费性能
 namespace galay::details
 {
 class EtcdAction: public WaitAction

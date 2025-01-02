@@ -15,15 +15,15 @@ inline Awaiter<T>::Awaiter(details::WaitAction *action, void *ctx)
 }
 
 template <typename T>
-inline Awaiter<T>::Awaiter(T result)
-    : m_result(result), m_action(nullptr), m_ctx(nullptr)
+inline Awaiter<T>::Awaiter(T&& result)
+    : m_result(std::move(result)), m_action(nullptr), m_ctx(nullptr)
 {
 }
 
 template <typename T>
-inline void Awaiter<T>::SetResult(T result)
+inline void Awaiter<T>::SetResult(T &&result)
 {
-    m_result = result;
+    m_result = std::move(result);
 }
 
 }
@@ -297,8 +297,8 @@ inline AsyncResult<T, CoRtn>::AsyncResult(details::WaitAction* action, void* ctx
 }
 
 template<typename T, typename CoRtn>
-inline AsyncResult<T, CoRtn>::AsyncResult(T result) 
-    : details::Awaiter<T>(result), m_handle(nullptr)
+inline AsyncResult<T, CoRtn>::AsyncResult(T&& result) 
+    : details::Awaiter<T>(std::forward<T>(result)), m_handle(nullptr)
 {
 }
 
@@ -324,14 +324,14 @@ inline bool AsyncResult<T, CoRtn>::await_suspend(std::coroutine_handle<typename 
 }
 
 template<typename T, typename CoRtn>
-inline T AsyncResult<T, CoRtn>::await_resume() const noexcept 
+inline T&& AsyncResult<T, CoRtn>::await_resume() const noexcept 
 {
     if( this->m_handle ) {
         while(!this->m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
     }
-    return this->m_result;
+    return const_cast<T&&>(std::move(this->m_result));
 }
 
 

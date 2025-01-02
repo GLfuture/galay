@@ -241,7 +241,7 @@ bool NetWaitEvent::OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void *ct
             m_socket->GetErrorCode() = error::MakeErrorCode(error::Error_AcceptError, errno);
         }
     }
-    awaiter->SetResult(handle);
+    awaiter->SetResult(std::move(handle));
     return false;
 }
 
@@ -253,7 +253,7 @@ bool NetWaitEvent::OnTcpRecvWaitPrepare(const CoroutineBase::wptr co, void* ctx)
         return true;
     }
     auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
-    awaiter->SetResult(recvBytes);
+    awaiter->SetResult(std::move(recvBytes));
     return false;
 }
 
@@ -265,7 +265,7 @@ bool NetWaitEvent::OnTcpSendWaitPrepare(const CoroutineBase::wptr co, void* ctx)
         return true;
     }
     auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
-    awaiter->SetResult(sendBytes);
+    awaiter->SetResult(std::move(sendBytes));
     return false;
 }
 
@@ -323,7 +323,7 @@ bool NetWaitEvent::OnUdpRecvfromWaitPrepare(const CoroutineBase::wptr co, void *
         return true;
     }
     auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
-    awaiter->SetResult(recvBytes);
+    awaiter->SetResult(std::move(recvBytes));
     return false;
 }
 
@@ -336,7 +336,7 @@ bool NetWaitEvent::OnUdpSendtoWaitPrepare(const CoroutineBase::wptr co, void *ct
         return true;
     }
     auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
-    awaiter->SetResult(sendBytes);
+    awaiter->SetResult(std::move(sendBytes));
     return false;
 }
 
@@ -355,7 +355,7 @@ void NetWaitEvent::HandleTcpRecvEvent(EventEngine *engine)
 {
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(m_ctx));
     auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
-    awaiter->SetResult(recvBytes);
+    awaiter->SetResult(std::move(recvBytes));
     //2.唤醒协程
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco.lock());
 }
@@ -365,7 +365,7 @@ void NetWaitEvent::HandleTcpSendEvent(EventEngine *engine)
 {
     int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(m_ctx));
     auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
-    awaiter->SetResult(sendBytes);
+    awaiter->SetResult(std::move(sendBytes));
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
 
@@ -388,7 +388,7 @@ void NetWaitEvent::HandleUdpRecvfromEvent(EventEngine *engine)
 {
     int recvBytes = UdpDealRecvfrom(static_cast<UdpIOVec*>(m_ctx));
     auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
-    awaiter->SetResult(recvBytes);
+    awaiter->SetResult(std::move(recvBytes));
     //2.唤醒协程
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
@@ -398,7 +398,7 @@ void NetWaitEvent::HandleUdpSendtoEvent(EventEngine *engine)
 {
     int sendBytes = UdpDealSendto(static_cast<UdpIOVec*>(this->m_ctx));
     auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
-    awaiter->SetResult(sendBytes);
+    awaiter->SetResult(std::move(sendBytes));
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
 
@@ -691,7 +691,7 @@ bool NetSslWaitEvent::OnTcpSslRecvWaitPrepare(const CoroutineBase::wptr co, void
     if(recvBytes == eCommonNonBlocking) {
         return true;
     }
-    awaiter->SetResult(recvBytes);
+    awaiter->SetResult(std::move(recvBytes));
     return false;
 }
 
@@ -705,7 +705,7 @@ bool NetSslWaitEvent::OnTcpSslSendWaitPrepare(const CoroutineBase::wptr co, void
     if( sendBytes == eCommonNonBlocking){
         return true;
     }
-    awaiter->SetResult(sendBytes);
+    awaiter->SetResult(std::move(sendBytes));
     return false;
 }
 
@@ -786,7 +786,7 @@ void NetSslWaitEvent::HandleTcpSslRecvEvent(EventEngine *engine)
 {
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(this->m_ctx));
     auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
-    awaiter->SetResult(recvBytes);
+    awaiter->SetResult(std::move(recvBytes));
     //2.唤醒协程
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
@@ -796,7 +796,7 @@ void NetSslWaitEvent::HandleTcpSslSendEvent(EventEngine *engine)
 {
     int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(this->m_ctx));
     auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
-    awaiter->SetResult(sendBytes);
+    awaiter->SetResult(std::move(sendBytes));
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
 
@@ -1023,8 +1023,8 @@ bool FileIoWaitEvent::OnKReadWaitPrepare(const CoroutineBase::wptr co, void *ctx
         }        
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
-    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(length);
     iov->m_offset += length;
+    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(std::move(length));
     return false;
 }
 
@@ -1044,8 +1044,8 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
-    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(length);
     iov->m_offset += length;
+    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(std::move(length));
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
 
@@ -1065,7 +1065,7 @@ bool FileIoWaitEvent::OnKWriteWaitPrepare(CoroutineBase::wptr co, void *ctx)
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", this->m_fileio->GetHandle().fd, length);
     iov->m_offset += length;
-    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(length);
+    static_cast<Awaiter<int>*>(co.lock()->GetAwaiter())->SetResult(std::move(length));
     return false;
 }
 
@@ -1085,8 +1085,8 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", m_fileio->GetHandle().fd, length);
     engine->DelEvent(this, nullptr);
-    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(length);
     iov->m_offset += length;
+    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(std::move(length));
     this->m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(this->m_waitco);
 }
 

@@ -149,6 +149,29 @@ inline redisReply *RedisSession::RedisCommand(const std::string &cmd, Args... ar
     return reply;
 }
 
+//Async
+template <typename CoRtn>
+inline AsyncResult<bool, CoRtn> RedisAsyncSession::AsyncConnect(THost host)
+{
+    m_host = host;
+    if(!Connect(host.m_ip, host.m_port)) {
+        return {false};
+    }
+    static_cast<details::RedisEvent*>(m_action->GetBindEvent())->ResetRedisWaitEventType(details::RedisWaitEventType_Write);
+    return {m_action, nullptr};
+}
+
+template <typename CoRtn>
+inline AsyncResult<RedisAsyncValue, CoRtn> RedisAsyncSession::AsyncCommand(const std::string &command)
+{
+    if( RedisAsyncCommand(command) != REDIS_OK) {
+        RedisAsyncValue value;
+        return {std::move(value)};
+    }
+    static_cast<details::RedisEvent*>(m_action->GetBindEvent())->ResetRedisWaitEventType(details::RedisWaitEventType_Write);
+    return {m_action, nullptr};
+}
+
 }
 
 

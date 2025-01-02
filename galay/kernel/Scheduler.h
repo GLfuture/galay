@@ -31,7 +31,7 @@ public:
     virtual ~Scheduler() = default;
 };
 
-class CoroutineScheduler final : public Scheduler
+class CoroutineScheduler final: public Scheduler
 {
 public:
     enum class Action
@@ -76,7 +76,7 @@ protected:
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
 };
 
-class TimerScheduler final : public EventScheduler
+class TimerScheduler final: public EventScheduler
 {
 public:
     using ptr = std::shared_ptr<TimerScheduler>;
@@ -93,6 +93,13 @@ public:
 private:
     std::shared_ptr<details::TimeEvent> m_timer_event;
 };
+
+class SessionScheduler final: public EventScheduler 
+{
+public:
+    std::string Name() override { return "SessionScheduler"; }
+};
+
 
 }
 

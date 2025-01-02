@@ -76,7 +76,7 @@ CoroutineBase::wptr p{};
 
 int main()
 {
-    galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
+    galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1}, {0, -1});
     getchar();
     p.lock()->Destroy();
     getchar();

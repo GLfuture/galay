@@ -39,6 +39,11 @@ namespace galay
 #define GALAY_VERSION "0.0.2"
 #endif
 
+#define DEFAULT_COROUTINE_SCHEDULER_CONF                {4, -1}
+#define DEFAULT_NETWORK_SCHEDULER_CONF                  {4, -1}
+#define DEFAULT_TIMER_SCHEDULER_CONF                    {1, -1}
+#define DEFAULT_SESSION_SCHEDULER_CONF                  {1, -1}
+
 struct GalayEnvConf 
 {
     using ptr = std::shared_ptr<GalayEnvConf>;
@@ -46,6 +51,7 @@ struct GalayEnvConf
     std::pair<uint32_t, int> m_coroutineSchedulerConf = DEFAULT_COROUTINE_SCHEDULER_CONF;
     std::pair<uint32_t, int> m_eventSchedulerConf = DEFAULT_NETWORK_SCHEDULER_CONF;
     std::pair<uint32_t, int> m_timerSchedulerConf = DEFAULT_TIMER_SCHEDULER_CONF;
+    std::pair<uint32_t, int> m_sessionSchedulerConf = DEFAULT_SESSION_SCHEDULER_CONF; //各个中间件的调度器配置
 };
 
 class GalayEnv

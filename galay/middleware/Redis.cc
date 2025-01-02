@@ -1,5 +1,137 @@
 #include "Redis.hpp"
+#include "galay/kernel/ExternApi.hpp"
+#include "galay/kernel/Async.hpp"
 #include <regex>
+#include <iostream>
+
+namespace galay::details
+{
+RedisEvent::RedisEvent(redis::RedisAsyncSession* redis)
+    : m_redis(redis), m_ctx(nullptr)
+{
+}
+
+bool RedisEvent::SetEventEngine(EventEngine *engine)
+{
+    m_engine = engine;
+    return true;
+}
+
+EventType RedisEvent::GetEventType()
+{
+    switch (m_redisWaitType)
+    {
+    case RedisWaitEventType_None:
+        return kEventTypeNone;
+    case RedisWaitEventType_Write:
+        return kEventTypeWrite;
+    case RedisWaitEventType_Read:
+        return kEventTypeRead;
+    default:
+        break;
+    }
+    return kEventTypeNone;
+}
+
+GHandle RedisEvent::GetHandle()
+{
+    return {m_redis->m_redis->c.fd};
+}
+
+void RedisEvent::HandleEvent(EventEngine *engine)
+{
+    switch (m_redisWaitType)
+    {
+    case RedisWaitEventType_None:
+        break;
+    case RedisWaitEventType_Write:
+        HandleRedisWrite(engine);
+        break;
+    case RedisWaitEventType_Read:
+        HandleRedisRead(engine);
+        break;
+    default:
+        break;
+    }
+}
+
+std::string RedisEvent::Name()
+{
+    switch (m_redisWaitType)
+    {
+    case RedisWaitEventType_None:
+        return "RedisNoneEvent";
+    case RedisWaitEventType_Write:
+        return "RedisWriteEvent";
+    case RedisWaitEventType_Read:
+        return "RedisReadEvent";
+    default:
+        break;
+    }
+    return "";
+}
+
+bool RedisEvent::OnWaitPrepare(CoroutineBase::wptr co, void *ctx)
+{
+    this->m_waitco = co;
+    this->m_ctx = ctx;
+    switch (m_redisWaitType)
+    {
+    case RedisWaitEventType_None:
+        break;
+    case RedisWaitEventType_Read:
+        return OnWaitReadPrepare(co, ctx);
+    case RedisWaitEventType_Write:
+        return OnWaitWritePrepare(co, ctx);
+    default:
+        break;
+    }
+    return false;
+}
+
+AwaiterBase *RedisEvent::GetAwaiterBase()
+{
+    return m_waitco.lock()->GetAwaiter();
+}
+
+void RedisEvent::ToResume()
+{
+    m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
+}
+
+bool RedisEvent::OnWaitWritePrepare(CoroutineBase::wptr co, void *ctx)
+{
+    return true;
+}
+
+bool RedisEvent::OnWaitReadPrepare(CoroutineBase::wptr co, void *ctx)
+{
+    return true;
+}
+
+bool RedisEvent::HandleRedisWrite(EventEngine *engine)
+{
+    m_redisWaitType = RedisWaitEventType_Read;
+    engine->ModEvent(this, nullptr);
+    redisAsyncHandleWrite(m_redis->m_redis);
+    return true;
+}
+
+bool RedisEvent::HandleRedisRead(EventEngine *engine)
+{
+    m_redisWaitType = RedisWaitEventType_Read;
+    engine->ModEvent(this, nullptr);
+    redisAsyncHandleRead(m_redis->m_redis);
+    return true;
+}
+
+RedisEvent::~RedisEvent()
+{
+    if(m_engine) m_engine.load()->DelEvent(this, nullptr);
+}
+
+
+}
 
 namespace galay::redis 
 {
@@ -58,12 +190,14 @@ std::any &RedisConfig::GetParams()
 
 RedisValue::RedisValue(RedisValue &&other)
 {
+    std::cout << "RedisValue move constructor" << std::endl;
     m_replay = std::move(other.m_replay);
     other.m_replay = nullptr;
 }
 
 RedisValue &RedisValue::operator=(RedisValue &&other)
 {
+    std::cout << "RedisValue::operator=" << std::endl;
     m_replay = std::move(other.m_replay);
     other.m_replay = nullptr;
     return *this;
@@ -222,9 +356,22 @@ RedisValue::~RedisValue()
 {
     if(m_replay) {
         freeReplyObject(m_replay);
+        m_replay = nullptr;
     }
 }
 
+RedisAsyncValue::RedisAsyncValue(RedisAsyncValue &&other)
+{
+    m_replay = other.m_replay;
+    other.m_replay = nullptr;
+}
+
+RedisAsyncValue &RedisAsyncValue::operator=(RedisAsyncValue &&other)
+{
+    m_replay = other.m_replay;
+    other.m_replay = nullptr;
+    return *this;
+}
 
 RedisSession::RedisSession(RedisConfig::ptr config)
     : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("RedisLogger"))
@@ -288,20 +435,20 @@ bool RedisSession::Connect(const std::string &url)
     return Connect(host, port, username, password, db_index);
 }
 
-bool RedisSession::Connect(const std::string &host, uint32_t port, const std::string& username, const std::string &password)
+bool RedisSession::Connect(const std::string &host, int32_t port, const std::string& username, const std::string &password)
 {
     return Connect(host, port, username, password, 0);
 }
 
-bool RedisSession::Connect(const std::string &host, uint32_t port, const std::string& username, const std::string &password, uint32_t db_index)
+bool RedisSession::Connect(const std::string &host, int32_t port, const std::string& username, const std::string &password, int32_t db_index)
 {
     return Connect(host, port, username, password, db_index, 2);
 }
 
-bool RedisSession::Connect(const std::string &ehost, uint32_t port, const std::string& username, const std::string &password, uint32_t db_index, int version)
+bool RedisSession::Connect(const std::string &ehost, int32_t port, const std::string& username, const std::string &password, int32_t db_index, int version)
 {
     std::string host = ehost;
-    if( ehost == "localhost") {
+    if( host == "localhost") {
         host = "127.0.0.1";
     }
     switch (m_config->GetConnectOption())
@@ -413,7 +560,7 @@ bool RedisSession::DisConnect()
     return false;
 }
 
-RedisValue RedisSession::SelectDB(uint32_t db_index)
+RedisValue RedisSession::SelectDB(int32_t db_index)
 {
     auto reply = RedisCommand("SELECT %d", db_index);
     return RedisValue(reply);
@@ -556,15 +703,163 @@ RedisSession::~RedisSession()
     DisConnect();
 }
 
-AsyncRedisSession::AsyncRedisSession(RedisConfig::ptr config)
-    : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("AsyncRedisLogger"))
+RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, details::SessionScheduler* scheduler)
+    : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("AsyncRedisLogger")), m_scheduler(scheduler), m_redis(nullptr)
 {
-    
+    if(!m_scheduler) {
+        if(SessionSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {
+            RedisLogError(m_logger->SpdLogger(), "No scheduler available, please start scheduler first.");
+            throw std::runtime_error("No scheduler available, please start scheduler first.");
+        }
+        m_scheduler = SessionSchedulerHolder::GetInstance()->GetScheduler();
+    }
+    m_action = new details::IOEventAction(m_scheduler->GetEngine(), new details::RedisEvent(this));
 }
 
-AsyncRedisSession::AsyncRedisSession(RedisConfig::ptr config, Logger::ptr logger)
-    : m_config(config), m_logger(logger)
+RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::SessionScheduler* scheduler)
+    : m_config(config), m_logger(logger), m_scheduler(scheduler), m_redis(nullptr)
 {
+    if(!m_scheduler) {
+        if(SessionSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {
+            RedisLogError(m_logger->SpdLogger(), "No scheduler available, please start scheduler first.");
+            throw std::runtime_error("No scheduler available, please start scheduler first.");
+        }
+        m_scheduler = SessionSchedulerHolder::GetInstance()->GetScheduler();
+    }
+    m_action = new details::IOEventAction(m_scheduler->GetEngine(), new details::RedisEvent(this));
+}
+
+bool RedisAsyncSession::Connect(const std::string &ehost, int32_t port)
+{
+    std::string host = ehost;
+    if( host == "localhost") {
+        host = "127.0.0.1";
+    }
+    switch (m_config->GetConnectOption())
+    {
+    case RedisConnectionOption::kRedisConnectionWithNull:
+        m_redis = redisAsyncConnect(host.c_str(), port);
+        break;
+    case RedisConnectionOption::kRedisConnectionWithBind:
+    {
+        std::string addr = std::any_cast<std::string>(m_config->GetParams());
+        redisOptions options;
+        REDIS_OPTIONS_SET_TCP(&options, host.c_str(), port);
+        options.endpoint.tcp.source_addr = addr.c_str();
+        m_redis = redisAsyncConnectWithOptions(&options);
+    }
+        break;
+    case RedisConnectionOption::kRedisConnectionWithBindAndReuse:
+    {
+        std::string addr = std::any_cast<std::string>(m_config->GetParams());
+        redisOptions options;
+        REDIS_OPTIONS_SET_TCP(&options, host.c_str(), port);
+        options.endpoint.tcp.source_addr = addr.c_str();
+        options.options |= REDIS_OPT_REUSEADDR;
+        m_redis = redisAsyncConnectWithOptions(&options);
+    }
+        break;
+    case RedisConnectionOption::kRedisConnectionWithUnix:
+    {
+        std::string path = std::any_cast<std::string>(m_config->GetParams());
+        m_redis = redisAsyncConnectUnix(path.c_str());
+    }
+        break;
+    default:
+        return false;
+    }
+    if(! m_redis || m_redis->err) {
+        if(m_redis) {
+            RedisLogError(m_logger->SpdLogger(), "[Redis connect to {}:{} failed, error is {}]", host.c_str(), port, m_redis->errstr);
+            redisAsyncFree(m_redis);
+            m_redis = nullptr;
+            return false;
+        } else {
+            RedisLogError(m_logger->SpdLogger(), "[Redis connect to {}:{} failed]", host.c_str(), port);
+            return false;           
+        }
+        return false;
+    }
+    HandleOption option({m_redis->c.fd});
+    option.HandleNonBlock();
+    m_redis->data = this;
+    m_redis->c.flags |= REDIS_NO_AUTO_FREE_REPLIES;
+    redisAsyncSetConnectCallback(m_redis, RedisConnectCallback);
+    redisAsyncSetDisconnectCallback(m_redis, RedisDisconnectCallback);
+    return true;
+}
+
+Coroutine<void> RedisAsyncSession::ReConnect(RoutineCtx::ptr routine)
+{
+    return RedisReconnect(routine, this);
+}
+
+int RedisAsyncSession::RedisAsyncCommand(const std::string &command)
+{
+    return redisAsyncCommand(m_redis, RedisCommandCallback, nullptr, command.c_str()) ;
+}
+
+void RedisAsyncSession::BindReConnectCallbackWithRoutineCtx(RoutineCtx::ptr routine)
+{
+    this->m_routine = routine;
+}
+
+RedisAsyncSession::~RedisAsyncSession()
+{
+    if(m_action) {
+        delete m_action;
+        m_action = nullptr; 
+    }
+    if(!m_redis) {
+        redisAsyncFree(m_redis);
+        m_redis = nullptr;
+    }
+}
+
+void RedisAsyncSession::RedisConnectCallback(const redisAsyncContext *c, int status)
+{
+    auto redis = static_cast<RedisAsyncSession*>(c->data);
+    auto awaiterbase = static_cast<details::RedisEvent*>(redis->m_action->GetBindEvent())->GetAwaiterBase();
+    bool res = (status == REDIS_OK);
+    static_cast<details::Awaiter<bool>*>(awaiterbase)->SetResult(std::move(res));
+    if(status != REDIS_OK) {
+        RedisLogError(redis->m_logger->SpdLogger(), "[Redis connect error: {}]", c->errstr);
+    } else {
+        RedisLogInfo(redis->m_logger->SpdLogger(), "[Redis connect success]");
+    }
+    static_cast<details::RedisEvent*>(redis->m_action->GetBindEvent())->ToResume();
+
+}
+
+void RedisAsyncSession::RedisDisconnectCallback(const redisAsyncContext *c, int status)
+{
+    auto redis = static_cast<RedisAsyncSession*>(c->data);
+    RedisLogError(redis->m_logger->SpdLogger(), "[Redis disconnected]");
+    if(redis->m_routine) {
+        RedisLogInfo(redis->m_logger->SpdLogger(), "[Redis reconnect.....]");
+        redis->ReConnect(redis->m_routine);
+    }
+
+}
+
+void RedisAsyncSession::RedisCommandCallback(redisAsyncContext *c, void *r, void *privdata)
+{
+    auto redis = static_cast<RedisAsyncSession*>(c->data);
+    auto awaiterbase = static_cast<details::RedisEvent*>(redis->m_action->GetBindEvent())->GetAwaiterBase();
+    RedisAsyncValue value(static_cast<redisReply*>(r));
+    static_cast<details::Awaiter<RedisAsyncValue>*>(awaiterbase)->SetResult(std::move(value));
+    static_cast<details::RedisEvent*>(redis->m_action->GetBindEvent())->ToResume();
+}
+
+Coroutine<void> RedisAsyncSession::RedisReconnect(RoutineCtx::ptr routine, RedisAsyncSession* session)
+{
+    bool success = co_await session->AsyncConnect<void>(session->m_host);
+    if(success) {
+        RedisLogInfo(session->m_logger->SpdLogger(), "RedisReconnect success");
+    } else {
+        RedisLogError(session->m_logger->SpdLogger(), "RedisReconnect error");
+    }
+    co_return;
 }
 
 }

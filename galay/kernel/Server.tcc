@@ -161,6 +161,9 @@ template<typename SocketType>
 inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost host) {
     m_is_running = true;
     int requiredEventSchedulerNum = std::min(m_config->m_requiredEventSchedulerNum, EventSchedulerHolder::GetInstance()->GetSchedulerSize());
+    if(requiredEventSchedulerNum == 0) {
+        throw std::runtime_error("no scheduler available");
+    }
     m_listen_events.resize(requiredEventSchedulerNum);
     for(int i = 0 ; i < requiredEventSchedulerNum; ++i )
     {

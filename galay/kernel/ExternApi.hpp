@@ -76,6 +76,7 @@ private:
 using EventSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::EventScheduler>>;
 using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
 using TimerSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
+using SessionSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::SessionScheduler>>;
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,7 +87,7 @@ bool InitializeSSLServerEnv(const char* cert_file, const char* key_file);
 bool InitialiszeSSLClientEnv();
 bool DestroySSLEnv();
 SSL_CTX* GetGlobalSSLCtx();
-void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf);
+void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf, std::pair<uint32_t, int> sessionConf);
 void DestroyGalayEnv();
 
 
