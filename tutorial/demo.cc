@@ -120,7 +120,6 @@ int main()
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
     auto ctx = galay::RoutineCtx::Create();
     auto co = test(ctx);
-    co.BelongScheduler()->ToDestroyCoroutine(co.GetThisCoroutine());
     std::cout << "start" << std::endl;
     getchar();
     std::cout << "getchar " << co().value() << std::endl;

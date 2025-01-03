@@ -37,7 +37,7 @@ inline PromiseType<T>::PromiseType(RoutineCtx::ptr ctx, Args&&...args)
     : m_ctx(ctx)
 {
     if(!m_ctx) {
-        panic("ctx is nullptr");
+        throw std::runtime_error("ctx is nullptr");
     }
 }
 
@@ -80,7 +80,7 @@ inline PromiseType<void>::PromiseType(RoutineCtx::ptr ctx, Args&&... agrs)
     : m_ctx(ctx)
 {
     if(!m_ctx) {
-        panic("ctx is nullptr");
+        throw std::runtime_error("ctx is nullptr");
     }
 }
 

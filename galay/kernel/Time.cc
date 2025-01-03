@@ -152,7 +152,7 @@ void TimeEvent::HandleEvent(EventEngine *engine)
 #if defined(__linux__)
     std::vector<galay::Timer::ptr> timers;
     std::unique_lock lock(this->m_mutex);
-    while (! m_timers.empty() && m_timers.top()->GetDeadline()  <= GetCurrentTimeMs() ) {
+    while (! m_timers.empty() && m_timers.top()->GetDeadline()  <= utils::GetCurrentTimeMs() ) {
         auto timer = m_timers.top();
         m_timers.pop();
         timers.emplace_back(timer);
