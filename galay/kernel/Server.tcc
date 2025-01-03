@@ -294,11 +294,10 @@ inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse* response, H
 template<typename SocketType>
 inline Coroutine<void> HttpRoute(RoutineCtx::ptr ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
 {
-    //co_await this_coroutine::AddToCoroutineStore();
     SocketType* socket = connection->GetSocket();
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
     Session session(connection, &HttpServer<SocketType>::RequestPool, &HttpServer<SocketType>::ResponsePool);
-    bool close_connection = false;
+    std::atomic_bool close_connection = false;
     while(true)
     {
 step1:
@@ -351,6 +350,7 @@ step1:
                     auto co = co_await this_coroutine::WaitAsyncExecute<std::string, void>(HttpRouteHandler<SocketType>::GetInstance()->Handler(ctx, method, session.GetRequest()->Header()->Uri(), session));
                     std::string resp = (*co)().value();
                     wholder.Reset(std::move(resp));
+                    if(session.IsClose()) close_connection = true;
                     goto step2;
                 }
             }
@@ -369,17 +369,14 @@ step2:
                 }
             }
         }
-        if(session.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "Close" || session.GetResponse()->Header()->HeaderPairs().GetValue("Connection") == "close") {
-            close_connection = true;
-        }
         // clear
         rholder.ClearBuffer(), wholder.ClearBuffer();
         session.GetRequest()->Reset(), session.GetResponse()->Reset();
         if(close_connection) {
-            bool res = co_await socket->Close();
             break;
         }
     }
+    bool res = co_await socket->Close();
     co_return;
 }
 
@@ -392,6 +389,7 @@ inline Coroutine<std::string> Handle(RoutineCtx::ptr ctx, http::HttpMethod metho
     auto it = handlerMap.find(method);
     auto version = session.GetRequest()->Header()->Version();
     if(it == handlerMap.end()) {
+        session.ToClose();
         co_return CodeResponse<HttpStatusCode::MethodNotAllowed_405>::ResponseStr(version);
     }
     auto uriit = it->second.find(path);
@@ -407,8 +405,10 @@ inline Coroutine<std::string> Handle(RoutineCtx::ptr ctx, http::HttpMethod metho
         }
         co_return session.GetResponse()->EncodePdu();
     } else {
+        session.ToClose();
         co_return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);
     }
+    session.ToClose();
     co_return CodeResponse<HttpStatusCode::InternalServerError_500>::ResponseStr(version);
 }
 

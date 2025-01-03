@@ -16,12 +16,9 @@ class Connection
 {
 public:
     using ptr = std::shared_ptr<Connection>;
-    explicit Connection(Socket* socket) 
-        :m_socket(socket) {}
-    
-    [[nodiscard]] Socket* GetSocket() const { return m_socket; } 
-    
-    ~Connection() { delete m_socket; }
+    explicit Connection(Socket* socket);
+    [[nodiscard]] Socket* GetSocket() const;
+    ~Connection();
 private:
     Socket* m_socket;
 };
@@ -31,12 +28,8 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    explicit CallbackStore(const std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)>& callback) 
-        : m_callback(callback) {}
-    void Execute(Socket* socket) {
-        auto connection = std::make_shared<Connection<Socket>>(socket);
-        m_callback(galay::RoutineCtx::Create(), connection);
-    }
+    explicit CallbackStore(const std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)>& callback);
+    void Execute(Socket* socket);
 private:
     std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)> m_callback;
 };
@@ -53,13 +46,9 @@ struct ProtocolStore
 {
     using ptr = std::shared_ptr<ProtocolStore>;
     ProtocolStore(utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool)
-        :m_request(request_pool->GetProtocol()), m_response(response_pool->GetProtocol()), \
-            m_request_pool(request_pool), m_response_pool(response_pool) {}
-    ~ProtocolStore() {
-        m_request_pool->PutProtocol(std::move(m_request));
-        m_response_pool->PutProtocol(std::move(m_response));
-    }
+        utils::ProtocolPool<Response>* response_pool);
+    ~ProtocolStore();
+
     std::unique_ptr<Request> m_request;
     std::unique_ptr<Response> m_response;
     utils::ProtocolPool<Request>* m_request_pool;
@@ -71,18 +60,16 @@ class Session
 {
 public:
     Session(std::shared_ptr<Connection<Socket>> connection, utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool)
-        :m_connection(connection), \
-            m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) {}
+        utils::ProtocolPool<Response>* response_pool);
 
-    Request* GetRequest() const { return m_proto_store->m_request.get(); }
-    Response* GetResponse() const { return m_proto_store->m_response.get(); }
-    std::shared_ptr<Connection<Socket>> GetConnection() { return m_connection; }
-    void* GetUserData() { return m_userdata; }
-    void SetUserData(void* data) { m_userdata = data; }
+    Request* GetRequest() const;
+    Response* GetResponse() const;
+    std::shared_ptr<Connection<Socket>> GetConnection();
+    void* GetUserData();
+    void SetUserData(void* data);
 
-    void ToClose() { m_close = true; }
-    bool IsClose() { return m_close; }
+    void ToClose();
+    bool IsClose();
     ~Session() = default;
 private:
     void* m_userdata;
@@ -98,5 +85,6 @@ using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpRes
 
 }
 
+#include "Session.tcc"
 
 #endif
