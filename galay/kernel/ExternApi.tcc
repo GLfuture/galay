@@ -251,7 +251,7 @@ AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coroutine<C
         auto child = co;
         auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(fco.lock())->GetAwaiter());
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(child));
-        if(child.Done()) return false;
+        if(child.IsDone()) return false;
         child.AppendExitCallback([fco](){
             fco.lock()->BelongScheduler()->ToResumeCoroutine(fco);
         });
@@ -268,7 +268,7 @@ galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func
         auto coro = async_func();
         auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(co.lock())->GetAwaiter());
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
-        if(coro.Done()) return false;
+        if(coro.IsDone()) return false;
         coro.AppendExitCallback([co](){
             co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });
@@ -286,7 +286,7 @@ galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(
         auto coro = async_func();
         auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(co.lock())->GetAwaiter());
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
-        if(coro.Done()) return false;
+        if(coro.IsDone()) return false;
         coro.AppendExitCallback([co](){
             co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });

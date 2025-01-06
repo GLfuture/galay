@@ -72,14 +72,18 @@ class CoroutineBase
 public:
     using ptr = std::shared_ptr<CoroutineBase>;
     using wptr = std::weak_ptr<CoroutineBase>;
-    virtual void Resume() const = 0;
-    virtual bool Done() const = 0;
-    virtual void Destroy() = 0;
+    
+    virtual bool IsSuspend() const = 0;
+    virtual bool IsDone() const = 0;
     virtual details::CoroutineScheduler* BelongScheduler() const = 0;
-    virtual bool SetAwaiter(AwaiterBase* awaiter) = 0; 
     virtual AwaiterBase* GetAwaiter() const = 0;
     virtual void AppendExitCallback(const std::function<void()>& callback) = 0;
+    virtual bool SetAwaiter(AwaiterBase* awaiter) = 0; 
+    virtual void Resume() = 0;
+    virtual void Destroy() = 0;
     virtual ~CoroutineBase() = default;
+
+    
 };
 
 template<typename T>
@@ -129,11 +133,17 @@ private:
     std::shared_ptr<Coroutine<void>> m_coroutine;
 };
 
+enum class CoroutineStatus: int32_t {
+    Running = 0,
+    Suspended,
+    Finished,
+};
 
 template<typename T>
 class Coroutine: public CoroutineBase
 {
     friend class PromiseType<T>;
+    friend class CoroutineScheduler;
 public:
     using ptr = std::shared_ptr<Coroutine>;
     using wptr = std::weak_ptr<Coroutine>;
@@ -146,20 +156,23 @@ public:
     Coroutine& operator=(const Coroutine& other) noexcept;
     
     details::CoroutineScheduler* BelongScheduler() const override;
-    void Destroy() override { m_handle.destroy(); }
-    bool Done() const  override { return *m_is_done; }
-    void Resume() const override { return m_handle.resume(); }
+    bool IsSuspend() const override;
+    bool IsDone() const override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
     AwaiterBase* GetAwaiter() const override;
 
     void AppendExitCallback(const std::function<void()>& callback) override;
-    std::optional<T> operator()() { return *m_result; }
+    std::optional<T> operator()();
+
+    bool Become(CoroutineStatus status);
     ~Coroutine() = default;
 private:
+    void Destroy() override;
+    void Resume() override;
     void ToExit();
 private:
     std::shared_ptr<std::optional<T>> m_result;
-    std::shared_ptr<std::atomic_bool> m_is_done;
+    std::shared_ptr<std::atomic<CoroutineStatus>> m_status;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;
     std::shared_ptr<std::list<std::function<void()>>> m_exit_cbs;
@@ -169,6 +182,7 @@ template<>
 class Coroutine<void>: public CoroutineBase
 {
     friend class PromiseType<void>;
+    friend class CoroutineScheduler;
 public:
     using ptr = std::shared_ptr<Coroutine>;
     using wptr = std::weak_ptr<Coroutine>;
@@ -181,19 +195,23 @@ public:
     Coroutine& operator=(const Coroutine& other) noexcept;
     
     details::CoroutineScheduler* BelongScheduler() const override;
-    void Destroy() override { m_handle.destroy(); }
-    bool Done() const  override { return *m_is_done; }
-    void Resume() const override { return m_handle.resume(); }
+    bool IsSuspend() const override;
+    bool IsDone() const  override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
     AwaiterBase* GetAwaiter() const override;
 
     void AppendExitCallback(const std::function<void()>& callback) override;
     void operator()() {}
+
+    bool Become(CoroutineStatus status);
     ~Coroutine() = default;
 private:
+    void Destroy() override;
+    void Resume() override;
+
     void ToExit();
 private:
-    std::shared_ptr<std::atomic_bool> m_is_done;
+    std::shared_ptr<std::atomic<CoroutineStatus>> m_status;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;
     std::shared_ptr<std::list<std::function<void()>>> m_exit_cbs;
