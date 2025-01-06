@@ -175,6 +175,12 @@ inline details::CoroutineScheduler* Coroutine<T>::BelongScheduler() const
 }
 
 template<typename T>
+inline bool Coroutine<T>::IsRunning() const
+{
+    return m_status->load() == CoroutineStatus::Running;
+}
+
+template<typename T>
 inline bool Coroutine<T>::IsSuspend() const 
 { 
     return m_status->load() == CoroutineStatus::Suspended; 
@@ -303,6 +309,11 @@ inline details::CoroutineScheduler* Coroutine<void>::BelongScheduler() const
     return m_handle.promise().m_ctx->GetScheduler();
 }
 
+inline bool Coroutine<void>::IsRunning() const
+{
+    return m_status->load() == CoroutineStatus::Running;
+}
+
 inline bool Coroutine<void>::IsSuspend() const 
 { 
     return m_status->load() == CoroutineStatus::Suspended; 
@@ -390,6 +401,9 @@ inline bool AsyncResult<T, CoRtn>::await_suspend(std::coroutine_handle<typename 
     while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
+    while(!co.lock()->Become(CoroutineStatus::Suspended)) {
+        LogError("[Become failed]");
+    } 
     return this->m_action->DoAction(std::static_pointer_cast<CoroutineBase>(co.lock()), this->m_ctx);
 }
 
@@ -400,6 +414,9 @@ inline T&& AsyncResult<T, CoRtn>::await_resume() const noexcept
         while(!this->m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
+        while(!this->m_handle.promise().GetCoroutine().lock()->Become(CoroutineStatus::Running)) {
+            LogError("[Become failed]");
+        } 
     }
     return const_cast<T&&>(std::move(this->m_result));
 }
@@ -444,6 +461,9 @@ bool AsyncResult<void, CoRtn>::await_suspend(std::coroutine_handle<typename Coro
     while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
+    while(!co.lock()->Become(CoroutineStatus::Suspended)) {
+        LogError("[Become failed]");
+    } 
     return m_action->DoAction(co, m_ctx);
 }
 
@@ -453,6 +473,9 @@ void AsyncResult<void, CoRtn>::await_resume() const noexcept {
         while(!m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
+        while(!this->m_handle.promise().GetCoroutine().lock()->Become(CoroutineStatus::Running)) {
+            LogError("[Become failed]");
+        } 
     }
 }
 

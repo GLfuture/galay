@@ -73,6 +73,7 @@ public:
     using ptr = std::shared_ptr<CoroutineBase>;
     using wptr = std::weak_ptr<CoroutineBase>;
     
+    virtual bool IsRunning() const = 0;
     virtual bool IsSuspend() const = 0;
     virtual bool IsDone() const = 0;
     virtual details::CoroutineScheduler* BelongScheduler() const = 0;
@@ -156,6 +157,7 @@ public:
     Coroutine& operator=(const Coroutine& other) noexcept;
     
     details::CoroutineScheduler* BelongScheduler() const override;
+    bool IsRunning() const override;
     bool IsSuspend() const override;
     bool IsDone() const override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
@@ -195,6 +197,7 @@ public:
     Coroutine& operator=(const Coroutine& other) noexcept;
     
     details::CoroutineScheduler* BelongScheduler() const override;
+    bool IsRunning() const override;
     bool IsSuspend() const override;
     bool IsDone() const  override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
