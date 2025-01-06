@@ -67,7 +67,7 @@ inline PromiseType<T>::~PromiseType()
 {
     //防止协程运行时resume创建出新的协程，析构时重复析构
     CoroutineStatus origin = m_coroutine->m_status->load();
-    if(!m_coroutine->m_is_done->compare_exchange_strong(origin, CoroutineStatus::Finished)) {
+    if(!m_coroutine->m_status->compare_exchange_strong(origin, CoroutineStatus::Finished)) {
         return;
     }
     if(m_coroutine) {
