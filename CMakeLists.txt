@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(galay VERSION 1.0)
+project(Galay VERSION 1.0)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

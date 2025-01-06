@@ -10,4 +10,4 @@ endif(ENABLE_NLOHMANN_JSON)
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${USE_NLOHMANN_JSON_DEFINE})
-install(TARGETS utils EXPORT galayTargets)
+install(TARGETS utils EXPORT GalayTargets)
