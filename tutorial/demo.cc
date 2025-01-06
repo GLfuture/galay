@@ -122,6 +122,7 @@ int main()
     auto co = test(ctx);
     std::cout << "start" << std::endl;
     getchar();
-    std::cout << "getchar " << co().value() << std::endl;
+    auto op = co();
+    if(op.has_value()) std::cout << "getchar " << op.value() << std::endl;
     return 0;
 }

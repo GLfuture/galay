@@ -112,6 +112,11 @@ private:
 };
 
 
+class CoroutineStore
+{
+
+};
+
 }
 
 

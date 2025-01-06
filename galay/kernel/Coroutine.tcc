@@ -401,10 +401,13 @@ inline bool AsyncResult<T, CoRtn>::await_suspend(std::coroutine_handle<typename 
     while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    while(!co.lock()->Become(CoroutineStatus::Suspended)) {
-        LogError("[Become failed]");
-    } 
-    return this->m_action->DoAction(std::static_pointer_cast<CoroutineBase>(co.lock()), this->m_ctx);
+    auto isSuspend = this->m_action->DoAction(std::static_pointer_cast<CoroutineBase>(co.lock()), this->m_ctx);
+    if(isSuspend) {
+        while(!co.lock()->Become(CoroutineStatus::Suspended)) {
+            LogError("[Become failed]");
+        } 
+    }
+    return isSuspend;
 }
 
 template<typename T, typename CoRtn>
@@ -461,10 +464,13 @@ bool AsyncResult<void, CoRtn>::await_suspend(std::coroutine_handle<typename Coro
     while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    while(!co.lock()->Become(CoroutineStatus::Suspended)) {
-        LogError("[Become failed]");
-    } 
-    return m_action->DoAction(co, m_ctx);
+    bool isSuspend = m_action->DoAction(co, m_ctx);
+    if(isSuspend) {
+        while(!co.lock()->Become(CoroutineStatus::Suspended)) {
+            LogError("[Become failed]");
+        } 
+    }
+    return isSuspend;
 }
 
 template<typename CoRtn>
