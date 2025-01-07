@@ -43,7 +43,7 @@ inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
     auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
-    m_ctx.m_sequence = m_ctx.m_sharedCtx->AddToGraph(m_ctx.m_layer, m_coroutine);
+    m_ctx.m_privateCtx->GetThisSequence() = m_ctx.m_sharedCtx->AddToGraph(++m_ctx.m_privateCtx->GetThisLayer(), m_coroutine);
     return *m_coroutine;
 }
 
@@ -73,7 +73,7 @@ inline PromiseType<T>::~PromiseType()
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
-    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_layer, m_ctx.m_sequence);
+    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_privateCtx->GetThisLayer(), m_ctx.m_privateCtx->GetThisSequence());
 }
 
 template<typename ...Args>
@@ -86,7 +86,7 @@ inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<void>>(std::coroutine_handle<PromiseType<void>>::from_promise(*this));
     auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
-    m_ctx.m_sequence = m_ctx.m_sharedCtx->AddToGraph(m_ctx.m_layer, m_coroutine);
+    m_ctx.m_privateCtx->GetThisSequence() = m_ctx.m_sharedCtx->AddToGraph(++m_ctx.m_privateCtx->GetThisLayer(), m_coroutine);
     return *m_coroutine;
 }
 
@@ -105,7 +105,7 @@ inline PromiseType<void>::~PromiseType()
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
-    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_layer, m_ctx.m_sequence);
+    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_privateCtx->GetThisLayer(), m_ctx.m_privateCtx->GetThisSequence());
 }
 
 

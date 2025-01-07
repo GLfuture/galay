@@ -47,6 +47,7 @@ template<>
 class PromiseType<void>;
 
 class CoroutineBase;
+class RoutineCtx;
 
 #define COUROUTINE_TREE_DEPTH   5
 
@@ -70,13 +71,25 @@ private:
     std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>> m_coGraph;
 };
 
+class RoutinePrivateCtx
+{
+    friend class RoutineCtx;
+public:
+    using ptr = std::shared_ptr<RoutinePrivateCtx>;
+    static RoutinePrivateCtx::ptr Create();
+    RoutinePrivateCtx();
+    uint16_t& GetThisLayer();
+    int32_t& GetThisSequence();
+private:
+    uint16_t m_layer = 0;
+    int32_t m_sequence = -1;
+};
 
 class RoutineCtx
 {
     template<typename CoRtn>
     friend class PromiseType;
     friend class PromiseType<void>;
-
 public:
     static RoutineCtx Create();
     static RoutineCtx Create(details::CoroutineScheduler* scheduler);
@@ -84,13 +97,14 @@ public:
     RoutineCtx(RoutineSharedCtx::ptr sharedData);
     RoutineCtx(const RoutineCtx& ctx);
     RoutineCtx(RoutineCtx&& ctx);
+
+    RoutineCtx Copy();
+
     RoutineSharedCtx::wptr GetSharedCtx();
     uint16_t GetThisLayer() const;
 private:
-    // get_return_object时增
-    uint16_t m_layer;
-    int32_t m_sequence;
     RoutineSharedCtx::ptr m_sharedCtx;
+    RoutinePrivateCtx::ptr m_privateCtx;
 };
 
 class CoroutineBase

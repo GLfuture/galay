@@ -59,7 +59,7 @@ inline EventEngine* ListenEvent<SocketType>::BelongEngine()
 
 template <typename SocketType>
 inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventEngine* engine) {
-    galay::details::CreateConnection(ctx, m_socket, m_store, engine);
+    galay::details::CreateConnection(ctx.Copy(), m_socket, m_store, engine);
 }
 
 template <typename SocketType>
@@ -233,7 +233,7 @@ inline HttpRouteHandler<SocketType> *server::HttpRouteHandler<SocketType>::GetIn
 template <typename SocketType>
 inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, galay::Session<SocketType, HttpRequest, HttpResponse> session)
 {
-    return Handle(ctx, method, path, session, m_handler_map);
+    return Handle(ctx.Copy(), method, path, session, m_handler_map);
 }
 
 template <typename SocketType>
@@ -276,7 +276,7 @@ inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::f
 template <typename SocketType>
 inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection)
 {
-    return HttpRoute(ctx, std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
+    return HttpRoute(ctx.Copy(), std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
 }
 
 template <typename SocketType> 

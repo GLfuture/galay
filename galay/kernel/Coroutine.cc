@@ -47,6 +47,25 @@ void RoutineSharedCtx::RemoveFromGraph(uint16_t layer, int32_t sequence)
     m_coGraph[layer].erase(sequence);
 }
 
+RoutinePrivateCtx::ptr RoutinePrivateCtx::Create()
+{
+    return std::make_shared<RoutinePrivateCtx>();
+}
+
+RoutinePrivateCtx::RoutinePrivateCtx()
+{
+}
+
+uint16_t& RoutinePrivateCtx::GetThisLayer()
+{
+    return m_layer;
+}
+
+int32_t& RoutinePrivateCtx::GetThisSequence()
+{
+    return m_sequence;
+}
+
 std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>> &RoutineSharedCtx::GetRoutineGraph()
 {
     return m_coGraph;
@@ -63,23 +82,30 @@ RoutineCtx RoutineCtx::Create(details::CoroutineScheduler *scheduler)
 }
 
 RoutineCtx::RoutineCtx(RoutineSharedCtx::ptr sharedData)
-    : m_sharedCtx(sharedData), m_layer(0), m_sequence(-1)
+    : m_sharedCtx(sharedData), m_privateCtx(RoutinePrivateCtx::Create())
 {
 }
 
 RoutineCtx::RoutineCtx(const RoutineCtx &ctx)
 {
     this->m_sharedCtx = ctx.m_sharedCtx;
-    this->m_layer = ctx.m_layer + 1;
-    this->m_sequence = -1;
+    this->m_privateCtx = ctx.m_privateCtx;
 }
 
 RoutineCtx::RoutineCtx(RoutineCtx &&ctx)
 {
     this->m_sharedCtx = ctx.m_sharedCtx;
     ctx.m_sharedCtx.reset();
-    this->m_layer = ctx.m_layer;
-    this->m_sequence = ctx.m_sequence;
+    this->m_privateCtx = ctx.m_privateCtx;
+    ctx.m_privateCtx.reset();
+}
+
+RoutineCtx RoutineCtx::Copy()
+{
+    RoutineCtx ctx(m_sharedCtx);
+    ctx.m_privateCtx->m_layer = m_privateCtx->m_layer;
+    ctx.m_privateCtx->m_sequence = m_privateCtx->m_sequence;
+    return std::move(ctx);
 }
 
 RoutineSharedCtx::wptr RoutineCtx::GetSharedCtx()
@@ -89,6 +115,7 @@ RoutineSharedCtx::wptr RoutineCtx::GetSharedCtx()
 
 uint16_t RoutineCtx::GetThisLayer() const
 {
-    return m_layer;
+    return m_privateCtx->m_layer;
 }
+
 }

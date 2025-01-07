@@ -68,7 +68,7 @@ class A
 {
 public:
     galay::Coroutine<int> func(galay::RoutineCtx ctx) {
-        return ::func(std::move(ctx));
+        return ::func(ctx.Copy());
     }
 };
 
@@ -84,11 +84,17 @@ galay::Coroutine<int> test(galay::RoutineCtx ctx)
     //     co_return std::move(res.value());
     // }
     std::cout << "TEST BEGIN........\n";
-    a.func(ctx);
-    a.func(ctx);
+    a.func(ctx.Copy());
+    a.func(ctx.Copy());
 
-    std::cout << "test\n";
+    std::cout << "test: layer: " << ctx.GetThisLayer() << '\n';
     auto& graph = ctx.GetSharedCtx().lock()->GetRoutineGraph();
+    for(int i = 0; i < graph.size(); ++i) {
+        std::cout << "layer: " << i << std::endl;
+        for(auto& coroutine: graph[i]) {
+            std::cout << "sequence: " << coroutine.first << " " << std::endl;
+        }
+    }
     for(int i = ctx.GetThisLayer() + 1; i < graph.size(); ++i) {
         std::cout << "layer: " << i << std::endl;
         for(auto& coroutine: graph[i]) {
@@ -96,6 +102,7 @@ galay::Coroutine<int> test(galay::RoutineCtx ctx)
             if(!coroutine.second.expired()) coroutine.second.lock()->BelongScheduler()->ToDestroyCoroutine(coroutine.second);
         }
     }
+    
     co_return 0;
 }
 
@@ -139,9 +146,8 @@ galay::Coroutine<int> test(galay::RoutineCtx ctx)
 int main()
 {
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
-    auto ctx = galay::RoutineCtx::Create();
     std::cout << "BEGIN.....\n";
-    auto co = test(std::move(ctx));
+    auto co = test(galay::RoutineCtx::Create());
     std::cout << "start" << std::endl;
     auto op = co();
     getchar();
