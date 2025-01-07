@@ -14,8 +14,8 @@
 namespace galay::details
 {
 
-Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, galay::AsyncTcpSocket* socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine);
-Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, AsyncTcpSslSocket* socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine);
+Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket* socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine);
+Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket* socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine);
 
 
 
@@ -32,7 +32,7 @@ public:
     EventEngine* BelongEngine() override;
     ~ListenEvent() override;
 private:
-    void CreateConnection(RoutineCtx::ptr ctx, EventEngine* engine);
+    void CreateConnection(RoutineCtx ctx, EventEngine* engine);
 private:
     SocketType* m_socket;
     CoroutineScheduler* m_scheduler;
@@ -133,16 +133,16 @@ class HttpRouteHandler
 {
     using Session = galay::Session<SocketType, HttpRequest, HttpResponse>;
 public:
-    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx::ptr,Session)>>>;
-    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(RoutineCtx::ptr,Session)>&& handler);
+    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx,Session)>>>;
+    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(RoutineCtx,Session)>&& handler);
     
     static HttpRouteHandler<SocketType>* GetInstance();
-    Coroutine<std::string> Handler(RoutineCtx::ptr ctx, HttpMethod method, const std::string &path, \
+    Coroutine<std::string> Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, \
                                     galay::Session<SocketType, HttpRequest, HttpResponse> session);
     
 private:
     static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
-    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx::ptr,Session)>>> m_handler_map;
+    std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx,Session)>>> m_handler_map;
 };
 
 template<typename SocketType>
@@ -160,12 +160,12 @@ public:
     explicit HttpServer(HttpServerConfig::ptr config);
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<Coroutine<void>(RoutineCtx::ptr,Session<SocketType, HttpRequest, HttpResponse>)>&& handler);
+    void RouteHandler(const std::string& path, std::function<Coroutine<void>(RoutineCtx,Session<SocketType, HttpRequest, HttpResponse>)>&& handler);
     void Start(THost host);
     void Stop();
     bool IsRunning() const;
 private:
-    Coroutine<void> HttpRouteForward(RoutineCtx::ptr ctx, std::shared_ptr<Connection<SocketType>> connection);
+    Coroutine<void> HttpRouteForward(RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection);
     void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
 private:
     TcpServer<SocketType> m_server;
@@ -178,11 +178,11 @@ template<typename SocketType>
 inline utils::ProtocolPool<HttpResponse> HttpServer<SocketType>::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
 
 template<typename SocketType>
-extern Coroutine<void> HttpRoute(RoutineCtx::ptr ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection);
+extern Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection);
 
 
 template<typename SocketType>
-extern Coroutine<std::string> Handle(RoutineCtx::ptr ctx, http::HttpMethod method, const std::string& path,\
+extern Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string& path,\
                                         Session<SocketType, http::HttpRequest, http::HttpResponse> session, \
                                         typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap);
 

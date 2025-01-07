@@ -33,26 +33,26 @@ namespace galay
 
 template <typename T>
 template <typename...Args>
-inline PromiseType<T>::PromiseType(RoutineCtx::ptr ctx, Args&&...args)
-    : m_ctx(ctx)
+inline PromiseType<T>::PromiseType(RoutineCtx ctx, Args&&...args)
+    : m_ctx(std::move(ctx))
 {
-    if(!m_ctx) {
-        panic("ctx is nullptr");
-    }
 }
 
 template <typename T>
 inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
-    m_ctx->m_co = m_coroutine;
+    auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
+    m_ctx.m_sequence = m_ctx.m_sharedCtx->AddToGraph(m_ctx.m_layer, m_coroutine);
     return *m_coroutine;
 }
 
 template<typename T>
 inline std::suspend_always PromiseType<T>::yield_value(T&& value) noexcept 
 { 
-    *(m_coroutine->m_result) = std::move(value); return {}; 
+    *(m_coroutine->m_result) = std::move(value); 
+    m_coroutine->Become(CoroutineStatus::Suspended);
+    return {}; 
 }
 
 template<typename T>
@@ -73,22 +73,27 @@ inline PromiseType<T>::~PromiseType()
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
+    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_layer, m_ctx.m_sequence);
 }
 
 template<typename ...Args>
-inline PromiseType<void>::PromiseType(RoutineCtx::ptr ctx, Args&&... agrs)
-    : m_ctx(ctx)
+inline PromiseType<void>::PromiseType(RoutineCtx ctx, Args&&... agrs)
+    : m_ctx(std::move(ctx))
 {
-    if(!m_ctx) {
-        panic("ctx is nullptr");
-    }
 }
 
 inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<void>>(std::coroutine_handle<PromiseType<void>>::from_promise(*this));
-    m_ctx->m_co = m_coroutine;
+    auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
+    m_ctx.m_sequence = m_ctx.m_sharedCtx->AddToGraph(m_ctx.m_layer, m_coroutine);
     return *m_coroutine;
+}
+
+inline std::suspend_always PromiseType<void>::yield_value() noexcept
+{
+    m_coroutine->Become(CoroutineStatus::Suspended);
+    return std::suspend_always();
 }
 
 inline PromiseType<void>::~PromiseType()
@@ -100,6 +105,7 @@ inline PromiseType<void>::~PromiseType()
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
+    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_layer, m_ctx.m_sequence);
 }
 
 
@@ -171,7 +177,7 @@ inline details::CoroutineScheduler* Coroutine<T>::BelongScheduler() const
     if(m_status->load() == CoroutineStatus::Finished) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx->GetScheduler();
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetScheduler();
 }
 
 template<typename T>
@@ -306,7 +312,7 @@ inline details::CoroutineScheduler* Coroutine<void>::BelongScheduler() const
     if(m_status->load() == CoroutineStatus::Finished) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx->GetScheduler();
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetScheduler();
 }
 
 inline bool Coroutine<void>::IsRunning() const

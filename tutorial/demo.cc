@@ -47,11 +47,19 @@
 
 #ifdef TEST_FATHER_EXIT
 
-galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx)
+galay::Coroutine<int> func(galay::RoutineCtx ctx)
 {
-    auto timer = ctx->WithTimeout(3000, [](){ std::cout << "timeout" << std::endl; });
-    co_await galay::this_coroutine::Sleepfor<int>(2000);
+    //auto timer = ctx->WithTimeout(3000, [](){ std::cout << "timeout" << std::endl; });
+    co_await galay::this_coroutine::Sleepfor<int>(3000);
     std::cout << "sleep 2s" << std::endl;
+    auto& graph = ctx.GetSharedCtx().lock()->GetRoutineGraph();
+    std::cout << "func\n";
+    for(int i = 0; i < graph.size(); ++i) {
+        std::cout << "layer: " << i << std::endl;
+        for(auto& coroutine: graph[i]) {
+            std::cout << "sequence: " << coroutine.first << " " << std::endl;
+        }
+    }
     co_return 1;
 }
 
@@ -59,28 +67,41 @@ galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx)
 class A 
 {
 public:
-    galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx) {
-        return ::func(ctx);
+    galay::Coroutine<int> func(galay::RoutineCtx ctx) {
+        return ::func(std::move(ctx));
     }
 };
 
 
-galay::Coroutine<int> test(galay::RoutineCtx::ptr ctx)
+galay::Coroutine<int> test(galay::RoutineCtx ctx)
 {
     int p = 10;
     A a;
-    auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a, ctx);
-    std::cout << "end" << std::endl;
-    auto res = (*co)();
-    if(res.has_value()) {
-        co_return std::move(res.value());
+    // auto co = co_await galay::this_coroutine::WaitAsyncExecute<int, int>(&A::func, &a, ctx);
+    // std::cout << "end" << std::endl;
+    // auto res = (*co)();
+    // if(res.has_value()) {
+    //     co_return std::move(res.value());
+    // }
+    std::cout << "TEST BEGIN........\n";
+    a.func(ctx);
+    a.func(ctx);
+
+    std::cout << "test\n";
+    auto& graph = ctx.GetSharedCtx().lock()->GetRoutineGraph();
+    for(int i = ctx.GetThisLayer() + 1; i < graph.size(); ++i) {
+        std::cout << "layer: " << i << std::endl;
+        for(auto& coroutine: graph[i]) {
+            std::cout << "sequence: " << coroutine.first << " " << std::endl;
+            if(!coroutine.second.expired()) coroutine.second.lock()->BelongScheduler()->ToDestroyCoroutine(coroutine.second);
+        }
     }
     co_return 0;
 }
 
 
 #else
-galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx)
+galay::Coroutine<int> func(galay::RoutineCtx ctx)
 {
     auto timer = ctx->WithTimeout(1000, [](){ std::cout << "timeout" << std::endl; });
     co_await galay::this_coroutine::Sleepfor<int>(2000);
@@ -93,13 +114,13 @@ galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx)
 class A 
 {
 public:
-    galay::Coroutine<int> func(galay::RoutineCtx::ptr ctx) {
+    galay::Coroutine<int> func(galay::RoutineCtx ctx) {
         return ::func(ctx);
     }
 };
 
 
-galay::Coroutine<int> test(galay::RoutineCtx::ptr ctx)
+galay::Coroutine<int> test(galay::RoutineCtx ctx)
 {
     int p = 10;
     A a;
@@ -119,10 +140,11 @@ int main()
 {
     galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
     auto ctx = galay::RoutineCtx::Create();
-    auto co = test(ctx);
+    std::cout << "BEGIN.....\n";
+    auto co = test(std::move(ctx));
     std::cout << "start" << std::endl;
-    getchar();
     auto op = co();
+    getchar();
     if(op.has_value()) std::cout << "getchar " << op.value() << std::endl;
     return 0;
 }

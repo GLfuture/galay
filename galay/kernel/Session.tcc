@@ -26,7 +26,7 @@ Connection<Socket>::~Connection()
 
 
 template <typename Socket>
-CallbackStore<Socket>::CallbackStore(const std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)>& callback) 
+CallbackStore<Socket>::CallbackStore(const std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<Socket>>)>& callback) 
     : m_callback(callback) 
 {
 

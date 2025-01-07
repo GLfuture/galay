@@ -19,7 +19,7 @@ template <typename SocketType>
 inline void ListenEvent<SocketType>::HandleEvent(EventEngine *engine)
 {
     engine->ModEvent(this, nullptr);
-    this->CreateConnection(std::make_shared<RoutineCtx>(m_scheduler), engine);
+    this->CreateConnection(RoutineCtx::Create(m_scheduler), engine);
 }
 
 
@@ -58,7 +58,7 @@ inline EventEngine* ListenEvent<SocketType>::BelongEngine()
 }
 
 template <typename SocketType>
-inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx::ptr ctx, EventEngine* engine) {
+inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventEngine* engine) {
     galay::details::CreateConnection(ctx, m_socket, m_store, engine);
 }
 
@@ -216,7 +216,7 @@ inline void TcpServer<SocketType>::Stop()
 }
 
 template <typename SocketType>
-inline void server::HttpRouteHandler<SocketType>::AddHandler(HttpMethod method, const std::string &path, std::function<Coroutine<void>(RoutineCtx::ptr, Session)> &&handler)
+inline void server::HttpRouteHandler<SocketType>::AddHandler(HttpMethod method, const std::string &path, std::function<Coroutine<void>(RoutineCtx, Session)> &&handler)
 {
     m_handler_map[method][path] = std::move(handler);
 }
@@ -231,7 +231,7 @@ inline HttpRouteHandler<SocketType> *server::HttpRouteHandler<SocketType>::GetIn
 }
 
 template <typename SocketType>
-inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx::ptr ctx, HttpMethod method, const std::string &path, galay::Session<SocketType, HttpRequest, HttpResponse> session)
+inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, galay::Session<SocketType, HttpRequest, HttpResponse> session)
 {
     return Handle(ctx, method, path, session, m_handler_map);
 }
@@ -239,7 +239,7 @@ inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx::
 template <typename SocketType>
 inline server::HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config)
 : m_server(config), 
-        m_store(std::make_unique<CallbackStore<SocketType>>([this](RoutineCtx::ptr ctx,std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
+        m_store(std::make_unique<CallbackStore<SocketType>>([this](RoutineCtx ctx,std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
                                                                     return HttpRouteForward(ctx, connection);
                                                                 })) 
 {
@@ -266,7 +266,7 @@ inline bool server::HttpServer<SocketType>::IsRunning() const
 
 template <typename SocketType>
 template <HttpMethod... Methods>
-inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::function<galay::Coroutine<void>(RoutineCtx::ptr, Session<SocketType, HttpRequest, HttpResponse>)> &&handler)
+inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::function<galay::Coroutine<void>(RoutineCtx, Session<SocketType, HttpRequest, HttpResponse>)> &&handler)
 {
     ([&](){
         HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));
@@ -274,7 +274,7 @@ inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::f
 }
 
 template <typename SocketType>
-inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx::ptr ctx, std::shared_ptr<Connection<SocketType>> connection)
+inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection)
 {
     return HttpRoute(ctx, std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
 }
@@ -292,7 +292,7 @@ inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse* response, H
 
 
 template<typename SocketType>
-inline Coroutine<void> HttpRoute(RoutineCtx::ptr ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
+inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
 {
     SocketType* socket = connection->GetSocket();
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
@@ -382,7 +382,7 @@ step2:
 
 
 template <typename SocketType>
-inline Coroutine<std::string> Handle(RoutineCtx::ptr ctx, http::HttpMethod method, const std::string &path, \
+inline Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string &path, \
                                     galay::Session<SocketType, http::HttpRequest, http::HttpResponse> session, \
                                     typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap)
 {

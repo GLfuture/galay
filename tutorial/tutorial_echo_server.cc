@@ -2,7 +2,7 @@
 
 class Handler {
 public:
-    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx::ptr ctx, galay::HttpSession session) {
+    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::HttpSession session) {
         auto resp = session.GetResponse();
         resp->SetContent("html", "<html>Hello World</html>");
         session.ToClose();

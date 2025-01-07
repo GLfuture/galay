@@ -8,7 +8,7 @@ using namespace galay::redis;
 #define TEST_ASYNC
 
 #ifdef TEST_ASYNC
-galay::Coroutine<void> test(galay::RoutineCtx::ptr ctx)
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
     auto config = RedisConfig::CreateConfig();
     galay::redis::RedisAsyncSession session(config);

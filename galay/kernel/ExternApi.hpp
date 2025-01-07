@@ -111,14 +111,7 @@ private:
     uint32_t m_count = 0;
 };
 
-
-class CoroutineStore
-{
-
-};
-
 }
-
 
 namespace galay::this_coroutine
 {
@@ -136,6 +129,9 @@ extern AsyncResult<typename CoroutineBase::wptr, CoRtn> GetThisCoroutine();
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
 
+template<typename CoRtn>
+extern AsyncResult<void, CoRtn> DeAllocteWithTimeOut(int64_t timeout, std::function<void()>&& callback);
+
 /*
     注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
     注意和AutoDestructor的回调区别，DeferExit的callback会在协程正常和非正常退出时调用
@@ -150,13 +146,13 @@ extern AsyncResult<typename Coroutine<CoRtn>::ptr, CoRtn> WaitAsyncExecute(Corou
     协程内部同步接口
 */
 template<typename CoRtn, typename T, typename ...Args>
-concept AsyncFuncType = requires(T func, galay::RoutineCtx::ptr ctx, Args... args) {
+concept AsyncFuncType = requires(T func, galay::RoutineCtx ctx, Args... args) {
     std::is_same_v<decltype(func(ctx, args...)), Coroutine<CoRtn>>; // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
 };
 
 template<typename T>
 concept RoutineCtxType = requires() {
-    std::is_same_v<T, galay::RoutineCtx::ptr>;
+    std::is_same_v<T, galay::RoutineCtx>;
 };
 
 template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, RoutineCtxType FirstArg, typename ...Args>

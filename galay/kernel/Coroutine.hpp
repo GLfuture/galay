@@ -46,25 +46,51 @@ class PromiseType;
 template<>
 class PromiseType<void>;
 
+class CoroutineBase;
+
+#define COUROUTINE_TREE_DEPTH   5
+
+class RoutineSharedCtx
+{
+    using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
+public:
+    using ptr = std::shared_ptr<RoutineSharedCtx>;
+    using wptr = std::weak_ptr<RoutineSharedCtx>;
+
+    static RoutineSharedCtx::ptr Create();
+    RoutineSharedCtx(details::CoroutineScheduler* scheduler);
+    RoutineSharedCtx(const RoutineSharedCtx& ctx);
+    RoutineSharedCtx(RoutineSharedCtx&& ctx);
+    details::CoroutineScheduler* GetScheduler();
+    int32_t AddToGraph(uint16_t layer, std::weak_ptr<CoroutineBase> coroutine);
+    void RemoveFromGraph(uint16_t layer, int32_t sequence);
+    std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>>& GetRoutineGraph();
+private:
+    std::atomic<details::CoroutineScheduler*> m_scheduler;
+    std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>> m_coGraph;
+};
+
+
 class RoutineCtx
 {
     template<typename CoRtn>
     friend class PromiseType;
     friend class PromiseType<void>;
-    using TimerSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::TimerScheduler>>;
-    using CoroutineSchedulerHolder = details::SchedulerHolder<details::RoundRobinLoadBalancer<details::CoroutineScheduler>>;
+
 public:
-    using ptr = std::shared_ptr<RoutineCtx>;
-    static RoutineCtx::ptr Create();
-    RoutineCtx();
-    RoutineCtx(details::CoroutineScheduler* scheduler);
+    static RoutineCtx Create();
+    static RoutineCtx Create(details::CoroutineScheduler* scheduler);
+
+    RoutineCtx(RoutineSharedCtx::ptr sharedData);
     RoutineCtx(const RoutineCtx& ctx);
     RoutineCtx(RoutineCtx&& ctx);
-    std::shared_ptr<Timer> WithTimeout(int64_t timeout, std::function<void()>&& callback);
-    details::CoroutineScheduler* GetScheduler();
+    RoutineSharedCtx::wptr GetSharedCtx();
+    uint16_t GetThisLayer() const;
 private:
-    std::weak_ptr<CoroutineBase> m_co;
-    std::atomic<details::CoroutineScheduler*> m_scheduler;
+    // get_return_object时增
+    uint16_t m_layer;
+    int32_t m_sequence;
+    RoutineSharedCtx::ptr m_sharedCtx;
 };
 
 class CoroutineBase
@@ -98,7 +124,7 @@ class PromiseType
     friend class Coroutine<T>;
 public:
     template<typename ...Args>
-    PromiseType(RoutineCtx::ptr ctx, Args&&... agrs);
+    PromiseType(RoutineCtx ctx, Args&&... agrs);
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<T> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -109,7 +135,7 @@ public:
     std::weak_ptr<Coroutine<T>> GetCoroutine() { return m_coroutine; }
     ~PromiseType();
 private:
-    RoutineCtx::ptr m_ctx;
+    RoutineCtx m_ctx;
     std::shared_ptr<Coroutine<T>> m_coroutine;
 };
 
@@ -119,18 +145,18 @@ class PromiseType<void>
     friend class Coroutine<void>;
 public:
     template<typename ...Args>
-    PromiseType(RoutineCtx::ptr ctx, Args&&... agrs);
+    PromiseType(RoutineCtx ctx, Args&&... agrs);
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<void> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
-    static std::suspend_always yield_value() noexcept { return {}; }
-    static std::suspend_never final_suspend() noexcept { return {};  }
-    static void unhandled_exception() noexcept {}
+    std::suspend_always yield_value() noexcept;
+    std::suspend_never final_suspend() noexcept { return {};  }
+    void unhandled_exception() noexcept {}
     void return_void () const noexcept {};
     std::weak_ptr<Coroutine<void>> GetCoroutine() { return m_coroutine; }
     ~PromiseType();
 private:
-    RoutineCtx::ptr m_ctx;
+    RoutineCtx m_ctx;
     std::shared_ptr<Coroutine<void>> m_coroutine;
 };
 

@@ -155,13 +155,13 @@ inline bool IOVecHolder<UdpIOVec>::Reset(const UdpIOVec& iov)
 
 
 template<typename CoRtn>
-WaitGroup<CoRtn>::WaitGroup(uint32_t count)
+inline WaitGroup<CoRtn>::WaitGroup(uint32_t count)
     :m_count(count)
 {
 }
 
 template<typename CoRtn>
-void WaitGroup<CoRtn>::Done()
+inline void WaitGroup<CoRtn>::Done()
 {
     std::shared_lock lk(m_mutex);
     if(m_count == 0) return;
@@ -175,7 +175,7 @@ void WaitGroup<CoRtn>::Done()
 }
 
 template<typename CoRtn>
-void WaitGroup<CoRtn>::Reset(uint32_t count)
+inline void WaitGroup<CoRtn>::Reset(uint32_t count)
 {
     std::unique_lock lk(m_mutex);
     m_count = count;
@@ -183,7 +183,7 @@ void WaitGroup<CoRtn>::Reset(uint32_t count)
 }
 
 template<typename CoRtn>
-AsyncResult<bool, CoRtn> WaitGroup<CoRtn>::Wait()
+inline AsyncResult<bool, CoRtn> WaitGroup<CoRtn>::Wait()
 {
     auto* action = new details::CoroutineHandleAction([this](CoroutineBase::wptr co, void* ctx)->bool{
         std::unique_lock lk(m_mutex);

@@ -28,10 +28,10 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    explicit CallbackStore(const std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)>& callback);
+    explicit CallbackStore(const std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<Socket>>)>& callback);
     void Execute(Socket* socket);
 private:
-    std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)> m_callback;
+    std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<Socket>>)> m_callback;
 };
 
 
