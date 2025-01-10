@@ -286,17 +286,12 @@ inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse* response, H
 }
 
 
-
-
-
-
-
 template<typename SocketType>
 inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
 {
     SocketType* socket = connection->GetSocket();
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
-    Session session(connection, &HttpServer<SocketType>::RequestPool, &HttpServer<SocketType>::ResponsePool);
+    Session<SocketType, http::HttpRequest, http::HttpResponse> session(connection);
     std::atomic_bool close_connection = false;
     while(true)
     {

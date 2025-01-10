@@ -105,8 +105,6 @@ concept ProtoType = std::default_initializable<T> && requires(T type, const std:
     { type.Reset() } -> std::same_as<void>;
 };
 
-#define DEFAULT_HTTP_REQUEST_POOL_SIZE               2048
-#define DEFAULT_HTTP_RESPONSE_POOL_SIZE              2048
 #define DEFAULT_HTTP_KEEPALIVE_TIME_MS              (7500 * 1000)
 
 using namespace galay::http;
@@ -153,10 +151,6 @@ template<typename SocketType>
 class HttpServer
 {
 public:
-
-    static utils::ProtocolPool<HttpRequest> RequestPool;
-    static utils::ProtocolPool<HttpResponse> ResponsePool;
-public:
     explicit HttpServer(HttpServerConfig::ptr config);
 
     template <HttpMethod ...Methods>
@@ -171,11 +165,6 @@ private:
     TcpServer<SocketType> m_server;
     std::unique_ptr<CallbackStore<SocketType>> m_store;
 };
-
-template<typename SocketType>
-inline utils::ProtocolPool<HttpRequest> HttpServer<SocketType>::RequestPool(DEFAULT_HTTP_REQUEST_POOL_SIZE);
-template<typename SocketType>
-inline utils::ProtocolPool<HttpResponse> HttpServer<SocketType>::ResponsePool(DEFAULT_HTTP_RESPONSE_POOL_SIZE);
 
 template<typename SocketType>
 extern Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection);

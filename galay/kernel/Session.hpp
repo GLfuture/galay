@@ -41,26 +41,11 @@ concept RequestType = std::is_base_of<Request, T>::value;
 template <typename T>
 concept ResponseType = std::is_base_of<Response, T>::value;
 
-template <RequestType Request, ResponseType Response>
-struct ProtocolStore
-{
-    using ptr = std::shared_ptr<ProtocolStore>;
-    ProtocolStore(utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool);
-    ~ProtocolStore();
-
-    std::unique_ptr<Request> m_request;
-    std::unique_ptr<Response> m_response;
-    utils::ProtocolPool<Request>* m_request_pool;
-    utils::ProtocolPool<Response>* m_response_pool;
-};
-
 template <typename Socket, RequestType Request, ResponseType Response>
 class Session
 {
 public:
-    Session(std::shared_ptr<Connection<Socket>> connection, utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool);
+    Session(std::shared_ptr<Connection<Socket>> connection);
 
     Request* GetRequest() const;
     Response* GetResponse() const;
@@ -74,8 +59,9 @@ public:
 private:
     void* m_userdata;
     bool m_close = false;
+    std::shared_ptr<Request> m_request;
+    std::shared_ptr<Response> m_response;
     std::shared_ptr<Connection<Socket>> m_connection;
-    ProtocolStore<Request, Response>::ptr m_proto_store;
 };
 
 

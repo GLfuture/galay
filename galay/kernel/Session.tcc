@@ -39,27 +39,10 @@ void CallbackStore<Socket>::Execute(Socket* socket)
     m_callback(galay::RoutineCtx::Create(), connection);
 }
 
-template <RequestType Request, ResponseType Response>
-ProtocolStore<Request, Response>::ProtocolStore(utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool)
-    :m_request(request_pool->GetProtocol()), m_response(response_pool->GetProtocol()), \
-        m_request_pool(request_pool), m_response_pool(response_pool) 
-{
-
-}
-
-template <RequestType Request, ResponseType Response>
-ProtocolStore<Request, Response>::~ProtocolStore() 
-{
-    m_request_pool->PutProtocol(std::move(m_request));
-    m_response_pool->PutProtocol(std::move(m_response));
-}
 
 template <typename Socket, RequestType Request, ResponseType Response>
-Session<Socket, Request, Response>::Session(std::shared_ptr<Connection<Socket>> connection, utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool)
-        :m_connection(connection), \
-            m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) 
+Session<Socket, Request, Response>::Session(std::shared_ptr<Connection<Socket>> connection)
+        :m_connection(connection), m_request(std::make_shared<Request>()), m_response(std::make_shared<Response>())
 {
 
 }
@@ -67,13 +50,13 @@ Session<Socket, Request, Response>::Session(std::shared_ptr<Connection<Socket>> 
 template <typename Socket, RequestType Request, ResponseType Response>
 Request* Session<Socket, Request, Response>::GetRequest() const 
 { 
-    return m_proto_store->m_request.get(); 
+    return m_request.get(); 
 }
 
 template <typename Socket, RequestType Request, ResponseType Response>
 Response* Session<Socket, Request, Response>::GetResponse() const 
 { 
-    return m_proto_store->m_response.get(); 
+    return m_response.get(); 
 }
 
 template <typename Socket, RequestType Request, ResponseType Response>
