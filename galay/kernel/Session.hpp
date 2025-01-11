@@ -12,10 +12,12 @@ namespace galay
 
 
 template <typename Socket>
-class Connection
+class Connection: public std::enable_shared_from_this<Connection<Socket>>
 {
 public:
     using ptr = std::shared_ptr<Connection>;
+    using timeout_callback_t = std::function<void(Connection<Socket>::ptr)>;
+
     explicit Connection(Socket* socket);
     
     template <typename CoRtn = void>
@@ -27,6 +29,7 @@ public:
     template <typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
+    void Destroy();
     ~Connection();
 private:
     Socket* m_socket;
@@ -44,9 +47,9 @@ class Session
 {
 public:
     using ptr = std::shared_ptr<Session>;
-    Session(std::shared_ptr<Connection<Socket>> connection);
+    Session(Connection<Socket>::ptr connection);
 
-    std::shared_ptr<Connection<Socket>> GetConnection();
+    Connection<Socket>::ptr GetConnection();
     Request* GetRequest() const;
     Response* GetResponse() const;
     void* GetUserData();
@@ -55,19 +58,21 @@ public:
     void Close();
     bool IsClose();
 
-    ~Session() = default;
+    ~Session();
 private:
     bool m_isClosed;
     void* m_userdata;
     Request* m_request;
     Response* m_response;
-    std::shared_ptr<Connection<Socket>> m_connection;
+    Connection<Socket>::ptr m_connection;
 };
 
 
 
 using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
 using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
+
+
 
 }
 

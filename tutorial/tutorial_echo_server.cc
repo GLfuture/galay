@@ -4,14 +4,6 @@
 class Handler {
 public:
     static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::HttpSession::ptr session) {
-        std::cout << ctx.GetThisLayer() << std::endl;
-        auto& graph = ctx.GetSharedCtx().lock()->GetRoutineGraph();
-        for(int i = 0; i < graph.size(); ++i) {
-            std::cout << "layer: " << i << std::endl;
-            for(auto& coroutine: graph[i]) {
-                std::cout << "sequence: " << coroutine.first << " " << std::endl;
-            }
-        }
         auto resp = session->GetResponse();
         resp->SetContent("html", "<html>Hello World</html>");
         session->Close();

@@ -2,6 +2,7 @@
 #define GALAY_SESSION_TCC
 
 #include "Session.hpp"
+#include <iostream>
 
 namespace galay
 {
@@ -33,6 +34,13 @@ inline AsyncResult<bool, CoRtn> Connection<Socket>::Close()
     return m_socket->Close();
 }
 
+
+template <typename Socket>
+inline void Connection<Socket>::Destroy()
+{
+    delete this;
+}
+
 template<typename Socket>
 Connection<Socket>::~Connection() 
 { 
@@ -41,14 +49,14 @@ Connection<Socket>::~Connection()
 
 
 template <typename Socket, RequestType Request, ResponseType Response>
-Session<Socket, Request, Response>::Session(std::shared_ptr<Connection<Socket>> connection)
+Session<Socket, Request, Response>::Session(Connection<Socket>::ptr connection)
         :m_connection(connection), m_request(new Request), m_response(new Response), m_isClosed(false)
 {
 
 }
 
 template <typename Socket, RequestType Request, ResponseType Response>
-inline std::shared_ptr<Connection<Socket>> Session<Socket, Request, Response>::GetConnection()
+inline Connection<Socket>::ptr Session<Socket, Request, Response>::GetConnection()
 {
     return m_connection;
 }
@@ -90,6 +98,14 @@ template <typename Socket, RequestType Request, ResponseType Response>
 inline bool Session<Socket, Request, Response>::IsClose()
 {
     return m_isClosed;
+}
+
+template <typename Socket, RequestType Request, ResponseType Response>
+inline Session<Socket, Request, Response>::~Session()
+{
+    std::cout << "Session::~Session()" << std::endl;
+    delete m_request;
+    delete m_response;
 }
 
 

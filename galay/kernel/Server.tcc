@@ -266,7 +266,7 @@ inline server::HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config)
 template <typename SocketType>
 inline void server::HttpServer<SocketType>::Start(THost host)
 {
-    m_server.Prepare([this](RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection) {
+    m_server.Prepare([this](RoutineCtx ctx, Connection<SocketType>::ptr connection) {
         typename Session<SocketType, HttpRequest, HttpResponse>::ptr session = std::make_shared<Session<SocketType, HttpRequest, HttpResponse>>(connection);
         return HttpRouteForward(ctx, session);
     });
@@ -311,6 +311,7 @@ template<typename SocketType>
 inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session)
 {
     auto connection = session->GetConnection();
+    std::cout << "HttpRoute" << std::endl;
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
     std::atomic_bool close_connection = false;
     while(true)
@@ -326,6 +327,7 @@ step1:
             } 
             else { 
                 std::string_view data(rholder->m_buffer, rholder->m_offset);
+                std::cout << data << '\n';
                 auto result = session->GetRequest()->DecodePdu(data);
                 if(!result.first) { //解析失败
                     switch (session->GetRequest()->GetErrorCode())
@@ -377,6 +379,7 @@ step2:
         while (true)
         {
             int length = co_await connection->Send(&wholder, wholder->m_size);
+            std::cout << "Send: " << length << std::endl;
             if( length <= 0 ) {
                 close_connection = true;
                 break;

@@ -22,7 +22,7 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    using callback_t = std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<Socket>>)>;
+    using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<Socket>::ptr)>;
     static void RegisteCallback(callback_t callback);
     static void CreateConncetion(Socket* socket);
 private:
@@ -89,7 +89,7 @@ template<typename SocketType>
 class TcpServer
 {
 public:
-    using callback_t = std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<SocketType>>)>;
+    using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<SocketType>::ptr)>;
     explicit TcpServer(TcpServerConfig::ptr config) :m_config(config) {}
     void Prepare(callback_t callback);
     //no block
