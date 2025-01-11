@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(galay VERSION 1.0)
+project(Galay VERSION 1.0)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -42,8 +42,8 @@ include_directories(thirdparty)
 set(THIRDPARTY_INCLUDE_DIRS concurrentqueue)
 
 set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common helper)
-set(STATIC_LIB ${PROJECT_NAME}-static)
-set(SHARED_LIB ${PROJECT_NAME})
+set(STATIC_LIB galay-static)
+set(SHARED_LIB galay)
 
 include_directories(${PROJECT_SOURCE_DIR})
 

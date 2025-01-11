@@ -20,4 +20,4 @@ if(ENABLE_TRACE_LOG)
     target_compile_definitions(${PROJECT_NAME} PRIVATE "ENABLE_DISPLAY_GALAY_LOG")
 endif()
 
-install(TARGETS kernel EXPORT galayTargets)
+install(TARGETS kernel EXPORT GalayTargets)

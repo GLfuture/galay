@@ -13,9 +13,24 @@ Connection<Socket>::Connection(Socket* socket)
 }
 
 template<typename Socket>
-Socket* Connection<Socket>::GetSocket() const
+template <typename CoRtn>
+AsyncResult<int, CoRtn> Connection<Socket>::Recv(TcpIOVec *iov, int size)
 {
-    return m_socket;
+    return m_socket->Recv(iov, size);
+}
+
+template <typename Socket>
+template <typename CoRtn>
+inline AsyncResult<int, CoRtn> Connection<Socket>::Send(TcpIOVec *iov, int size)
+{
+    return m_socket->Send(iov, size);
+}
+
+template <typename Socket>
+template <typename CoRtn>
+inline AsyncResult<bool, CoRtn> Connection<Socket>::Close()
+{
+    return m_socket->Close();
 }
 
 template<typename Socket>
@@ -25,62 +40,31 @@ Connection<Socket>::~Connection()
 }
 
 
-template <typename Socket>
-CallbackStore<Socket>::CallbackStore(const std::function<Coroutine<void>(RoutineCtx::ptr,std::shared_ptr<Connection<Socket>>)>& callback) 
-    : m_callback(callback) 
-{
-
-}
-
-template <typename Socket>
-void CallbackStore<Socket>::Execute(Socket* socket) 
-{
-    auto connection = std::make_shared<Connection<Socket>>(socket);
-    m_callback(galay::RoutineCtx::Create(), connection);
-}
-
-template <RequestType Request, ResponseType Response>
-ProtocolStore<Request, Response>::ProtocolStore(utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool)
-    :m_request(request_pool->GetProtocol()), m_response(response_pool->GetProtocol()), \
-        m_request_pool(request_pool), m_response_pool(response_pool) 
-{
-
-}
-
-template <RequestType Request, ResponseType Response>
-ProtocolStore<Request, Response>::~ProtocolStore() 
-{
-    m_request_pool->PutProtocol(std::move(m_request));
-    m_response_pool->PutProtocol(std::move(m_response));
-}
-
 template <typename Socket, RequestType Request, ResponseType Response>
-Session<Socket, Request, Response>::Session(std::shared_ptr<Connection<Socket>> connection, utils::ProtocolPool<Request>* request_pool, \
-        utils::ProtocolPool<Response>* response_pool)
-        :m_connection(connection), \
-            m_proto_store(std::make_shared<ProtocolStore<Request, Response>>(request_pool, response_pool)) 
+Session<Socket, Request, Response>::Session(std::shared_ptr<Connection<Socket>> connection)
+        :m_connection(connection), m_request(new Request), m_response(new Response), m_isClosed(false)
 {
 
 }
 
 template <typename Socket, RequestType Request, ResponseType Response>
-Request* Session<Socket, Request, Response>::GetRequest() const 
+inline std::shared_ptr<Connection<Socket>> Session<Socket, Request, Response>::GetConnection()
+{
+    return m_connection;
+}
+
+template <typename Socket, RequestType Request, ResponseType Response>
+Request *Session<Socket, Request, Response>::GetRequest() const
 { 
-    return m_proto_store->m_request.get(); 
+    return m_request; 
 }
 
 template <typename Socket, RequestType Request, ResponseType Response>
 Response* Session<Socket, Request, Response>::GetResponse() const 
 { 
-    return m_proto_store->m_response.get(); 
+    return m_response; 
 }
 
-template <typename Socket, RequestType Request, ResponseType Response>
-std::shared_ptr<Connection<Socket>> Session<Socket, Request, Response>::GetConnection() 
-{ 
-    return m_connection; 
-}
 
 template <typename Socket, RequestType Request, ResponseType Response>
 void* Session<Socket, Request, Response>::GetUserData() 
@@ -94,20 +78,21 @@ void Session<Socket, Request, Response>::SetUserData(void* data)
     m_userdata = data; 
 }
 
-template <typename Socket, RequestType Request, ResponseType Response>
-void Session<Socket, Request, Response>::ToClose() 
-{ 
-    m_close = true; 
-}
 
 template <typename Socket, RequestType Request, ResponseType Response>
-bool Session<Socket, Request, Response>::IsClose() 
-{ 
-    return m_close; 
+inline void Session<Socket, Request, Response>::Close()
+{
+    m_isClosed = true;
+}
+
+
+template <typename Socket, RequestType Request, ResponseType Response>
+inline bool Session<Socket, Request, Response>::IsClose()
+{
+    return m_isClosed;
 }
 
 
 }
-
 
 #endif

@@ -33,26 +33,26 @@ namespace galay
 
 template <typename T>
 template <typename...Args>
-inline PromiseType<T>::PromiseType(RoutineCtx::ptr ctx, Args&&...args)
-    : m_ctx(ctx)
+inline PromiseType<T>::PromiseType(RoutineCtx ctx, Args&&...args)
+    : m_ctx(std::move(ctx))
 {
-    if(!m_ctx) {
-        throw std::runtime_error("ctx is nullptr");
-    }
 }
 
 template <typename T>
 inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
-    m_ctx->m_co = m_coroutine;
+    auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
+    m_ctx.m_privateCtx->GetThisSequence() = m_ctx.m_sharedCtx->AddToGraph(++m_ctx.m_privateCtx->GetThisLayer(), m_coroutine);
     return *m_coroutine;
 }
 
 template<typename T>
 inline std::suspend_always PromiseType<T>::yield_value(T&& value) noexcept 
 { 
-    *(m_coroutine->m_result) = std::move(value); return {}; 
+    *(m_coroutine->m_result) = std::move(value); 
+    m_coroutine->Become(CoroutineStatus::Suspended);
+    return {}; 
 }
 
 template<typename T>
@@ -66,47 +66,53 @@ template<typename T>
 inline PromiseType<T>::~PromiseType() 
 {
     //防止协程运行时resume创建出新的协程，析构时重复析构
-    bool origin = false;
-    if(!m_coroutine->m_is_done->compare_exchange_strong(origin, true)) {
+    CoroutineStatus origin = m_coroutine->m_status->load();
+    if(!m_coroutine->m_status->compare_exchange_strong(origin, CoroutineStatus::Finished)) {
         return;
     }
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
+    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_privateCtx->GetThisLayer(), m_ctx.m_privateCtx->GetThisSequence());
 }
 
 template<typename ...Args>
-inline PromiseType<void>::PromiseType(RoutineCtx::ptr ctx, Args&&... agrs)
-    : m_ctx(ctx)
+inline PromiseType<void>::PromiseType(RoutineCtx ctx, Args&&... agrs)
+    : m_ctx(std::move(ctx))
 {
-    if(!m_ctx) {
-        throw std::runtime_error("ctx is nullptr");
-    }
 }
 
 inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<void>>(std::coroutine_handle<PromiseType<void>>::from_promise(*this));
-    m_ctx->m_co = m_coroutine;
+    auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
+    m_ctx.m_privateCtx->GetThisSequence() = m_ctx.m_sharedCtx->AddToGraph(++m_ctx.m_privateCtx->GetThisLayer(), m_coroutine);
     return *m_coroutine;
+}
+
+inline std::suspend_always PromiseType<void>::yield_value() noexcept
+{
+    m_coroutine->Become(CoroutineStatus::Suspended);
+    return std::suspend_always();
 }
 
 inline PromiseType<void>::~PromiseType()
 {
-    bool origin = false;
-    if(!m_coroutine->m_is_done->compare_exchange_strong(origin, true)) {
+    CoroutineStatus origin = m_coroutine->m_status->load();
+    if(!m_coroutine->m_status->compare_exchange_strong(origin, CoroutineStatus::Finished)) {
         return;
     }
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
+    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_privateCtx->GetThisLayer(), m_ctx.m_privateCtx->GetThisSequence());
 }
 
 
 template<typename T>
 inline Coroutine<T>::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
 {
-    m_is_done = std::make_shared<std::atomic_bool>(false);
+    m_status = std::make_shared<std::atomic<CoroutineStatus>>(CoroutineStatus::Running);
     m_result = std::make_shared<std::optional<T>>();
     m_handle = handle;
     m_awaiter = nullptr;
@@ -120,8 +126,8 @@ inline Coroutine<T>::Coroutine(Coroutine&& other) noexcept
     other.m_handle = nullptr;
     m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
-    m_is_done = other.m_is_done;
-    other.m_is_done.reset();
+    m_status = other.m_status;
+    other.m_status.reset();
     m_result = other.m_result;
     other.m_result.reset();
     m_exit_cbs = other.m_exit_cbs;
@@ -134,7 +140,7 @@ inline Coroutine<T>::Coroutine(const Coroutine& other) noexcept
     m_awaiter.store(other.m_awaiter);
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
-    m_is_done = other.m_is_done;
+    m_status = other.m_status;
     m_result = other.m_result;
 }
 
@@ -145,8 +151,8 @@ inline Coroutine<T>& Coroutine<T>::operator=(Coroutine&& other) noexcept
     other.m_handle = nullptr;
     m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
-    m_is_done = other.m_is_done;
-    other.m_is_done.reset();
+    m_status = other.m_status;
+    other.m_status.reset();
     m_result = other.m_result;
     other.m_result.reset();
     m_exit_cbs = other.m_exit_cbs;
@@ -158,7 +164,7 @@ template<typename T>
 Coroutine<T>& Coroutine<T>::operator=(const Coroutine& other) noexcept
 {
     m_awaiter.store(other.m_awaiter);
-    m_is_done = other.m_is_done;
+    m_status = other.m_status;
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
     m_result = other.m_result;
@@ -168,10 +174,28 @@ Coroutine<T>& Coroutine<T>::operator=(const Coroutine& other) noexcept
 template<typename T>
 inline details::CoroutineScheduler* Coroutine<T>::BelongScheduler() const
 {
-    if(m_is_done->load()) {
+    if(m_status->load() == CoroutineStatus::Finished) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx->GetScheduler();
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetScheduler();
+}
+
+template<typename T>
+inline bool Coroutine<T>::IsRunning() const
+{
+    return m_status->load() == CoroutineStatus::Running;
+}
+
+template<typename T>
+inline bool Coroutine<T>::IsSuspend() const 
+{ 
+    return m_status->load() == CoroutineStatus::Suspended; 
+}
+
+template<typename T>
+inline bool Coroutine<T>::IsDone() const  
+{ 
+    return m_status->load() == CoroutineStatus::Finished; 
 }
 
 template<typename T>
@@ -189,11 +213,40 @@ inline void Coroutine<T>::AppendExitCallback(const std::function<void()>& callba
     m_exit_cbs->emplace_front(callback);
 }
 
+template <typename T>
+inline bool Coroutine<T>::Become(CoroutineStatus status)
+{
+    auto origin = m_status->load();
+    if(!m_status->compare_exchange_strong(origin, status)) {
+        return false;
+    }
+    return true;
+}
+
+template<typename T>
+inline std::optional<T> Coroutine<T>::operator()() 
+{ 
+    return *m_result; 
+}
+
 template<typename T>
 inline AwaiterBase* Coroutine<T>::GetAwaiter() const
 {
     return m_awaiter.load();
 }
+
+template<typename T>
+inline void Coroutine<T>::Destroy() 
+{ 
+    m_handle.destroy(); 
+}
+
+template<typename T>
+inline void Coroutine<T>::Resume() 
+{ 
+    return m_handle.resume(); 
+}
+
 
 template<typename T>
 inline void Coroutine<T>::ToExit()
@@ -206,7 +259,7 @@ inline void Coroutine<T>::ToExit()
 
 inline Coroutine<void>::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
 {
-    m_is_done = std::make_shared<std::atomic_bool>(false);
+    m_status = std::make_shared<std::atomic<CoroutineStatus>>(CoroutineStatus::Running);
     m_exit_cbs = std::make_shared<std::list<std::function<void()>>>();
     m_handle = handle;
     m_awaiter = nullptr;
@@ -220,8 +273,8 @@ inline Coroutine<void>::Coroutine(Coroutine&& other) noexcept
     other.m_awaiter = nullptr;
     m_exit_cbs = other.m_exit_cbs;
     other.m_exit_cbs.reset();
-    m_is_done = other.m_is_done;
-    other.m_is_done.reset();
+    m_status = other.m_status;
+    other.m_status.reset();
 }
 
 inline Coroutine<void>::Coroutine(const Coroutine& other) noexcept
@@ -229,7 +282,7 @@ inline Coroutine<void>::Coroutine(const Coroutine& other) noexcept
     m_awaiter.store(other.m_awaiter);
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
-    m_is_done = other.m_is_done;
+    m_status = other.m_status;
 }
 
 inline Coroutine<void>& Coroutine<void>::operator=(Coroutine&& other) noexcept
@@ -238,8 +291,8 @@ inline Coroutine<void>& Coroutine<void>::operator=(Coroutine&& other) noexcept
     other.m_handle = nullptr;
     m_awaiter.store(other.m_awaiter);
     other.m_awaiter = nullptr;
-    m_is_done = other.m_is_done;
-    other.m_is_done.reset();
+    m_status = other.m_status;
+    other.m_status.reset();
     m_exit_cbs = other.m_exit_cbs;
     other.m_exit_cbs.reset();
     return *this;
@@ -250,16 +303,31 @@ inline Coroutine<void>& Coroutine<void>::operator=(const Coroutine &other) noexc
     m_awaiter.store(other.m_awaiter);
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
-    m_is_done = other.m_is_done;
+    m_status = other.m_status;
     return *this;
 }
 
 inline details::CoroutineScheduler* Coroutine<void>::BelongScheduler() const
 {
-    if(m_is_done->load()) {
+    if(m_status->load() == CoroutineStatus::Finished) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx->GetScheduler();
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetScheduler();
+}
+
+inline bool Coroutine<void>::IsRunning() const
+{
+    return m_status->load() == CoroutineStatus::Running;
+}
+
+inline bool Coroutine<void>::IsSuspend() const 
+{ 
+    return m_status->load() == CoroutineStatus::Suspended; 
+}
+
+inline bool Coroutine<void>::IsDone() const 
+{ 
+    return m_status->load() == CoroutineStatus::Finished; 
 }
 
 inline bool Coroutine<void>::SetAwaiter(AwaiterBase* awaiter)
@@ -273,6 +341,25 @@ inline bool Coroutine<void>::SetAwaiter(AwaiterBase* awaiter)
 inline void Coroutine<void>::AppendExitCallback(const std::function<void()>& callback)
 {
     m_exit_cbs->emplace_front(callback);
+}
+
+inline bool Coroutine<void>::Become(CoroutineStatus status) 
+{
+    auto origin = m_status->load();
+    if(!m_status->compare_exchange_strong(origin, status)) {
+        return false;
+    }
+    return true;
+}
+
+inline void Coroutine<void>::Destroy() 
+{ 
+    m_handle.destroy(); 
+}
+
+inline void Coroutine<void>::Resume() 
+{ 
+    return m_handle.resume(); 
 }
 
 inline AwaiterBase* Coroutine<void>::GetAwaiter() const
@@ -320,7 +407,13 @@ inline bool AsyncResult<T, CoRtn>::await_suspend(std::coroutine_handle<typename 
     while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    return this->m_action->DoAction(std::static_pointer_cast<CoroutineBase>(co.lock()), this->m_ctx);
+    auto isSuspend = this->m_action->DoAction(std::static_pointer_cast<CoroutineBase>(co.lock()), this->m_ctx);
+    if(isSuspend) {
+        while(!co.lock()->Become(CoroutineStatus::Suspended)) {
+            LogError("[Become failed]");
+        } 
+    }
+    return isSuspend;
 }
 
 template<typename T, typename CoRtn>
@@ -330,6 +423,9 @@ inline T&& AsyncResult<T, CoRtn>::await_resume() const noexcept
         while(!this->m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
+        while(!this->m_handle.promise().GetCoroutine().lock()->Become(CoroutineStatus::Running)) {
+            LogError("[Become failed]");
+        } 
     }
     return const_cast<T&&>(std::move(this->m_result));
 }
@@ -374,7 +470,13 @@ bool AsyncResult<void, CoRtn>::await_suspend(std::coroutine_handle<typename Coro
     while(!co.lock()->SetAwaiter(this)){
         LogError("[Set awaiter failed]");
     }
-    return m_action->DoAction(co, m_ctx);
+    bool isSuspend = m_action->DoAction(co, m_ctx);
+    if(isSuspend) {
+        while(!co.lock()->Become(CoroutineStatus::Suspended)) {
+            LogError("[Become failed]");
+        } 
+    }
+    return isSuspend;
 }
 
 template<typename CoRtn>
@@ -383,6 +485,9 @@ void AsyncResult<void, CoRtn>::await_resume() const noexcept {
         while(!m_handle.promise().GetCoroutine().lock()->SetAwaiter(nullptr)){
             LogError("[Set awaiter failed]");
         }
+        while(!this->m_handle.promise().GetCoroutine().lock()->Become(CoroutineStatus::Running)) {
+            LogError("[Become failed]");
+        } 
     }
 }
 

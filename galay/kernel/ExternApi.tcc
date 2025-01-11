@@ -155,13 +155,13 @@ inline bool IOVecHolder<UdpIOVec>::Reset(const UdpIOVec& iov)
 
 
 template<typename CoRtn>
-WaitGroup<CoRtn>::WaitGroup(uint32_t count)
+inline WaitGroup<CoRtn>::WaitGroup(uint32_t count)
     :m_count(count)
 {
 }
 
 template<typename CoRtn>
-void WaitGroup<CoRtn>::Done()
+inline void WaitGroup<CoRtn>::Done()
 {
     std::shared_lock lk(m_mutex);
     if(m_count == 0) return;
@@ -175,7 +175,7 @@ void WaitGroup<CoRtn>::Done()
 }
 
 template<typename CoRtn>
-void WaitGroup<CoRtn>::Reset(uint32_t count)
+inline void WaitGroup<CoRtn>::Reset(uint32_t count)
 {
     std::unique_lock lk(m_mutex);
     m_count = count;
@@ -183,7 +183,7 @@ void WaitGroup<CoRtn>::Reset(uint32_t count)
 }
 
 template<typename CoRtn>
-AsyncResult<bool, CoRtn> WaitGroup<CoRtn>::Wait()
+inline AsyncResult<bool, CoRtn> WaitGroup<CoRtn>::Wait()
 {
     auto* action = new details::CoroutineHandleAction([this](CoroutineBase::wptr co, void* ctx)->bool{
         std::unique_lock lk(m_mutex);
@@ -251,7 +251,7 @@ AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coroutine<C
         auto child = co;
         auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(fco.lock())->GetAwaiter());
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(child));
-        if(child.Done()) return false;
+        if(child.IsDone()) return false;
         child.AppendExitCallback([fco](){
             fco.lock()->BelongScheduler()->ToResumeCoroutine(fco);
         });
@@ -268,7 +268,7 @@ galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func
         auto coro = async_func();
         auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(co.lock())->GetAwaiter());
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
-        if(coro.Done()) return false;
+        if(coro.IsDone()) return false;
         coro.AppendExitCallback([co](){
             co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });
@@ -286,7 +286,7 @@ galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(
         auto coro = async_func();
         auto awaiter = static_cast<typename details::Awaiter<typename Coroutine<CoRtn>::ptr>*>(std::dynamic_pointer_cast<Coroutine<FCoRtn>>(co.lock())->GetAwaiter());
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
-        if(coro.Done()) return false;
+        if(coro.IsDone()) return false;
         coro.AppendExitCallback([co](){
             co.lock()->BelongScheduler()->ToResumeCoroutine(co);
         });

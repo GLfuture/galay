@@ -375,7 +375,7 @@ public:
 	template<typename CoRtn>
 	AsyncResult<RedisAsyncValue, CoRtn> AsyncCommand(const std::string& command);
 
-	void BindReConnectCallbackWithRoutineCtx(RoutineCtx::ptr routine);
+	void BindReConnectCallbackWithRoutineCtx(RoutineCtx routine);
 
 	~RedisAsyncSession();
 private:
@@ -383,11 +383,11 @@ private:
 	static void RedisDisconnectCallback(const redisAsyncContext *c, int status);
 	static void RedisCommandCallback(redisAsyncContext *c, void *r, void *privdata);
 
-	static Coroutine<void> RedisReconnect(RoutineCtx::ptr routine, RedisAsyncSession* session);
+	static Coroutine<void> RedisReconnect(RoutineCtx routine, RedisAsyncSession* session);
 
 	//关闭hiredis自动释放reply
 	bool Connect(const std::string& host, int32_t port);
-	Coroutine<void> ReConnect(RoutineCtx::ptr routine);
+	Coroutine<void> ReConnect(RoutineCtx routine);
 
 	int RedisAsyncCommand(const std::string& command);
 private:
@@ -397,7 +397,7 @@ private:
 	RedisConfig::ptr m_config;
 	details::IOEventAction* m_action;
 	details::SessionScheduler* m_scheduler;
-	RoutineCtx::ptr m_routine = nullptr;
+	RoutineCtx m_routine = nullptr;
 };
 
 

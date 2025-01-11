@@ -1,4 +1,4 @@
-option(ENABLE_DEBUG "Enable debug" OFF)
+option(ENABLE_DEBUG "Enable debug" ON)
 option(ENABLE_INSTALL_SYSTEM "Enable install system" ON) 
 option(ENABLE_BUILD_ETCD "Enable build mysql" OFF)
 option(ENABLE_BUILD_MYSQL "Enable build mysql" OFF)

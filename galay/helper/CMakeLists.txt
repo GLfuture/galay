@@ -5,4 +5,4 @@ file(GLOB SRC_LIST "*.cc")
 
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
 link_libraries(${PROJECT_NAME})
-install(TARGETS helper EXPORT galayTargets)
+install(TARGETS helper EXPORT GalayTargets)

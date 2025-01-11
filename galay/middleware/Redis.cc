@@ -2,7 +2,6 @@
 #include "galay/kernel/ExternApi.hpp"
 #include "galay/kernel/Async.hpp"
 #include <regex>
-#include <iostream>
 
 namespace galay::details
 {
@@ -193,14 +192,12 @@ std::any &RedisConfig::GetParams()
 
 RedisValue::RedisValue(RedisValue &&other)
 {
-    std::cout << "RedisValue move constructor" << std::endl;
     m_replay = std::move(other.m_replay);
     other.m_replay = nullptr;
 }
 
 RedisValue &RedisValue::operator=(RedisValue &&other)
 {
-    std::cout << "RedisValue::operator=" << std::endl;
     m_replay = std::move(other.m_replay);
     other.m_replay = nullptr;
     return *this;
@@ -792,7 +789,7 @@ bool RedisAsyncSession::Connect(const std::string &ehost, int32_t port)
     return true;
 }
 
-Coroutine<void> RedisAsyncSession::ReConnect(RoutineCtx::ptr routine)
+Coroutine<void> RedisAsyncSession::ReConnect(RoutineCtx routine)
 {
     return RedisReconnect(routine, this);
 }
@@ -802,7 +799,7 @@ int RedisAsyncSession::RedisAsyncCommand(const std::string &command)
     return redisAsyncCommand(m_redis, RedisCommandCallback, nullptr, command.c_str()) ;
 }
 
-void RedisAsyncSession::BindReConnectCallbackWithRoutineCtx(RoutineCtx::ptr routine)
+void RedisAsyncSession::BindReConnectCallbackWithRoutineCtx(RoutineCtx routine)
 {
     this->m_routine = routine;
 }
@@ -854,7 +851,7 @@ void RedisAsyncSession::RedisCommandCallback(redisAsyncContext *c, void *r, void
     static_cast<details::RedisEvent*>(redis->m_action->GetBindEvent())->ToResume();
 }
 
-Coroutine<void> RedisAsyncSession::RedisReconnect(RoutineCtx::ptr routine, RedisAsyncSession* session)
+Coroutine<void> RedisAsyncSession::RedisReconnect(RoutineCtx routine, RedisAsyncSession* session)
 {
     bool success = co_await session->AsyncConnect<void>(session->m_host);
     if(success) {

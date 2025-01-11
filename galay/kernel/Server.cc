@@ -5,7 +5,7 @@
 namespace galay::details
 {
 
-Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, galay::AsyncTcpSocket *socket, CallbackStore<galay::AsyncTcpSocket> *store, EventEngine *engine)
+Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, EventEngine *engine)
 {
     THost addr{};
     while(true)
@@ -24,12 +24,12 @@ Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, galay::AsyncTcpSocket *soc
         }
         LogTrace("[Handle:{}, Acceot Success]", new_socket->GetHandle().fd);
         engine->ResetMaxEventSize(handle.fd);
-        store->Execute(new_socket);
+        CallbackStore<galay::AsyncTcpSocket>::CreateConncetion(new_socket);
     }
     co_return;
 }
 
-Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, AsyncTcpSslSocket *socket, CallbackStore<AsyncTcpSslSocket> *store, EventEngine *engine)
+Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, EventEngine *engine)
 {
     THost addr{};
     while (true)
@@ -55,7 +55,7 @@ Coroutine<void> CreateConnection(RoutineCtx::ptr ctx, AsyncTcpSslSocket *socket,
         }
         LogTrace("[Handle:{}, SSL_Acceot Success]", new_socket->GetHandle().fd);
         engine->ResetMaxEventSize(handle.fd);
-        store->Execute(new_socket);
+        CallbackStore<AsyncTcpSslSocket>::CreateConncetion(new_socket);
     }
     co_return;
 }

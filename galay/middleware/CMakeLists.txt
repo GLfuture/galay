@@ -36,4 +36,4 @@ endif()
 add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${DEPEND_LIBS})
 
-install(TARGETS middleware EXPORT galayTargets)
+install(TARGETS middleware EXPORT GalayTargets)

@@ -79,10 +79,14 @@ bool CoroutineScheduler::Loop(int timeout)
                 switch (co.first)
                 {
                 case Action::kActionResume:
-                    co.second.lock()->Resume();
+                {
+                    if(co.second.lock()->IsSuspend()) {
+                        co.second.lock()->Resume();
+                    }
                     break;
+                }
                 case Action::kActionDestroy:
-                {   
+                {
                     co.second.lock()->Destroy();
                     break;
                 }
