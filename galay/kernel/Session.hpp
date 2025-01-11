@@ -17,21 +17,19 @@ class Connection
 public:
     using ptr = std::shared_ptr<Connection>;
     explicit Connection(Socket* socket);
-    [[nodiscard]] Socket* GetSocket() const;
+    
+    template <typename CoRtn = void>
+    AsyncResult<int, CoRtn> Recv(TcpIOVec *iov, int size);
+
+    template <typename CoRtn = void>
+    AsyncResult<int, CoRtn> Send(TcpIOVec *iov, int size);
+
+    template <typename CoRtn = void>
+    AsyncResult<bool, CoRtn> Close();
+
     ~Connection();
 private:
     Socket* m_socket;
-};
-
-
-template <typename Socket>
-class CallbackStore
-{
-public:
-    explicit CallbackStore(const std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<Socket>>)>& callback);
-    void Execute(Socket* socket);
-private:
-    std::function<Coroutine<void>(RoutineCtx,std::shared_ptr<Connection<Socket>>)> m_callback;
 };
 
 
@@ -45,22 +43,24 @@ template <typename Socket, RequestType Request, ResponseType Response>
 class Session
 {
 public:
+    using ptr = std::shared_ptr<Session>;
     Session(std::shared_ptr<Connection<Socket>> connection);
 
+    std::shared_ptr<Connection<Socket>> GetConnection();
     Request* GetRequest() const;
     Response* GetResponse() const;
-    std::shared_ptr<Connection<Socket>> GetConnection();
     void* GetUserData();
     void SetUserData(void* data);
 
-    void ToClose();
+    void Close();
     bool IsClose();
+
     ~Session() = default;
 private:
+    bool m_isClosed;
     void* m_userdata;
-    bool m_close = false;
-    std::shared_ptr<Request> m_request;
-    std::shared_ptr<Response> m_response;
+    Request* m_request;
+    Response* m_response;
     std::shared_ptr<Connection<Socket>> m_connection;
 };
 

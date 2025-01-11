@@ -6,10 +6,25 @@
 namespace galay::details
 {
 
+template <typename Socket>
+CallbackStore<Socket>::callback_t CallbackStore<Socket>::m_callback = nullptr;
+
+template <typename Socket>
+void CallbackStore<Socket>::RegisteCallback(callback_t callback)
+{
+    m_callback = callback;
+}
+
+template <typename Socket>
+void CallbackStore<Socket>::CreateConncetion(Socket* socket) 
+{
+    auto connection = std::make_shared<Connection<Socket>>(socket);
+    if(m_callback) m_callback(RoutineCtx::Create(), connection);
+}
 
 template <typename SocketType>
-inline ListenEvent<SocketType>::ListenEvent(EventEngine* engine, SocketType* socket, CallbackStore<SocketType>* store)
-    : m_socket(socket), m_store(store), m_engine(engine), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
+inline ListenEvent<SocketType>::ListenEvent(EventEngine* engine, SocketType* socket)
+    : m_socket(socket), m_engine(engine), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
 {
     engine->AddEvent(this, nullptr);
 }
@@ -59,7 +74,7 @@ inline EventEngine* ListenEvent<SocketType>::BelongEngine()
 
 template <typename SocketType>
 inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventEngine* engine) {
-    galay::details::CreateConnection(ctx.Copy(), m_socket, m_store, engine);
+    galay::details::CreateConnection(ctx.Copy(), m_socket, engine);
 }
 
 template <typename SocketType>
@@ -156,9 +171,15 @@ inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::Defaul
     return "<html>500 Internal Server Error</html>";
 }
 
+template <typename SocketType>
+inline void server::TcpServer<SocketType>::Prepare(callback_t callback)
+{
+    details::CallbackStore<SocketType>::RegisteCallback(callback);
+}
 
-template<typename SocketType>
-inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost host) {
+template <typename SocketType>
+inline void TcpServer<SocketType>::Start(THost host)
+{
     m_is_running = true;
     int requiredEventSchedulerNum = std::min(m_config->m_requiredEventSchedulerNum, EventSchedulerHolder::GetInstance()->GetSchedulerSize());
     if(requiredEventSchedulerNum == 0) {
@@ -199,8 +220,8 @@ inline void TcpServer<SocketType>::Start(CallbackStore<SocketType>* store, THost
             m_listen_events.clear();
             return;
         }
-        m_listen_events[i] = new details::ListenEvent<SocketType>(EventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket, store);
-    } 
+        m_listen_events[i] = new details::ListenEvent<SocketType>(EventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket);
+    }
 }
 
 template<typename SocketType>
@@ -216,7 +237,7 @@ inline void TcpServer<SocketType>::Stop()
 }
 
 template <typename SocketType>
-inline void server::HttpRouteHandler<SocketType>::AddHandler(HttpMethod method, const std::string &path, std::function<Coroutine<void>(RoutineCtx, Session)> &&handler)
+inline void server::HttpRouteHandler<SocketType>::AddHandler(HttpMethod method, const std::string &path, std::function<Coroutine<void>(RoutineCtx, SessionPtr)> &&handler)
 {
     m_handler_map[method][path] = std::move(handler);
 }
@@ -231,25 +252,25 @@ inline HttpRouteHandler<SocketType> *server::HttpRouteHandler<SocketType>::GetIn
 }
 
 template <typename SocketType>
-inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, galay::Session<SocketType, HttpRequest, HttpResponse> session)
+inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, SessionPtr session)
 {
-    return Handle(ctx.Copy(), method, path, session, m_handler_map);
+    return Handle<SocketType>(ctx.Copy(), method, path, session, m_handler_map);
 }
 
 template <typename SocketType>
 inline server::HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config)
-: m_server(config), 
-        m_store(std::make_unique<CallbackStore<SocketType>>([this](RoutineCtx ctx,std::shared_ptr<Connection<SocketType>> connection)->Coroutine<void> {
-                                                                    return HttpRouteForward(ctx, connection);
-                                                                })) 
+    :m_server(config)
 {
-
 }
 
 template <typename SocketType>
 inline void server::HttpServer<SocketType>::Start(THost host)
 {
-    m_server.Start(m_store.get(), host);
+    m_server.Prepare([this](RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection) {
+        typename Session<SocketType, HttpRequest, HttpResponse>::ptr session = std::make_shared<Session<SocketType, HttpRequest, HttpResponse>>(connection);
+        return HttpRouteForward(ctx, session);
+    });
+    m_server.Start(host);
 }
 
 template <typename SocketType>
@@ -266,7 +287,7 @@ inline bool server::HttpServer<SocketType>::IsRunning() const
 
 template <typename SocketType>
 template <HttpMethod... Methods>
-inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::function<galay::Coroutine<void>(RoutineCtx, Session<SocketType, HttpRequest, HttpResponse>)> &&handler)
+inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::function<galay::Coroutine<void>(RoutineCtx,SessionPtr)> &&handler)
 {
     ([&](){
         HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));
@@ -274,9 +295,9 @@ inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::f
 }
 
 template <typename SocketType>
-inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, std::shared_ptr<Connection<SocketType>> connection)
+inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session)
 {
-    return HttpRoute(ctx.Copy(), std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, connection);
+    return HttpRoute<SocketType>(ctx.Copy(), std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, session);
 }
 
 template <typename SocketType> 
@@ -287,28 +308,27 @@ inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse* response, H
 
 
 template<typename SocketType>
-inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, std::shared_ptr<Connection<SocketType>> connection)
+inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session)
 {
-    SocketType* socket = connection->GetSocket();
+    auto connection = session->GetConnection();
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
-    Session<SocketType, http::HttpRequest, http::HttpResponse> session(connection);
     std::atomic_bool close_connection = false;
     while(true)
     {
 step1:
         while(true) {
-            int length = co_await socket->Recv(&rholder, max_header_size);
+            int length = co_await connection->Recv(&rholder, max_header_size);
             if( length <= 0 ) {
                 if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
-                    bool res = co_await socket->Close();
+                    bool res = co_await connection->Close();
                     co_return;
                 }
             } 
             else { 
                 std::string_view data(rholder->m_buffer, rholder->m_offset);
-                auto result = session.GetRequest()->DecodePdu(data);
+                auto result = session->GetRequest()->DecodePdu(data);
                 if(!result.first) { //解析失败
-                    switch (session.GetRequest()->GetErrorCode())
+                    switch (session->GetRequest()->GetErrorCode())
                     {
                     case error::HttpErrorCode::kHttpError_HeaderInComplete:
                     case error::HttpErrorCode::kHttpError_BodyInComplete:
@@ -341,11 +361,13 @@ step1:
                     }
                 }
                 else { //解析成功
-                    HttpMethod method = session.GetRequest()->Header()->Method();
-                    auto co = co_await this_coroutine::WaitAsyncExecute<std::string, void>(HttpRouteHandler<SocketType>::GetInstance()->Handler(ctx, method, session.GetRequest()->Header()->Uri(), session));
+                    HttpMethod method = session->GetRequest()->Header()->Method();
+                    auto co = co_await this_coroutine::WaitAsyncExecute<std::string, void>(\
+                                HttpRouteHandler<SocketType>::GetInstance()->Handler(ctx, method,\
+                                    session->GetRequest()->Header()->Uri(), session));
                     std::string resp = (*co)().value();
                     wholder.Reset(std::move(resp));
-                    if(session.IsClose()) close_connection = true;
+                    if(session->IsClose()) close_connection = true;
                     goto step2;
                 }
             }
@@ -354,7 +376,7 @@ step1:
 step2:
         while (true)
         {
-            int length = co_await socket->Send(&wholder, wholder->m_size);
+            int length = co_await connection->Send(&wholder, wholder->m_size);
             if( length <= 0 ) {
                 close_connection = true;
                 break;
@@ -366,44 +388,44 @@ step2:
         }
         // clear
         rholder.ClearBuffer(), wholder.ClearBuffer();
-        session.GetRequest()->Reset(), session.GetResponse()->Reset();
+        session->GetRequest()->Reset(), session->GetResponse()->Reset();
         if(close_connection) {
             break;
         }
     }
-    bool res = co_await socket->Close();
+    bool res = co_await connection->Close();
     co_return;
 }
 
 
 template <typename SocketType>
 inline Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string &path, \
-                                    galay::Session<SocketType, http::HttpRequest, http::HttpResponse> session, \
+                                    typename galay::Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session, \
                                     typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap)
 {
     auto it = handlerMap.find(method);
-    auto version = session.GetRequest()->Header()->Version();
+    auto version = session->GetRequest()->Header()->Version();
     if(it == handlerMap.end()) {
-        session.ToClose();
+        session->Close();
         co_return CodeResponse<HttpStatusCode::MethodNotAllowed_405>::ResponseStr(version);
     }
     auto uriit = it->second.find(path);
     if(uriit != it->second.end()) {
-        http::HttpHelper::DefaultOK(session.GetResponse(), HttpVersion::Http_Version_1_1);
+        http::HttpHelper::DefaultOK(session->GetResponse(), HttpVersion::Http_Version_1_1);
         co_await this_coroutine::WaitAsyncExecute<void, std::string>(uriit->second(ctx, session));
-        if(session.IsClose()) {
-            if(session.GetResponse()->Header()->HeaderPairs().HasKey("Connection")) {
-                session.GetResponse()->Header()->HeaderPairs().SetHeaderPair("Connection", "close");
+        if(session->IsClose()) {
+            if(session->GetResponse()->Header()->HeaderPairs().HasKey("Connection")) {
+                session->GetResponse()->Header()->HeaderPairs().SetHeaderPair("Connection", "close");
             } else {
-                session.GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+                session->GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
             }
         }
-        co_return session.GetResponse()->EncodePdu();
+        co_return session->GetResponse()->EncodePdu();
     } else {
-        session.ToClose();
+        session->Close();
         co_return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);
     }
-    session.ToClose();
+    session->Close();
     co_return CodeResponse<HttpStatusCode::InternalServerError_500>::ResponseStr(version);
 }
 
