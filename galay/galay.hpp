@@ -32,6 +32,7 @@
 #include "utils/RateLimiter.h"
 #include "utils/Tree.h"
 #include "utils/Thread.h"
+#include "utils/ArgsParse.hpp"
 
 namespace galay 
 {
