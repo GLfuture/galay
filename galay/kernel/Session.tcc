@@ -103,7 +103,6 @@ inline bool Session<Socket, Request, Response>::IsClose()
 template <typename Socket, RequestType Request, ResponseType Response>
 inline Session<Socket, Request, Response>::~Session()
 {
-    std::cout << "Session::~Session()" << std::endl;
     delete m_request;
     delete m_response;
 }

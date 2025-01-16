@@ -345,7 +345,7 @@ protected:
     virtual int UdpDealSendto(UdpIOVec* iov);
 protected:
     NetWaitEventType m_type;
-    void *m_ctx{};
+    void *m_ctx = nullptr;
     AsyncNetIo* m_socket;
 };
 
@@ -445,17 +445,17 @@ namespace galay::details
 ****************************
 */
 
-bool AsyncTcpSocket(AsyncNetIo::wptr asocket);
+bool AsyncTcpSocket(AsyncNetIo::wptr aio);
 
-bool AsyncUdpSocket(AsyncNetIo::wptr asocket);
+bool AsyncUdpSocket(AsyncNetIo::wptr aio);
 
-bool Bind(AsyncNetIo::wptr asocket, const std::string& addr, int port);
+bool Bind(AsyncNetIo::wptr aio, const std::string& addr, int port);
 
-bool Listen(AsyncNetIo::wptr asocket, int backlog);
+bool Listen(AsyncNetIo::wptr aio, int backlog);
 template<typename CoRtn = void>
-AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr asocket, THost* addr);
+AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr aio, THost* addr);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr async_socket, THost* addr);
+AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr aio, THost* addr);
 /*
     return: 
         >0   bytes read
@@ -463,41 +463,41 @@ AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr async_socket, THost* addr
         <0  error
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr asocket, TcpIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout = -1);
 /*
     return: 
         >0   bytes send
         <0  error
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr asocket, TcpIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout = -1);
 /*
 
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr asocket, UdpIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr asocket, UdpIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetIo::wptr asocket);
+AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetIo::wptr aio);
 
-bool AsyncSSLSocket(AsyncSslNetIo::wptr asocket, SSL_CTX* ctx);
+bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX* ctx);
 /*
     must be called after AsyncAccept
 */
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetIo::wptr asocket);
+AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetIo::wptr aio);
 /*
     must be called after AsyncConnect
 */
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetIo::wptr asocket);
+AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetIo::wptr aio);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetIo::wptr asocket, TcpIOVec *iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetIo::wptr asocket, TcpIOVec *iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetIo::wptr asocket);
+AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetIo::wptr aio);
 
 /*
     ****************************
