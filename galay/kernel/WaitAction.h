@@ -35,7 +35,7 @@ public:
     // Add NetEvent to EventEngine
     bool DoAction(CoroutineBase::wptr co, void* ctx) override;
     void ResetEvent(details::WaitEvent* event);
-    [[nodiscard]] details::WaitEvent* GetBindEvent() const { return m_event; };
+    details::WaitEvent* GetBindEvent() const { return m_event; };
     ~IOEventAction() override;
 private:
     EventEngine* m_engine;

@@ -40,14 +40,16 @@ public:
     explicit AsyncNetIo(GHandle handle, details::EventEngine* engine);
 
     HandleOption GetOption() const;
-    GHandle& GetHandle() { return m_handle; }
-    details::IOEventAction* GetAction() { return m_action; };
+    GHandle& GetHandle();
+    details::IOEventAction* GetIOAction();
+
     uint32_t &GetErrorCode();
     virtual ~AsyncNetIo();
 protected:
     virtual void ActionInit(details::EventEngine *engine);
 protected:
     GHandle m_handle;
+    Timer::ptr m_timer;
     uint32_t m_err_code;
     details::IOEventAction* m_action;
 };
@@ -77,14 +79,15 @@ public:
     using wptr = std::weak_ptr<AsyncFileIo>;
     explicit AsyncFileIo(details::EventEngine* engine);
     explicit AsyncFileIo(GHandle handle, details::EventEngine* engine);
-    [[nodiscard]] HandleOption GetOption() const;
-    details::IOEventAction* GetAction() { return m_action; };
-    GHandle& GetHandle() { return m_handle; }
-    uint32_t& GetErrorCode() { return m_error_code; }
+    HandleOption GetOption() const;
+    details::IOEventAction* GetIOAction();
+    GHandle& GetHandle();
+    uint32_t& GetErrorCode();
     virtual ~AsyncFileIo();
 protected:
     // eventfd
     GHandle m_handle;
+    Timer::ptr m_timer;
     uint32_t m_error_code;
     details::IOEventAction* m_action;
 };
@@ -300,7 +303,7 @@ enum NetWaitEventType
 enum CommonFailedType
 {
     eCommonOtherFailed = -2,
-    eCommonNonBlocking = -1,
+    eCommonNonBlocking,
     eCommonDisConnect = 0,
 };
 
@@ -463,21 +466,21 @@ AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr aio, THost* addr);
         <0  error
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout = -1);
+AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout);
 /*
     return: 
         >0   bytes send
         <0  error
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout = -1);
+AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout);
 /*
 
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
 AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetIo::wptr aio);
 
@@ -486,16 +489,16 @@ bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX* ctx);
     must be called after AsyncAccept
 */
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetIo::wptr aio);
+AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetIo::wptr aio, int64_t timeout);
 /*
     must be called after AsyncConnect
 */
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetIo::wptr aio);
+AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetIo::wptr aio, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length);
+AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
 AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetIo::wptr aio);
 
@@ -507,9 +510,9 @@ AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetIo::wptr aio);
 
 bool AsyncFileOpen(AsyncFileIo::wptr afileio, const char* path, int flags, mode_t mode);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileIo::wptr afile, FileIOVec* iov, size_t length);
+AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileIo::wptr afile, FileIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-extern AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileIo::wptr afile, FileIOVec* iov, size_t length);
+extern AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileIo::wptr afile, FileIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
 extern AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileIo::wptr afile);
 

@@ -10,6 +10,9 @@ namespace galay::details
 {
 inline bool AsyncTcpSocket(AsyncNetIo::wptr aio)
 {
+    if (aio.expired()) {
+        return false;
+    }
     aio.lock()->GetErrorCode() = error::ErrorCode::Error_NoError;
     aio.lock()->GetHandle().fd = socket(AF_INET, SOCK_STREAM, 0);
     if (aio.lock()->GetHandle().fd < 0) {
@@ -67,61 +70,61 @@ inline bool Listen(AsyncNetIo::wptr aio, int backlog)
 template<typename CoRtn>
 inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr aio, THost* addr)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetAction(), addr};
+    return {aio.lock()->GetIOAction(), addr};
 }
 
 template<typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr aio, THost* addr)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetAction(), addr};
+    return {aio.lock()->GetIOAction(), addr};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeRecv);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeRecv);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {aio.lock()->GetAction(), iov};
+    return {aio.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr aio, TcpIOVec *iov, size_t length)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSend);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSend);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {aio.lock()->GetAction(), iov};
+    return {aio.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr aio, UdpIOVec *iov, size_t length)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeRecvFrom);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeRecvFrom);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {aio.lock()->GetAction(), iov};
+    return {aio.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr aio, UdpIOVec *iov, size_t length)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeSendTo);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeSendTo);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {aio.lock()->GetAction(), iov};
+    return {aio.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetIo::wptr aio)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeClose);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeClose);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetAction(), nullptr};
+    return {aio.lock()->GetIOAction(), nullptr};
 }
 
 inline bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX *ctx)
@@ -139,43 +142,43 @@ inline bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX *ctx)
 template<typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncSSLAccept(typename AsyncSslNetIo::wptr aio)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslAccept);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslAccept);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetAction(), nullptr};
+    return {aio.lock()->GetIOAction(), nullptr};
 }
 
 template<typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncSSLConnect(typename AsyncSslNetIo::wptr aio)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslConnect);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslConnect);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetAction(), nullptr};
+    return {aio.lock()->GetIOAction(), nullptr};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncSSLRecv(typename AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslRecv);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslRecv);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {aio.lock()->GetAction(), iov};
+    return {aio.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncSSLSend(typename AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslSend);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslSend);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {aio.lock()->GetAction(), iov};
+    return {aio.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncSSLClose(typename AsyncSslNetIo::wptr aio)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeSslClose);
+    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeSslClose);
     aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetAction(), nullptr};
+    return {aio.lock()->GetIOAction(), nullptr};
 }
 
 
@@ -196,27 +199,27 @@ inline bool AsyncFileOpen(typename AsyncFileIo::wptr afile, const char *path, co
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncFileRead(typename AsyncFileIo::wptr afile, FileIOVec *iov,  size_t length)
 {
-    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeRead);
+    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeRead);
     afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {afile.lock()->GetAction(), iov};
+    return {afile.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncFileWrite(typename AsyncFileIo::wptr afile, FileIOVec *iov, size_t length)
 {
-    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeWrite);
+    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeWrite);
     afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     iov->m_length = length;
-    return {afile.lock()->GetAction(), iov};
+    return {afile.lock()->GetIOAction(), iov};
 }
 
 template<typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileIo::wptr afile)
 {
-    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeClose);
+    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeClose);
     afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {afile.lock()->GetAction(), nullptr};
+    return {afile.lock()->GetIOAction(), nullptr};
 }
 
 }
@@ -226,13 +229,14 @@ namespace galay
 {
 
 inline AsyncNetIo::AsyncNetIo(details::EventEngine* engine)
-    : m_handle({}), m_err_code(0), m_action(new details::IOEventAction(engine, new details::NetWaitEvent(this)))
+    : m_handle({}), m_err_code(0), m_timer(nullptr)\
+        , m_action(new details::IOEventAction(engine, new details::NetWaitEvent(this)))
 {
 }
 
 
 inline AsyncNetIo::AsyncNetIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_err_code(0)
+    :m_handle(handle), m_err_code(0), m_timer(nullptr)
 {
     ActionInit(engine);
 }
@@ -244,6 +248,15 @@ AsyncNetIo::GetOption() const
     return HandleOption(m_handle);
 }
 
+inline GHandle& AsyncNetIo::GetHandle() 
+{ 
+    return m_handle; 
+}
+
+inline details::IOEventAction* AsyncNetIo::GetIOAction() 
+{ 
+    return m_action; 
+}
 
 inline AsyncNetIo::~AsyncNetIo()
 {
@@ -298,14 +311,16 @@ inline void AsyncSslNetIo::ActionInit(details::EventEngine *engine)
 
 
 inline AsyncFileIo::AsyncFileIo(details::EventEngine* engine)
-    :m_handle({}), m_error_code(0), m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
+    :m_handle({}), m_error_code(0), m_timer(nullptr)\
+        , m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
 {
 
 }
 
 
 inline AsyncFileIo::AsyncFileIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_error_code(0), m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
+    :m_handle(handle), m_error_code(0), m_timer(nullptr)\
+        , m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
 {
 }
 
@@ -316,6 +331,21 @@ inline HandleOption AsyncFileIo::GetOption() const
     return HandleOption(m_handle);
 }
 
+inline details::IOEventAction* AsyncFileIo::GetIOAction() 
+{ 
+    return m_action; 
+}
+
+
+inline GHandle& AsyncFileIo::GetHandle() 
+{ 
+    return m_handle; 
+}
+
+inline uint32_t& AsyncFileIo::GetErrorCode() 
+{ 
+    return m_error_code; 
+}
 
 inline AsyncFileIo::~AsyncFileIo()
 {
@@ -442,8 +472,8 @@ inline AsyncResult<int, CoRtn> AsyncFileNativeAio::Commit()
         return AsyncResult<int, CoRtn>(-1);
     }
     this->m_current_index = 0;
-    dynamic_cast<details::FileIoWaitEvent*>(this->GetAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
-    return {this->GetAction(), nullptr};
+    dynamic_cast<details::FileIoWaitEvent*>(this->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
+    return {this->GetIOAction(), nullptr};
 }
 
 
