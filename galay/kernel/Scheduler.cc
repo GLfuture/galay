@@ -10,6 +10,7 @@ namespace galay::details
 {
 
 EventScheduler::EventScheduler()
+    : m_latch(1)
 {
 #if defined(USE_EPOLL)
     m_engine = std::make_shared<details::EpollEventEngine>();
@@ -18,7 +19,6 @@ EventScheduler::EventScheduler()
 #elif defined(USE_KQUEUE)
     m_engine = std::make_shared<details::KqueueEventEngine>();
 #endif
-    m_waiter = std::make_shared<thread::ThreadWaiters>(1);
 }
 
 bool EventScheduler::Loop(int timeout)
@@ -29,7 +29,7 @@ bool EventScheduler::Loop(int timeout)
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
         LogTrace("[{}({}) exist successfully]", Name(), GetEngine()->GetHandle().fd);
-        m_waiter->Decrease();
+        m_latch.count_down();
     });
     this->m_thread->detach();
     return true;
@@ -40,7 +40,14 @@ bool EventScheduler::Stop()
     m_timer_event.reset();
     if(!m_engine->IsRunning()) return false;
     m_engine->Stop();
-    return m_waiter->Wait(5000);
+    int count = 1;
+    do {
+        if(count ++ >= 5) {
+            if(m_latch.try_wait()) return true;
+        } else break;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    } while(true);
+    return m_latch.try_wait();
 }
 
 bool EventScheduler::IsRunning() const
