@@ -2,6 +2,7 @@
 #define GALAY_WAITACTION_H
 
 #include "Coroutine.hpp"
+#include "Time.hpp"
 
 namespace galay::details
 {

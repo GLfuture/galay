@@ -21,7 +21,7 @@ namespace galay::details {
 class Event;
 class CallbackEvent;
 class EventEngine; 
-class TimeEvent;
+class AbstractTimeEvent;
 
 
 class Scheduler
@@ -62,36 +62,22 @@ class EventScheduler: public Scheduler
 public:
     using ptr = std::shared_ptr<EventScheduler>;
     using uptr = std::unique_ptr<EventScheduler>;
+
+    using timer_ptr = std::shared_ptr<Timer>;
     EventScheduler();
     std::string Name() override { return "EventScheduler"; }
     virtual bool Loop(int timeout);
     virtual bool Stop();
     bool IsRunning() const;
     virtual uint32_t GetErrorCode() const;
-    virtual details::EventEngine* GetEngine() { return m_engine.get(); }
+    virtual EventEngine* GetEngine() { return m_engine.get(); }
+    void AddTimer(timer_ptr timer, int64_t ms);
     ~EventScheduler() = default;
 protected:
     std::unique_ptr<std::thread> m_thread;
-    std::shared_ptr<details::EventEngine> m_engine;
+    std::shared_ptr<EventEngine> m_engine;
+    std::shared_ptr<AbstractTimeEvent> m_timer_event;
     std::shared_ptr<thread::ThreadWaiters> m_waiter;
-};
-
-class TimerScheduler final: public EventScheduler
-{
-public:
-    using ptr = std::shared_ptr<TimerScheduler>;
-    TimerScheduler();
-    std::string Name() override { return "TimerScheduler"; }
-    std::shared_ptr<Timer> AddTimer(uint64_t ms, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<Timer>)>&& callback) const;
-    void AddTimer(const uint64_t ms, const std::shared_ptr<Timer>& timer);
-    bool Loop(int timeout) override;
-    bool Stop() override;
-    bool IsRunning() const;
-    uint32_t GetErrorCode() const override;
-    details::EventEngine* GetEngine() override { return m_engine.get(); }
-    ~TimerScheduler();
-private:
-    std::shared_ptr<details::TimeEvent> m_timer_event;
 };
 
 class SessionScheduler final: public EventScheduler 

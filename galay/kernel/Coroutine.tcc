@@ -172,12 +172,21 @@ Coroutine<T>& Coroutine<T>::operator=(const Coroutine& other) noexcept
 }
 
 template<typename T>
-inline details::CoroutineScheduler* Coroutine<T>::BelongScheduler() const
+inline details::CoroutineScheduler* Coroutine<T>::GetCoScheduler() const
 {
     if(m_status->load() == CoroutineStatus::Finished) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetScheduler();
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetCoScheduler();
+}
+
+template <typename T>
+inline details::EventScheduler *Coroutine<T>::GetEventScheduler() const
+{
+    if(m_status->load() == CoroutineStatus::Finished) {
+        return nullptr;
+    }
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetEventScheduler();
 }
 
 template<typename T>
@@ -307,12 +316,20 @@ inline Coroutine<void>& Coroutine<void>::operator=(const Coroutine &other) noexc
     return *this;
 }
 
-inline details::CoroutineScheduler* Coroutine<void>::BelongScheduler() const
+inline details::CoroutineScheduler* Coroutine<void>::GetCoScheduler() const
 {
     if(m_status->load() == CoroutineStatus::Finished) {
         return nullptr;
     }
-    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetScheduler();
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetCoScheduler();
+}
+
+inline details::EventScheduler* Coroutine<void>::GetEventScheduler() const
+{
+    if(m_status->load() == CoroutineStatus::Finished) {
+        return nullptr;
+    }
+    return m_handle.promise().m_ctx.GetSharedCtx().lock()->GetEventScheduler();
 }
 
 inline bool Coroutine<void>::IsRunning() const

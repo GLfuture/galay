@@ -58,16 +58,18 @@ public:
     using ptr = std::shared_ptr<RoutineSharedCtx>;
     using wptr = std::weak_ptr<RoutineSharedCtx>;
 
-    static RoutineSharedCtx::ptr Create();
-    RoutineSharedCtx(details::CoroutineScheduler* scheduler);
+    static RoutineSharedCtx::ptr Create(details::EventScheduler* src_scheduler);
+    RoutineSharedCtx(details::EventScheduler* src_scheduler, details::CoroutineScheduler* dest_scheduler);
     RoutineSharedCtx(const RoutineSharedCtx& ctx);
     RoutineSharedCtx(RoutineSharedCtx&& ctx);
-    details::CoroutineScheduler* GetScheduler();
+    details::CoroutineScheduler* GetCoScheduler();
+    details::EventScheduler* GetEventScheduler();
     int32_t AddToGraph(uint16_t layer, std::weak_ptr<CoroutineBase> coroutine);
     void RemoveFromGraph(uint16_t layer, int32_t sequence);
     std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>>& GetRoutineGraph();
 private:
-    std::atomic<details::CoroutineScheduler*> m_scheduler;
+    std::atomic<details::EventScheduler*> m_src_scheduler;
+    std::atomic<details::CoroutineScheduler*> m_dest_scheduler;
     std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>> m_coGraph;
 };
 
@@ -91,8 +93,8 @@ class RoutineCtx
     friend class PromiseType;
     friend class PromiseType<void>;
 public:
-    static RoutineCtx Create();
-    static RoutineCtx Create(details::CoroutineScheduler* scheduler);
+    static RoutineCtx Create(details::EventScheduler* src_scheduler);
+    static RoutineCtx Create(details::EventScheduler* src_scheduler, details::CoroutineScheduler* dest_scheduler);
 
     RoutineCtx(RoutineSharedCtx::ptr sharedData);
     RoutineCtx(const RoutineCtx& ctx);
@@ -116,15 +118,14 @@ public:
     virtual bool IsRunning() const = 0;
     virtual bool IsSuspend() const = 0;
     virtual bool IsDone() const = 0;
-    virtual details::CoroutineScheduler* BelongScheduler() const = 0;
+    virtual details::CoroutineScheduler* GetCoScheduler() const = 0;
+    virtual details::EventScheduler* GetEventScheduler() const = 0;
     virtual AwaiterBase* GetAwaiter() const = 0;
     virtual void AppendExitCallback(const std::function<void()>& callback) = 0;
     virtual bool SetAwaiter(AwaiterBase* awaiter) = 0; 
     virtual void Resume() = 0;
     virtual void Destroy() = 0;
     virtual ~CoroutineBase() = default;
-
-    
 };
 
 template<typename T>
@@ -196,7 +197,8 @@ public:
     Coroutine& operator=(Coroutine&& other) noexcept;
     Coroutine& operator=(const Coroutine& other) noexcept;
     
-    details::CoroutineScheduler* BelongScheduler() const override;
+    details::CoroutineScheduler* GetCoScheduler() const override;
+    details::EventScheduler* GetEventScheduler() const override;
     bool IsRunning() const override;
     bool IsSuspend() const override;
     bool IsDone() const override;
@@ -236,7 +238,8 @@ public:
     Coroutine& operator=(Coroutine&& other) noexcept;
     Coroutine& operator=(const Coroutine& other) noexcept;
     
-    details::CoroutineScheduler* BelongScheduler() const override;
+    details::CoroutineScheduler* GetCoScheduler() const override;
+    details::EventScheduler* GetEventScheduler() const override;
     bool IsRunning() const override;
     bool IsSuspend() const override;
     bool IsDone() const  override;

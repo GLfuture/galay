@@ -31,65 +31,72 @@ private:
     uint32_t m_error_code;
 };
 
-class AsyncNetIo
+
+class AsyncTimeoutTicker: public std::enable_shared_from_this<AsyncTimeoutTicker>
 {
 public:
-    using ptr = std::shared_ptr<AsyncNetIo>;
-    using wptr = std::weak_ptr<AsyncNetIo>;
-    explicit AsyncNetIo(details::EventEngine* engine);
-    explicit AsyncNetIo(GHandle handle, details::EventEngine* engine);
+    using ptr = std::shared_ptr<AsyncTimeoutTicker>;
+    using wptr = std::weak_ptr<AsyncTimeoutTicker>;
 
-    HandleOption GetOption() const;
-    GHandle& GetHandle();
-    details::IOEventAction* GetIOAction();
+    void Execute(details::AbstractTimeEvent* event);
 
-    uint32_t &GetErrorCode();
-    virtual ~AsyncNetIo();
-protected:
-    virtual void ActionInit(details::EventEngine *engine);
-protected:
-    GHandle m_handle;
-    Timer::ptr m_timer;
-    uint32_t m_err_code;
-    details::IOEventAction* m_action;
+    bool RefreshTime(int64_t timeout);
+    
+    bool Start(details::EventScheduler* scheduler);
+private:
+    std::atomic_int64_t m_timeout = -1;
+    std::atomic_int64_t m_deadline = -1;
+};
+
+// one coroutine one context
+
+/*
+    一个接口用同一个context
+*/
+class AsyncNetEventContext: public std::enable_shared_from_this<AsyncNetEventContext>
+{
+public:
+
+    static AsyncNetEventContext* Create(details::EventScheduler* scheduler);
+    static AsyncNetEventContext* Create(GHandle handle, details::EventScheduler* scheduler);
+
+    virtual ~AsyncNetEventContext();
+
+    GHandle m_handle = {};
+    uint32_t m_error_code = 0;
+    AsyncTimeoutTicker::ptr m_ticker = nullptr;
+    details::IOEventAction* m_action = nullptr;
 };
 
 
-class AsyncSslNetIo: public AsyncNetIo
+class AsyncSslNetEventContext: public AsyncNetEventContext
 {
 public:
-    using ptr = std::shared_ptr<AsyncSslNetIo>;
-    using wptr = std::weak_ptr<AsyncSslNetIo>;
-    explicit AsyncSslNetIo(details::EventEngine* engine);
-    explicit AsyncSslNetIo(GHandle handle, details::EventEngine* engine);
-    explicit AsyncSslNetIo(SSL* ssl, details::EventEngine* engine);
-    SSL*& GetSSL() { return m_ssl; }
-    ~AsyncSslNetIo() override;
-protected:
-    void ActionInit(details::EventEngine *engine) override;
-protected:
+    static AsyncSslNetEventContext* Create(details::EventScheduler* scheduler);
+    static AsyncSslNetEventContext* Create(GHandle handle, details::EventScheduler* scheduler);
+    static AsyncSslNetEventContext* Create(SSL* ssl, details::EventScheduler* scheduler);
+
+    virtual ~AsyncSslNetEventContext();
+
     SSL* m_ssl;
 };
 
 
-class AsyncFileIo
+class AsyncFileEventContext: public std::enable_shared_from_this<AsyncFileEventContext>
 {
 public:
-    using ptr = std::shared_ptr<AsyncFileIo>;
-    using wptr = std::weak_ptr<AsyncFileIo>;
-    explicit AsyncFileIo(details::EventEngine* engine);
-    explicit AsyncFileIo(GHandle handle, details::EventEngine* engine);
-    HandleOption GetOption() const;
-    details::IOEventAction* GetIOAction();
-    GHandle& GetHandle();
-    uint32_t& GetErrorCode();
-    virtual ~AsyncFileIo();
-protected:
+
+    static AsyncFileEventContext* Create(details::EventScheduler* scheduler);
+    static AsyncFileEventContext* Create(GHandle handle, details::EventScheduler* scheduler);
+    
+    virtual ~AsyncFileEventContext();
+
     // eventfd
-    GHandle m_handle;
-    Timer::ptr m_timer;
-    uint32_t m_error_code;
-    details::IOEventAction* m_action;
+    GHandle m_handle = {};
+
+    int64_t m_timeout = -1;
+    uint32_t m_error_code = 0;
+    details::IOEventAction* m_action = nullptr;
 };
 
 #ifdef  __linux__
@@ -101,13 +108,15 @@ public:
 };
 
 
-class AsyncFileNativeAio: public AsyncFileIo
+class AsyncLinuxFileEventContext: public AsyncFileEventContext
 {
 public:
-    using ptr = std::shared_ptr<AsyncFileNativeAio>;
-    using wptr = std::weak_ptr<AsyncFileNativeAio>;
-    explicit AsyncFileNativeAio(details::EventEngine* engine, int maxevents);
-    explicit AsyncFileNativeAio(GHandle handle, details::EventEngine* engine, int maxevents);
+
+    static AsyncLinuxFileEventContext* Create(details::EventScheduler* scheduler, int maxevents);
+    static AsyncLinuxFileEventContext* Create(GHandle handle, details::EventScheduler* scheduler, int maxevents);
+
+    explicit AsyncLinuxFileEventContext(details::EventScheduler* scheduler, int maxevents);
+    explicit AsyncLinuxFileEventContext(GHandle handle, details::EventScheduler* scheduler, int maxevents);
 
     bool InitialEventHandle();
     bool InitialEventHandle(GHandle handle);
@@ -128,7 +137,7 @@ public:
     io_context_t GetIoContext() { return m_ioctx; }
     bool IoFinished(uint64_t finished_io);
     uint32_t GetUnfinishedIO() { return m_current_index; }
-    virtual ~AsyncFileNativeAio();
+    virtual ~AsyncLinuxFileEventContext();
 private:
     GHandle m_event_handle;
     io_context_t m_ioctx;
@@ -144,28 +153,29 @@ private:
 class AsyncTcpSocket
 {
 public:
-    explicit AsyncTcpSocket(details::EventEngine* engine);
-    explicit AsyncTcpSocket(GHandle handle, details::EventEngine* engine);
+    explicit AsyncTcpSocket(details::EventScheduler* scheduler);
+    explicit AsyncTcpSocket(GHandle handle, details::EventScheduler* scheduler);
     bool Socket() const;
     bool Socket(GHandle handle);
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
     template<typename CoRtn = void>
-    AsyncResult<bool, CoRtn> Connect(THost* addr);
+    AsyncResult<bool, CoRtn> Connect(THost* addr, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<GHandle, CoRtn> Accept(THost* addr);
+    AsyncResult<GHandle, CoRtn> Accept(THost* addr, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Send(TcpIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> Send(TcpIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
-    GHandle GetHandle() const { return m_io->GetHandle(); }
-    uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
-    ~AsyncTcpSocket() = default;
+    GHandle GetHandle() const;
+    uint32_t GetErrorCode() const;
+    virtual ~AsyncTcpSocket();
 private:
-    AsyncNetIo::ptr m_io;
+    details::IOEventAction::ptr m_action;
+    AsyncNetEventContext* m_async_context;
 };
 
 
@@ -173,33 +183,33 @@ class AsyncTcpSslSocket
 {
     static SSL_CTX* SslCtx;
 public:
-    explicit AsyncTcpSslSocket(details::EventEngine* engine);
-    explicit AsyncTcpSslSocket(GHandle handle, details::EventEngine* engine);
-    explicit AsyncTcpSslSocket(SSL* ssl, details::EventEngine* engine);
+    explicit AsyncTcpSslSocket(details::EventScheduler* scheduler);
+    explicit AsyncTcpSslSocket(GHandle handle, details::EventScheduler* scheduler);
+    explicit AsyncTcpSslSocket(SSL* ssl, details::EventScheduler* scheduler);
     bool Socket() const;
     bool Socket(GHandle handle);
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
     template<typename CoRtn = void>
-    AsyncResult<bool, CoRtn> Connect(THost* addr);
+    AsyncResult<bool, CoRtn> Connect(THost* addr, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<bool, CoRtn> AsyncSSLConnect();
+    AsyncResult<bool, CoRtn> AsyncSSLConnect(int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<GHandle, CoRtn> Accept(THost* addr);
+    AsyncResult<GHandle, CoRtn> Accept(THost* addr, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<bool, CoRtn> SSLAccept();
+    AsyncResult<bool, CoRtn> SSLAccept(int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Send(TcpIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> Send(TcpIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
-    GHandle GetHandle() const { return m_io->GetHandle(); }
-    uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
+    GHandle GetHandle() const;
+    uint32_t GetErrorCode() const;
     ~AsyncTcpSslSocket() = default;
 private:
-    AsyncSslNetIo::ptr m_io;
+    AsyncSslNetEventContext* m_async_context;
 };
 
 
@@ -207,21 +217,21 @@ class AsyncUdpSocket
 {
 public:
     using ptr = std::shared_ptr<AsyncUdpSocket>;
-    explicit AsyncUdpSocket(details::EventEngine* engine);
-    explicit AsyncUdpSocket(GHandle handle, details::EventEngine* engine);
+    explicit AsyncUdpSocket(details::EventScheduler* scheduler);
+    explicit AsyncUdpSocket(GHandle handle, details::EventScheduler* scheduler);
     bool Socket() const;
     bool Bind(const std::string& addr, int port);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> RecvFrom(UdpIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> RecvFrom(UdpIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> SendTo(UdpIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> SendTo(UdpIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
-    GHandle GetHandle() const { return m_io->GetHandle(); }
-    uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
-    ~AsyncUdpSocket() = default;
+    GHandle GetHandle() const;
+    uint32_t GetErrorCode() const;
+    virtual ~AsyncUdpSocket();
 private:
-    AsyncNetIo::ptr m_io;
+    AsyncNetEventContext* m_async_context;
 };
 
 
@@ -229,19 +239,20 @@ class AsyncFileDescriptor
 {
 public:
     using ptr = std::shared_ptr<AsyncFileDescriptor>;
-    explicit AsyncFileDescriptor(details::EventEngine* engine);
-    explicit AsyncFileDescriptor(GHandle handle, details::EventEngine* engine);
+    explicit AsyncFileDescriptor(details::EventScheduler* scheduler);
+    explicit AsyncFileDescriptor(GHandle handle, details::EventScheduler* scheduler);
     bool Open(const char* path, int flags, mode_t mode);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Read(FileIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> Read(FileIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Write(FileIOVec* iov, size_t length);
+    AsyncResult<int, CoRtn> Write(FileIOVec* iov, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
-    GHandle GetHandle() const { return m_io->GetHandle(); }
-    uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
+    GHandle GetHandle() const;
+    uint32_t GetErrorCode() const;
+    virtual ~AsyncFileDescriptor();
 private:
-    AsyncFileIo::ptr m_io;
+    AsyncFileEventContext* m_async_context;
 };
 
 #ifdef  __linux__
@@ -250,8 +261,8 @@ class AsyncFileNativeAioDescriptor
 {
 public:
     using ptr = std::shared_ptr<AsyncFileNativeAioDescriptor>;
-    explicit AsyncFileNativeAioDescriptor(details::EventEngine* engine, int maxevents);
-    explicit AsyncFileNativeAioDescriptor(GHandle handle, details::EventEngine* engine, int maxevents);
+    explicit AsyncFileNativeAioDescriptor(details::EventScheduler* scheduler, int maxevents);
+    explicit AsyncFileNativeAioDescriptor(GHandle handle, details::EventScheduler* scheduler, int maxevents);
     bool Open(const char* path, int flags, mode_t mode);
 
     bool PrepareRead(char* buf, size_t len, long long offset, AioCallback* callback = nullptr);
@@ -264,12 +275,12 @@ public:
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
-    GHandle GetEventHandle() { return m_io->GetEventHandle(); }
-    GHandle GetHandle() const { return m_io->GetHandle(); }
-    uint32_t GetErrorCode() const { return m_io->GetErrorCode(); }
+    GHandle GetEventHandle() { return m_async_context->GetEventHandle(); }
+    GHandle GetHandle() const { return m_async_context->GetHandle(); }
+    uint32_t GetErrorCode() const { return m_async_context->GetErrorCode(); }
     ~AsyncFileNativeAioDescriptor();
 private:
-    AsyncFileNativeAio::ptr m_io;
+    AsyncLinuxFileEventContext*  m_async_context;
 };
 
 #endif
@@ -310,7 +321,7 @@ enum CommonFailedType
 class NetWaitEvent: public WaitEvent
 {
 public:
-    explicit NetWaitEvent(AsyncNetIo* socket);
+    explicit NetWaitEvent(AsyncNetEventContext* context);
     
     std::string Name() override;
     bool OnWaitPrepare(CoroutineBase::wptr co, void* ctx) override;
@@ -318,7 +329,6 @@ public:
     EventType GetEventType() override;
     GHandle GetHandle() override;
     void ResetNetWaitEventType(const NetWaitEventType type) { m_type = type; }
-    AsyncNetIo* GetAsyncTcpSocket() const { return m_socket; }
     ~NetWaitEvent() override;
 protected:
     bool OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void* ctx);
@@ -349,18 +359,18 @@ protected:
 protected:
     NetWaitEventType m_type;
     void *m_ctx = nullptr;
-    AsyncNetIo* m_socket;
+    AsyncNetEventContext* m_async_context;
 };
 
 class NetSslWaitEvent final : public NetWaitEvent
 {
 public:
-    explicit NetSslWaitEvent(AsyncSslNetIo* socket);
+    explicit NetSslWaitEvent(AsyncSslNetEventContext* async_context);
     std::string Name() override;
     EventType GetEventType() override;
     bool OnWaitPrepare(CoroutineBase::wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
-    AsyncSslNetIo* GetAsyncTcpSocket() const;
+    AsyncSslNetEventContext* GetAsyncContext() const;
     ~NetSslWaitEvent() override = default;
 protected:
     bool OnTcpSslAcceptWaitPrepare(const CoroutineBase::wptr co, void* ctx);
@@ -381,7 +391,7 @@ protected:
     // return sendByte
     int TcpDealSend(TcpIOVec* iovc) override;
 private:
-    int m_ssl_error{};
+    int m_ssl_error = 0;
 };
 
 
@@ -409,14 +419,14 @@ enum FileIoWaitEventType
 class FileIoWaitEvent final : public WaitEvent
 {
 public:
-    explicit FileIoWaitEvent(AsyncFileIo* fileio);
+    explicit FileIoWaitEvent(AsyncFileEventContext* async_context);
     std::string Name() override;
     bool OnWaitPrepare(CoroutineBase::wptr co, void* ctx) override;
     void HandleEvent(EventEngine* engine) override;
     EventType GetEventType() override;
     GHandle GetHandle() override;
     void ResetFileIoWaitEventType(FileIoWaitEventType type) { m_type = type; }
-    AsyncFileIo* GetAsyncTcpSocket() const { return m_fileio; }
+    AsyncFileEventContext* GetAsyncContext() const { return m_async_context; }
     ~FileIoWaitEvent() override;
 private:
 #ifdef __linux__
@@ -431,8 +441,8 @@ private:
     bool OnCloseWaitPrepare(const CoroutineBase::wptr co, void* ctx);
     
 private:
-    void *m_ctx{};
-    AsyncFileIo* m_fileio;
+    void *m_ctx = nullptr;
+    AsyncFileEventContext* m_async_context;
     FileIoWaitEventType m_type;
 };
 
@@ -448,17 +458,17 @@ namespace galay::details
 ****************************
 */
 
-bool AsyncTcpSocket(AsyncNetIo::wptr aio);
+bool AsyncTcpSocket(AsyncNetEventContext* async_context);
 
-bool AsyncUdpSocket(AsyncNetIo::wptr aio);
+bool AsyncUdpSocket(AsyncNetEventContext* async_context);
 
-bool Bind(AsyncNetIo::wptr aio, const std::string& addr, int port);
+bool Bind(AsyncNetEventContext* async_context, const std::string& addr, int port);
 
-bool Listen(AsyncNetIo::wptr aio, int backlog);
+bool Listen(AsyncNetEventContext* async_context, int backlog);
 template<typename CoRtn = void>
-AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr aio, THost* addr);
+AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetEventContext* async_context, THost* addr, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr aio, THost* addr);
+AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetEventContext* async_context, THost* addr, int64_t timeout);
 /*
     return: 
         >0   bytes read
@@ -466,41 +476,41 @@ AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr aio, THost* addr);
         <0  error
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncRecv(AsyncNetEventContext* async_context, TcpIOVec* iov, size_t length, int64_t timeout);
 /*
     return: 
         >0   bytes send
         <0  error
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncSend(AsyncNetEventContext* async_context, TcpIOVec* iov, size_t length, int64_t timeout);
 /*
 
 */
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetEventContext* async_context, UdpIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr aio, UdpIOVec* iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetEventContext* async_context, UdpIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetIo::wptr aio);
+AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetEventContext* async_context);
 
-bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX* ctx);
+bool AsyncSSLSocket(AsyncSslNetEventContext* async_context, SSL_CTX* ctx);
 /*
     must be called after AsyncAccept
 */
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetIo::wptr aio, int64_t timeout);
+AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetEventContext* async_context, int64_t timeout);
 /*
     must be called after AsyncConnect
 */
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetIo::wptr aio, int64_t timeout);
+AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetEventContext* async_context, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetEventContext* async_context, TcpIOVec *iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetEventContext* async_context, TcpIOVec *iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetIo::wptr aio);
+AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetEventContext* async_context);
 
 /*
     ****************************
@@ -508,13 +518,13 @@ AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetIo::wptr aio);
     ****************************
 */
 
-bool AsyncFileOpen(AsyncFileIo::wptr afileio, const char* path, int flags, mode_t mode);
+bool AsyncFileOpen(AsyncFileEventContext* afileio, const char* path, int flags, mode_t mode);
 template<typename CoRtn = void>
-AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileIo::wptr afile, FileIOVec* iov, size_t length, int64_t timeout);
+AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileEventContext* afile, FileIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-extern AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileIo::wptr afile, FileIOVec* iov, size_t length, int64_t timeout);
+extern AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileEventContext* afile, FileIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
-extern AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileIo::wptr afile);
+extern AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileEventContext* afile);
 
 
 

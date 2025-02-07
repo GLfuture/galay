@@ -169,7 +169,7 @@ inline void WaitGroup<CoRtn>::Done()
     if(m_count == 0) {
         if(!m_coroutine.expired()) {
             static_cast<AsyncResult<bool, CoRtn>*>(m_coroutine.lock()->GetAwaiter())->SetResult(true);
-            m_coroutine.lock()->BelongScheduler()->ToResumeCoroutine(m_coroutine);
+            m_coroutine.lock()->GetCoScheduler()->ToResumeCoroutine(m_coroutine);
         }
     }
 }
@@ -219,15 +219,27 @@ AsyncResult<void, CoRtn> Sleepfor(int64_t ms)
 {
     auto func = [ms](CoroutineBase::wptr co, void* ctx)->bool{
         if(ms <= 0) return false;
-        auto timecb = [co](details::TimeEvent::wptr event, Timer::ptr timer){
-            if(!co.expired()) co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+        auto timecb = [co](details::AbstractTimeEvent::wptr event, Timer::ptr timer){
+            if(!co.expired()) co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
+        };
+        auto timer = std::make_shared<Timer>(std::move(timecb));
+        co.lock()->GetEventScheduler()->AddTimer(timer, ms);
+        return true;
+    };
+    auto* action = new details::CoroutineHandleAction(std::move(func));
+    return {action , nullptr};
+}
+
+template <typename CoRtn>
+AsyncResult<void, CoRtn> Sleepfor(details::EventScheduler *scheduler, int64_t ms)
+{
+    auto func = [scheduler, ms](CoroutineBase::wptr co, void* ctx)->bool{
+        if(ms <= 0) return false;
+        auto timecb = [co](details::AbstractTimeEvent::wptr event, Timer::ptr timer){
+            if(!co.expired()) co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         };
         auto timer = std::make_shared<Timer>(ms, std::move(timecb));
-        // auto coexitcb = [timer]() {
-        //     timer->Cancle();
-        // };
-        // co.lock()->AppendExitCallback(coexitcb);
-        TimerSchedulerHolder::GetInstance()->GetScheduler()->AddTimer(ms,  timer);
+        scheduler->AddTimer(ms,  timer);
         return true;
     };
     auto* action = new details::CoroutineHandleAction(std::move(func));
@@ -253,7 +265,7 @@ AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coroutine<C
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(child));
         if(child.IsDone()) return false;
         child.AppendExitCallback([fco](){
-            fco.lock()->BelongScheduler()->ToResumeCoroutine(fco);
+            fco.lock()->GetCoScheduler()->ToResumeCoroutine(fco);
         });
         return true;
     });
@@ -270,7 +282,7 @@ galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
         if(coro.IsDone()) return false;
         coro.AppendExitCallback([co](){
-            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+            co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         });
         return true;
     });
@@ -288,7 +300,7 @@ galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(
         awaiter->SetResult(std::make_shared<Coroutine<CoRtn>>(coro));
         if(coro.IsDone()) return false;
         coro.AppendExitCallback([co](){
-            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+            co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         });
         return true;
     });

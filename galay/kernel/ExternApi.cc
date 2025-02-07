@@ -52,11 +52,10 @@ SSL_CTX *GetGlobalSSLCtx()
     return SslCtx;
 }
 
-void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> timerConf, std::pair<uint32_t, int> sessionConf)
+void InitializeGalayEnv(std::pair<uint32_t, int> coroutineConf, std::pair<uint32_t, int> eventConf, std::pair<uint32_t, int> sessionConf)
 {
     CoroutineSchedulerHolder::GetInstance()->Initialize(coroutineConf.first, coroutineConf.second);
     EventSchedulerHolder::GetInstance()->Initialize(eventConf.first, eventConf.second);
-    TimerSchedulerHolder::GetInstance()->Initialize(timerConf.first, timerConf.second);
     SessionSchedulerHolder::GetInstance()->Initialize(sessionConf.first, sessionConf.second);
 }
 
@@ -64,7 +63,6 @@ void DestroyGalayEnv()
 {
     CoroutineSchedulerHolder::GetInstance()->Destroy();
     EventSchedulerHolder::GetInstance()->Destroy();
-    TimerSchedulerHolder::GetInstance()->Destroy();
     SessionSchedulerHolder::GetInstance()->Destroy();
 }
 

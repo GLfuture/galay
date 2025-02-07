@@ -14,7 +14,7 @@ EtcdClient::RegisterService(const std::string& ServiceName, const std::string& S
         this->m_client->put(ServiceName, ServiceAddr).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
             static_cast<details::Awaiter<bool>*>(co.lock()->GetAwaiter())->SetResult(true);
-            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+            co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         });
     });
     return {&m_action, nullptr};
@@ -31,7 +31,7 @@ EtcdClient::RegisterService(const std::string& ServiceName, const std::string& S
             m_client->put(ServiceName,ServiceAddr,leaseid).then([this, co](::etcd::Response resp){
                 m_response = std::move(resp);
                 static_cast<details::Awaiter<bool>*>(co.lock()->GetAwaiter())->SetResult(true);
-                co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+                co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
             });
         });
     });
@@ -46,7 +46,7 @@ EtcdClient::DiscoverService(const std::string& ServiceName)
         m_client->get(ServiceName).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
             static_cast<details::Awaiter<bool>*>(co.lock()->GetAwaiter())->SetResult(true);
-            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+            co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         });
     });
     return {&m_action, nullptr};
@@ -60,7 +60,7 @@ EtcdClient::DiscoverServicePrefix(const std::string& Prefix)
         m_client->ls(Prefix).then([this, co](::etcd::Response resp){
             m_response = std::move(resp);
             static_cast<details::Awaiter<bool>*>(co.lock()->GetAwaiter())->SetResult(true);
-            co.lock()->BelongScheduler()->ToResumeCoroutine(co);
+            co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         });
     });
     return {&m_action, nullptr};

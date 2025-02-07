@@ -14,8 +14,8 @@
 namespace galay::details
 {
 
-Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket* socket, EventEngine *engine);
-Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket* socket, EventEngine *engine);
+Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket* socket, EventScheduler *engine);
+Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket* socket, EventScheduler *engine);
 
 
 template <typename Socket>
@@ -24,7 +24,7 @@ class CallbackStore
 public:
     using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<Socket>::ptr)>;
     static void RegisteCallback(callback_t callback);
-    static void CreateConncetion(Socket* socket);
+    static void CreateConnAndExecCallback(EventScheduler* scheduler, Socket* socket);
 private:
     static callback_t m_callback;
 };
@@ -33,7 +33,7 @@ template <typename SocketType>
 class ListenEvent: public Event
 {
 public:
-    ListenEvent(EventEngine* engine, SocketType* socket);
+    ListenEvent(EventScheduler* scheduler, SocketType* socket);
     void HandleEvent(EventEngine* engine) override;
     std::string Name() override;
     EventType GetEventType() override;
@@ -42,11 +42,10 @@ public:
     EventEngine* BelongEngine() override;
     ~ListenEvent() override;
 private:
-    void CreateConnection(RoutineCtx ctx, EventEngine* engine);
+    void CreateConnection(RoutineCtx ctx, EventScheduler* scheduler);
 private:
     SocketType* m_socket;
-    CoroutineScheduler* m_scheduler;
-    std::atomic<EventEngine*> m_engine;
+    std::atomic<EventScheduler*> m_scheduler;
 };
 
 

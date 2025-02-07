@@ -5,7 +5,7 @@
 namespace galay::details
 {
 
-Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, EventEngine *engine)
+Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, EventScheduler *scheduler)
 {
     THost addr{};
     while(true)
@@ -17,19 +17,19 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, 
             }
             co_return;
         }
-        auto new_socket = new galay::AsyncTcpSocket(engine);
+        auto new_socket = new galay::AsyncTcpSocket(scheduler);
         if( !new_socket->Socket(handle) ) {
             delete new_socket;
             co_return;
         }
         LogTrace("[Handle:{}, Acceot Success]", new_socket->GetHandle().fd);
-        engine->ResetMaxEventSize(handle.fd);
-        CallbackStore<galay::AsyncTcpSocket>::CreateConncetion(new_socket);
+        scheduler->GetEngine()->ResetMaxEventSize(handle.fd);
+        CallbackStore<galay::AsyncTcpSocket>::CreateConnAndExecCallback(scheduler ,new_socket);
     }
     co_return;
 }
 
-Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, EventEngine *engine)
+Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, EventScheduler *scheduler)
 {
     THost addr{};
     while (true)
@@ -41,7 +41,7 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, Even
             }
             co_return;
         }
-        auto new_socket = new AsyncTcpSslSocket(engine);
+        auto new_socket = new AsyncTcpSslSocket(scheduler);
         if( bool res = new_socket->Socket(handle); !res ) {
             delete new_socket;
             co_return;
@@ -54,8 +54,8 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, Even
             co_return;
         }
         LogTrace("[Handle:{}, SSL_Acceot Success]", new_socket->GetHandle().fd);
-        engine->ResetMaxEventSize(handle.fd);
-        CallbackStore<AsyncTcpSslSocket>::CreateConncetion(new_socket);
+        scheduler->GetEngine()->ResetMaxEventSize(handle.fd);
+        CallbackStore<AsyncTcpSslSocket>::CreateConnAndExecCallback(scheduler, new_socket);
     }
     co_return;
 }

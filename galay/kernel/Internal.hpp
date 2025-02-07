@@ -3,6 +3,7 @@
 
 #include "galay/common/Base.h"
 #include "galay/common/Error.h"
+#include "EventEngine.h"
 #include "Strategy.hpp"
 #include "Log.h"
 
@@ -17,7 +18,6 @@ class AwaiterBase
 
 namespace galay::details
 {
-class EventEngine;
 
 extern std::string ToString(EventType type);
 

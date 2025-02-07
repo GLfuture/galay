@@ -2,16 +2,17 @@
 #include "galay/kernel/EventEngine.h"
 #include <iostream>
 
-#define TEST_AUTO_DESTROY
+#define TEST_SLEEP
 
 #ifdef TEST_SLEEP
-galay::Coroutine test()
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
     std::cout << "start" << std::endl;
-    co_await galay::this_coroutine::Sleepfor(5000);
-    std::cout << "sleep 1s" << std::endl;
+    co_await galay::this_coroutine::Sleepfor<void>(5000);
+    std::cout << "sleep 5s" << std::endl;
     co_return;
 }
+
 
 
 int main()
@@ -20,9 +21,9 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     galay::details::KqueueEventEngine::ptr engine = std::make_shared<galay::details::KqueueEventEngine>();
     GHandle handle{};
-    galay::details::TimeEvent::CreateHandle(handle);
+    galay::details::AbstractTimeEvent::CreateHandle(handle);
     
-    galay::details::TimeEvent::ptr event = std::make_shared<galay::details::TimeEvent>(handle, engine.get());
+    galay::details::AbstractTimeEvent::ptr event = std::make_shared<galay::details::AbstractTimeEvent>(handle, engine.get());
     int i = 0;
     galay::Timer::ptr timer = event->AddTimer(1000, [event, &i](auto event, galay::Timer::ptr t) {
         std::cout << "timer expired" << std::endl;
@@ -38,8 +39,8 @@ int main()
     getchar(); 
     return 0;
 #endif
-    galay::InitializeGalayEnv({1, -1}, {0, -1}, {1, -1});
-    test();
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
     std::cout << "main thread wait..." << std::endl;
     getchar();
     galay::DestroyGalayEnv();
@@ -108,6 +109,27 @@ int main()
     return 0;
 }
 
+#elif defined(TEST_TIMER)
 
+int i = 0;
+
+void func(galay::details::AbstractTimeEvent::wptr event, galay::Timer::ptr timer)
+{
+    std::cout << "timer expired " << i++ << std::endl;
+}
+
+int main()
+{
+    galay::details::EventScheduler scheduler;
+    scheduler.Loop(-1);
+    galay::Timer::ptr timer1 = galay::Timer::Create(func);
+    //int64_t timeout, std::function<void(std::weak_ptr<details::AbstractTimeEvent>, Timer::ptr)> &&func
+    scheduler.AddTimer(timer1, 2000);
+    galay::Timer::ptr timer2 = galay::Timer::Create(func);
+    scheduler.AddTimer(timer2, 500);
+    getchar();
+    scheduler.Stop();
+    return 0;
+}
 
 #endif

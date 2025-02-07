@@ -95,7 +95,7 @@ AwaiterBase *RedisEvent::GetAwaiterBase()
 
 void RedisEvent::ToResume()
 {
-    m_waitco.lock()->BelongScheduler()->ToResumeCoroutine(m_waitco);
+    m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(m_waitco);
 }
 
 bool RedisEvent::OnWaitWritePrepare(CoroutineBase::wptr co, void *ctx)

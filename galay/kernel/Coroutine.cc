@@ -1,32 +1,43 @@
 #include "Coroutine.hpp"
-#include "Time.h"
+#include "Time.hpp"
 
 namespace galay
 {
-RoutineSharedCtx::ptr RoutineSharedCtx::Create()
+RoutineSharedCtx::ptr RoutineSharedCtx::Create(details::EventScheduler* src_scheduler)
 {
-    return std::make_shared<RoutineSharedCtx>(CoroutineSchedulerHolder::GetInstance()->GetScheduler());
+    return std::make_shared<RoutineSharedCtx>(src_scheduler, CoroutineSchedulerHolder::GetInstance()->GetScheduler());
 }
 
-RoutineSharedCtx::RoutineSharedCtx(details::CoroutineScheduler *scheduler)
-    : m_scheduler(scheduler)
+RoutineSharedCtx::RoutineSharedCtx(details::EventScheduler* src_scheduler, details::CoroutineScheduler *dest_scheduler)
+    : m_src_scheduler(src_scheduler), m_dest_scheduler(dest_scheduler)
 {
 }
 
 RoutineSharedCtx::RoutineSharedCtx(const RoutineSharedCtx &ctx)
 {
-    this->m_scheduler.store(ctx.m_scheduler);
+    this->m_dest_scheduler.store(ctx.m_dest_scheduler);
+    this->m_src_scheduler.store(ctx.m_src_scheduler);
+    this->m_coGraph = ctx.m_coGraph;
 }
 
 RoutineSharedCtx::RoutineSharedCtx(RoutineSharedCtx &&ctx)
 {
-    this->m_scheduler.store(std::move(ctx.m_scheduler));
-    ctx.m_scheduler.store(nullptr);
+    this->m_dest_scheduler.store(std::move(ctx.m_dest_scheduler));
+    ctx.m_dest_scheduler.store(nullptr);
+    this->m_src_scheduler.store(std::move(ctx.m_src_scheduler));
+    ctx.m_src_scheduler.store(nullptr);
+    this->m_coGraph = std::move(ctx.m_coGraph);
+    ctx.m_coGraph.clear();
 }
 
-details::CoroutineScheduler *RoutineSharedCtx::GetScheduler()
+details::CoroutineScheduler *RoutineSharedCtx::GetCoScheduler()
 {
-    return m_scheduler.load();
+    return m_dest_scheduler.load();
+}
+
+details::EventScheduler *RoutineSharedCtx::GetEventScheduler()
+{
+    return m_src_scheduler.load();
 }
 
 int32_t RoutineSharedCtx::AddToGraph(uint16_t layer, std::weak_ptr<CoroutineBase> coroutine)
@@ -71,14 +82,14 @@ std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>> &RoutineS
     return m_coGraph;
 }
 
-RoutineCtx RoutineCtx::Create()
+RoutineCtx RoutineCtx::Create(details::EventScheduler* src_scheduler)
 {
-    return RoutineCtx(RoutineSharedCtx::Create());
+    return RoutineCtx(RoutineSharedCtx::Create(src_scheduler));
 }
 
-RoutineCtx RoutineCtx::Create(details::CoroutineScheduler *scheduler)
+RoutineCtx RoutineCtx::Create(details::EventScheduler* src_scheduler, details::CoroutineScheduler *dest_scheduler)
 {
-    return RoutineCtx(std::make_shared<RoutineSharedCtx>(scheduler));
+    return RoutineCtx(std::make_shared<RoutineSharedCtx>(src_scheduler, dest_scheduler));
 }
 
 RoutineCtx::RoutineCtx(RoutineSharedCtx::ptr sharedData)

@@ -16,17 +16,17 @@ void CallbackStore<Socket>::RegisteCallback(callback_t callback)
 }
 
 template <typename Socket>
-void CallbackStore<Socket>::CreateConncetion(Socket* socket) 
+void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, Socket* socket) 
 {
     auto connection = std::make_shared<Connection<Socket>>(socket);
-    if(m_callback) m_callback(RoutineCtx::Create(), connection);
+    if(m_callback) m_callback(RoutineCtx::Create(scheduler), connection);
 }
 
 template <typename SocketType>
-inline ListenEvent<SocketType>::ListenEvent(EventEngine* engine, SocketType* socket)
-    : m_socket(socket), m_engine(engine), m_scheduler(CoroutineSchedulerHolder::GetInstance()->GetScheduler())
+inline ListenEvent<SocketType>::ListenEvent(EventScheduler* scheduler, SocketType* socket)
+    : m_socket(socket), m_scheduler(scheduler)
 {
-    engine->AddEvent(this, nullptr);
+    scheduler->GetEngine()->AddEvent(this, nullptr);
 }
 
 
@@ -34,7 +34,7 @@ template <typename SocketType>
 inline void ListenEvent<SocketType>::HandleEvent(EventEngine *engine)
 {
     engine->ModEvent(this, nullptr);
-    this->CreateConnection(RoutineCtx::Create(m_scheduler), engine);
+    this->CreateConnection(RoutineCtx::Create(m_scheduler), m_scheduler);
 }
 
 
@@ -59,28 +59,24 @@ inline GHandle ListenEvent<SocketType>::GetHandle()
 template <typename SocketType>
 inline bool ListenEvent<SocketType>::SetEventEngine(EventEngine* engine)
 {
-    details::EventEngine* t = m_engine.load();
-    if(!m_engine.compare_exchange_strong(t, engine)) {
-        return false;
-    }
     return true;
 }
 
 template <typename SocketType>
 inline EventEngine* ListenEvent<SocketType>::BelongEngine()
 {
-    return m_engine.load();
+    return m_scheduler.load()->GetEngine();
 }
 
 template <typename SocketType>
-inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventEngine* engine) {
-    galay::details::CreateConnection(ctx.Copy(), m_socket, engine);
+inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventScheduler* scheduler) {
+    galay::details::CreateConnection(ctx.Copy(), m_socket, scheduler);
 }
 
 template <typename SocketType>
 inline ListenEvent<SocketType>::~ListenEvent()
 {
-    if(m_engine) m_engine.load()->DelEvent(this, nullptr);
+    if(m_scheduler) m_scheduler.load()->GetEngine()->DelEvent(this, nullptr);
     delete m_socket;
 }
 
@@ -188,7 +184,7 @@ inline void TcpServer<SocketType>::Start(THost host)
     m_listen_events.resize(requiredEventSchedulerNum);
     for(int i = 0 ; i < requiredEventSchedulerNum; ++i )
     {
-        SocketType* socket = new SocketType(EventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine());
+        SocketType* socket = new SocketType(EventSchedulerHolder::GetInstance()->GetScheduler(i));
         if(const bool res = socket->Socket(); !res ) {
             delete socket;
             for(int j = 0; j < i; ++j ){
@@ -220,7 +216,7 @@ inline void TcpServer<SocketType>::Start(THost host)
             m_listen_events.clear();
             return;
         }
-        m_listen_events[i] = new details::ListenEvent<SocketType>(EventSchedulerHolder::GetInstance()->GetScheduler(i)->GetEngine(), socket);
+        m_listen_events[i] = new details::ListenEvent<SocketType>(EventSchedulerHolder::GetInstance()->GetScheduler(i), socket);
     }
 }
 
@@ -311,7 +307,6 @@ template<typename SocketType>
 inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session)
 {
     auto connection = session->GetConnection();
-    std::cout << "HttpRoute" << std::endl;
     IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
     std::atomic_bool close_connection = false;
     while(true)
@@ -327,7 +322,6 @@ step1:
             } 
             else { 
                 std::string_view data(rholder->m_buffer, rholder->m_offset);
-                std::cout << data << '\n';
                 auto result = session->GetRequest()->DecodePdu(data);
                 if(!result.first) { //解析失败
                     switch (session->GetRequest()->GetErrorCode())
@@ -379,7 +373,6 @@ step2:
         while (true)
         {
             int length = co_await connection->Send(&wholder, wholder->m_size);
-            std::cout << "Send: " << length << std::endl;
             if( length <= 0 ) {
                 close_connection = true;
                 break;

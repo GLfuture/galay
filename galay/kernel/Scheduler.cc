@@ -2,7 +2,7 @@
 #include "EventEngine.h"
 #include "Coroutine.hpp"
 #include "ExternApi.hpp"
-#include "Time.h"
+#include "Time.hpp"
 #include "galay/utils/Thread.h"
 #include "Log.h"
 
@@ -23,6 +23,9 @@ EventScheduler::EventScheduler()
 
 bool EventScheduler::Loop(int timeout)
 {
+    GHandle handle{};
+    details::TimeEvent<TimerManagerType::kPriorityQueueTimerManager>::CreateHandle(handle);
+    m_timer_event = std::make_shared<details::TimeEvent<TimerManagerType::kPriorityQueueTimerManager>>(handle, m_engine.get());
     this->m_thread = std::make_unique<std::thread>([this, timeout](){
         m_engine->Loop(timeout);
         LogTrace("[{}({}) exist successfully]", Name(), GetEngine()->GetHandle().fd);
@@ -34,6 +37,7 @@ bool EventScheduler::Loop(int timeout)
 
 bool EventScheduler::Stop()
 {
+    m_timer_event.reset();
     if(!m_engine->IsRunning()) return false;
     m_engine->Stop();
     return m_waiter->Wait(5000);
@@ -49,6 +53,11 @@ uint32_t EventScheduler::GetErrorCode() const
     return m_engine->GetErrorCode();
 }
 
+
+void EventScheduler::AddTimer(timer_ptr timer, int64_t ms)
+{
+    m_timer_event->AddTimer(timer, ms);
+}
 
 CoroutineScheduler::CoroutineScheduler()
     : m_running(false)
@@ -117,48 +126,6 @@ bool CoroutineScheduler::Stop()
 bool CoroutineScheduler::IsRunning() const
 {
     return m_running;
-}
-
-TimerScheduler::TimerScheduler()
-{
-}
-
-std::shared_ptr<galay::Timer> TimerScheduler::AddTimer(const uint64_t ms, std::function<void(std::weak_ptr<details::TimeEvent>, std::shared_ptr<galay::Timer>)>&& callback) const
-{
-    return m_timer_event->AddTimer(ms, std::move(callback));
-}
-
-void TimerScheduler::AddTimer(const uint64_t ms, const std::shared_ptr<Timer>& timer)
-{
-    m_timer_event->AddTimer(ms, timer);
-}
-
-bool TimerScheduler::Loop(const int timeout)
-{
-    GHandle handle{};
-    details::TimeEvent::CreateHandle(handle);
-    m_timer_event = std::make_shared<details::TimeEvent>(handle, m_engine.get());
-    return EventScheduler::Loop(timeout);
-}
-
-bool TimerScheduler::Stop()
-{
-    m_timer_event.reset();
-    return EventScheduler::Stop();
-}
-
-bool TimerScheduler::IsRunning() const
-{
-    return EventScheduler::IsRunning();
-}
-
-uint32_t TimerScheduler::GetErrorCode() const
-{
-    return EventScheduler::GetErrorCode();
-}
-
-TimerScheduler::~TimerScheduler()
-{ 
 }
 
 }

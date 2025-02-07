@@ -309,7 +309,7 @@ int KqueueEventEngine::ModEvent(Event *event, void* ctx)
     k_event.flags = EV_ADD;
     if(!ConvertToKEvent(k_event, event, ctx)) {
         return 0;
-    };
+    }
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);
     if(ret != 0){
         m_error_code = error::MakeErrorCode(error::Error_ModEventError, errno);
@@ -325,6 +325,9 @@ int KqueueEventEngine::DelEvent(Event *event, void* ctx)
     LogTrace("[Del {} From Engine({}), Handle: {}, Type: {}]]", event->Name(), this->m_handle.fd, event->GetHandle().fd, ToString(event->GetEventType()));
     struct kevent k_event;
     k_event.flags = EV_DELETE;
+    if(!ConvertToKEvent(k_event, event, ctx)) {
+        return 0;
+    }
     int ret = kevent(m_handle.fd, &k_event, 1, nullptr, 0, nullptr);
     if(ret != 0){
         m_error_code = error::MakeErrorCode(error::Error_DelEventError, errno);
@@ -364,8 +367,11 @@ bool KqueueEventEngine::ConvertToKEvent(struct kevent &ev, Event *event, void *c
     case kEventTypeTimer:
     {
         ev.filter = EVFILT_TIMER;
-        int64_t during_time = static_cast<Timer*>(ctx)->GetTimeout();
-        ev.data = during_time;
+        if(ctx != nullptr) {
+            int64_t during_time = static_cast<Timer*>(ctx)->GetTimeout();
+            ev.data = during_time;
+        }
+        
     }
         break;
     }

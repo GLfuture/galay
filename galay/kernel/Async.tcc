@@ -8,131 +8,134 @@
 
 namespace galay::details
 {
-inline bool AsyncTcpSocket(AsyncNetIo::wptr aio)
+inline bool AsyncTcpSocket(AsyncNetEventContext* async_context)
 {
-    if (aio.expired()) {
+    async_context->m_error_code = error::ErrorCode::Error_NoError;
+    async_context->m_handle.fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (async_context->m_handle.fd < 0) {
+        async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
         return false;
     }
-    aio.lock()->GetErrorCode() = error::ErrorCode::Error_NoError;
-    aio.lock()->GetHandle().fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (aio.lock()->GetHandle().fd < 0) {
-        aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
-        return false;
-    }
-    HandleOption option(aio.lock()->GetHandle());
+    HandleOption option(async_context->m_handle);
     option.HandleNonBlock();
     return true;
 }
 
 
-inline bool AsyncUdpSocket(AsyncNetIo::wptr aio)
+inline bool AsyncUdpSocket(AsyncNetEventContext* async_context)
 {
-    aio.lock()->GetErrorCode() = error::ErrorCode::Error_NoError;
-    aio.lock()->GetHandle().fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (aio.lock()->GetHandle().fd < 0) {
-        aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
+    async_context->m_error_code = error::ErrorCode::Error_NoError;
+    async_context->m_handle.fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (async_context->m_handle.fd < 0) {
+        async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
         return false;
     }
-    HandleOption option(aio.lock()->GetHandle());
+    HandleOption option(async_context->m_handle);
     option.HandleNonBlock();
     return true;
 }
 
 
-inline bool Bind(AsyncNetIo::wptr aio, const std::string& addr, int port)
+inline bool Bind(AsyncNetEventContext* async_context, const std::string& addr, int port)
 {
-    aio.lock()->GetErrorCode() = error::ErrorCode::Error_NoError;
+    async_context->m_error_code = error::ErrorCode::Error_NoError;
     sockaddr_in taddr{};
     taddr.sin_family = AF_INET;
     taddr.sin_port = htons(port);
     if(addr.empty()) taddr.sin_addr.s_addr = INADDR_ANY;
     else taddr.sin_addr.s_addr = inet_addr(addr.c_str());
-    if( bind(aio.lock()->GetHandle().fd, reinterpret_cast<sockaddr*>(&taddr), sizeof(taddr)) )
+    if( bind(async_context->m_handle.fd, reinterpret_cast<sockaddr*>(&taddr), sizeof(taddr)) )
     {
-        aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_BindError, errno);
+        async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_BindError, errno);
         return false;
     }
     return true;
 }
 
 
-inline bool Listen(AsyncNetIo::wptr aio, int backlog)
+inline bool Listen(AsyncNetEventContext* async_context, int backlog)
 {
-    aio.lock()->GetErrorCode() = error::ErrorCode::Error_NoError;
-    if( listen(aio.lock()->GetHandle().fd, backlog) )
+    async_context->m_error_code = error::ErrorCode::Error_NoError;
+    if( listen(async_context->m_handle.fd, backlog) )
     {
-        aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_ListenError, errno);
+        async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_ListenError, errno);
         return false;
     }
     return true;
 }
 
 template<typename CoRtn>
-inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetIo::wptr aio, THost* addr)
+inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetEventContext* async_context, THost* addr, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetIOAction(), addr};
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    ////async_context->m_timeout = timeout;
+    return {async_context->m_action, addr};
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetIo::wptr aio, THost* addr)
+inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetEventContext* async_context, THost* addr, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetIOAction(), addr};
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    ////async_context->m_timeout = timeout;
+    return {async_context->m_action, addr};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncRecv(AsyncNetIo::wptr aio, TcpIOVec* iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncRecv(AsyncNetEventContext* async_context, TcpIOVec* iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeRecv);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeRecv);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {aio.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncSend(AsyncNetIo::wptr aio, TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncSend(AsyncNetEventContext* async_context, TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSend);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSend);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {aio.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetIo::wptr aio, UdpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetEventContext* async_context, UdpIOVec *iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeRecvFrom);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeRecvFrom);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {aio.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetIo::wptr aio, UdpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetEventContext* async_context, UdpIOVec *iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeSendTo);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeSendTo);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {aio.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetIo::wptr aio)
+inline AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetEventContext* async_context)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeClose);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetIOAction(), nullptr};
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeClose);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    return {async_context->m_action, nullptr};
 }
 
-inline bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX *ctx)
+inline bool AsyncSSLSocket(AsyncSslNetEventContext* async_context, SSL_CTX *ctx)
 {
     SSL* ssl = SSL_new(ctx);
     if(ssl == nullptr) return false;
-    if(SSL_set_fd(ssl, aio.lock()->GetHandle().fd)) {
-        aio.lock()->GetSSL() = ssl;
+    if(SSL_set_fd(ssl, async_context->m_handle.fd)) {
+        async_context->m_ssl = ssl;
         return true;
     }
     SSL_free(ssl);
@@ -140,49 +143,53 @@ inline bool AsyncSSLSocket(AsyncSslNetIo::wptr aio, SSL_CTX *ctx)
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncSSLAccept(typename AsyncSslNetIo::wptr aio)
+inline AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetEventContext* async_context, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslAccept);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetIOAction(), nullptr};
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslAccept);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
+    return {async_context->m_action, nullptr};
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncSSLConnect(typename AsyncSslNetIo::wptr aio)
+inline AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetEventContext* async_context, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslConnect);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetIOAction(), nullptr};
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslConnect);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
+    return {async_context->m_action, nullptr};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncSSLRecv(typename AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetEventContext* async_context, TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslRecv);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslRecv);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {aio.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncSSLSend(typename AsyncSslNetIo::wptr aio, TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetEventContext* async_context, TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslSend);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslSend);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {aio.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncSSLClose(typename AsyncSslNetIo::wptr aio)
+inline AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetEventContext* async_context)
 {
-    dynamic_cast<NetWaitEvent*>(aio.lock()->GetIOAction()->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeSslClose);
-    aio.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {aio.lock()->GetIOAction(), nullptr};
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeSslClose);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    return {async_context->m_action, nullptr};
 }
 
 
-inline bool AsyncFileOpen(typename AsyncFileIo::wptr afile, const char *path, const int flags, mode_t mode)
+inline bool AsyncFileOpen(AsyncFileEventContext* async_context, const char *path, const int flags, mode_t mode)
 {
 #if defined(__linux__) || defined(__APPLE__) 
     const int fd = open(path, flags, mode);
@@ -190,36 +197,38 @@ inline bool AsyncFileOpen(typename AsyncFileIo::wptr afile, const char *path, co
         return false;
     }
 #endif
-    afile.lock()->GetHandle() = GHandle{fd};
+    async_context->m_handle = GHandle{fd};
     HandleOption option(GHandle{fd});
     option.HandleNonBlock();
     return true;
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileRead(typename AsyncFileIo::wptr afile, FileIOVec *iov,  size_t length)
+inline AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileEventContext* async_context, FileIOVec *iov,  size_t length, int64_t timeout)
 {
-    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeRead);
-    afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<FileIoWaitEvent*>(async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeRead);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {afile.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileWrite(typename AsyncFileIo::wptr afile, FileIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileEventContext* async_context, FileIOVec *iov, size_t length, int64_t timeout)
 {
-    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeWrite);
-    afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    static_cast<FileIoWaitEvent*>(async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeWrite);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    //async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {afile.lock()->GetIOAction(), iov};
+    return {async_context->m_action, iov};
 }
 
 template<typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileIo::wptr afile)
+inline AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileEventContext* async_context)
 {
-    dynamic_cast<FileIoWaitEvent*>(afile.lock()->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeClose);
-    afile.lock()->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {afile.lock()->GetIOAction(), nullptr};
+    static_cast<FileIoWaitEvent*>(async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeClose);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    return {async_context->m_action, nullptr};
 }
 
 }
@@ -228,74 +237,58 @@ inline AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileIo::wptr afile)
 namespace galay
 {
 
-inline AsyncNetIo::AsyncNetIo(details::EventEngine* engine)
-    : m_handle({}), m_err_code(0), m_timer(nullptr)\
-        , m_action(new details::IOEventAction(engine, new details::NetWaitEvent(this)))
+
+inline AsyncNetEventContext* AsyncNetEventContext::Create(details::EventScheduler* scheduler)
 {
+    auto context = new AsyncNetEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetWaitEvent(context));
+    context->m_ticker = std::make_shared<AsyncTimeoutTicker>();
+    return context;
 }
 
-
-inline AsyncNetIo::AsyncNetIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_err_code(0), m_timer(nullptr)
+inline AsyncNetEventContext* AsyncNetEventContext::Create(GHandle handle, details::EventScheduler* scheduler)
 {
-    ActionInit(engine);
+    auto context = new AsyncNetEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetWaitEvent(context));
+    context->m_ticker = std::make_shared<AsyncTimeoutTicker>();
+    context->m_handle = handle;
+    return context;
 }
 
-
-inline HandleOption
-AsyncNetIo::GetOption() const
+inline AsyncNetEventContext::~AsyncNetEventContext()
 {
-    return HandleOption(m_handle);
+    if(m_action) {
+        delete m_action;
+        m_action = nullptr;
+    }
 }
 
-inline GHandle& AsyncNetIo::GetHandle() 
-{ 
-    return m_handle; 
-}
 
-inline details::IOEventAction* AsyncNetIo::GetIOAction() 
-{ 
-    return m_action; 
-}
-
-inline AsyncNetIo::~AsyncNetIo()
+inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(details::EventScheduler* scheduler)
 {
-    delete m_action;
+    auto context = new AsyncSslNetEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetSslWaitEvent(context));
+    return context;
 }
 
-
-inline void AsyncNetIo::ActionInit(details::EventEngine *engine)
+inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(GHandle handle, details::EventScheduler* scheduler)
 {
-    m_action = new details::IOEventAction(engine, new details::NetWaitEvent(this));
+    auto context = new AsyncSslNetEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetSslWaitEvent(context));
+    context->m_handle = handle;
+    return context;
 }
 
-
-inline uint32_t &AsyncNetIo::GetErrorCode()
+inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(SSL *ssl, details::EventScheduler* scheduler)
 {
-    return m_err_code;
+    auto context = new AsyncSslNetEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetSslWaitEvent(context));
+    context->m_handle = {SSL_get_fd(ssl)};
+    context->m_ssl = ssl;
+    return context;
 }
 
-
-inline AsyncSslNetIo::AsyncSslNetIo(details::EventEngine *engine)
-    : AsyncNetIo(engine), m_ssl(nullptr)
-{
-    ActionInit(engine);
-}
-
-
-inline AsyncSslNetIo::AsyncSslNetIo(GHandle handle, details::EventEngine *engine)
-    :AsyncNetIo(handle, engine), m_ssl(nullptr)
-{
-}
-
-
-inline AsyncSslNetIo::AsyncSslNetIo(SSL *ssl, details::EventEngine *engine)
-    :AsyncNetIo({SSL_get_fd(ssl)}, engine), m_ssl(ssl)
-{
-}
-
-
-inline AsyncSslNetIo::~AsyncSslNetIo()
+inline AsyncSslNetEventContext::~AsyncSslNetEventContext()
 {
     if(m_ssl) {
         SSL_shutdown(m_ssl);
@@ -303,65 +296,45 @@ inline AsyncSslNetIo::~AsyncSslNetIo()
     }
 }
 
-
-inline void AsyncSslNetIo::ActionInit(details::EventEngine *engine)
+inline AsyncFileEventContext* galay::AsyncFileEventContext::Create(details::EventScheduler* scheduler)
 {
-    this->m_action = new details::IOEventAction(engine, new details::NetSslWaitEvent(this));
+    auto context = new AsyncFileEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::FileIoWaitEvent(context));
+    return context;
 }
 
-
-inline AsyncFileIo::AsyncFileIo(details::EventEngine* engine)
-    :m_handle({}), m_error_code(0), m_timer(nullptr)\
-        , m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
+inline AsyncFileEventContext* AsyncFileEventContext::Create(GHandle handle, details::EventScheduler* scheduler)
 {
-
+    auto context = new AsyncFileEventContext;
+    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::FileIoWaitEvent(context));
+    context->m_handle = handle;
+    return context;
 }
 
-
-inline AsyncFileIo::AsyncFileIo(GHandle handle, details::EventEngine *engine)
-    :m_handle(handle), m_error_code(0), m_timer(nullptr)\
-        , m_action(new details::IOEventAction(engine, new details::FileIoWaitEvent(this)))
-{
-}
-
-
-
-inline HandleOption AsyncFileIo::GetOption() const
-{
-    return HandleOption(m_handle);
-}
-
-inline details::IOEventAction* AsyncFileIo::GetIOAction() 
-{ 
-    return m_action; 
-}
-
-
-inline GHandle& AsyncFileIo::GetHandle() 
-{ 
-    return m_handle; 
-}
-
-inline uint32_t& AsyncFileIo::GetErrorCode() 
-{ 
-    return m_error_code; 
-}
-
-inline AsyncFileIo::~AsyncFileIo()
+inline AsyncFileEventContext::~AsyncFileEventContext()
 {
     delete m_action;
 }
 
 
-#ifdef __linux__ 
+#ifdef __linux__
 
+inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(details::EventScheduler* scheduler, int maxevents)
+{
+    return new AsyncLinuxFileEventContext(scheduler, maxevents);
+}
 
-inline AsyncFileNativeAio::AsyncFileNativeAio(details::EventEngine *engine, int maxevents)
-    :AsyncFileIo(engine), m_current_index(0), m_unfinished_io(0)
+inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(GHandle handle, details::EventScheduler* scheduler, int maxevents)
+{
+    return new AsyncLinuxFileEventContext(handle, scheduler, maxevents);
+}
+
+inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(details::EventScheduler* scheduler, int maxevents)
+    : AsyncFileEventContext(scheduler), m_current_index(0), m_unfinished_io(0)
 {
     int ret = io_setup(maxevents, &m_ioctx);
     if(ret) {
-        this->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
+        this->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
         return;
     }
     m_iocbs.resize(maxevents);
@@ -372,12 +345,12 @@ inline AsyncFileNativeAio::AsyncFileNativeAio(details::EventEngine *engine, int 
 }
 
 
-inline AsyncFileNativeAio::AsyncFileNativeAio(GHandle handle, details::EventEngine *engine, int maxevents)
-    :AsyncFileIo(handle, engine), m_current_index(0), m_unfinished_io(0)
+inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(GHandle handle, details::EventScheduler* scheduler, int maxevents)
+    :AsyncFileEventContext(handle, scheduler), m_current_index(0), m_unfinished_io(0)
 {
     int ret = io_setup(maxevents, &m_ioctx);
     if(ret) {
-        this->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
+        this->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
         return;
     }
     m_iocbs.resize(maxevents);
@@ -388,7 +361,7 @@ inline AsyncFileNativeAio::AsyncFileNativeAio(GHandle handle, details::EventEngi
 }
 
 
-inline bool AsyncFileNativeAio::InitialEventHandle()
+inline bool AsyncLinuxFileEventContext::InitialEventHandle()
 {
     m_event_handle.fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
     if(m_event_handle.fd < 0) return false;
@@ -396,14 +369,14 @@ inline bool AsyncFileNativeAio::InitialEventHandle()
 }
 
 
-inline bool AsyncFileNativeAio::InitialEventHandle(GHandle handle)
+inline bool AsyncLinuxFileEventContext::InitialEventHandle(GHandle handle)
 {
     m_event_handle.fd = handle.fd;
     return true;
 }
 
 
-inline bool AsyncFileNativeAio::CloseEventHandle()
+inline bool AsyncLinuxFileEventContext::CloseEventHandle()
 {
     int ret = close(m_event_handle.fd);
     if(ret < 0) return false;
@@ -412,7 +385,7 @@ inline bool AsyncFileNativeAio::CloseEventHandle()
 }
 
 
-inline bool AsyncFileNativeAio::PrepareRead(char *buf, size_t len, long long offset, AioCallback* callback)
+inline bool AsyncLinuxFileEventContext::PrepareRead(char *buf, size_t len, long long offset, AioCallback* callback)
 {
     uint32_t num = this->m_current_index.load();
     if(num >= this->m_iocbs.size()) return false;
@@ -425,7 +398,7 @@ inline bool AsyncFileNativeAio::PrepareRead(char *buf, size_t len, long long off
 }
 
 
-inline bool AsyncFileNativeAio::PrepareWrite(char *buf, size_t len, long long offset, AioCallback* callback)
+inline bool AsyncLinuxFileEventContext::PrepareWrite(char *buf, size_t len, long long offset, AioCallback* callback)
 {
     uint32_t num = this->m_current_index.load();
     if(num >= this->m_iocbs.size()) return false;
@@ -438,7 +411,7 @@ inline bool AsyncFileNativeAio::PrepareWrite(char *buf, size_t len, long long of
 }
 
 
-inline bool AsyncFileNativeAio::PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback)
+inline bool AsyncLinuxFileEventContext::PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback)
 {
     uint32_t num = this->m_current_index.load();
     if(num >= this->m_iocbs.size()) return false;
@@ -451,7 +424,7 @@ inline bool AsyncFileNativeAio::PrepareReadV(iovec* iov, int count, long long of
 }
 
 
-inline bool AsyncFileNativeAio::PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback)
+inline bool AsyncLinuxFileEventContext::PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback)
 {
     uint32_t num = this->m_current_index.load();
     if(num >= this->m_iocbs.size()) return false;
@@ -464,20 +437,20 @@ inline bool AsyncFileNativeAio::PrepareWriteV(iovec* iov, int count, long long o
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileNativeAio::Commit()
+inline AsyncResult<int, CoRtn> AsyncLinuxFileEventContext::Commit()
 {
     int ret = io_submit(this->m_ioctx, this->m_unfinished_io, this->m_iocb_ptrs.data());
     if( ret < 0 ) {
-        this->GetErrorCode() = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSubmitError, -ret);
+        this->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSubmitError, -ret);
         return AsyncResult<int, CoRtn>(-1);
     }
     this->m_current_index = 0;
-    dynamic_cast<details::FileIoWaitEvent*>(this->GetIOAction()->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
-    return {this->GetIOAction(), nullptr};
+    static_cast<details::FileIoWaitEvent*>(this->m_action->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
+    return {this->m_action, nullptr};
 }
 
 
-inline bool AsyncFileNativeAio::IoFinished(uint64_t finished_io)
+inline bool AsyncLinuxFileEventContext::IoFinished(uint64_t finished_io)
 {
     uint32_t num = this->m_unfinished_io.load();
     if(!this->m_unfinished_io.compare_exchange_strong(num, num - finished_io)) return false;
@@ -485,7 +458,7 @@ inline bool AsyncFileNativeAio::IoFinished(uint64_t finished_io)
 }
 
 
-inline AsyncFileNativeAio::~AsyncFileNativeAio()
+inline AsyncLinuxFileEventContext::~AsyncLinuxFileEventContext()
 {
     io_destroy(this->m_ioctx);
     close(this->m_event_handle.fd);
@@ -495,27 +468,27 @@ inline AsyncFileNativeAio::~AsyncFileNativeAio()
 
 
 
-inline AsyncTcpSocket::AsyncTcpSocket(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(engine))
+inline AsyncTcpSocket::AsyncTcpSocket(details::EventScheduler* scheduler)
+    :m_async_context(AsyncNetEventContext::Create(scheduler))
 {
 }
 
 
-inline AsyncTcpSocket::AsyncTcpSocket(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(handle, engine))
+inline AsyncTcpSocket::AsyncTcpSocket(GHandle handle, details::EventScheduler *scheduler)
+    :m_async_context(AsyncNetEventContext::Create(handle, scheduler))
 {
 }
 
 
 inline bool AsyncTcpSocket::Socket() const
 {
-    return details::AsyncTcpSocket(m_io);
+    return details::AsyncTcpSocket(m_async_context);
 }
 
 
 inline bool AsyncTcpSocket::Socket(GHandle handle)
 {
-    m_io->GetHandle() = handle;
+    m_async_context->m_handle = handle;
     HandleOption option(handle);
     return option.HandleNonBlock();
 }
@@ -523,48 +496,66 @@ inline bool AsyncTcpSocket::Socket(GHandle handle)
 
 inline bool AsyncTcpSocket::Bind(const std::string& addr, int port)
 {
-    return details::Bind(m_io, addr, port);
+    return details::Bind(m_async_context, addr, port);
 }
 
 
 inline bool AsyncTcpSocket::Listen(int backlog)
 {
-    return details::Listen(m_io, backlog);
+    return details::Listen(m_async_context, backlog);
+}
+
+inline GHandle AsyncTcpSocket::GetHandle() const
+{
+    return m_async_context->m_handle;
+}
+
+inline uint32_t AsyncTcpSocket::GetErrorCode() const
+{
+    return m_async_context->m_error_code;
+}
+
+inline AsyncTcpSocket::~AsyncTcpSocket()
+{
+    if(m_async_context) {
+        delete m_async_context;
+        m_async_context = nullptr;
+    }
 }
 
 template <typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Connect(THost *addr)
+inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Connect(THost *addr, int64_t timeout)
 {
-    return details::AsyncConnect<CoRtn>(m_io, addr);
+    return details::AsyncConnect<CoRtn>(m_async_context, addr, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<GHandle, CoRtn> AsyncTcpSocket::Accept(THost *addr)
+inline AsyncResult<GHandle, CoRtn> AsyncTcpSocket::Accept(THost *addr, int64_t timeout)
 {
-    return details::AsyncAccept<CoRtn>(m_io, addr);
+    return details::AsyncAccept<CoRtn>(m_async_context, addr, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSocket::Recv(TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncTcpSocket::Recv(TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    return details::AsyncRecv<CoRtn>(m_io, iov, length);
+    return details::AsyncRecv<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSocket::Send(TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncTcpSocket::Send(TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    return details::AsyncSend<CoRtn>(m_io, iov, length);
+    return details::AsyncSend<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Close()
 {
-    return details::AsyncNetClose<CoRtn>(m_io);
+    return details::AsyncNetClose<CoRtn>(m_async_context);
 }
 
 
-inline AsyncTcpSslSocket::AsyncTcpSslSocket(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncSslNetIo>(engine))
+inline AsyncTcpSslSocket::AsyncTcpSslSocket(details::EventScheduler* scheduler)
+    :m_async_context(AsyncSslNetEventContext::Create(scheduler))
 {
     if(!SslCtx) {
         SslCtx = GetGlobalSSLCtx();
@@ -572,8 +563,8 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(details::EventEngine *engine)
 }
 
 
-inline AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncSslNetIo>(handle, engine))
+inline AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, details::EventScheduler* scheduler)
+    :m_async_context(AsyncSslNetEventContext::Create(handle, scheduler))
 {
     if(!SslCtx) {
         SslCtx = GetGlobalSSLCtx();
@@ -584,8 +575,8 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, details::EventEngine
 inline SSL_CTX* AsyncTcpSslSocket::SslCtx = nullptr;
 
 
-inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncSslNetIo>(ssl, engine))
+inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl, details::EventScheduler* scheduler)
+    :m_async_context(AsyncSslNetEventContext::Create(ssl, scheduler))
 {
     if(!SslCtx) {
         SslCtx = GetGlobalSSLCtx();
@@ -595,218 +586,267 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl, details::EventEngine *engi
 
 inline bool AsyncTcpSslSocket::Socket() const
 {
-    if(!details::AsyncTcpSocket(m_io)){
+    if(!details::AsyncTcpSocket(m_async_context)){
         return false;
     }
-    return details::AsyncSSLSocket(m_io, SslCtx);
+    return details::AsyncSSLSocket(m_async_context, SslCtx);
 }
 
 
 inline bool AsyncTcpSslSocket::Socket(GHandle handle)
 {
-    m_io->GetHandle() = handle;
+    m_async_context->m_handle = handle;
     HandleOption option(handle);
     if(!option.HandleNonBlock()) {
         return false;
     }
-    return details::AsyncSSLSocket(m_io, SslCtx);;
+    return details::AsyncSSLSocket(m_async_context, SslCtx);;
 }
 
 
 inline bool AsyncTcpSslSocket::Bind(const std::string& addr, int port)
 {
-    return details::Bind(m_io, addr, port);
+    return details::Bind(m_async_context, addr, port);
 }
 
 
 inline bool AsyncTcpSslSocket::Listen(int backlog)
 {
-    return details::Listen(m_io, backlog);
+    return details::Listen(m_async_context, backlog);
 }
 
 template <typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Connect(THost *addr)
+inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Connect(THost *addr, int64_t timeout)
 {
-    return details::AsyncConnect<CoRtn>(m_io, addr);
+    return details::AsyncConnect<CoRtn>(m_async_context, addr, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::AsyncSSLConnect()
+inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::AsyncSSLConnect(int64_t timeout)
 {
-    return details::AsyncSSLConnect<CoRtn>(m_io);
+    return details::AsyncSSLConnect<CoRtn>(m_async_context);
 }
 
 template <typename CoRtn>
-inline AsyncResult<GHandle, CoRtn> AsyncTcpSslSocket::Accept(THost *addr)
+inline AsyncResult<GHandle, CoRtn> AsyncTcpSslSocket::Accept(THost *addr, int64_t timeout)
 {
-    return details::AsyncAccept<CoRtn>(m_io, addr);
+    return details::AsyncAccept<CoRtn>(m_async_context, addr, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::SSLAccept()
+inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::SSLAccept(int64_t timeout)
 {
-    return details::AsyncSSLAccept<CoRtn>(m_io);
+    return details::AsyncSSLAccept<CoRtn>(m_async_context, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Recv(TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Recv(TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    return details::AsyncSSLRecv<CoRtn>(m_io, iov, length);
+    return details::AsyncSSLRecv<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Send(TcpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Send(TcpIOVec *iov, size_t length, int64_t timeout)
 {
-    return details::AsyncSSLSend<CoRtn>(m_io, iov, length);
+    return details::AsyncSSLSend<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Close()
 {
-    return details::AsyncSSLClose<CoRtn>(m_io);
+    return details::AsyncSSLClose<CoRtn>(m_async_context);
 }
 
+inline GHandle AsyncTcpSslSocket::GetHandle() const
+{
+    return m_async_context->m_handle;
+}
 
-inline AsyncUdpSocket::AsyncUdpSocket(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(engine))
+inline uint32_t AsyncTcpSslSocket::GetErrorCode() const
+{
+    return m_async_context->m_error_code;
+}
+
+inline AsyncUdpSocket::AsyncUdpSocket(details::EventScheduler* scheduler)
+    :m_async_context(AsyncNetEventContext::Create(scheduler))
 {
 }
 
 
-inline AsyncUdpSocket::AsyncUdpSocket(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncNetIo>(handle, engine))
+inline AsyncUdpSocket::AsyncUdpSocket(GHandle handle, details::EventScheduler* scheduler)
+    :m_async_context(AsyncNetEventContext::Create(handle, scheduler))
 {
 }
 
 
 inline bool AsyncUdpSocket::Socket() const
 {
-    return details::AsyncUdpSocket(m_io);
+    return details::AsyncUdpSocket(m_async_context);
 }
 
 
 inline bool AsyncUdpSocket::Bind(const std::string& addr, int port)
 {
-    return details::Bind(m_io, addr, port);
+    return details::Bind(m_async_context, addr, port);
+}
+
+inline GHandle AsyncUdpSocket::GetHandle() const
+{
+    return m_async_context->m_handle;
+}
+
+inline uint32_t AsyncUdpSocket::GetErrorCode() const
+{
+    return m_async_context->m_error_code;
+}
+
+inline AsyncUdpSocket::~AsyncUdpSocket()
+{
+    if(m_async_context) {
+        delete m_async_context;
+        m_async_context = nullptr;
+    }
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncUdpSocket::RecvFrom(UdpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncUdpSocket::RecvFrom(UdpIOVec *iov, size_t length, int64_t timeout)
 {
-    return details::AsyncRecvFrom<CoRtn>(m_io, iov, length);
+    return details::AsyncRecvFrom<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncUdpSocket::SendTo(UdpIOVec *iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncUdpSocket::SendTo(UdpIOVec *iov, size_t length, int64_t timeout)
 {
-    return details::AsyncSendTo<CoRtn>(m_io, iov, length);
+    return details::AsyncSendTo<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncUdpSocket::Close()
 {
-    return details::AsyncNetClose<CoRtn>(m_io);
+    return details::AsyncNetClose<CoRtn>(m_async_context);
 }
 
 
-inline AsyncFileDescriptor::AsyncFileDescriptor(details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncFileIo>(engine))
+inline AsyncFileDescriptor::AsyncFileDescriptor(details::EventScheduler* scheduler)
+    :m_async_context(AsyncFileEventContext::Create(scheduler))
 {
 }
 
 
-inline AsyncFileDescriptor::AsyncFileDescriptor(GHandle handle, details::EventEngine *engine)
-    :m_io(std::make_shared<AsyncFileIo>(handle, engine))
+inline AsyncFileDescriptor::AsyncFileDescriptor(GHandle handle, details::EventScheduler* scheduler)
+    :m_async_context(AsyncFileEventContext::Create(handle, scheduler))
 {
 }
 
 
 inline bool AsyncFileDescriptor::Open(const char *path, int flags, mode_t mode)
 {
-    return details::AsyncFileOpen(m_io, path, flags, mode);
+    return details::AsyncFileOpen(m_async_context, path, flags, mode);
+}
+
+inline GHandle AsyncFileDescriptor::GetHandle() const
+{
+    return m_async_context->m_handle;
+}
+
+inline uint32_t AsyncFileDescriptor::GetErrorCode() const
+{
+    return m_async_context->m_error_code;
+}
+
+inline AsyncFileDescriptor::~AsyncFileDescriptor()
+{
+    if( m_async_context ) {
+        delete m_async_context;
+        m_async_context = nullptr;
+    }
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Read(FileIOVec* iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Read(FileIOVec* iov, size_t length, int64_t timeout)
 {
-    return details::AsyncFileRead<CoRtn>(m_io, iov, length);
+    return details::AsyncFileRead<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Write(FileIOVec* iov, size_t length)
+inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Write(FileIOVec* iov, size_t length, int64_t timeout)
 {
-    return details::AsyncFileWrite<CoRtn>(m_io, iov, length);
+    return details::AsyncFileWrite<CoRtn>(m_async_context, iov, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncFileDescriptor::Close()
 {
-    return details::AsyncFileClose<CoRtn>(m_io);
+    return details::AsyncFileClose<CoRtn>(m_async_context);
 }
 
 
 #ifdef __linux__
 
 
-inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(details::EventEngine *engine, int maxevents)
-    :m_io(std::make_shared<AsyncFileNativeAio>(engine, maxevents))
+inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(details::EventScheduler* scheduler, int maxevents)
+    :m_async_context(AsyncLinuxFileEventContext::Create(engine, maxevents))
 {
-    m_io->InitialEventHandle();
+    m_async_context->InitialEventHandle();
 }
 
 
-inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, details::EventEngine *engine, int maxevents)
-    :m_io(std::make_shared<AsyncFileNativeAio>(handle, engine, maxevents))
+inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, details::EventScheduler* scheduler, int maxevents)
+    :m_async_context(AsyncLinuxFileEventContext::Create(handle, engine, maxevents))
 {
-    m_io->InitialEventHandle();
+    m_async_context->InitialEventHandle();
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::Open(const char *path, int flags, mode_t mode)
 {
-    return details::AsyncFileOpen(m_io, path, flags, mode);
+    return details::AsyncFileOpen(m_async_context, path, flags, mode);
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareRead(char *buf, size_t len, long long offset, AioCallback *callback)
 {
-    return m_io->PrepareRead(buf, len, offset, callback);
+    return m_async_context->PrepareRead(buf, len, offset, callback);
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareWrite(char *buf, size_t len, long long offset, AioCallback *callback)
 {
-    return m_io->PrepareWrite(buf, len, offset, callback);
+    return m_async_context->PrepareWrite(buf, len, offset, callback);
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareReadV(iovec *iov, int count, long long offset, AioCallback *callback)
 {
-    return m_io->PrepareReadV(iov, count, offset, callback);
+    return m_async_context->PrepareReadV(iov, count, offset, callback);
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareWriteV(iovec *iov, int count, long long offset, AioCallback *callback)
 {
-    return m_io->PrepareWriteV(iov, count, offset, callback);
+    return m_async_context->PrepareWriteV(iov, count, offset, callback);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncFileNativeAioDescriptor::Commit()
 {
-    return m_io->Commit<CoRtn>();
+    return m_async_context->Commit<CoRtn>();
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncFileNativeAioDescriptor::Close()
 {
-    return details::AsyncFileClose<CoRtn>(m_io);
+    return details::AsyncFileClose<CoRtn>(m_async_context);
 }
 
 
 inline AsyncFileNativeAioDescriptor::~AsyncFileNativeAioDescriptor()
 {
-    m_io->CloseEventHandle();
+    m_async_context->CloseEventHandle();
+    if( m_async_context ) {
+        delete m_async_context;
+        m_async_context = nullptr;
+    }
 }
 
 #endif

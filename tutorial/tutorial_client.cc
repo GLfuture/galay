@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 
 uint32_t g_port = 8080;
-galay::Coroutine<void> test(galay::RoutineCtx ctx, galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
+galay::Coroutine<void> test(galay::RoutineCtx ctx, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
     int64_t start = galay::utils::GetCurrentTimeMs();
     int i = 0;
@@ -39,14 +39,14 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx, galay::details::EventEngine* 
     co_return;
 }
 
-void pack(galay::details::EventEngine* engine, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
+void pack(galay::details::EventScheduler* scheduler, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
-    test(galay::RoutineCtx::Create(), engine, sockets, begin, end);
+    test(galay::RoutineCtx::Create(scheduler), sockets, begin, end);
 }
 
 galay::AsyncTcpSocket* initSocket()
 {
-    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine());
+    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0));
     socket->Socket();
     return socket;
 }
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     g_port = atoi(argv[1]);
-    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1}, {1, -1});
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     std::vector<galay::AsyncTcpSocket*> sockets;
     for (size_t i = 0; i < 2048; ++i)
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     std::vector<std::thread> ths;
     for( int i = 0 ; i < 8 ; ++i )
     {
-        ths.push_back(std::thread(std::bind(pack, galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(), std::ref(sockets), i * 256, (i + 1) * 256)));
+        ths.push_back(std::thread(std::bind(pack, galay::EventSchedulerHolder::GetInstance()->GetScheduler(0), std::ref(sockets), i * 256, (i + 1) * 256)));
         ths[i].detach();
     }
     getchar();

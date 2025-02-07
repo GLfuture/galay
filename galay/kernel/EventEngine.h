@@ -1,7 +1,6 @@
 #ifndef GALAY_EVENTSCHEDULER_H
 #define GALAY_EVENTSCHEDULER_H
 #include "galay/common/Base.h"
-#include "Internal.hpp"
 #include <string>
 #include <atomic>
 #include <vector>
@@ -9,6 +8,7 @@
 
 namespace galay::details
 {
+class Event;
 
 #define DEFAULT_MAX_EVENTS 1024
 

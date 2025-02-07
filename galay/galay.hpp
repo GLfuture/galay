@@ -16,7 +16,7 @@
 #include "kernel/Server.hpp"
 #include "kernel/ExternApi.hpp"
 #include "kernel/Log.h"
-#include "kernel/Time.h"
+#include "kernel/Time.hpp"
 
 //protocol
 #include "protocol/Http.h"
@@ -42,7 +42,6 @@ namespace galay
 
 #define DEFAULT_COROUTINE_SCHEDULER_CONF                {4, -1}
 #define DEFAULT_NETWORK_SCHEDULER_CONF                  {4, -1}
-#define DEFAULT_TIMER_SCHEDULER_CONF                    {1, -1}
 #define DEFAULT_SESSION_SCHEDULER_CONF                  {1, -1}
 
 struct GalayEnvConf 
@@ -51,7 +50,6 @@ struct GalayEnvConf
     static GalayEnvConf::ptr Create();
     std::pair<uint32_t, int> m_coroutineSchedulerConf = DEFAULT_COROUTINE_SCHEDULER_CONF;
     std::pair<uint32_t, int> m_eventSchedulerConf = DEFAULT_NETWORK_SCHEDULER_CONF;
-    std::pair<uint32_t, int> m_timerSchedulerConf = DEFAULT_TIMER_SCHEDULER_CONF;
     std::pair<uint32_t, int> m_sessionSchedulerConf = DEFAULT_SESSION_SCHEDULER_CONF; //各个中间件的调度器配置
 };
 
@@ -64,7 +62,6 @@ public:
 
 
 }
-
 
 #include "galay.inl"
 

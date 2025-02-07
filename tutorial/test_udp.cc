@@ -2,7 +2,7 @@
 
 galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
 {
-    galay::AsyncUdpSocket socket(galay::EventSchedulerHolder::GetInstance()->GetScheduler()->GetEngine());
+    galay::AsyncUdpSocket socket(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0));
     if (!socket.Socket())
     {
         printf("create socket failed\n");
@@ -44,7 +44,8 @@ galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
 
 int main()
 {
-    int a = test_dns(galay::RoutineCtx::Create())().value();
+    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    int a = test_dns(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)))().value();
     getchar();
     return 0;
 }
