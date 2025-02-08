@@ -76,11 +76,11 @@ CoroutineBase::wptr p{};
 
 int main()
 {
-    galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
+    galay::GalayEnvConf conf;
+    galay::GalayEnv env(conf);
     getchar();
     p.lock()->Destroy();
     getchar();
-    galay::DestroyGalayEnv();
     return 0;
 }
 

@@ -38,7 +38,7 @@ public:
     using ptr = std::shared_ptr<AsyncTimeoutTicker>;
     using wptr = std::weak_ptr<AsyncTimeoutTicker>;
 
-    void Execute(details::AbstractTimeEvent* event);
+    void Execute(details::TimeEvent* event);
 
     bool RefreshTime(int64_t timeout);
     

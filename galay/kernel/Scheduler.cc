@@ -21,12 +21,18 @@ EventScheduler::EventScheduler()
 #endif
 }
 
-bool EventScheduler::Loop(int timeout)
+void EventScheduler::InitTimeEvent(TimerManagerType type)
 {
     GHandle handle{};
-    details::TimeEvent<TimerManagerType::kPriorityQueueTimerManager>::CreateHandle(handle);
-    m_timer_event = std::make_shared<details::TimeEvent<TimerManagerType::kPriorityQueueTimerManager>>(handle, m_engine.get());
-    this->m_thread = std::make_unique<std::thread>([this, timeout](){
+    TimeEvent::CreateHandle(handle);
+    m_timer_event = std::make_shared<details::TimeEvent>(handle, m_engine.get(), type);
+}
+
+bool EventScheduler::Loop()
+{
+    this->m_thread = std::make_unique<std::thread>([this](){
+        int timeout = -1;
+        if( m_timer_event ) timeout = m_timer_event->OnceLoopTimeout();
         m_engine->Loop(timeout);
         LogTrace("[{}({}) exist successfully]", Name(), GetEngine()->GetHandle().fd);
         m_latch.count_down();
@@ -83,7 +89,7 @@ void CoroutineScheduler::ToDestroyCoroutine(Coroutine_wptr coroutine)
     m_coroutines_queue.enqueue({Action::kActionDestroy, coroutine});
 }
 
-bool CoroutineScheduler::Loop(int timeout)
+bool CoroutineScheduler::Loop()
 {
     this->m_thread = std::make_unique<std::thread>([this](){
         std::pair<Action, Coroutine_wptr> co;

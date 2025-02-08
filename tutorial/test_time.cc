@@ -21,9 +21,9 @@ int main()
     spdlog::set_level(spdlog::level::debug);
     galay::details::KqueueEventEngine::ptr engine = std::make_shared<galay::details::KqueueEventEngine>();
     GHandle handle{};
-    galay::details::AbstractTimeEvent::CreateHandle(handle);
+    galay::details::TimeEvent::CreateHandle(handle);
     
-    galay::details::AbstractTimeEvent::ptr event = std::make_shared<galay::details::AbstractTimeEvent>(handle, engine.get());
+    galay::details::TimeEvent::ptr event = std::make_shared<galay::details::TimeEvent>(handle, engine.get());
     int i = 0;
     galay::Timer::ptr timer = event->AddTimer(1000, [event, &i](auto event, galay::Timer::ptr t) {
         std::cout << "timer expired" << std::endl;
@@ -39,11 +39,13 @@ int main()
     getchar(); 
     return 0;
 #endif
-    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    galay::GalayEnvConf conf;
+    conf.m_coroutineSchedulerConf.m_thread_num = 1;
+    conf.m_eventSchedulerConf.m_thread_num = 1;
+    galay::GalayEnv env(conf);
     test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
     std::cout << "main thread wait..." << std::endl;
     getchar();
-    galay::DestroyGalayEnv();
     return 0;
 }
 #elif defined(TEST_DEADLINE)
@@ -113,7 +115,7 @@ int main()
 
 int i = 0;
 
-void func(galay::details::AbstractTimeEvent::wptr event, galay::Timer::ptr timer)
+void func(galay::details::TimeEvent::wptr event, galay::Timer::ptr timer)
 {
     std::cout << "timer expired " << i++ << std::endl;
 }
@@ -123,7 +125,7 @@ int main()
     galay::details::EventScheduler scheduler;
     scheduler.Loop(-1);
     galay::Timer::ptr timer1 = galay::Timer::Create(func);
-    //int64_t timeout, std::function<void(std::weak_ptr<details::AbstractTimeEvent>, Timer::ptr)> &&func
+    //int64_t timeout, std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> &&func
     scheduler.AddTimer(timer1, 2000);
     galay::Timer::ptr timer2 = galay::Timer::Create(func);
     scheduler.AddTimer(timer2, 500);

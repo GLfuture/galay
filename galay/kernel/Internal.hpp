@@ -72,10 +72,9 @@ class SchedulerHolder
     static std::unique_ptr<SchedulerHolder> Instance;
 public:
 
-    //最少为1
-    void Initialize(uint32_t scheduler_size, int timeout);
     void Initialize(std::vector<std::unique_ptr<typename Type::value_type>>&& schedulers);
-    void Destroy();
+    void StartAll();
+    void StopAll();
     static SchedulerHolder* GetInstance();
     Type::value_type* GetScheduler();
     Type::value_type* GetScheduler(uint32_t index);

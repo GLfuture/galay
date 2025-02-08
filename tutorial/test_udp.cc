@@ -44,7 +44,8 @@ galay::Coroutine<int> test_dns(galay::RoutineCtx ctx)
 
 int main()
 {
-    galay::InitializeGalayEnv({1, -1}, {1, -1}, {1, -1});
+    galay::GalayEnvConf conf;
+    galay::GalayEnv env(conf);
     int a = test_dns(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)))().value();
     getchar();
     return 0;

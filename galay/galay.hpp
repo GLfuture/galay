@@ -40,17 +40,33 @@ namespace galay
 #define GALAY_VERSION "0.0.2"
 #endif
 
-#define DEFAULT_COROUTINE_SCHEDULER_CONF                {4, -1}
-#define DEFAULT_NETWORK_SCHEDULER_CONF                  {4, -1}
+#define DEFAULT_COROUTINE_SCHEDULER_THREAD_NUM          4
+#define DEFAULT_EVENT_SCHEDULER_THREAD_NUM              4
 #define DEFAULT_SESSION_SCHEDULER_CONF                  {1, -1}
+
+struct CoroutineSchedulerConf
+{
+    int m_thread_num = DEFAULT_COROUTINE_SCHEDULER_THREAD_NUM;
+};
+
+enum EventSchedulerTimerManagerType {
+    kEventSchedulerTimerManagerTypeHeap = 0,
+    kEventSchedulerTimerManagerTypeRbTree,
+    kEventSchedulerTimerManagerTypeTimeWheel
+};
+
+struct EventSchedulerConf
+{
+    int m_thread_num = DEFAULT_EVENT_SCHEDULER_THREAD_NUM;
+    EventSchedulerTimerManagerType m_time_manager_type = kEventSchedulerTimerManagerTypeHeap;
+};
 
 struct GalayEnvConf 
 {
     using ptr = std::shared_ptr<GalayEnvConf>;
     static GalayEnvConf::ptr Create();
-    std::pair<uint32_t, int> m_coroutineSchedulerConf = DEFAULT_COROUTINE_SCHEDULER_CONF;
-    std::pair<uint32_t, int> m_eventSchedulerConf = DEFAULT_NETWORK_SCHEDULER_CONF;
-    std::pair<uint32_t, int> m_sessionSchedulerConf = DEFAULT_SESSION_SCHEDULER_CONF; //各个中间件的调度器配置
+    CoroutineSchedulerConf  m_coroutineSchedulerConf;
+    EventSchedulerConf      m_eventSchedulerConf;
 };
 
 class GalayEnv
@@ -63,6 +79,33 @@ public:
 
 }
 
-#include "galay.inl"
+
+inline galay::GalayEnvConf::ptr galay::GalayEnvConf::Create()
+{
+    return std::make_shared<GalayEnvConf>();
+}
+
+inline galay::GalayEnv::GalayEnv(GalayEnvConf conf)
+{
+    std::vector<std::unique_ptr<details::CoroutineScheduler>> co_schedulers;
+    co_schedulers.reserve(conf.m_coroutineSchedulerConf.m_thread_num);
+    std::vector<std::unique_ptr<details::EventScheduler>> event_schedulers;
+    event_schedulers.reserve(conf.m_eventSchedulerConf.m_thread_num);
+    for(int i = 0; i < conf.m_coroutineSchedulerConf.m_thread_num; ++i ) {
+        co_schedulers.emplace_back(std::make_unique<details::CoroutineScheduler>());
+    }
+    for(int i = 0; i < conf.m_eventSchedulerConf.m_thread_num; ++i ) {
+        event_schedulers.emplace_back(std::make_unique<details::EventScheduler>());
+        event_schedulers[i]->InitTimeEvent(static_cast<TimerManagerType>(conf.m_eventSchedulerConf.m_time_manager_type));
+    }
+    InitializeGalayEnv(std::move(co_schedulers), std::move(event_schedulers));
+    StartGalayEnv();
+}
+
+inline galay::GalayEnv::~GalayEnv()
+{
+    DestroyGalayEnv();
+}
+
 
 #endif

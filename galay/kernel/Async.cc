@@ -91,7 +91,7 @@ uint32_t& HandleOption::GetErrorCode()
     return m_error_code;
 }
 
-void AsyncTimeoutTicker::Execute(details::AbstractTimeEvent* event)
+void AsyncTimeoutTicker::Execute(details::TimeEvent* event)
 {
     
 }

@@ -6,6 +6,7 @@
 #include <latch>
 #include <functional>
 #include <concurrentqueue/moodycamel/blockingconcurrentqueue.h>
+#include "Time.hpp"
 #include "galay/common/Base.h"
 
 namespace galay::thread {
@@ -22,7 +23,7 @@ namespace galay::details {
 class Event;
 class CallbackEvent;
 class EventEngine; 
-class AbstractTimeEvent;
+class TimeEvent;
 
 
 class Scheduler
@@ -47,7 +48,7 @@ public:
     std::string Name() override { return "CoroutineScheduler"; }
     void ToResumeCoroutine(Coroutine_wptr coroutine);
     void ToDestroyCoroutine(Coroutine_wptr coroutine);
-    bool Loop(int timeout);
+    bool Loop();
     bool Stop();
     bool IsRunning() const;
 private:
@@ -67,7 +68,13 @@ public:
     using timer_ptr = std::shared_ptr<Timer>;
     EventScheduler();
     std::string Name() override { return "EventScheduler"; }
-    virtual bool Loop(int timeout);
+
+    /*
+        PriorityQueueTimerManager or RbTreeTimerManager can init anywhere
+        TimeWheelTimerManager must be inited before Loop()
+    */
+    void InitTimeEvent(TimerManagerType type);
+    virtual bool Loop();
     virtual bool Stop();
     bool IsRunning() const;
     virtual uint32_t GetErrorCode() const;
@@ -78,13 +85,7 @@ protected:
     std::latch m_latch;
     std::unique_ptr<std::thread> m_thread;
     std::shared_ptr<EventEngine> m_engine;
-    std::shared_ptr<AbstractTimeEvent> m_timer_event;
-};
-
-class SessionScheduler final: public EventScheduler 
-{
-public:
-    std::string Name() override { return "SessionScheduler"; }
+    std::shared_ptr<TimeEvent> m_timer_event;
 };
 
 

@@ -219,7 +219,7 @@ AsyncResult<void, CoRtn> Sleepfor(int64_t ms)
 {
     auto func = [ms](CoroutineBase::wptr co, void* ctx)->bool{
         if(ms <= 0) return false;
-        auto timecb = [co](details::AbstractTimeEvent::wptr event, Timer::ptr timer){
+        auto timecb = [co](details::TimeEvent::wptr event, Timer::ptr timer){
             if(!co.expired()) co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         };
         auto timer = std::make_shared<Timer>(std::move(timecb));
@@ -235,7 +235,7 @@ AsyncResult<void, CoRtn> Sleepfor(details::EventScheduler *scheduler, int64_t ms
 {
     auto func = [scheduler, ms](CoroutineBase::wptr co, void* ctx)->bool{
         if(ms <= 0) return false;
-        auto timecb = [co](details::AbstractTimeEvent::wptr event, Timer::ptr timer){
+        auto timecb = [co](details::TimeEvent::wptr event, Timer::ptr timer){
             if(!co.expired()) co.lock()->GetCoScheduler()->ToResumeCoroutine(co);
         };
         auto timer = std::make_shared<Timer>(ms, std::move(timecb));

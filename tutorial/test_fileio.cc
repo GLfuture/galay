@@ -112,7 +112,8 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
 
 int main()
 {
-    galay::GalayEnv env({{1, -1}, {1, -1}, {1, -1}});
+    galay::GalayEnvConf conf;
+    galay::GalayEnv env(conf);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
     getchar();
