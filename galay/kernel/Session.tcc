@@ -2,7 +2,6 @@
 #define GALAY_SESSION_TCC
 
 #include "Session.hpp"
-#include <iostream>
 
 namespace galay
 {
@@ -15,16 +14,16 @@ Connection<Socket>::Connection(Socket* socket)
 
 template<typename Socket>
 template <typename CoRtn>
-AsyncResult<int, CoRtn> Connection<Socket>::Recv(TcpIOVec *iov, int size)
+AsyncResult<int, CoRtn> Connection<Socket>::Recv(TcpIOVec *iov, int size, int64_t timeout_ms)
 {
-    return m_socket->Recv(iov, size);
+    return m_socket->Recv(iov, size, timeout_ms);
 }
 
 template <typename Socket>
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> Connection<Socket>::Send(TcpIOVec *iov, int size)
+inline AsyncResult<int, CoRtn> Connection<Socket>::Send(TcpIOVec *iov, int size, int64_t timeout_ms)
 {
-    return m_socket->Send(iov, size);
+    return m_socket->Send(iov, size, timeout_ms);
 }
 
 template <typename Socket>

@@ -11,26 +11,26 @@
 namespace galay
 {
 
-Timer::ptr Timer::Create(timer_callback &&func)
+Timer::ptr Timer::Create(timer_callback_t &&func)
 {
     return std::make_shared<Timer>(std::move(func));
 }
 
-Timer::Timer(timer_callback &&func)
+Timer::Timer(timer_callback_t &&func)
 {
     m_callback = std::move(func);
 }
 
-int64_t
-Timer::GetTimeout() const
-{
-    return m_timeout;
-}
 
 int64_t
 Timer::GetDeadline() const
 {
     return m_deadline;
+}
+
+int64_t Timer::GetTimeout() const
+{
+    return m_deadline - utils::GetCurrentTimeMs();
 }
 
 int64_t
@@ -43,48 +43,39 @@ Timer::GetRemainTime() const
 bool
 Timer::ResetTimeout(int64_t timeout)
 {
-    int64_t old = m_timeout.load();
-    if(!m_timeout.compare_exchange_strong(old, timeout)) return false;
-    old = m_deadline.load();
+    if (!IsCancel()) return false;
+    int64_t old = m_deadline.load();
     if(!m_deadline.compare_exchange_strong(old, utils::GetCurrentTimeMs() + timeout)) return false;
-    m_success = false;
-    return true;
-}
-
-bool Timer::ResetTimeout(int64_t timeout, timer_callback &&func)
-{
-    if(!ResetTimeout(timeout)) return false;
-    m_callback = std::move(func);
     return true;
 }
 
 void
 Timer::Execute(std::weak_ptr<details::TimeEvent> event)
 {
-    if (m_cancle.load())
+    if (m_cancel.load())
         return;
     m_callback(event, shared_from_this());
-    m_success.store(true);
 }
 
-bool Timer::Start()
+void
+Timer::SetIsCancel(bool cancel)
 {
-    bool old = true;
-    return m_cancle.compare_exchange_strong(old, false);
+    m_cancel.store(cancel);
 }
 
-bool
-Timer::Cancle()
+bool Timer::IsCancel() const
 {
-    bool old = false;
-    return m_cancle.compare_exchange_strong(old, true); 
+    return m_cancel.load();
 }
 
-// 是否已经完成
-bool
-Timer::IsSuccess() const
+void Timer::SetTimerManager(timer_manager_ptr manager)
 {
-    return m_success.load();
+    m_manager = manager;
+}
+
+Timer::timer_manager_ptr Timer::GetTimerManager() const
+{
+    return m_manager;
 }
 
 bool
@@ -156,7 +147,7 @@ TimeEvent::TimeEvent(const GHandle handle, EventEngine* engine, TimerManagerType
         m_timer_manager = std::make_shared<PriorityQueueTimerManager>();
         break;
     case TimerManagerType::kTimerManagerTypeRbTree :
-        /*To Do*/
+        m_timer_manager = std::make_shared<RbtreeTimerManager>();
         break;
     case TimerManagerType::kTimerManagerTypeTimeWheel :
         /*To Do*/
@@ -193,7 +184,7 @@ bool TimeEvent::SetEventEngine(EventEngine *engine)
     return true;
 }
 
-EventEngine *TimeEvent::BelongEngine()
+EventEngine* TimeEvent::BelongEngine()
 {
     return m_engine;
 }
@@ -201,7 +192,8 @@ EventEngine *TimeEvent::BelongEngine()
 void TimeEvent::AddTimer(const Timer::ptr &timer, const int64_t timeout)
 {
     timer->ResetTimeout(timeout);
-    timer->Start();
+    timer->SetIsCancel(false);
+    timer->SetTimerManager(m_timer_manager);
     this->m_timer_manager->Push(timer);
     ActiveTimerManager();
 }
@@ -321,4 +313,92 @@ int64_t PriorityQueueTimerManager::OnceLoopTimeout()
 {
     return -1;
 }
+
+
+std::list<Timer::ptr> RbtreeTimerManager::GetArriveredTimers()
+{
+    std::list<Timer::ptr> timers;
+    int64_t now = utils::GetCurrentTimeMs();
+    std::unique_lock lock(this->m_mutex);
+    while (!m_timers.empty() && (*m_timers.begin())->GetDeadline() <= now) {
+        auto timer = *(m_timers.begin());
+        m_timers.erase(m_timers.begin());
+        timers.emplace_back(timer);
+    }
+    return timers;
+}
+
+
+TimerManagerType RbtreeTimerManager::Type()
+{
+    return TimerManagerType::kTimerManagerTypeRbTree;
+}
+
+Timer::ptr RbtreeTimerManager::Top()
+{
+    std::shared_lock lock(m_mutex);
+    if(m_timers.empty()) {
+        return nullptr;
+    }
+    return *m_timers.begin();
+}
+
+bool RbtreeTimerManager::IsEmpty()
+{
+    std::shared_lock lock(m_mutex);
+    return m_timers.empty();
+}
+
+void RbtreeTimerManager::Push(Timer::ptr timer)
+{
+    std::unique_lock lock(m_mutex);
+    m_timers.insert(timer);
+}
+
+void RbtreeTimerManager::UpdateTimers(void *ctx)
+{
+#ifdef __linux__
+    TimeEvent* event = static_cast<TimeEvent*>(ctx);
+    struct timespec abstime;
+    if (IsEmpty())
+    {
+        abstime.tv_sec = 0;
+        abstime.tv_nsec = 0;
+    }
+    else
+    {
+        auto timer = Top();
+        int64_t time = timer->GetRemainTime();
+        if (time != 0)
+        {
+            abstime.tv_sec = time / 1000;
+            abstime.tv_nsec = (time % 1000) * 1000000;
+        }
+        else
+        {
+            abstime.tv_sec = 0;
+            abstime.tv_nsec = 1;
+        }
+    }
+    struct itimerspec its = {
+        .it_interval = {},
+        .it_value = abstime};
+    timerfd_settime(event->m_handle.fd, 0, &its, nullptr);
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+    TimeEvent* event = static_cast<TimeEvent*>(ctx);
+    if(IsEmpty()) {
+        return;
+    } else {
+        auto timer = Top();
+        event->m_engine.load()->ModEvent(event, timer.get());
+    }
+#endif
+}
+
+int64_t RbtreeTimerManager::OnceLoopTimeout()
+{
+    return -1;
+}
+
+
 }

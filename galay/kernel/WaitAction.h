@@ -19,7 +19,6 @@ public:
     ~WaitEvent() override = default;
 protected:
     std::atomic<EventEngine*> m_engine;
-    CoroutineBase::wptr m_waitco;
 };
 
 /*
@@ -31,7 +30,7 @@ class IOEventAction: public WaitAction
 public:
     using ptr = std::shared_ptr<IOEventAction>;
 
-    IOEventAction(EventEngine* engine, WaitEvent* event);
+    IOEventAction(WaitEvent* event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     bool DoAction(CoroutineBase::wptr co, void* ctx) override;
@@ -39,7 +38,6 @@ public:
     details::WaitEvent* GetBindEvent() const { return m_event; };
     ~IOEventAction() override;
 private:
-    EventEngine* m_engine;
     WaitEvent* m_event;
 };
 

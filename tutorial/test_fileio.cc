@@ -49,7 +49,7 @@ Coroutine<void> test(galay::RoutineCtx ctx)
 #else
 galay::Coroutine<void> test(galay::RoutineCtx ctx)
 {
-    galay::AsyncFileDescriptor descriptor(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0));
+    galay::AsyncFileDescriptor descriptor;
     bool sunccess = descriptor.Open("test.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     galay::IOVecHolder<galay::FileIOVec> holder(10 * 1024 * 1024);
     for(int i = 0; i < 10 * 1024 * 1024; ++i) {

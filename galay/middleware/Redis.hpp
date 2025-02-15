@@ -47,6 +47,7 @@ private:
 	bool HandleRedisWrite(EventEngine* engine);
 private:
 	void* m_ctx;
+	CoroutineBase::wptr m_waitco;
 	redis::RedisAsyncSession* m_redis;
 	RedisWaitEventType m_redisWaitType = RedisWaitEventType_None;
 };
@@ -367,15 +368,15 @@ class RedisAsyncSession
 {
 	friend class details::RedisEvent;
 public:
-	RedisAsyncSession(RedisConfig::ptr config, details::SessionScheduler* scheduler = nullptr);
-	RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::SessionScheduler* scheduler = nullptr);	
+	RedisAsyncSession(RedisConfig::ptr config, details::EventScheduler* scheduler = nullptr, details::CoroutineScheduler* coroutine_scheduler = nullptr);
+	RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::EventScheduler* scheduler = nullptr, details::CoroutineScheduler* coroutine_scheduler = nullptr);	
 	template<typename CoRtn>
 	AsyncResult<bool, CoRtn> AsyncConnect(THost host);
 
 	template<typename CoRtn>
 	AsyncResult<RedisAsyncValue, CoRtn> AsyncCommand(const std::string& command);
 
-	void BindReConnectCallbackWithRoutineCtx(RoutineCtx routine);
+	void StartReConnect();
 
 	~RedisAsyncSession();
 private:
@@ -392,12 +393,13 @@ private:
 	int RedisAsyncCommand(const std::string& command);
 private:
 	THost m_host;
+	bool m_reconnect = false;
 	Logger::ptr m_logger;
 	redisAsyncContext* m_redis;
 	RedisConfig::ptr m_config;
 	details::IOEventAction* m_action;
-	details::SessionScheduler* m_scheduler;
-	RoutineCtx m_routine = nullptr;
+	details::EventScheduler* m_scheduler;
+	details::CoroutineScheduler* m_coScheduler;
 };
 
 

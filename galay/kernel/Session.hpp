@@ -21,10 +21,10 @@ public:
     explicit Connection(Socket* socket);
     
     template <typename CoRtn = void>
-    AsyncResult<int, CoRtn> Recv(TcpIOVec *iov, int size);
+    AsyncResult<int, CoRtn> Recv(TcpIOVec *iov, int size, int64_t timeout_ms);
 
     template <typename CoRtn = void>
-    AsyncResult<int, CoRtn> Send(TcpIOVec *iov, int size);
+    AsyncResult<int, CoRtn> Send(TcpIOVec *iov, int size, int64_t timeout_ms);
 
     template <typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();

@@ -8,7 +8,7 @@
 
 namespace galay::details
 {
-inline bool AsyncTcpSocket(AsyncNetEventContext* async_context)
+inline bool AsyncTcpSocket(AsyncNetEventContext* async_context, bool noblock)
 {
     async_context->m_error_code = error::ErrorCode::Error_NoError;
     async_context->m_handle.fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -16,13 +16,15 @@ inline bool AsyncTcpSocket(AsyncNetEventContext* async_context)
         async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
         return false;
     }
-    HandleOption option(async_context->m_handle);
-    option.HandleNonBlock();
+    if(noblock) {
+        HandleOption option(async_context->m_handle);
+        option.HandleNonBlock();
+    }
     return true;
 }
 
 
-inline bool AsyncUdpSocket(AsyncNetEventContext* async_context)
+inline bool AsyncUdpSocket(AsyncNetEventContext* async_context, bool noblock)
 {
     async_context->m_error_code = error::ErrorCode::Error_NoError;
     async_context->m_handle.fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -30,8 +32,10 @@ inline bool AsyncUdpSocket(AsyncNetEventContext* async_context)
         async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_SocketError, errno);
         return false;
     }
-    HandleOption option(async_context->m_handle);
-    option.HandleNonBlock();
+    if(noblock) {
+        HandleOption option(async_context->m_handle);
+        option.HandleNonBlock();
+    }
     return true;
 }
 
@@ -69,7 +73,8 @@ inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetEventContext* async_conte
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeAccept);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    ////async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Accept);
+    async_context->m_timeout = timeout;
     return {async_context->m_action, addr};
 }
 
@@ -78,7 +83,8 @@ inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetEventContext* async_context
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeConnect);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    ////async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Connect);
+    async_context->m_timeout = timeout;
     return {async_context->m_action, addr};
 }
 
@@ -87,8 +93,12 @@ inline AsyncResult<int, CoRtn> AsyncRecv(AsyncNetEventContext* async_context, Tc
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeRecv);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Recv);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
+    if(iov->m_buffer == nullptr) {
+        iov->m_buffer = new char[length];
+    }
     return {async_context->m_action, iov};
 }
 
@@ -97,7 +107,8 @@ inline AsyncResult<int, CoRtn> AsyncSend(AsyncNetEventContext* async_context, Tc
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSend);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Send);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -107,7 +118,8 @@ inline AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetEventContext* async_context
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeRecvFrom);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_RecvFrom);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -117,7 +129,8 @@ inline AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetEventContext* async_context, 
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kUdpWaitEventTypeSendTo);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SendTo);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -147,7 +160,8 @@ inline AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetEventContext* async_co
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslAccept);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLAccept);
+    async_context->m_timeout = timeout;
     return {async_context->m_action, nullptr};
 }
 
@@ -156,7 +170,8 @@ inline AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetEventContext* async_c
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslConnect);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLConnect);
+    async_context->m_timeout = timeout;
     return {async_context->m_action, nullptr};
 }
 
@@ -165,7 +180,8 @@ inline AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetEventContext* async_conte
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslRecv);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLRead);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -175,7 +191,8 @@ inline AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetEventContext* async_conte
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSslSend);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLWrite);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -208,7 +225,8 @@ inline AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileEventContext* async_contex
 {
     static_cast<FileIoWaitEvent*>(async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeRead);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_FileRead);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -218,7 +236,8 @@ inline AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileEventContext* async_conte
 {
     static_cast<FileIoWaitEvent*>(async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeWrite);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    //async_context->m_timeout = timeout;
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_FileWrite);
+    async_context->m_timeout = timeout;
     iov->m_length = length;
     return {async_context->m_action, iov};
 }
@@ -238,21 +257,27 @@ namespace galay
 {
 
 
-inline AsyncNetEventContext* AsyncNetEventContext::Create(details::EventScheduler* scheduler)
+inline AsyncNetEventContext* AsyncNetEventContext::Create()
 {
     auto context = new AsyncNetEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetWaitEvent(context));
-    context->m_ticker = std::make_shared<AsyncTimeoutTicker>();
+    context->m_action = new details::IOEventAction(new details::NetWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncNetEventContext* AsyncNetEventContext::Create(GHandle handle, details::EventScheduler* scheduler)
+inline AsyncNetEventContext* AsyncNetEventContext::Create(GHandle handle)
 {
     auto context = new AsyncNetEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetWaitEvent(context));
-    context->m_ticker = std::make_shared<AsyncTimeoutTicker>();
+    context->m_action = new details::IOEventAction(new details::NetWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = handle;
     return context;
+}
+
+inline void AsyncNetEventContext::Resume()
+{
+    m_timeout = -1;
+    m_resumer->Resume();
 }
 
 inline AsyncNetEventContext::~AsyncNetEventContext()
@@ -264,25 +289,28 @@ inline AsyncNetEventContext::~AsyncNetEventContext()
 }
 
 
-inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(details::EventScheduler* scheduler)
+inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create()
 {
     auto context = new AsyncSslNetEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetSslWaitEvent(context));
+    context->m_action = new details::IOEventAction(new details::NetSslWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(GHandle handle, details::EventScheduler* scheduler)
+inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(GHandle handle)
 {
     auto context = new AsyncSslNetEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetSslWaitEvent(context));
+    context->m_action = new details::IOEventAction(new details::NetSslWaitEvent(context));
     context->m_handle = handle;
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(SSL *ssl, details::EventScheduler* scheduler)
+inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(SSL *ssl)
 {
     auto context = new AsyncSslNetEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::NetSslWaitEvent(context));
+    context->m_action = new details::IOEventAction(new details::NetSslWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = {SSL_get_fd(ssl)};
     context->m_ssl = ssl;
     return context;
@@ -296,17 +324,19 @@ inline AsyncSslNetEventContext::~AsyncSslNetEventContext()
     }
 }
 
-inline AsyncFileEventContext* galay::AsyncFileEventContext::Create(details::EventScheduler* scheduler)
+inline AsyncFileEventContext* galay::AsyncFileEventContext::Create()
 {
     auto context = new AsyncFileEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::FileIoWaitEvent(context));
+    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncFileEventContext* AsyncFileEventContext::Create(GHandle handle, details::EventScheduler* scheduler)
+inline AsyncFileEventContext* AsyncFileEventContext::Create(GHandle handle)
 {
     auto context = new AsyncFileEventContext;
-    context->m_action = new details::IOEventAction(scheduler->GetEngine(), new details::FileIoWaitEvent(context));
+    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = handle;
     return context;
 }
@@ -316,21 +346,26 @@ inline AsyncFileEventContext::~AsyncFileEventContext()
     delete m_action;
 }
 
+inline void AsyncFileEventContext::Resume()
+{
+    m_timeout = -1;
+    m_resumer->Resume();
+}
 
 #ifdef __linux__
 
-inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(details::EventScheduler* scheduler, int maxevents)
+inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(int maxevents)
 {
-    return new AsyncLinuxFileEventContext(scheduler, maxevents);
+    return new AsyncLinuxFileEventContext(maxevents);
 }
 
-inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(GHandle handle, details::EventScheduler* scheduler, int maxevents)
+inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(GHandle handle, int maxevents)
 {
-    return new AsyncLinuxFileEventContext(handle, scheduler, maxevents);
+    return new AsyncLinuxFileEventContext(handle, maxevents);
 }
 
-inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(details::EventScheduler* scheduler, int maxevents)
-    : AsyncFileEventContext(scheduler), m_current_index(0), m_unfinished_io(0)
+inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(int maxevents)
+    : AsyncFileEventContext(), m_current_index(0), m_unfinished_io(0)
 {
     int ret = io_setup(maxevents, &m_ioctx);
     if(ret) {
@@ -345,8 +380,8 @@ inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(details::EventSche
 }
 
 
-inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(GHandle handle, details::EventScheduler* scheduler, int maxevents)
-    :AsyncFileEventContext(handle, scheduler), m_current_index(0), m_unfinished_io(0)
+inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(GHandle handle, int maxevents)
+    :AsyncFileEventContext(handle), m_current_index(0), m_unfinished_io(0)
 {
     int ret = io_setup(maxevents, &m_ioctx);
     if(ret) {
@@ -468,21 +503,21 @@ inline AsyncLinuxFileEventContext::~AsyncLinuxFileEventContext()
 
 
 
-inline AsyncTcpSocket::AsyncTcpSocket(details::EventScheduler* scheduler)
-    :m_async_context(AsyncNetEventContext::Create(scheduler))
+inline AsyncTcpSocket::AsyncTcpSocket()
+    :m_async_context(AsyncNetEventContext::Create())
 {
 }
 
 
-inline AsyncTcpSocket::AsyncTcpSocket(GHandle handle, details::EventScheduler *scheduler)
-    :m_async_context(AsyncNetEventContext::Create(handle, scheduler))
+inline AsyncTcpSocket::AsyncTcpSocket(GHandle handle)
+    :m_async_context(AsyncNetEventContext::Create(handle))
 {
 }
 
 
-inline bool AsyncTcpSocket::Socket() const
+inline bool AsyncTcpSocket::Socket(bool noblock) const
 {
-    return details::AsyncTcpSocket(m_async_context);
+    return details::AsyncTcpSocket(m_async_context, noblock);
 }
 
 
@@ -554,8 +589,8 @@ inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Close()
 }
 
 
-inline AsyncTcpSslSocket::AsyncTcpSslSocket(details::EventScheduler* scheduler)
-    :m_async_context(AsyncSslNetEventContext::Create(scheduler))
+inline AsyncTcpSslSocket::AsyncTcpSslSocket()
+    :m_async_context(AsyncSslNetEventContext::Create())
 {
     if(!SslCtx) {
         SslCtx = GetGlobalSSLCtx();
@@ -563,8 +598,8 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(details::EventScheduler* scheduler)
 }
 
 
-inline AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, details::EventScheduler* scheduler)
-    :m_async_context(AsyncSslNetEventContext::Create(handle, scheduler))
+inline AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle)
+    :m_async_context(AsyncSslNetEventContext::Create(handle))
 {
     if(!SslCtx) {
         SslCtx = GetGlobalSSLCtx();
@@ -575,8 +610,8 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(GHandle handle, details::EventSchedu
 inline SSL_CTX* AsyncTcpSslSocket::SslCtx = nullptr;
 
 
-inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl, details::EventScheduler* scheduler)
-    :m_async_context(AsyncSslNetEventContext::Create(ssl, scheduler))
+inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl)
+    :m_async_context(AsyncSslNetEventContext::Create(ssl))
 {
     if(!SslCtx) {
         SslCtx = GetGlobalSSLCtx();
@@ -584,9 +619,9 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl, details::EventScheduler* s
 }
 
 
-inline bool AsyncTcpSslSocket::Socket() const
+inline bool AsyncTcpSslSocket::Socket(bool noblock) const
 {
-    if(!details::AsyncTcpSocket(m_async_context)){
+    if(!details::AsyncTcpSocket(m_async_context, noblock)){
         return false;
     }
     return details::AsyncSSLSocket(m_async_context, SslCtx);
@@ -667,21 +702,21 @@ inline uint32_t AsyncTcpSslSocket::GetErrorCode() const
     return m_async_context->m_error_code;
 }
 
-inline AsyncUdpSocket::AsyncUdpSocket(details::EventScheduler* scheduler)
-    :m_async_context(AsyncNetEventContext::Create(scheduler))
+inline AsyncUdpSocket::AsyncUdpSocket()
+    :m_async_context(AsyncNetEventContext::Create())
 {
 }
 
 
-inline AsyncUdpSocket::AsyncUdpSocket(GHandle handle, details::EventScheduler* scheduler)
-    :m_async_context(AsyncNetEventContext::Create(handle, scheduler))
+inline AsyncUdpSocket::AsyncUdpSocket(GHandle handle)
+    :m_async_context(AsyncNetEventContext::Create(handle))
 {
 }
 
 
-inline bool AsyncUdpSocket::Socket() const
+inline bool AsyncUdpSocket::Socket(bool noblock) const
 {
-    return details::AsyncUdpSocket(m_async_context);
+    return details::AsyncUdpSocket(m_async_context, noblock);
 }
 
 
@@ -727,14 +762,14 @@ inline AsyncResult<bool, CoRtn> AsyncUdpSocket::Close()
 }
 
 
-inline AsyncFileDescriptor::AsyncFileDescriptor(details::EventScheduler* scheduler)
-    :m_async_context(AsyncFileEventContext::Create(scheduler))
+inline AsyncFileDescriptor::AsyncFileDescriptor()
+    :m_async_context(AsyncFileEventContext::Create())
 {
 }
 
 
-inline AsyncFileDescriptor::AsyncFileDescriptor(GHandle handle, details::EventScheduler* scheduler)
-    :m_async_context(AsyncFileEventContext::Create(handle, scheduler))
+inline AsyncFileDescriptor::AsyncFileDescriptor(GHandle handle)
+    :m_async_context(AsyncFileEventContext::Create(handle))
 {
 }
 
@@ -784,14 +819,14 @@ inline AsyncResult<bool, CoRtn> AsyncFileDescriptor::Close()
 #ifdef __linux__
 
 
-inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(details::EventScheduler* scheduler, int maxevents)
+inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(, int maxevents)
     :m_async_context(AsyncLinuxFileEventContext::Create(engine, maxevents))
 {
     m_async_context->InitialEventHandle();
 }
 
 
-inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, details::EventScheduler* scheduler, int maxevents)
+inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, , int maxevents)
     :m_async_context(AsyncLinuxFileEventContext::Create(handle, engine, maxevents))
 {
     m_async_context->InitialEventHandle();

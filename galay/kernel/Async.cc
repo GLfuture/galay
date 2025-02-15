@@ -91,22 +91,136 @@ uint32_t& HandleOption::GetErrorCode()
     return m_error_code;
 }
 
-void AsyncTimeoutTicker::Execute(details::TimeEvent* event)
-{
-    
-}
-
-bool AsyncTimeoutTicker::Start(details::EventScheduler* scheduler)
-{
-    AsyncTimeoutTicker::wptr this_ptr = weak_from_this();
-    
-    return false;
-}
 
 }
 
 namespace galay::details
 {
+Resumer::Resumer(int64_t& timeout)
+    :m_timeout(timeout)
+{
+}
+
+void Resumer::StartTimeout(int64_t timeout)
+{
+    if(!m_timer) {
+        m_timer = std::make_shared<Timer>([resumer = shared_from_this()](time_event_wptr event, Timer::ptr timer) {
+            Resumer::DoingAsyncTimeout(resumer, event, timer);
+        });
+    }
+    if(m_waitco.expired()) {
+        LogError("Resumer::StartTimeout error, waitco is expired");
+        return;
+    }
+    if(m_timer->IsCancel()) {
+        m_lastest_end_time = utils::GetCurrentTimeMs() + timeout;
+        m_waitco.lock()->GetEventScheduler()->AddTimer(m_timer, timeout);
+    }
+    else {
+        m_lastest_end_time = utils::GetCurrentTimeMs() + timeout;
+    }
+}
+
+void Resumer::Reset(CoroutineBase::wptr waitco)
+{
+    m_resumed.store(false);
+    m_waitco = waitco;
+    m_lastest_end_time = 0;
+}
+
+void Resumer::Reset(CoroutineBase::wptr waitco, Timer::ptr timer)
+{
+    m_resumed.store(false);
+    m_timer = timer;
+    m_waitco = waitco;
+    m_lastest_end_time = 0;
+}
+
+bool Resumer::IsResumed()
+{
+    return m_resumed.load();
+}
+
+bool Resumer::Resume()
+{
+    bool resumed = false;
+    if(m_resumed.compare_exchange_strong(resumed, true)) {
+        m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(m_waitco);
+        return true;
+    } 
+    return false;
+}
+
+void Resumer::SetResumeInterfaceType(ResumeInterfaceType type)
+{
+    m_type = type;
+}
+
+CoroutineBase::wptr Resumer::GetWaitCo()
+{
+    return m_waitco;
+}
+
+int64_t Resumer::GetLastestEndTime()
+{
+    return m_lastest_end_time;
+}
+
+void Resumer::DoingAsyncTimeout(Resumer::ptr resumer, time_event_wptr event, Timer::ptr timer)
+{
+    int64_t now = utils::GetCurrentTimeMs();
+    if (resumer->GetLastestEndTime() <= now) {
+        if(!resumer->IsResumed()) {
+            if(resumer->m_waitco.expired()) return;
+            resumer->m_timeout = -1;
+            switch (resumer->m_type)
+            {
+            case kResumeInterfaceType_Accept:
+                static_cast<Awaiter<GHandle>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult({-1});
+                break;
+            case kResumeInterfaceType_Connect:
+                static_cast<Awaiter<bool>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(false);
+                break;
+            case kResumeInterfaceType_Recv:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_Send:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_RecvFrom:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_SendTo:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_SSLAccept:
+                static_cast<Awaiter<bool>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(false);
+                break;
+            case kResumeInterfaceType_SSLConnect:
+                static_cast<Awaiter<bool>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(false);
+                break;
+            case kResumeInterfaceType_SSLRead:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_SSLWrite:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_FileRead:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            case kResumeInterfaceType_FileWrite:
+                static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
+                break;
+            default:
+                break;
+            }
+            resumer->m_timer->SetIsCancel(true);
+            resumer->Resume();
+        }
+    } else {
+        event.lock()->AddTimer(timer, resumer->GetLastestEndTime() - now);
+    }
+}
 
 NetWaitEvent::NetWaitEvent(AsyncNetEventContext* context)
     :m_type(kWaitEventTypeError), m_async_context(context)
@@ -141,30 +255,43 @@ std::string NetWaitEvent::Name()
 
 bool NetWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void* ctx)
 {
-    this->m_waitco = co;
+    this->m_async_context->m_resumer->Reset(co);
     this->m_ctx = ctx;
+    bool res = false;
     switch (m_type)
     {
     case kWaitEventTypeError:
         return false;
     case kTcpWaitEventTypeAccept:
-        return OnTcpAcceptWaitPrepare(co, ctx);
+        res = OnTcpAcceptWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeRecv:
-        return OnTcpRecvWaitPrepare(co, ctx);
+        res = OnTcpRecvWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeSend:
-        return OnTcpSendWaitPrepare(co, ctx);
+        res = OnTcpSendWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeConnect:
-        return OnTcpConnectWaitPrepare(co, ctx);
+        res = OnTcpConnectWaitPrepare(co, ctx);
+        break;
     case kWaitEventTypeClose:
-        return OnCloseWaitPrepare(co, ctx);
+        res = OnCloseWaitPrepare(co, ctx);
+        break;
     case kUdpWaitEventTypeRecvFrom:
-        return OnUdpRecvfromWaitPrepare(co, ctx);
+        res = OnUdpRecvfromWaitPrepare(co, ctx);
+        break;
     case kUdpWaitEventTypeSendTo:
-        return OnUdpSendtoWaitPrepare(co, ctx);
+        res = OnUdpSendtoWaitPrepare(co, ctx);
+        break;
     default:
         break;
     }
-    return false;
+    if(res) {
+        if(this->m_async_context->m_timeout != -1) {
+            this->m_async_context->m_resumer->StartTimeout(this->m_async_context->m_timeout);
+        }
+    }
+    return res;
 }
 
 void NetWaitEvent::HandleEvent(EventEngine *engine)
@@ -248,7 +375,8 @@ bool NetWaitEvent::OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void *ct
     auto awaiter = static_cast<Awaiter<GHandle>*>(co.lock()->GetAwaiter());
     if( handle.fd < 0 ) {
         if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
-            
+            awaiter->SetResult(std::move(handle));
+            return true;
         }else{
             m_async_context->m_error_code = error::MakeErrorCode(error::Error_AcceptError, errno);
         }
@@ -360,33 +488,51 @@ void NetWaitEvent::HandleErrorEvent(EventEngine *engine)
 
 void NetWaitEvent::HandleTcpAcceptEvent(EventEngine *engine)
 {
+    THost* netaddr = static_cast<THost*>(m_ctx);
+    sockaddr addr{};
+    socklen_t addrlen = sizeof(addr);
+    GHandle handle {
+        .fd = accept(m_async_context->m_handle.fd, &addr, &addrlen),
+    };
+    netaddr->m_ip = inet_ntoa(((sockaddr_in*)&addr)->sin_addr);
+    netaddr->m_port = ntohs(((sockaddr_in*)&addr)->sin_port);
+    LogTrace("[Accept Address: {}:{}]", netaddr->m_ip, netaddr->m_port);
+    auto awaiter = static_cast<Awaiter<GHandle>*>(m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
+    if( handle.fd < 0 ) {
+        if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
+        }else{
+            m_async_context->m_error_code = error::MakeErrorCode(error::Error_AcceptError, errno);
+        }
+    }
+    awaiter->SetResult(std::move(handle));
+    m_async_context->Resume();
 }
 
 
 void NetWaitEvent::HandleTcpRecvEvent(EventEngine *engine)
 {
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(m_ctx));
-    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(std::move(recvBytes));
     //2.唤醒协程
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco.lock());
+    this->m_async_context->Resume();
 }
 
 
 void NetWaitEvent::HandleTcpSendEvent(EventEngine *engine)
 {
     int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(m_ctx));
-    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(std::move(sendBytes));
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    this->m_async_context->Resume();
 }
 
 
 void NetWaitEvent::HandleTcpConnectEvent(EventEngine *engine)
 {
-    auto awaiter = static_cast<Awaiter<bool>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<bool>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(true);
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    this->m_async_context->Resume();
 }
 
 
@@ -399,19 +545,19 @@ void NetWaitEvent::HandleCloseEvent(EventEngine *engine)
 void NetWaitEvent::HandleUdpRecvfromEvent(EventEngine *engine)
 {
     int recvBytes = UdpDealRecvfrom(static_cast<UdpIOVec*>(m_ctx));
-    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(std::move(recvBytes));
     //2.唤醒协程
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    this->m_async_context->Resume();
 }
 
 
 void NetWaitEvent::HandleUdpSendtoEvent(EventEngine *engine)
 {
     int sendBytes = UdpDealSendto(static_cast<UdpIOVec*>(this->m_ctx));
-    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(std::move(sendBytes));
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    this->m_async_context->Resume();
 }
 
 
@@ -570,36 +716,52 @@ EventType NetSslWaitEvent::GetEventType()
 
 bool NetSslWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void* ctx)
 {
-    this->m_waitco = co;
+    this->m_async_context->m_resumer->Reset(co);
     this->m_ctx = ctx;
+    bool res = false;
     switch (this->m_type)
     {
     case kWaitEventTypeError:
         return false;
     case kTcpWaitEventTypeAccept:
-        return OnTcpAcceptWaitPrepare(co, ctx);
+        res = OnTcpAcceptWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeSslAccept:
-        return OnTcpSslAcceptWaitPrepare(co, ctx);
+        res = OnTcpSslAcceptWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeRecv:
-        return OnTcpRecvWaitPrepare(co, ctx);
+        res = OnTcpRecvWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeSslRecv:
-        return OnTcpSslRecvWaitPrepare(co, ctx);
+        res = OnTcpSslRecvWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeSend:
-        return OnTcpSendWaitPrepare(co, ctx);
+        res = OnTcpSendWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeSslSend:
-        return OnTcpSslSendWaitPrepare(co, ctx);
+        res = OnTcpSslSendWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeConnect:
-        return OnTcpConnectWaitPrepare(co, ctx);
+        res = OnTcpConnectWaitPrepare(co, ctx);
+        break;
     case kTcpWaitEventTypeSslConnect:
-        return OnTcpSslConnectWaitPrepare(co, ctx);
+        res = OnTcpSslConnectWaitPrepare(co, ctx);
+        break;
     case kWaitEventTypeClose:
-        return OnCloseWaitPrepare(co, ctx);
+        res = OnCloseWaitPrepare(co, ctx);
+        break;
     case kWaitEventTypeSslClose:
-        return OnTcpSslCloseWaitPrepare(co, ctx);
+        res = OnTcpSslCloseWaitPrepare(co, ctx);
+        break;
     default:
         break;
     }
-    return false;
+    if(res) {
+        if(this->m_async_context->m_timeout != -1) {
+            this->m_async_context->m_resumer->StartTimeout(this->m_async_context->m_timeout);
+        }
+    }
+    return res;
 }
 
 
@@ -750,13 +912,13 @@ bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const CoroutineBase::wptr co, voi
 
 void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 {
-    auto awaiter = static_cast<Awaiter<bool>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<bool>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     SSL* ssl = dynamic_cast<AsyncSslNetEventContext*>(this->m_async_context)->m_ssl;
     const int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", this->m_async_context->m_handle.fd);
     if( r == 1 ){
         awaiter->SetResult(true);
-        this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+        this->m_async_context->Resume();
         return;
     }
     this->m_ssl_error = SSL_get_error(ssl, r);
@@ -765,7 +927,7 @@ void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
     } else {
         awaiter->SetResult(false);
         this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SSLAcceptError, errno);
-        this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+        this->m_async_context->Resume();
     }
     
 }
@@ -773,13 +935,13 @@ void NetSslWaitEvent::HandleTcpSslAcceptEvent(EventEngine *engine)
 
 void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
 {
-    auto awaiter = static_cast<Awaiter<bool>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<bool>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     SSL* ssl = static_cast<AsyncSslNetEventContext*>(this->m_async_context)->m_ssl;
     const int r = SSL_do_handshake(ssl);
     LogTrace("[SSL_do_handshake, handle: {}]", this->m_async_context->m_handle.fd);
     if( r == 1 ){
         awaiter->SetResult(true);
-        this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+        this->m_async_context->Resume();
     }
     this->m_ssl_error = SSL_get_error(ssl, r);
     if( this->m_ssl_error == SSL_ERROR_WANT_READ || this->m_ssl_error == SSL_ERROR_WANT_WRITE ){
@@ -787,7 +949,7 @@ void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
     } else {
         awaiter->SetResult(false);
         this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SSLConnectError, errno);
-        this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+        this->m_async_context->Resume();
     }
     
 }
@@ -796,19 +958,19 @@ void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
 void NetSslWaitEvent::HandleTcpSslRecvEvent(EventEngine *engine)
 {
     int recvBytes = TcpDealRecv(static_cast<TcpIOVec*>(this->m_ctx));
-    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(std::move(recvBytes));
     //2.唤醒协程
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    this->m_async_context->Resume();
 }
 
 
 void NetSslWaitEvent::HandleTcpSslSendEvent(EventEngine *engine)
 {
     int sendBytes = TcpDealSend(static_cast<TcpIOVec*>(this->m_ctx));
-    auto awaiter = static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter());
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(std::move(sendBytes));
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    this->m_async_context->Resume();
 }
 
 
@@ -903,24 +1065,34 @@ std::string FileIoWaitEvent::Name()
 
 bool FileIoWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void *ctx)
 {
-    this->m_waitco = co;
+    this->m_async_context->m_resumer->Reset(co);
     this->m_ctx = ctx;
+    bool res = false;
     switch (m_type)
     {
 #ifdef __linux__
     case kFileIoWaitEventTypeLinuxAio:
-        return OnAioWaitPrepare(co, ctx);
+        res = OnAioWaitPrepare(co, ctx);
+        break;
 #endif
     case kFileIoWaitEventTypeRead:
-        return OnKReadWaitPrepare(co, ctx);
+        res = OnKReadWaitPrepare(co, ctx);
+        break;
     case kFileIoWaitEventTypeWrite:
-        return OnKWriteWaitPrepare(co, ctx);
+        res = OnKWriteWaitPrepare(co, ctx);
+        break;
     case kFileIoWaitEventTypeClose:
-        return OnCloseWaitPrepare(co, ctx);
+        res = OnCloseWaitPrepare(co, ctx);
+        break;
     default:
         break;
     }
-    return false;
+    if(res) {
+        if(this->m_async_context->m_timeout != -1) {
+            this->m_async_context->m_resumer->StartTimeout(this->m_async_context->m_timeout);
+        }
+    }
+    return res;
 }
 
 
@@ -1056,8 +1228,8 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
     LogTrace("[Handle: {}, ReadBytes: {}]", this->m_async_context->m_handle.fd, length);
     engine->DelEvent(this, nullptr);
     iov->m_offset += length;
-    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(std::move(length));
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter())->SetResult(std::move(length));
+    this->m_async_context->Resume();
 }
 
 
@@ -1097,8 +1269,8 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
     LogTrace("[Handle: {}, WriteBytes: {}]", this->m_async_context->m_handle.fd, length);
     engine->DelEvent(this, nullptr);
     iov->m_offset += length;
-    static_cast<Awaiter<int>*>(this->m_waitco.lock()->GetAwaiter())->SetResult(std::move(length));
-    this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+    static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter())->SetResult(std::move(length));
+    this->m_async_context->Resume();
 }
 
 
@@ -1121,5 +1293,7 @@ bool FileIoWaitEvent::OnCloseWaitPrepare(const CoroutineBase::wptr co, void *ctx
     }
     return false;
 }
+
+
 
 }

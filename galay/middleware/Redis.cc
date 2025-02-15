@@ -703,30 +703,30 @@ RedisSession::~RedisSession()
     DisConnect();
 }
 
-RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, details::SessionScheduler* scheduler)
-    : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("AsyncRedisLogger")), m_scheduler(scheduler), m_redis(nullptr)
+RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, details::EventScheduler* scheduler, details::CoroutineScheduler* coroutine_scheduler)
+    : m_config(config), m_logger(Logger::CreateStdoutLoggerMT("AsyncRedisLogger")), m_scheduler(scheduler), m_coScheduler(coroutine_scheduler), m_redis(nullptr)
 {
     if(!m_scheduler) {
-        if(SessionSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {
+        if(EventSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {
             RedisLogError(m_logger->SpdLogger(), "No scheduler available, please start scheduler first.");
             throw std::runtime_error("No scheduler available, please start scheduler first.");
         }
-        m_scheduler = SessionSchedulerHolder::GetInstance()->GetScheduler();
+        m_scheduler = EventSchedulerHolder::GetInstance()->GetScheduler();
     }
-    m_action = new details::IOEventAction(m_scheduler->GetEngine(), new details::RedisEvent(this));
+    m_action = new details::IOEventAction(new details::RedisEvent(this));
 }
 
-RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::SessionScheduler* scheduler)
-    : m_config(config), m_logger(logger), m_scheduler(scheduler), m_redis(nullptr)
+RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::EventScheduler* scheduler, details::CoroutineScheduler* coroutine_scheduler)
+    : m_config(config), m_logger(logger), m_scheduler(scheduler), m_coScheduler(coroutine_scheduler), m_redis(nullptr)
 {
     if(!m_scheduler) {
-        if(SessionSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {
+        if(EventSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {
             RedisLogError(m_logger->SpdLogger(), "No scheduler available, please start scheduler first.");
             throw std::runtime_error("No scheduler available, please start scheduler first.");
         }
-        m_scheduler = SessionSchedulerHolder::GetInstance()->GetScheduler();
+        m_scheduler = EventSchedulerHolder::GetInstance()->GetScheduler();
     }
-    m_action = new details::IOEventAction(m_scheduler->GetEngine(), new details::RedisEvent(this));
+    m_action = new details::IOEventAction(new details::RedisEvent(this));
 }
 
 bool RedisAsyncSession::Connect(const std::string &ehost, int32_t port)
@@ -799,11 +799,6 @@ int RedisAsyncSession::RedisAsyncCommand(const std::string &command)
     return redisAsyncCommand(m_redis, RedisCommandCallback, nullptr, command.c_str()) ;
 }
 
-void RedisAsyncSession::BindReConnectCallbackWithRoutineCtx(RoutineCtx routine)
-{
-    this->m_routine = routine;
-}
-
 RedisAsyncSession::~RedisAsyncSession()
 {
     if(m_action) {
@@ -835,11 +830,10 @@ void RedisAsyncSession::RedisDisconnectCallback(const redisAsyncContext *c, int 
 {
     auto redis = static_cast<RedisAsyncSession*>(c->data);
     RedisLogError(redis->m_logger->SpdLogger(), "[Redis disconnected]");
-    if(redis->m_routine) {
+    if( redis->m_reconnect ) {
         RedisLogInfo(redis->m_logger->SpdLogger(), "[Redis reconnect.....]");
-        redis->ReConnect(redis->m_routine);
+        redis->ReConnect(RoutineCtx::Create(redis->m_scheduler, redis->m_coScheduler));
     }
-
 }
 
 void RedisAsyncSession::RedisCommandCallback(redisAsyncContext *c, void *r, void *privdata)

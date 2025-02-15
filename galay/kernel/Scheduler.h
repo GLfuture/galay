@@ -74,6 +74,7 @@ public:
         TimeWheelTimerManager must be inited before Loop()
     */
     void InitTimeEvent(TimerManagerType type);
+    std::shared_ptr<TimeEvent> GetTimeEvent();
     virtual bool Loop();
     virtual bool Stop();
     bool IsRunning() const;

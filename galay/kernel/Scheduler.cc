@@ -28,6 +28,11 @@ void EventScheduler::InitTimeEvent(TimerManagerType type)
     m_timer_event = std::make_shared<details::TimeEvent>(handle, m_engine.get(), type);
 }
 
+std::shared_ptr<TimeEvent> EventScheduler::GetTimeEvent()
+{
+    return m_timer_event;
+}
+
 bool EventScheduler::Loop()
 {
     this->m_thread = std::make_unique<std::thread>([this](){

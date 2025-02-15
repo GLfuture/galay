@@ -17,7 +17,7 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, 
             }
             co_return;
         }
-        auto new_socket = new galay::AsyncTcpSocket(scheduler);
+        auto new_socket = new galay::AsyncTcpSocket();
         if( !new_socket->Socket(handle) ) {
             delete new_socket;
             co_return;
@@ -41,7 +41,7 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, Even
             }
             co_return;
         }
-        auto new_socket = new AsyncTcpSslSocket(scheduler);
+        auto new_socket = new AsyncTcpSslSocket();
         if( bool res = new_socket->Socket(handle); !res ) {
             delete new_socket;
             co_return;

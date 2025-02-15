@@ -14,6 +14,57 @@
 
 #define DEFAULT_IO_EVENTS_SIZE      1024
 
+namespace galay::details
+{
+
+const int TIMEOUT_RETURN = -2;
+
+enum ResumeInterfaceType
+{
+    kResumeInterfaceType_Accept = 0,
+    kResumeInterfaceType_Connect,
+    kResumeInterfaceType_Recv,
+    kResumeInterfaceType_Send,
+    kResumeInterfaceType_RecvFrom,
+    kResumeInterfaceType_SendTo,
+    kResumeInterfaceType_SSLAccept,
+    kResumeInterfaceType_SSLConnect,
+    kResumeInterfaceType_SSLRead,
+    kResumeInterfaceType_SSLWrite,
+    kResumeInterfaceType_FileRead,
+    kResumeInterfaceType_FileWrite
+};
+
+class Resumer: public std::enable_shared_from_this<Resumer>
+{
+public:
+    using ptr = std::shared_ptr<Resumer>;
+    using time_event_wptr = std::weak_ptr<details::TimeEvent>;
+    Resumer(int64_t& timeout);
+    
+    void StartTimeout(int64_t timeout);
+    void Reset(CoroutineBase::wptr waitco);
+    void Reset(CoroutineBase::wptr waitco, Timer::ptr timer);
+    bool IsResumed();
+    bool Resume();
+
+    void SetResumeInterfaceType(ResumeInterfaceType type);
+    CoroutineBase::wptr GetWaitCo();
+    int64_t GetLastestEndTime();
+
+private:
+    static void DoingAsyncTimeout(Resumer::ptr resumer, time_event_wptr event, Timer::ptr timer);
+private:
+    int64_t& m_timeout;
+    ResumeInterfaceType m_type;
+    int64_t m_lastest_end_time = 0;
+    Timer::ptr m_timer = nullptr;
+    std::atomic_bool m_resumed = false;
+    CoroutineBase::wptr m_waitco;
+};
+
+}
+
 namespace galay
 {
 
@@ -32,22 +83,6 @@ private:
 };
 
 
-class AsyncTimeoutTicker: public std::enable_shared_from_this<AsyncTimeoutTicker>
-{
-public:
-    using ptr = std::shared_ptr<AsyncTimeoutTicker>;
-    using wptr = std::weak_ptr<AsyncTimeoutTicker>;
-
-    void Execute(details::TimeEvent* event);
-
-    bool RefreshTime(int64_t timeout);
-    
-    bool Start(details::EventScheduler* scheduler);
-private:
-    std::atomic_int64_t m_timeout = -1;
-    std::atomic_int64_t m_deadline = -1;
-};
-
 // one coroutine one context
 
 /*
@@ -57,14 +92,17 @@ class AsyncNetEventContext: public std::enable_shared_from_this<AsyncNetEventCon
 {
 public:
 
-    static AsyncNetEventContext* Create(details::EventScheduler* scheduler);
-    static AsyncNetEventContext* Create(GHandle handle, details::EventScheduler* scheduler);
+    static AsyncNetEventContext* Create();
+    static AsyncNetEventContext* Create(GHandle handle);
+
+    void Resume();
 
     virtual ~AsyncNetEventContext();
 
     GHandle m_handle = {};
     uint32_t m_error_code = 0;
-    AsyncTimeoutTicker::ptr m_ticker = nullptr;
+    int64_t m_timeout = 0;
+    details::Resumer::ptr m_resumer = nullptr;
     details::IOEventAction* m_action = nullptr;
 };
 
@@ -72,9 +110,9 @@ public:
 class AsyncSslNetEventContext: public AsyncNetEventContext
 {
 public:
-    static AsyncSslNetEventContext* Create(details::EventScheduler* scheduler);
-    static AsyncSslNetEventContext* Create(GHandle handle, details::EventScheduler* scheduler);
-    static AsyncSslNetEventContext* Create(SSL* ssl, details::EventScheduler* scheduler);
+    static AsyncSslNetEventContext* Create();
+    static AsyncSslNetEventContext* Create(GHandle handle);
+    static AsyncSslNetEventContext* Create(SSL* ssl);
 
     virtual ~AsyncSslNetEventContext();
 
@@ -86,16 +124,18 @@ class AsyncFileEventContext: public std::enable_shared_from_this<AsyncFileEventC
 {
 public:
 
-    static AsyncFileEventContext* Create(details::EventScheduler* scheduler);
-    static AsyncFileEventContext* Create(GHandle handle, details::EventScheduler* scheduler);
+    static AsyncFileEventContext* Create();
+    static AsyncFileEventContext* Create(GHandle handle);
     
     virtual ~AsyncFileEventContext();
 
+    void Resume();
+
     // eventfd
     GHandle m_handle = {};
-
-    int64_t m_timeout = -1;
+    int64_t m_timeout = 0;
     uint32_t m_error_code = 0;
+    details::Resumer::ptr m_resumer = nullptr;
     details::IOEventAction* m_action = nullptr;
 };
 
@@ -112,11 +152,11 @@ class AsyncLinuxFileEventContext: public AsyncFileEventContext
 {
 public:
 
-    static AsyncLinuxFileEventContext* Create(details::EventScheduler* scheduler, int maxevents);
-    static AsyncLinuxFileEventContext* Create(GHandle handle, details::EventScheduler* scheduler, int maxevents);
+    static AsyncLinuxFileEventContext* Create(int maxevents);
+    static AsyncLinuxFileEventContext* Create(GHandle handle, int maxevents);
 
-    explicit AsyncLinuxFileEventContext(details::EventScheduler* scheduler, int maxevents);
-    explicit AsyncLinuxFileEventContext(GHandle handle, details::EventScheduler* scheduler, int maxevents);
+    explicit AsyncLinuxFileEventContext(int maxevents);
+    explicit AsyncLinuxFileEventContext(GHandle handle, int maxevents);
 
     bool InitialEventHandle();
     bool InitialEventHandle(GHandle handle);
@@ -153,9 +193,9 @@ private:
 class AsyncTcpSocket
 {
 public:
-    explicit AsyncTcpSocket(details::EventScheduler* scheduler);
-    explicit AsyncTcpSocket(GHandle handle, details::EventScheduler* scheduler);
-    bool Socket() const;
+    explicit AsyncTcpSocket();
+    explicit AsyncTcpSocket(GHandle handle);
+    bool Socket(bool noblock = true) const;
     bool Socket(GHandle handle);
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
@@ -183,10 +223,10 @@ class AsyncTcpSslSocket
 {
     static SSL_CTX* SslCtx;
 public:
-    explicit AsyncTcpSslSocket(details::EventScheduler* scheduler);
-    explicit AsyncTcpSslSocket(GHandle handle, details::EventScheduler* scheduler);
-    explicit AsyncTcpSslSocket(SSL* ssl, details::EventScheduler* scheduler);
-    bool Socket() const;
+    explicit AsyncTcpSslSocket();
+    explicit AsyncTcpSslSocket(GHandle handle);
+    explicit AsyncTcpSslSocket(SSL* ssl);
+    bool Socket(bool noblock = true) const;
     bool Socket(GHandle handle);
     bool Bind(const std::string& addr, int port);
     bool Listen(int backlog);
@@ -217,9 +257,9 @@ class AsyncUdpSocket
 {
 public:
     using ptr = std::shared_ptr<AsyncUdpSocket>;
-    explicit AsyncUdpSocket(details::EventScheduler* scheduler);
-    explicit AsyncUdpSocket(GHandle handle, details::EventScheduler* scheduler);
-    bool Socket() const;
+    explicit AsyncUdpSocket();
+    explicit AsyncUdpSocket(GHandle handle);
+    bool Socket(bool noblock = true) const;
     bool Bind(const std::string& addr, int port);
     template<typename CoRtn = void>
     AsyncResult<int, CoRtn> RecvFrom(UdpIOVec* iov, size_t length, int64_t timeout = -1);
@@ -239,8 +279,8 @@ class AsyncFileDescriptor
 {
 public:
     using ptr = std::shared_ptr<AsyncFileDescriptor>;
-    explicit AsyncFileDescriptor(details::EventScheduler* scheduler);
-    explicit AsyncFileDescriptor(GHandle handle, details::EventScheduler* scheduler);
+    explicit AsyncFileDescriptor();
+    explicit AsyncFileDescriptor(GHandle handle);
     bool Open(const char* path, int flags, mode_t mode);
     template<typename CoRtn = void>
     AsyncResult<int, CoRtn> Read(FileIOVec* iov, size_t length, int64_t timeout = -1);
@@ -261,8 +301,8 @@ class AsyncFileNativeAioDescriptor
 {
 public:
     using ptr = std::shared_ptr<AsyncFileNativeAioDescriptor>;
-    explicit AsyncFileNativeAioDescriptor(details::EventScheduler* scheduler, int maxevents);
-    explicit AsyncFileNativeAioDescriptor(GHandle handle, details::EventScheduler* scheduler, int maxevents);
+    explicit AsyncFileNativeAioDescriptor(, int maxevents);
+    explicit AsyncFileNativeAioDescriptor(GHandle handle, int maxevents);
     bool Open(const char* path, int flags, mode_t mode);
 
     bool PrepareRead(char* buf, size_t len, long long offset, AioCallback* callback = nullptr);
@@ -313,7 +353,8 @@ enum NetWaitEventType
 
 enum CommonFailedType
 {
-    eCommonOtherFailed = -2,
+    eCommonOtherFailed = -3,
+    eCommonTimeOutFailed = -2,
     eCommonNonBlocking,
     eCommonDisConnect = 0,
 };
@@ -395,15 +436,6 @@ private:
 };
 
 
-class UdpWaitEvent: public WaitEvent
-{
-public:
-    
-private:
-    sockaddr* m_ToAddr = nullptr;
-    sockaddr* m_FromAddr = nullptr;
-};
-
 enum FileIoWaitEventType
 {
     kFileIoWaitEventTypeError,
@@ -458,9 +490,9 @@ namespace galay::details
 ****************************
 */
 
-bool AsyncTcpSocket(AsyncNetEventContext* async_context);
+bool AsyncTcpSocket(AsyncNetEventContext* async_context, bool noblock);
 
-bool AsyncUdpSocket(AsyncNetEventContext* async_context);
+bool AsyncUdpSocket(AsyncNetEventContext* async_context, bool noblock);
 
 bool Bind(AsyncNetEventContext* async_context, const std::string& addr, int port);
 

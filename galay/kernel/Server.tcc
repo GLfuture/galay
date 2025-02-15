@@ -184,7 +184,7 @@ inline void TcpServer<SocketType>::Start(THost host)
     m_listen_events.resize(requiredEventSchedulerNum);
     for(int i = 0 ; i < requiredEventSchedulerNum; ++i )
     {
-        SocketType* socket = new SocketType(EventSchedulerHolder::GetInstance()->GetScheduler(i));
+        SocketType* socket = new SocketType();
         if(const bool res = socket->Socket(); !res ) {
             delete socket;
             for(int j = 0; j < i; ++j ){
@@ -313,9 +313,10 @@ inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typenam
     {
 step1:
         while(true) {
-            int length = co_await connection->Recv(&rholder, max_header_size);
+            int length = co_await connection->Recv(&rholder, max_header_size, 5000);
             if( length <= 0 ) {
-                if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
+                if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed \
+                    || length == details::CommonFailedType::eCommonTimeOutFailed ) {
                     bool res = co_await connection->Close();
                     co_return;
                 }
@@ -372,7 +373,7 @@ step1:
 step2:
         while (true)
         {
-            int length = co_await connection->Send(&wholder, wholder->m_size);
+            int length = co_await connection->Send(&wholder, wholder->m_size, 5000);
             if( length <= 0 ) {
                 close_connection = true;
                 break;

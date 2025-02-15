@@ -2,7 +2,7 @@
 #include "galay/kernel/EventEngine.h"
 #include <iostream>
 
-#define TEST_SLEEP
+#define TEST_ASYNC_TIMEOUT
 
 #ifdef TEST_SLEEP
 galay::Coroutine<void> test(galay::RoutineCtx ctx)
@@ -42,6 +42,7 @@ int main()
     galay::GalayEnvConf conf;
     conf.m_coroutineSchedulerConf.m_thread_num = 1;
     conf.m_eventSchedulerConf.m_thread_num = 1;
+    conf.m_eventSchedulerConf.m_time_manager_type = galay::EventSchedulerTimerManagerType::kEventSchedulerTimerManagerTypeRbTree;
     galay::GalayEnv env(conf);
     test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
     std::cout << "main thread wait..." << std::endl;
@@ -131,6 +132,38 @@ int main()
     scheduler.AddTimer(timer2, 500);
     getchar();
     scheduler.Stop();
+    return 0;
+}
+
+#elif defined(TEST_ASYNC_TIMEOUT)
+
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
+{
+    galay::AsyncTcpSocket socket;
+    socket.Socket();
+    socket.Bind("127.0.0.1", 8090);
+    socket.Listen(10);
+    while(true) {
+        galay::THost host;
+        GHandle handle = co_await socket.Accept<void>(&host, 10000);
+        std::cout << "accept :" << host.m_ip << ": " << host.m_port << std::endl;
+        std::cout << "handle :" << handle.fd << std::endl << "------------------------\n";
+        galay::TcpIOVec vec;
+        int byte = co_await socket.Recv<void>(&vec, 512, 10000);
+        std::cout << "recv :" << byte << " : " << std::string(vec.m_buffer, byte) << std::endl;
+        co_return;
+    };
+    
+}
+
+int main()
+{
+    galay::GalayEnvConf conf;
+    conf.m_coroutineSchedulerConf.m_thread_num = 1;
+    conf.m_eventSchedulerConf.m_thread_num = 1;
+    galay::GalayEnv env(conf);
+    test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
+    getchar();
     return 0;
 }
 

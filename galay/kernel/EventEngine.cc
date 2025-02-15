@@ -56,6 +56,11 @@ EpollEventEngine::Loop(int timeout)
             Event* event = (Event*)m_events[i].data.ptr;
             event->HandleEvent(this);
         }
+        if(! m_once_loop_cbs.empty() ) {
+            for(auto& callback: m_once_loop_cbs) {
+                callback();
+            }
+        }
     } while (!this->m_stop);
     return true;
 }
@@ -249,6 +254,11 @@ bool KqueueEventEngine::Loop(int timeout)
         {
             Event* event = (Event*)m_events[i].udata;
             event->HandleEvent(this);
+        }
+        if(! m_once_loop_cbs.empty() ) {
+            for(auto& callback: m_once_loop_cbs) {
+                callback();
+            }
         }
     } while (!this->m_stop);
     return true;

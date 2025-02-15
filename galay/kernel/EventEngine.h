@@ -3,8 +3,9 @@
 #include "galay/common/Base.h"
 #include <string>
 #include <atomic>
-#include <vector>
+#include <list>
 #include <memory>
+#include <functional>
 
 namespace galay::details
 {
@@ -32,6 +33,7 @@ public:
     virtual GHandle GetHandle() = 0;
     virtual uint32_t GetMaxEventSize() = 0;
     virtual void ResetMaxEventSize(uint32_t size) = 0;
+    virtual void RegisterOnceLoopCallback(std::function<void()>&& callback) = 0;
     virtual ~EventEngine() = default;
 protected:
     std::atomic_uint32_t m_id;
@@ -52,6 +54,7 @@ public:
     virtual uint32_t GetErrorCode() const override { return m_error_code; }
     virtual GHandle GetHandle() override { return m_handle; }
     virtual uint32_t GetMaxEventSize() override { return m_event_size; }
+    void RegisterOnceLoopCallback(std::function<void()>&& callback) override { m_once_loop_cbs.push_back(std::move(callback)); }
 
     /*
         设置步骤
@@ -66,9 +69,10 @@ private:
 private:
     GHandle m_handle;
     uint32_t m_error_code;
+    std::atomic_bool m_stop;
     std::atomic_uint32_t m_event_size;
     std::atomic<epoll_event*> m_events;
-    std::atomic_bool m_stop;
+    std::list<std::function<void()>> m_once_loop_cbs; 
 };
 #elif defined(USE_IOURING)
 class IoUringEventEngine
@@ -98,6 +102,7 @@ public:
     GHandle GetHandle() override { return m_handle; }
     uint32_t GetMaxEventSize() override { return m_event_size; }
     void ResetMaxEventSize(const uint32_t size) override { m_event_size = size; }
+    void RegisterOnceLoopCallback(std::function<void()>&& callback) override { m_once_loop_cbs.push_back(std::move(callback)); }
     ~KqueueEventEngine() override;
 private:
     bool ConvertToKEvent(struct kevent &ev, Event *event, void* ctx);
@@ -107,6 +112,7 @@ private:
     std::atomic_bool m_stop;
     std::atomic_uint32_t m_event_size;
     std::atomic<struct kevent*> m_events;
+    std::list<std::function<void()>> m_once_loop_cbs; 
 };
 
 #endif

@@ -46,7 +46,7 @@ void pack(galay::details::EventScheduler* scheduler, std::vector<galay::AsyncTcp
 
 galay::AsyncTcpSocket* initSocket()
 {
-    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0));
+    galay::AsyncTcpSocket* socket = new galay::AsyncTcpSocket();
     socket->Socket();
     return socket;
 }

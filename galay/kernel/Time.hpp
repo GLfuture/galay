@@ -6,6 +6,7 @@
 #include <atomic>
 #include <string>
 #include <queue>
+#include <set>
 #include <list>
 #include <functional>
 #include <shared_mutex>
@@ -15,6 +16,7 @@
 
 namespace galay::details {
 class TimeEvent;
+class TimerManager;
 }
 
 namespace galay 
@@ -43,28 +45,32 @@ public:
         bool operator()(const Timer::ptr &a, const Timer::ptr &b) const;
     };
 
-    using timer_callback = std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)>;
+    using timer_callback_t = std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)>;
+    using timer_manager_ptr = std::weak_ptr<details::TimerManager>;
 
-    static Timer::ptr Create(timer_callback &&func);
+    static Timer::ptr Create(timer_callback_t &&func);
 
-    Timer(timer_callback &&func);
-    int64_t GetTimeout() const;
+    Timer(timer_callback_t &&func);
     int64_t GetDeadline() const;
+    int64_t GetTimeout() const;
     int64_t GetRemainTime() const;
     std::any& GetUserData() { return m_context; };
+    //取消状态的Timer才能调用
     bool ResetTimeout(int64_t timeout);
-    bool ResetTimeout(int64_t timeout, timer_callback &&func);
+
+
     void Execute(std::weak_ptr<details::TimeEvent> event);
-    bool Start();
-    bool Cancle();
-    bool IsSuccess() const;
+    void SetIsCancel(bool cancel);
+    bool IsCancel() const;
+
+    void SetTimerManager(timer_manager_ptr manager);
+    timer_manager_ptr GetTimerManager() const;
 private:
     std::any m_context;
     std::atomic_int64_t m_deadline{ -1 };
-    std::atomic_int64_t m_timeout{ -1 };
-    std::atomic_bool m_cancle{true};
-    std::atomic_bool m_success{false};
-    std::function<void(std::weak_ptr<details::TimeEvent>, Timer::ptr)> m_callback;
+    std::atomic_bool m_cancel {true};
+    timer_callback_t m_callback;
+    timer_manager_ptr m_manager;
 };
 
 }
@@ -98,12 +104,14 @@ class TimerManager
 {
 public:
     using ptr = std::shared_ptr<TimerManager>;
+    using wptr = std::weak_ptr<TimerManager>;
 
     virtual std::list<Timer::ptr> GetArriveredTimers() = 0;
     virtual TimerManagerType Type() = 0;
     virtual Timer::ptr Top() = 0;
     virtual bool IsEmpty()= 0;
-    virtual void Push(Timer::ptr) = 0;
+    virtual size_t Size() = 0;
+    virtual void Push(Timer::ptr timer) = 0;
     virtual void UpdateTimers(void* ctx) = 0;
     virtual int64_t OnceLoopTimeout() = 0;
 };
@@ -116,6 +124,7 @@ public:
     TimerManagerType Type() override;
     Timer::ptr Top() override;
     bool IsEmpty() override;
+    size_t Size() override { std::shared_lock lock(m_mutex); return m_timers.size(); }
     void Push(Timer::ptr timer) override;
     void UpdateTimers(void* ctx) override;
     int64_t OnceLoopTimeout() override;
@@ -123,6 +132,39 @@ private:
     std::shared_mutex m_mutex;
     std::priority_queue<Timer::ptr, std::vector<std::shared_ptr<galay::Timer>>, Timer::TimerCompare> m_timers;  
 };
+
+class RbtreeTimerManager: public TimerManager
+{
+public:
+    using ptr = std::shared_ptr<RbtreeTimerManager>;
+    std::list<Timer::ptr> GetArriveredTimers() override;
+    TimerManagerType Type() override;
+    Timer::ptr Top() override;
+    size_t Size() override { std::shared_lock lock(m_mutex); return m_timers.size(); }
+    bool IsEmpty() override;
+    void Push(Timer::ptr timer) override;
+    void UpdateTimers(void* ctx) override;
+    int64_t OnceLoopTimeout() override;
+private:
+    std::shared_mutex m_mutex;
+    std::set<Timer::ptr, Timer::TimerCompare> m_timers;
+};
+
+
+// class TimeWheelTimerManager: public TimerManager
+// {
+// public:
+//     using ptr = std::shared_ptr<TimeWheelTimerManager>;
+//     std::list<Timer::ptr> GetArriveredTimers() override;
+//     TimerManagerType Type() override;
+//     Timer::ptr Top() override;
+//     bool IsEmpty() override;
+//     void Push(Timer::ptr timer) override;
+//     void UpdateTimers(void* ctx) override;
+//     int64_t OnceLoopTimeout() override;
+// private:
+
+// };
 
 
 
@@ -134,6 +176,7 @@ protected:
 #endif
 
     friend class PriorityQueueTimerManager;
+    friend class RbtreeTimerManager;
 public:
     using ptr = std::shared_ptr<TimeEvent>;
     using wptr = std::weak_ptr<TimeEvent>;
@@ -151,6 +194,8 @@ public:
     EventEngine* BelongEngine() override;
 
     void AddTimer(const Timer::ptr& timer, const int64_t timeout);
+
+    TimerManager::ptr GetTimerManager() { return m_timer_manager; };
     
     virtual ~TimeEvent();
 private:

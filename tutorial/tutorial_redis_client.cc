@@ -45,9 +45,11 @@ void test()
 
 int main() 
 {
-    galay::GalayEnv env({});
+    galay::GalayEnvConf conf;
+    conf.m_eventSchedulerConf.m_thread_num = 1;
+    galay::GalayEnv env(conf);
 #ifdef TEST_ASYNC
-    test(galay::RoutineCtx::Create());
+    test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
     getchar();
 #elif defined(TEST_SYNC)
     test();
