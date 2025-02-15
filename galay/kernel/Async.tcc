@@ -356,12 +356,19 @@ inline void AsyncFileEventContext::Resume()
 
 inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(int maxevents)
 {
-    return new AsyncLinuxFileEventContext(maxevents);
+    auto context = new AsyncLinuxFileEventContext(maxevents);
+    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
+    return context;
 }
 
 inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(GHandle handle, int maxevents)
 {
-    return new AsyncLinuxFileEventContext(handle, maxevents);
+    auto context = new AsyncLinuxFileEventContext(maxevents);
+    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
+    context->m_handle = handle;
+    return context;
 }
 
 inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(int maxevents)
@@ -377,111 +384,6 @@ inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(int maxevents)
     for (int i = 0 ; i < maxevents; ++i) {
         m_iocb_ptrs[i] = &m_iocbs[i];   
     }
-}
-
-
-inline AsyncLinuxFileEventContext::AsyncLinuxFileEventContext(GHandle handle, int maxevents)
-    :AsyncFileEventContext(handle), m_current_index(0), m_unfinished_io(0)
-{
-    int ret = io_setup(maxevents, &m_ioctx);
-    if(ret) {
-        this->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSetupError, errno);
-        return;
-    }
-    m_iocbs.resize(maxevents);
-    m_iocb_ptrs.resize(maxevents); 
-    for (int i = 0 ; i < maxevents; ++i) {
-        m_iocb_ptrs[i] = &m_iocbs[i];   
-    }
-}
-
-
-inline bool AsyncLinuxFileEventContext::InitialEventHandle()
-{
-    m_event_handle.fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
-    if(m_event_handle.fd < 0) return false;
-    return true;
-}
-
-
-inline bool AsyncLinuxFileEventContext::InitialEventHandle(GHandle handle)
-{
-    m_event_handle.fd = handle.fd;
-    return true;
-}
-
-
-inline bool AsyncLinuxFileEventContext::CloseEventHandle()
-{
-    int ret = close(m_event_handle.fd);
-    if(ret < 0) return false;
-    m_event_handle.fd = 0;
-    return true;
-}
-
-
-inline bool AsyncLinuxFileEventContext::PrepareRead(char *buf, size_t len, long long offset, AioCallback* callback)
-{
-    uint32_t num = this->m_current_index.load();
-    if(num >= this->m_iocbs.size()) return false;
-    if(!this->m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!this->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_pread(this->m_iocb_ptrs[num], this->m_handle.fd, buf, len, offset);
-    io_set_eventfd(this->m_iocb_ptrs[num], this->m_event_handle.fd);
-    this->m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-
-inline bool AsyncLinuxFileEventContext::PrepareWrite(char *buf, size_t len, long long offset, AioCallback* callback)
-{
-    uint32_t num = this->m_current_index.load();
-    if(num >= this->m_iocbs.size()) return false;
-    if(!this->m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!this->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_pwrite(this->m_iocb_ptrs[num], this->m_handle.fd, buf, len, offset);
-    io_set_eventfd(this->m_iocb_ptrs[num], this->m_event_handle.fd);
-    this->m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-
-inline bool AsyncLinuxFileEventContext::PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback)
-{
-    uint32_t num = this->m_current_index.load();
-    if(num >= this->m_iocbs.size()) return false;
-    if(!this->m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!this->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_preadv(this->m_iocb_ptrs[num], this->m_handle.fd, iov, count, offset);
-    io_set_eventfd(this->m_iocb_ptrs[num], this->m_event_handle.fd);
-    this->m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-
-inline bool AsyncLinuxFileEventContext::PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback)
-{
-    uint32_t num = this->m_current_index.load();
-    if(num >= this->m_iocbs.size()) return false;
-    if(!this->m_current_index.compare_exchange_strong(num, num + 1)) return false;
-    if(!this->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
-    io_prep_pwritev(this->m_iocb_ptrs[num], this->m_handle.fd, iov, count, offset);
-    io_set_eventfd(this->m_iocb_ptrs[num], this->m_event_handle.fd);
-    this->m_iocb_ptrs[num]->data = callback;
-    return true;
-}
-
-template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncLinuxFileEventContext::Commit()
-{
-    int ret = io_submit(this->m_ioctx, this->m_unfinished_io, this->m_iocb_ptrs.data());
-    if( ret < 0 ) {
-        this->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSubmitError, -ret);
-        return AsyncResult<int, CoRtn>(-1);
-    }
-    this->m_current_index = 0;
-    static_cast<details::FileIoWaitEvent*>(this->m_action->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
-    return {this->m_action, nullptr};
 }
 
 
@@ -819,17 +721,17 @@ inline AsyncResult<bool, CoRtn> AsyncFileDescriptor::Close()
 #ifdef __linux__
 
 
-inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(, int maxevents)
-    :m_async_context(AsyncLinuxFileEventContext::Create(engine, maxevents))
+inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(int maxevents)
+    :m_async_context(AsyncLinuxFileEventContext::Create(maxevents))
 {
-    m_async_context->InitialEventHandle();
+    m_async_context->m_event_handle.fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
 }
 
 
-inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, , int maxevents)
-    :m_async_context(AsyncLinuxFileEventContext::Create(handle, engine, maxevents))
+inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle, int maxevents)
+    :m_async_context(AsyncLinuxFileEventContext::Create(handle, maxevents))
 {
-    m_async_context->InitialEventHandle();
+    m_async_context->m_event_handle.fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC | EFD_SEMAPHORE);
 }
 
 
@@ -841,31 +743,66 @@ inline bool AsyncFileNativeAioDescriptor::Open(const char *path, int flags, mode
 
 inline bool AsyncFileNativeAioDescriptor::PrepareRead(char *buf, size_t len, long long offset, AioCallback *callback)
 {
-    return m_async_context->PrepareRead(buf, len, offset, callback);
+    uint32_t num = m_async_context->m_current_index.load();
+    if(num >= m_async_context->m_iocbs.size()) return false;
+    if(!m_async_context->m_current_index.compare_exchange_strong(num, num + 1)) return false;
+    if(!m_async_context->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
+    io_prep_pread(m_async_context->m_iocb_ptrs[num], m_async_context->m_handle.fd, buf, len, offset);
+    io_set_eventfd(m_async_context->m_iocb_ptrs[num], m_async_context->m_event_handle.fd);
+    m_async_context->m_iocb_ptrs[num]->data = callback;
+    return true;
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareWrite(char *buf, size_t len, long long offset, AioCallback *callback)
 {
-    return m_async_context->PrepareWrite(buf, len, offset, callback);
+    uint32_t num = m_async_context->m_current_index.load();
+    if(num >= m_async_context->m_iocbs.size()) return false;
+    if(!m_async_context->m_current_index.compare_exchange_strong(num, num + 1)) return false;
+    if(!m_async_context->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
+    io_prep_pwrite(m_async_context->m_iocb_ptrs[num], m_async_context->m_handle.fd, buf, len, offset);
+    io_set_eventfd(m_async_context->m_iocb_ptrs[num], m_async_context->m_event_handle.fd);
+    m_async_context->m_iocb_ptrs[num]->data = callback;
+    return true;
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareReadV(iovec *iov, int count, long long offset, AioCallback *callback)
 {
-    return m_async_context->PrepareReadV(iov, count, offset, callback);
+    uint32_t num = m_async_context->m_current_index.load();
+    if(num >= m_async_context->m_iocbs.size()) return false;
+    if(!m_async_context->m_current_index.compare_exchange_strong(num, num + 1)) return false;
+    if(!m_async_context->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
+    io_prep_preadv(m_async_context->m_iocb_ptrs[num], m_async_context->m_handle.fd, iov, count, offset);
+    io_set_eventfd(m_async_context->m_iocb_ptrs[num], m_async_context->m_event_handle.fd);
+    m_async_context->m_iocb_ptrs[num]->data = callback;
+    return true;
 }
 
 
 inline bool AsyncFileNativeAioDescriptor::PrepareWriteV(iovec *iov, int count, long long offset, AioCallback *callback)
 {
-    return m_async_context->PrepareWriteV(iov, count, offset, callback);
+    uint32_t num = m_async_context->m_current_index.load();
+    if(num >= m_async_context->m_iocbs.size()) return false;
+    if(!m_async_context->m_current_index.compare_exchange_strong(num, num + 1)) return false;
+    if(!m_async_context->m_unfinished_io.compare_exchange_strong(num, num + 1)) return false;
+    io_prep_pwritev(m_async_context->m_iocb_ptrs[num], m_async_context->m_handle.fd, iov, count, offset);
+    io_set_eventfd(m_async_context->m_iocb_ptrs[num], m_async_context->m_event_handle.fd);
+    m_async_context->m_iocb_ptrs[num]->data = callback;
+    return true;
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncFileNativeAioDescriptor::Commit()
 {
-    return m_async_context->Commit<CoRtn>();
+    int ret = io_submit(m_async_context->m_ioctx, m_async_context->m_unfinished_io, m_async_context->m_iocb_ptrs.data());
+    if( ret < 0 ) {
+        m_async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_LinuxAioSubmitError, -ret);
+        return AsyncResult<int, CoRtn>(-1);
+    }
+    m_async_context->m_current_index = 0;
+    static_cast<details::FileIoWaitEvent*>(m_async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
+    return {m_async_context->m_action, nullptr};
 }
 
 template <typename CoRtn>
@@ -877,7 +814,7 @@ inline AsyncResult<bool, CoRtn> AsyncFileNativeAioDescriptor::Close()
 
 inline AsyncFileNativeAioDescriptor::~AsyncFileNativeAioDescriptor()
 {
-    m_async_context->CloseEventHandle();
+    if(m_async_context->m_event_handle.fd > 0) close(m_async_context->m_event_handle.fd);
     if( m_async_context ) {
         delete m_async_context;
         m_async_context = nullptr;

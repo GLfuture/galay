@@ -88,7 +88,7 @@ private:
 /*
     一个接口用同一个context
 */
-class AsyncNetEventContext: public std::enable_shared_from_this<AsyncNetEventContext>
+class AsyncNetEventContext
 {
 public:
 
@@ -120,7 +120,7 @@ public:
 };
 
 
-class AsyncFileEventContext: public std::enable_shared_from_this<AsyncFileEventContext>
+class AsyncFileEventContext
 {
 public:
 
@@ -131,7 +131,6 @@ public:
 
     void Resume();
 
-    // eventfd
     GHandle m_handle = {};
     int64_t m_timeout = 0;
     uint32_t m_error_code = 0;
@@ -156,29 +155,10 @@ public:
     static AsyncLinuxFileEventContext* Create(GHandle handle, int maxevents);
 
     explicit AsyncLinuxFileEventContext(int maxevents);
-    explicit AsyncLinuxFileEventContext(GHandle handle, int maxevents);
-
-    bool InitialEventHandle();
-    bool InitialEventHandle(GHandle handle);
-    bool CloseEventHandle();
-    /*
-        return false at m_current_index == maxevents or m_current_index atomic operation;
-    */
-    bool PrepareRead(char* buf, size_t len, long long offset, AioCallback* callback = nullptr);
-    bool PrepareWrite(char* buf, size_t len, long long offset, AioCallback* callback = nullptr);
-
-    bool PrepareReadV(iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
-    bool PrepareWriteV(iovec* iov, int count, long long offset, AioCallback* callback = nullptr);
-
-    template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Commit();
     
-    GHandle GetEventHandle() { return m_event_handle; }
-    io_context_t GetIoContext() { return m_ioctx; }
     bool IoFinished(uint64_t finished_io);
-    uint32_t GetUnfinishedIO() { return m_current_index; }
     virtual ~AsyncLinuxFileEventContext();
-private:
+
     GHandle m_event_handle;
     io_context_t m_ioctx;
     std::vector<iocb> m_iocbs;
@@ -301,7 +281,7 @@ class AsyncFileNativeAioDescriptor
 {
 public:
     using ptr = std::shared_ptr<AsyncFileNativeAioDescriptor>;
-    explicit AsyncFileNativeAioDescriptor(, int maxevents);
+    explicit AsyncFileNativeAioDescriptor(int maxevents);
     explicit AsyncFileNativeAioDescriptor(GHandle handle, int maxevents);
     bool Open(const char* path, int flags, mode_t mode);
 
@@ -315,12 +295,12 @@ public:
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
-    GHandle GetEventHandle() { return m_async_context->GetEventHandle(); }
-    GHandle GetHandle() const { return m_async_context->GetHandle(); }
-    uint32_t GetErrorCode() const { return m_async_context->GetErrorCode(); }
+    GHandle GetEventHandle() { return m_async_context->m_event_handle; }
+    GHandle GetHandle() const { return m_async_context->m_handle; }
+    uint32_t GetErrorCode() const { return m_async_context->m_error_code; }
     ~AsyncFileNativeAioDescriptor();
 private:
-    AsyncLinuxFileEventContext*  m_async_context;
+    AsyncLinuxFileEventContext* m_async_context;
 };
 
 #endif
@@ -557,6 +537,7 @@ template<typename CoRtn = void>
 extern AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileEventContext* afile, FileIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
 extern AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileEventContext* afile);
+
 
 
 

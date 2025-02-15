@@ -301,7 +301,10 @@ private:
 };
 
 
+}
 
+namespace galay
+{
 
 #define GET HttpMethod::Http_Method_Get
 #define POST HttpMethod::Http_Method_Post
@@ -316,8 +319,6 @@ private:
 #define HTTP_1_0 HttpVersion::Http_Version_1_0
 #define HTTP_1_1 HttpVersion::Http_Version_1_1
 #define HTTP_2_0 HttpVersion::Http_Version_2_0
-
-
 
 }
     

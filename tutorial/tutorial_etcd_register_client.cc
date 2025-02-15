@@ -1,5 +1,5 @@
-#include "galay/galay.hpp"
 #include "galay/middleware/Etcd.hpp"
+#include "galay/galay.hpp"
 
 galay::Coroutine<void> func(galay::RoutineCtx ctx)
 {
@@ -12,9 +12,11 @@ galay::Coroutine<void> func(galay::RoutineCtx ctx)
 
 int main()
 {
-    galay::InitializeGalayEnv({1, -1}, {0, -1}, {0, -1});
-    func(galay::RoutineCtx::Create());
+    galay::GalayEnvConf conf;
+    conf.m_coroutineSchedulerConf.m_thread_num = 1;
+    conf.m_eventSchedulerConf.m_thread_num = 1;
+    galay::GalayEnv env(conf);
+    func(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
     getchar();
-    galay::DestroyGalayEnv();
     return 0;
 }

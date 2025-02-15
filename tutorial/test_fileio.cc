@@ -13,7 +13,7 @@ using galay::Coroutine;
 Coroutine<void> test(galay::RoutineCtx ctx)
 {
     galay::details::InternelLogger::GetInstance()->GetLogger()->SpdLogger()->set_level(spdlog::level::trace);
-    galay::AsyncFileNativeAioDescriptor descriptor(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)->GetEngine(),1024);
+    galay::AsyncFileNativeAioDescriptor descriptor(1024);
     bool res = descriptor.Open("test.txt", O_RDWR | O_CREAT, 0644);
     if(!res) {
         printf("open file failed\n");

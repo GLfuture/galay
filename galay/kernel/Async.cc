@@ -1145,7 +1145,7 @@ GHandle FileIoWaitEvent::GetHandle()
     {
 #ifdef __linux__
     case kFileIoWaitEventTypeLinuxAio:
-        return static_cast<AsyncLinuxFileEventContext*>(this->m_async_context.get())->m_handle;
+        return static_cast<AsyncLinuxFileEventContext*>(this->m_async_context)->m_event_handle;
 #endif
     default:
         break;
@@ -1173,9 +1173,9 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
 {
     uint64_t finish_nums = 0;
     auto async_context = static_cast<AsyncLinuxFileEventContext*>(this->m_async_context);
-    int ret = read(async_context->GetEventHandle().fd, &finish_nums, sizeof(uint64_t));
+    int ret = read(async_context->m_event_handle.fd, &finish_nums, sizeof(uint64_t));
     io_event events[DEFAULT_IO_EVENTS_SIZE] = {0};
-    int r = io_getevents(async_context->GetIoContext(), 1, DEFAULT_IO_EVENTS_SIZE, events, nullptr);
+    int r = io_getevents(async_context->m_ioctx, 1, DEFAULT_IO_EVENTS_SIZE, events, nullptr);
     LogTrace("[io_getevents return {} events]", r);
     while (r --> 0)
     {
@@ -1186,7 +1186,7 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
     }
     if( async_context->IoFinished(finish_nums) ){
         engine->DelEvent(this, nullptr);
-        this->m_waitco.lock()->GetCoScheduler()->ToResumeCoroutine(this->m_waitco);
+        this->m_async_context->m_resumer->Resume();
     }
 }
 #endif
