@@ -2,8 +2,39 @@
 #include <iostream>
 
 
-namespace args 
+namespace galay::args 
 {
+
+args::ArgInputType::ArgInputType(Arg* arg)
+    :m_arg(arg)
+{
+}
+
+void args::ArgInputType::IsInt()
+{
+    m_arg->m_input_type = InputType::InputInt;
+}
+
+void args::ArgInputType::IsFloat()
+{
+    m_arg->m_input_type = InputType::InputFloat;
+}
+
+void args::ArgInputType::IsDouble()
+{
+    m_arg->m_input_type = InputType::InputDouble;
+}
+
+void args::ArgInputType::IsString()
+{
+    m_arg->m_input_type = InputType::InputString;
+}
+
+
+args::InputValue::InputValue(Arg *arg)
+    :m_arg(arg)
+{
+}
 
 Arg *Arg::Create(const std::string &name)
 {
@@ -15,18 +46,18 @@ Arg::Arg(const std::string &name)
 {
 }
 
-Arg &Arg::Short(const std::string &short_name)
+Arg &Arg::Short(char short_name)
 {
     if(m_short_name == m_name) throw std::runtime_error("short name can not be same as long name");
-    m_short_name = short_name;
+    m_short_name = std::string(short_name, 1);
     return *this;
 }
 
 
-Arg &Arg::Input(bool input)
+ArgInputType Arg::Input(bool input)
 {
     m_input = input;
-    return *this;
+    return ArgInputType(this);
 }
 
 Arg &Arg::Output(const std::string &output)
@@ -53,7 +84,7 @@ Arg &Arg::Failure(std::function<void(std::string)> &&callback)
     return *this;
 }
 
-Arg &Arg::Print()
+Arg &Arg::PrintError()
 {
     m_failure_callback = [](std::string errmsg) {
         std::cout << errmsg << std::endl;
@@ -61,9 +92,9 @@ Arg &Arg::Print()
     return *this;
 }
 
-std::optional<std::string>& Arg::Value()
+InputValue args::Arg::Value()
 {
-    return m_value;
+    return InputValue(this);
 }
 
 Cmd *Cmd::Create(const std::string &name)
@@ -99,6 +130,23 @@ Cmd& Cmd::AddArg(Arg *arg, bool auto_free)
         m_required.insert(arg->m_name);
     }
     return *this;
+}
+
+void args::Cmd::Help(const std::string &help_str)
+{
+    Arg* arg = Arg::Create("help");
+    arg->Output(help_str).Short('h');
+    AddArg(arg, true);
+}
+
+void args::Cmd::ShowHelp()
+{
+    if(m_sub_args.find("help") == m_sub_args.end()) {
+        std::cout << "Not set help string" << std::endl;
+        return;
+    }
+    auto it = m_sub_args.find("help");
+    std::cout << it->second->m_output << std::endl;
 }
 
 Cmd::~Cmd()
@@ -266,5 +314,17 @@ bool App::Parse(int argc, const char **argv)
     if(!res) return false;
     return res;
 }
+
+void args::App::Help(const std::string &help_str)
+{
+    Cmd::Help(help_str);
+}
+
+void args::App::ShowHelp()
+{
+    Cmd::ShowHelp();
+}
+
+
 
 }

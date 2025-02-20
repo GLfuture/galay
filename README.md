@@ -41,20 +41,22 @@
 
 1. 快速搭建一个高性能http服务器
 ``` c++
+#include "galay/galay.hpp"
+
 class Handler {
 public:
-    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::HttpSession session) {
-        galay::http::HttpHelper::DefaultHttpResponse(session.GetResponse(), HttpVersion::Http_Version_1_1 , HttpStatusCode::OK_200, "text/html", "<html> <h1> Hello World </h1> </html>");
-        session.GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
+    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::HttpSession::ptr session) {
+        auto resp = session->GetResponse();
+        resp->SetContent("html", "<html>Hello World</html>");
+        session->Close();
         co_return;
     }
-
 };
 
-int main()
+int main(int argc, char* argv[])
 {
-    galay::server::HttpServerConfig::ptr config = std::make_shared<galay::server::HttpServerConfig>();
     galay::GalayEnv env({});
+    auto config = galay::server::HttpServerConfig::Create();
     galay::server::HttpServer<galay::AsyncTcpSocket> server(config);
     server.RouteHandler<galay::http::GET>("/", Handler::GetHelloWorldHandler);
     server.Start({"", 8060});
