@@ -155,6 +155,12 @@ inline std::string CodeResponse<HttpStatusCode::UriTooLong_414>::DefaultResponse
     return "<html>Uri Too Long</html>";
 }
 
+template<>
+inline std::string CodeResponse<HttpStatusCode::RequestTimeout_408>::DefaultResponseBody()
+{
+    return "<html>408 Request Timeout</html>";
+}
+
 template <>
 inline std::string CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::DefaultResponseBody()
 {
@@ -315,9 +321,13 @@ step1:
         while(true) {
             int length = co_await connection->Recv(&rholder, max_header_size, 5000);
             if( length <= 0 ) {
-                if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed \
-                    || length == details::CommonFailedType::eCommonTimeOutFailed ) {
+                if( length == details::CommonFailedType::eCommonDisConnect || length == details::CommonFailedType::eCommonOtherFailed ) {
                     bool res = co_await connection->Close();
+                    co_return;
+                } else if( length == details::CommonFailedType::eCommonTimeOutFailed ) {
+                    wholder.Reset(CodeResponse<HttpStatusCode::RequestTimeout_408>::ResponseStr(HttpVersion::Http_Version_1_1));
+                    co_await connection->Send(&wholder, wholder->m_size, 5000);
+                    co_await connection->Close();
                     co_return;
                 }
             } 

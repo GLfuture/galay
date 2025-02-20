@@ -355,7 +355,7 @@ enum CommonFailedType
 {
     eCommonOtherFailed = -3,
     eCommonTimeOutFailed = -2,
-    eCommonNonBlocking,
+    eCommonNonBlocking = -1,
     eCommonDisConnect = 0,
 };
 

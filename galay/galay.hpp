@@ -32,7 +32,7 @@
 #include "utils/RateLimiter.h"
 #include "utils/Tree.h"
 #include "utils/Thread.h"
-#include "utils/ArgsParse.hpp"
+#include "utils/App.hpp"
 
 namespace galay 
 {
@@ -49,11 +49,21 @@ struct CoroutineSchedulerConf
     int m_thread_num = DEFAULT_COROUTINE_SCHEDULER_THREAD_NUM;
 };
 
+enum IOInterfaceReturnType
+{
+    eReturnOtherFailed = -3,
+    eReturnTimeOutFailed = -2,
+    eReturnNonBlocking = -1,
+    eReturnDisConnect = 0,
+};
+
 enum EventSchedulerTimerManagerType {
     kEventSchedulerTimerManagerTypeHeap = 0,
     kEventSchedulerTimerManagerTypeRbTree,
     kEventSchedulerTimerManagerTypeTimeWheel
 };
+
+
 
 struct EventSchedulerConf
 {
