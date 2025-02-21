@@ -69,6 +69,7 @@ public:
     ArgInputType Input(bool input);
     Arg& Output(const std::string& output);
     Arg& Required(bool required);
+    Arg& Unique(bool unique);
     Arg& Success(std::function<void(Arg*)>&& callback);
     //callback [in] errmsg, replace print
     Arg& Failure(std::function<void(std::string)>&& callback);
@@ -83,6 +84,7 @@ private:
     std::string m_short_name;
     bool m_required = false;
     bool m_input = false;
+    bool m_unique = false;
     InputType m_input_type = InputType::InputString;
     std::string m_output;
     std::optional<std::string> m_value;
@@ -140,35 +142,55 @@ public:
 template <>
 inline int InputValue::ConvertTo() const
 {
-    if(!m_arg->m_value.has_value()) throw std::runtime_error("no value");
-    return std::stoi(m_arg->m_value.value());
+    if(!m_arg->m_value.has_value()) throw std::runtime_error("no input value");
+    try {
+        return std::stoi(m_arg->m_value.value());
+    } catch(...) {
+        throw std::runtime_error("convert to int failed");
+    }
+    return 0;
 }
 
 template <>
 inline uint32_t InputValue::ConvertTo() const
 {
-    if(!m_arg->m_value.has_value()) throw std::runtime_error("no value");
-    return std::stoi(m_arg->m_value.value());
+    if(!m_arg->m_value.has_value()) throw std::runtime_error("no input value");
+    try {
+        return std::stoi(m_arg->m_value.value());
+    } catch(...) {
+        throw std::runtime_error("convert to int failed");
+    }
+    return 0;
 }
 
 template <>
 inline float InputValue::ConvertTo() const
 {
-    if(!m_arg->m_value.has_value()) throw std::runtime_error("no value");
-    return std::stof(m_arg->m_value.value());
+    if(!m_arg->m_value.has_value()) throw std::runtime_error("no input value");
+    try {
+        return std::stof(m_arg->m_value.value());
+    } catch(...) {
+        throw std::runtime_error("convert to float failed");
+    }
+    return 0.0f;
 }
 
 template <>
 inline double InputValue::ConvertTo() const
 {
-    if(!m_arg->m_value.has_value()) throw std::runtime_error("no value");
-    return std::stod(m_arg->m_value.value());
+    if(!m_arg->m_value.has_value()) throw std::runtime_error("no input value");
+    try {
+        return std::stod(m_arg->m_value.value());
+    } catch(...) {
+        throw std::runtime_error("convert to double failed");
+    }
+    return 0.0;
 }
 
 template <>
 inline std::string InputValue::ConvertTo() const
 {
-    if(!m_arg->m_value.has_value()) throw std::runtime_error("no value");
+    if(!m_arg->m_value.has_value()) throw std::runtime_error("no input value");
     return m_arg->m_value.value();
 }
 

@@ -72,6 +72,12 @@ Arg &Arg::Required(bool required)
     return *this;
 }
 
+Arg &args::Arg::Unique(bool unique)
+{
+    m_unique = unique;
+    return *this;
+}
+
 Arg &Arg::Success(std::function<void(Arg*)>&& callback)
 {
     m_success_callback = std::move(callback);
@@ -135,7 +141,7 @@ Cmd& Cmd::AddArg(Arg *arg, bool auto_free)
 void args::Cmd::Help(const std::string &help_str)
 {
     Arg* arg = Arg::Create("help");
-    arg->Output(help_str).Short('h');
+    arg->Output(help_str).Short('h').Unique(true);
     AddArg(arg, true);
 }
 
@@ -282,10 +288,26 @@ bool Cmd::Parse(int argc, int index, const char **argv)
             return false;
         }
     }
-    if( !m_required.empty() ) {
+    //unique 优先级比required高且具有输入唯一性
+    for( auto& arg: m_collector.m_complete_args ) {
+        if( arg->m_unique ) {
+            if( m_collector.m_complete_args.size() != 1 ) {
+                std::cout << "\t--" << arg->m_name << " can not use with other args" << std::endl; 
+                return false;
+            } else {
+                auto arg = (*m_collector.m_complete_args.begin());
+                if(arg->m_success_callback) arg->m_success_callback(arg);
+                if( m_collector.m_output_arg ) {
+                    std::cout << m_collector.m_output_arg->m_output << std::endl;
+                }
+                return true;
+            }
+        }
+    }
+    if( !m_required.empty()) {
         std::string required;
         for(auto& req: m_required) {
-            required += "--" + req + " ";
+            required += "\t--" + req + " ";
         }
         required += "is required";
         std::cout << required << std::endl;
