@@ -6,7 +6,7 @@
 #include <cinttypes>
 #include <concepts>
 
-namespace galay::utils
+namespace galay::pool
 {
 
 template <typename T>

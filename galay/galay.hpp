@@ -33,6 +33,7 @@
 #include "utils/Tree.h"
 #include "utils/Thread.h"
 #include "utils/App.hpp"
+#include "utils/Mvcc.hpp"
 
 namespace galay 
 {

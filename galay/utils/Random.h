@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-namespace galay::tools
+namespace galay::utils
 {
     class Randomizer
     {

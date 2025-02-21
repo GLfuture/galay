@@ -8,7 +8,7 @@ namespace galay::security
 std::string 
 Salt::Create(int SaltLenMin,int SaltLenMax)
 {
-    int saltlen = tools::Randomizer::RandomInt(SaltLenMin,SaltLenMax);
+    int saltlen = utils::Randomizer::RandomInt(SaltLenMin,SaltLenMax);
     unsigned char* salt = new unsigned char[saltlen];
     bzero(salt,saltlen);
     RAND_bytes(salt,saltlen);
