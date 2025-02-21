@@ -18,6 +18,7 @@ int main(int argc, const char* argv[])
     galay::args::Arg* port_arg = galay::args::Arg::Create("port"), *ip_arg = galay::args::Arg::Create("ip");
     port_arg->Short('p').Required(true).Input(true).IsInt();
     ip_arg->Input(true);
+    app.AddArg(port_arg, true).AddArg(ip_arg, true);
     if(!app.Parse(argc, argv)) {
         app.ShowHelp();
         return -1;

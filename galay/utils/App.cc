@@ -49,7 +49,7 @@ Arg::Arg(const std::string &name)
 Arg &Arg::Short(char short_name)
 {
     if(m_short_name == m_name) throw std::runtime_error("short name can not be same as long name");
-    m_short_name = std::string(short_name, 1);
+    m_short_name = short_name;
     return *this;
 }
 
