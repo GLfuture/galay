@@ -1174,8 +1174,8 @@ void FileIoWaitEvent::HandleAioEvent(EventEngine* engine)
     uint64_t finish_nums = 0;
     auto async_context = static_cast<AsyncLinuxFileEventContext*>(this->m_async_context);
     int ret = read(async_context->m_event_handle.fd, &finish_nums, sizeof(uint64_t));
-    io_event events[DEFAULT_IO_EVENTS_SIZE] = {0};
-    int r = io_getevents(async_context->m_ioctx, 1, DEFAULT_IO_EVENTS_SIZE, events, nullptr);
+    io_event events[DEFAULT_LINUX_AIO_EVENTS_SIZE] = {0};
+    int r = io_getevents(async_context->m_ioctx, 1, DEFAULT_LINUX_AIO_EVENTS_SIZE, events, nullptr);
     LogTrace("[io_getevents return {} events]", r);
     while (r --> 0)
     {

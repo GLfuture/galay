@@ -12,7 +12,7 @@
     #include <libaio.h>
 #endif
 
-#define DEFAULT_IO_EVENTS_SIZE      1024
+#define DEFAULT_LINUX_AIO_EVENTS_SIZE      1024
 
 namespace galay::details
 {
