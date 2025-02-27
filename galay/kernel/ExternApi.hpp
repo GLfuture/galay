@@ -96,6 +96,7 @@ void DestroyGalayEnv();
 }
 #endif
 
+// To Erase
 //线程安全
 template<typename CoRtn>
 class WaitGroup

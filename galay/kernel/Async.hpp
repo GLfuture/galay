@@ -68,6 +68,10 @@ private:
 namespace galay
 {
 
+using TcpIOVecHolder = IOVecHolder<TcpIOVec>;
+using UdpIOVecHolder = IOVecHolder<UdpIOVec>;
+using FileIOVecHolder = IOVecHolder<FileIOVec>;
+
 class HandleOption
 {
 public:
@@ -190,6 +194,8 @@ private:
 
 #endif
 
+
+
 class AsyncTcpSocket
 {
 public:
@@ -204,9 +210,9 @@ public:
     template<typename CoRtn = void>
     AsyncResult<GHandle, CoRtn> Accept(THost* addr, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Send(TcpIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
@@ -239,9 +245,9 @@ public:
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> SSLAccept(int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Recv(TcpIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Send(TcpIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
@@ -262,9 +268,9 @@ public:
     bool Socket(bool noblock = true) const;
     bool Bind(const std::string& addr, int port);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> RecvFrom(UdpIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> RecvFrom(UdpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> SendTo(UdpIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> SendTo(UdpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
     GHandle GetHandle() const;
@@ -283,9 +289,9 @@ public:
     explicit AsyncFileDescriptor(GHandle handle);
     bool Open(const char* path, int flags, mode_t mode);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Read(FileIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> Read(FileIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
-    AsyncResult<int, CoRtn> Write(FileIOVec* iov, size_t length, int64_t timeout = -1);
+    AsyncResult<int, CoRtn> Write(FileIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
     GHandle GetHandle() const;

@@ -4,6 +4,7 @@
 #include <any>
 #include <functional>
 #include "Coroutine.hpp"
+#include "Async.hpp"
 #include "galay/protocol/Http.h"
 #include "galay/utils/Pool.hpp"
 
@@ -21,10 +22,10 @@ public:
     explicit Connection(Socket* socket);
     
     template <typename CoRtn = void>
-    AsyncResult<int, CoRtn> Recv(TcpIOVec *iov, int size, int64_t timeout_ms);
+    AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
 
     template <typename CoRtn = void>
-    AsyncResult<int, CoRtn> Send(TcpIOVec *iov, int size, int64_t timeout_ms);
+    AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
 
     template <typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();

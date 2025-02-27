@@ -23,11 +23,11 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx, std::vector<galay::AsyncTcpSo
             break;
         }
         
-        std::string resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
-        galay::IOVecHolder<galay::TcpIOVec> wholder, rholder(1024);
-        wholder.Reset(std::move(resp));
-        int length = co_await socket->Send(&wholder, wholder->m_size);
-        length = co_await socket->Recv(&rholder, rholder->m_size);
+        const char* resp = "GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
+        galay::TcpIOVecHolder wholder, rholder(1024);
+        wholder.Reset(resp);
+        int length = co_await socket->Send(wholder, wholder->m_size);
+        length = co_await socket->Recv(rholder, rholder->m_size);
         bool res = co_await socket->Close();
         if (!res)
         {

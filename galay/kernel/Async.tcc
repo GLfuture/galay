@@ -571,15 +571,15 @@ inline AsyncResult<GHandle, CoRtn> AsyncTcpSocket::Accept(THost *addr, int64_t t
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSocket::Recv(TcpIOVec *iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncTcpSocket::Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncRecv<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncRecv<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSocket::Send(TcpIOVec *iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncTcpSocket::Send(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSend<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncSend<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
@@ -675,15 +675,15 @@ inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::SSLAccept(int64_t timeout)
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Recv(TcpIOVec *iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSSLRecv<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncSSLRecv<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Send(TcpIOVec *iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Send(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSSLSend<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncSSLSend<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
@@ -744,15 +744,15 @@ inline AsyncUdpSocket::~AsyncUdpSocket()
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncUdpSocket::RecvFrom(UdpIOVec *iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncUdpSocket::RecvFrom(UdpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncRecvFrom<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncRecvFrom<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncUdpSocket::SendTo(UdpIOVec *iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncUdpSocket::SendTo(UdpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSendTo<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncSendTo<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
@@ -798,15 +798,15 @@ inline AsyncFileDescriptor::~AsyncFileDescriptor()
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Read(FileIOVec* iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Read(FileIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncFileRead<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncFileRead<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>
-inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Write(FileIOVec* iov, size_t length, int64_t timeout)
+inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Write(FileIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncFileWrite<CoRtn>(m_async_context, iov, length, timeout);
+    return details::AsyncFileWrite<CoRtn>(m_async_context, &holder, length, timeout);
 }
 
 template <typename CoRtn>

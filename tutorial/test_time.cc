@@ -148,9 +148,9 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
         GHandle handle = co_await socket.Accept<void>(&host, 10000);
         std::cout << "accept :" << host.m_ip << ": " << host.m_port << std::endl;
         std::cout << "handle :" << handle.fd << std::endl << "------------------------\n";
-        galay::TcpIOVec vec;
-        int byte = co_await socket.Recv<void>(&vec, 512, 10000);
-        std::cout << "recv :" << byte << " : " << std::string(vec.m_buffer, byte) << std::endl;
+        galay::TcpIOVecHolder vec;
+        int byte = co_await socket.Recv<void>(vec, 512, 10000);
+        std::cout << "recv :" << byte << " : " << std::string(vec->m_buffer, byte) << std::endl;
         co_return;
     };
     
