@@ -1,22 +1,16 @@
-#include "galay/utils/ArgsParse.hpp"
+#include "galay/utils/App.hpp"
 #include <iostream>
 int main(int argc, const char* argv[])
 {
-    args::CmdArgsParser app("docker\n such as docker's command\n  -c <command> [<args>]");
-    app.AddOption<args::CmdType::Output>("-v,--version", [](args::SubCommand* app, args::Option* option) {
-        std::cout << option->GetValue() << std::endl;
-        std::cout << "version: 2" << std::endl;
-    });
-    app.AddOption<args::CmdType::InputAndOutput>("-u,--use", [](args::SubCommand* app, args::Option* option) {
-        std::cout << option->GetValue() << std::endl;
-        std::cout << "Hello To Use This Tool" << std::endl;
-    });
-    app.AddOption<args::CmdType::Output>("-h,--help", [](args::SubCommand* app, args::Option* option) {
-    });
-    if(app.AppCmdsParse(argc, argv)) {
-        app.ExecuteAllParsedCmds();
+    galay::args::App app("tutorial_cmd_parser");
+    galay::args::Arg* arg = galay::args::Arg::Create("version"), *arg2 = galay::args::Arg::Create("input");
+    arg->Short('v').Output("Version 2.0");
+    arg2->Short('i').Input(true).IsString();
+    app.AddArg(arg, true).Help("./tutorial_cmd_parser [OPTIONS]\n   -v, --versopn\t\tshow version");
+    if(!app.Parse(argc, argv)) {
+        app.ShowHelp();
+        return -1;
     }
-    std::cout << app.ToString();
-    app.CleanUp();
+    std::string input = arg2->Value().ConvertTo<std::string>();
     return 0;
 }

@@ -1,7 +1,7 @@
 #include "Random.h"
 #include <random>
 
-namespace galay::tools
+namespace galay::utils
 {
 int 
 Randomizer::RandomInt(int RandomMin,int RandomMax)

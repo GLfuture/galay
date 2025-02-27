@@ -3,7 +3,7 @@
 
 #include "Pool.hpp"
 
-namespace galay::utils
+namespace galay::pool
 {
 
 

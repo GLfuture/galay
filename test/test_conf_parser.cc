@@ -8,14 +8,14 @@
 //current directory must be build/test
 int main(int argc, char *argv[])
 {
-    galay::utils::ParserManager parserManager;
+    galay::parser::ParserManager parserManager;
     auto parser = parserManager.CreateParser("init.conf");
-    auto confParser = std::dynamic_pointer_cast<galay::utils::ConfigParser>(parser);
+    auto confParser = std::dynamic_pointer_cast<galay::parser::ConfigParser>(parser);
     std::cout << std::any_cast<std::string>(confParser->GetValue("author")) << std::endl;
 #ifdef INCLUDE_NLOHMANN_JSON_HPP
     parser = parserManager.CreateParser("init.json");
-    auto jsonParser = std::dynamic_pointer_cast<galay::utils::JsonParser>(parser);
-    auto j = std::any_cast<galay::utils::JsonValue>(jsonParser->GetValue("dependencies"));
+    auto jsonParser = std::dynamic_pointer_cast<galay::parser::JsonParser>(parser);
+    auto j = std::any_cast<galay::parser::JsonValue>(jsonParser->GetValue("dependencies"));
     for(auto it = j.begin() ; it != j.end(); it++){
         std::cout << *it << std::endl;
     }
