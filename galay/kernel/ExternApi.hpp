@@ -82,9 +82,15 @@ extern "C" {
 
 
 bool InitializeSSLServerEnv(const char* cert_file, const char* key_file);
-bool InitialiszeSSLClientEnv();
+bool InitialiszeSSLClientEnv(const char* server_pem = nullptr);
 bool DestroySSLEnv();
+
+bool InitializeHttp2ServerEnv(const char* cert_file, const char* key_file);
+bool InitializeHttp2ClientEnv(const char* server_pem = nullptr);
+bool DestroyHttp2Env();
+
 SSL_CTX* GetGlobalSSLCtx();
+
 void InitializeGalayEnv(std::vector<std::unique_ptr<details::CoroutineScheduler>>&& coroutine_schedulers,
                         std::vector<std::unique_ptr<details::EventScheduler>>&& event_schedulers);
 void StartGalayEnv();
@@ -133,8 +139,6 @@ extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> Sleepfor(details::EventScheduler* scheduler, int64_t ms);
 
-template<typename CoRtn>
-extern AsyncResult<void, CoRtn> DeAllocteWithTimeOut(int64_t timeout, std::function<void()>&& callback);
 
 /*
     注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象

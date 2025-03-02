@@ -31,11 +31,16 @@ bool InitializeSSLServerEnv(const char *cert_file, const char *key_file)
     return true;
 }
 
-bool InitialiszeSSLClientEnv()
+bool InitialiszeSSLClientEnv(const char* server_pem)
 {
     SslCtx = SSL_CTX_new(TLS_client_method());
     if (SslCtx == nullptr) {
         return false;
+    }
+    if(server_pem) {
+        if(SSL_CTX_load_verify_locations(SslCtx, server_pem, NULL) <= 0) {
+            return false;
+        }
     }
     return true;
 }
@@ -46,6 +51,32 @@ bool DestroySSLEnv()
     EVP_cleanup();
     return true;
 }
+
+bool InitializeHttp2ServerEnv(const char* cert_file, const char* key_file)
+{
+    if(!InitializeSSLServerEnv(cert_file, key_file)) {
+        return false;
+    }
+    const unsigned char alpn_protocols[] = "\x08\x04\x00\x00"; // HTTP/2
+    SSL_CTX_set_alpn_protos(SslCtx, alpn_protocols, sizeof(alpn_protocols));
+    return true;
+}
+
+bool InitializeHttp2ClientEnv(const char* server_pem)
+{
+    if(!InitialiszeSSLClientEnv(server_pem)) {
+        return false;
+    }
+    const unsigned char alpn_protocols[] = "\x08\x04\x00\x00"; // HTTP/2
+    SSL_CTX_set_alpn_protos(SslCtx, alpn_protocols, sizeof(alpn_protocols));
+    return true;
+}
+
+bool DestroyHttp2Env()
+{
+    DestroySSLEnv();
+}
+
 
 SSL_CTX *GetGlobalSSLCtx()
 {

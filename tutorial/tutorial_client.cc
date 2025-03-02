@@ -57,6 +57,7 @@ int main(int argc, char* argv[])
         std::cout << "./tutorial_client [port]\n";
         return -1;
     }
+    std::cout << "ssl version" << OpenSSL_version(OPENSSL_VERSION) << std::endl;
     g_port = atoi(argv[1]);
     galay::GalayEnvConf conf;
     conf.m_coroutineSchedulerConf.m_thread_num = 1;

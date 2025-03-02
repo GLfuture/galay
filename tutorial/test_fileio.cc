@@ -62,7 +62,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
     printf("write file\n");
     int length = 10 * 1024 * 1024;
     while(true){
-        int size = co_await descriptor.Write(&holder, holder->m_size);
+        int size = co_await descriptor.Write(holder, holder->m_size);
         printf("write size: %d\n", size);
         if(size < 0) {
             printf("write error: %s\n", galay::error::GetErrorString(descriptor.GetErrorCode()).c_str());
@@ -81,7 +81,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
     lseek(descriptor.GetHandle().fd, 0, SEEK_SET);  // 将文件指针移回文件开头
     while(true)
     {
-        int size = co_await descriptor.Read(&holder, holder->m_size);
+        int size = co_await descriptor.Read(holder, holder->m_size);
         printf("read size %d\n", size);
         if(size <= 0) {
             printf("write error: %s\n", galay::error::GetErrorString(descriptor.GetErrorCode()).c_str());
