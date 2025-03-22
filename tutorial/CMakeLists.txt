@@ -9,6 +9,7 @@ set(SRC_LIST
     test_fileio.cc
     test_waitgroup.cc
     test_udp.cc
+    tutorial_cricuitbreaker.cc
     )
 
 

@@ -29,6 +29,7 @@
 #include "utils/TypeName.h"
 #include "utils/Random.h"
 #include "utils/RateLimiter.h"
+#include "utils/CricuitBreaker.hpp"
 #include "utils/Tree.h"
 #include "utils/Thread.h"
 #include "utils/App.hpp"

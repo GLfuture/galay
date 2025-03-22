@@ -7,7 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 
-namespace galay::tools
+namespace galay::utils
 {
     class CountSemaphore
     {

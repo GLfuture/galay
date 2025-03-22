@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-namespace galay::tools 
+namespace galay::utils 
 {
 CountSemaphore::CountSemaphore(uint64_t initcount,uint64_t capacity)
 {
