@@ -74,7 +74,7 @@ bool InitializeHttp2ClientEnv(const char* server_pem)
 
 bool DestroyHttp2Env()
 {
-    DestroySSLEnv();
+    return DestroySSLEnv();
 }
 
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <concepts>
 #include <optional>
+#include <stdexcept>
 #include <functional>
 #include <unordered_set>
 #include <unordered_map>

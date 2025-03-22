@@ -5,21 +5,25 @@
 #include <functional>
 #include "Coroutine.hpp"
 #include "Async.hpp"
-#include "galay/protocol/Http.h"
+#include "galay/protocol/Protocol.h"
 #include "galay/utils/Pool.hpp"
+
+// namespace galay::details{
+//     class EventScheduler;
+// }
 
 namespace galay
 {
-
 
 template <typename Socket>
 class Connection: public std::enable_shared_from_this<Connection<Socket>>
 {
 public:
     using ptr = std::shared_ptr<Connection>;
+    using EventScheduler = details::EventScheduler;
     using timeout_callback_t = std::function<void(Connection<Socket>::ptr)>;
 
-    explicit Connection(Socket* socket);
+    explicit Connection(EventScheduler* scheduler, Socket* socket);
     
     template <typename CoRtn = void>
     AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
@@ -30,10 +34,12 @@ public:
     template <typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
-    void Destroy();
+    EventScheduler *GetScheduler() const;
+
     ~Connection();
 private:
     Socket* m_socket;
+    EventScheduler* m_scheduler;
 };
 
 
@@ -67,13 +73,6 @@ private:
     Response* m_response;
     Connection<Socket>::ptr m_connection;
 };
-
-
-
-using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
-using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
-
-
 
 }
 

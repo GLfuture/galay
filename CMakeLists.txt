@@ -41,7 +41,7 @@ include_directories(thirdparty)
 
 set(THIRDPARTY_INCLUDE_DIRS concurrentqueue)
 
-set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common helper)
+set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common)
 set(STATIC_LIB galay-static)
 set(SHARED_LIB galay)
 

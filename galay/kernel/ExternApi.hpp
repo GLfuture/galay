@@ -148,8 +148,8 @@ template<typename CoRtn>
 extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback);
 
 
-template<typename CoRtn>
-extern AsyncResult<typename Coroutine<CoRtn>::ptr, CoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co);
+template<typename CoRtn, typename FCoRtn>
+extern AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co);
 /*
     协程内部同步接口
 */

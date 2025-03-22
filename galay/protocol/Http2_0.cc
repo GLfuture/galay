@@ -1,7 +1,144 @@
-#include "Http2_0.h"
+#include "Http2_0.hpp"
 
 namespace galay::http2 
 {
+
+std::unordered_map<uint32_t, std::string> hpackHuffmanMap = {
+    {0,   "1111111111000"},
+    {1,   "11111111111111111011001"},
+    {2,   "1111111111111111111111100010"},
+    {3,   "1111111111111111111111100011"},
+    {4,   "1111111111111111111111100100"},
+    {5,   "1111111111111111111111100101"},
+    {6,   "1111111111111111111111100110"},
+    {7,   "1111111111111111111111100111"},
+    {8,   "1111111111111111111111101000"},
+    {9,   "111111111111111111101010"},
+    {10,  "111111111111111111111111111100"},
+    {11,  "1111111111111111111111101001"},
+    {12,  "1111111111111111111111101010"},
+    {13,  "111111111111111111111111111101"},
+    {14,  "1111111111111111111111101011"},
+    {15,  "1111111111111111111111101100"},
+    {16,  "1111111111111111111111101101"},
+    {17,  "1111111111111111111111101110"},
+    {18,  "1111111111111111111111101111"},
+    {19,  "1111111111111111111111110000"},
+    {20,  "1111111111111111111111110001"},
+    {21,  "1111111111111111111111110010"},
+    {22,  "111111111111111111111111111110"},
+    {23,  "1111111111111111111111110011"},
+    {24,  "1111111111111111111111110100"},
+    {25,  "1111111111111111111111110101"},
+    {26,  "1111111111111111111111110110"},
+    {27,  "1111111111111111111111110111"},
+    {28,  "1111111111111111111111111000"},
+    {29,  "1111111111111111111111111001"},
+    {30,  "1111111111111111111111111010"},
+    {31,  "1111111111111111111111111011"},
+    
+    // ASCII 可打印字符
+    {32,  "000111"},        // 空格
+    {33,  "1111111000"},     // !
+    {34,  "1111111001"},     // "
+    {35,  "111111111010"},   // #
+    {36,  "1111111111001"},  // $
+    {37,  "010101"},         // %
+    {38,  "11111000"},       // &
+    {39,  "11111111010"},    // '
+    {40,  "1111111010"},     // (
+    {41,  "1111111011"},     // )
+    {42,  "11111001"},       // *
+    {43,  "11111111011"},    // +
+    {44,  "11111010"},       // ,
+    {45,  "010110"},         // -
+    {46,  "010111"},         // .
+    {47,  "011000"},         // /
+    
+    // 数字 0-9
+    {48,  "00000"},          // 0
+    {49,  "00001"},          // 1
+    {50,  "00010"},          // 2
+    {51,  "011001"},         // 3
+    {52,  "011010"},         // 4
+    {53,  "011011"},         // 5
+    {54,  "011100"},         // 6
+    {55,  "011101"},         // 7
+    {56,  "011110"},         // 8
+    {57,  "011111"},         // 9
+    
+    // 标点符号
+    {58,  "1011100"},        // :
+    {59,  "11111011"},       // ;
+    {60,  "111111111111100"},// <
+    {61,  "100000"},         // =
+    {62,  "111111111011"},   // >
+    {63,  "1111111100"},     // ?
+    {64,  "1111111111010"},  // @
+    
+    // 大写字母 A-Z
+    {65,  "100001"},         // A
+    {66,  "1011101"},        // B
+    {67,  "1011110"},        // C
+    {68,  "1011111"},        // D
+    {69,  "1100000"},        // E
+    {70,  "1100001"},        // F
+    {71,  "1100010"},        // G
+    {72,  "1100011"},        // H
+    {73,  "1100100"},        // I
+    {74,  "1100101"},        // J
+    {75,  "1100110"},        // K
+    {76,  "1100111"},        // L
+    {77,  "1101000"},        // M
+    {78,  "1101001"},        // N
+    {79,  "1101010"},        // O
+    {80,  "1101011"},        // P
+    {81,  "1101100"},        // Q
+    {82,  "1101101"},        // R
+    {83,  "1101110"},        // S
+    {84,  "1101111"},        // T
+    {85,  "1110000"},        // U
+    {86,  "1110001"},        // V
+    {87,  "1110010"},        // W
+    {88,  "11111100"},        // X
+    {89,  "1110011"},        // Y
+    {90,  "11111101"},        // Z
+    
+    // 小写字母 a-z
+    {97,  "0001100"},        // a
+    {98,  "100011"},         // b
+    {99,  "0011111"},        // c
+    {100, "100100"},         // d
+    {101, "001100"},         // e
+    {102, "100101"},         // f
+    {103, "100110"},         // g
+    {104, "100111"},         // h
+    {105, "001101"},         // i
+    {106, "101000"},         // j
+    {107, "101001"},         // k
+    {108, "101010"},         // l
+    {109, "101011"},         // m
+    {110, "001110"},         // n
+    {111, "101100"},         // o
+    {112, "101101"},         // p
+    {113, "101110"},         // q
+    {114, "101111"},         // r
+    {115, "110000"},         // s
+    {116, "110001"},         // t
+    {117, "110010"},         // u
+    {118, "110011"},         // v
+    {119, "110100"},         // w
+    {120, "110101"},         // x
+    {121, "110110"},         // y
+    {122, "110111"},         // z
+    {123, "1110100"},    // ASCII 123: {
+    {124, "1110101"},    // ASCII 124: |
+    {125, "1110110"},    // ASCII 125: }
+    {126, "1110111"},    // ASCII 126: ~
+    
+    // 特殊符号
+    {256, "11111111111111111111111111111110"} // EOS
+};
 
 DataFrame *FrameFactory::CreateDataFrame(uint32_t stream_id, bool end_stream, std::string &&data, uint32_t max_payload_length, uint8_t padding_length)
 {
@@ -17,13 +154,13 @@ DataFrame *FrameFactory::CreateDataFrame(uint32_t stream_id, bool end_stream, st
     return frame;
 }
 
-HeadersFrame *FrameFactory::CreateHeadersFrame(uint32_t stream_id, bool end_stream, std::string&& header_block_fragment, \
-    uint32_t max_payload_length, bool priority, bool exclusive, uint32_t stream_dependency, uint8_t weight, uint8_t padding_length)
+HeadersFrame *FrameFactory::CreateHeadersFrame(uint32_t stream_id, bool no_data, std::string&& header_block_fragment, \
+    uint32_t max_payload_length, Priority priority, uint8_t padding_length)
 {
     FrameHeader header;
     header.stream_id = stream_id;
     header.type = FrameType::HEADERS;
-    if (end_stream)
+    if (no_data)
     {
         header.flags |= 0x01;
     }
@@ -31,21 +168,19 @@ HeadersFrame *FrameFactory::CreateHeadersFrame(uint32_t stream_id, bool end_stre
     {
         header.flags |= 0x08;
     }
-    if (priority)
+    if (priority.priority)
     {
         header.flags |= 0x20;
     }
     HeadersFrame* frame = new HeadersFrame(header);
     frame->m_padding_length = padding_length;
-    frame->m_exclusive = exclusive;
-    frame->m_stream_dependency = stream_dependency;
-    frame->m_weight = weight;
+    frame->m_priority = priority;
     frame->m_max_payload_length = max_payload_length;
     frame->m_header_block_fragment = std::move(header_block_fragment);
     return frame;
 }
 
-PriorityFrame *FrameFactory::CreatePriorityFrame(uint32_t stream_id, bool exclusive, uint32_t stream_dependency_id, uint8_t weight)
+PriorityFrame *FrameFactory::CreatePriorityFrame(uint32_t stream_id, Priority priority)
 {
     FrameHeader header;
     header.flags = 0;
@@ -53,9 +188,7 @@ PriorityFrame *FrameFactory::CreatePriorityFrame(uint32_t stream_id, bool exclus
     header.stream_id = stream_id;
     header.type = FrameType::PRIORITY;
     PriorityFrame* frame = new PriorityFrame(header);
-    frame->m_exclusive = exclusive;
-    frame->m_dependent_stream_id = stream_dependency_id;
-    frame->m_weight = weight;
+    frame->m_priority = std::move(priority);
     return frame;
 }
 
@@ -106,13 +239,14 @@ PingFrame *FrameFactory::CreatePingFrame(uint32_t stream_id, bool ack, std::arra
     return frame;
 }
 
-GoAwayFrame *FrameFactory::CreateGoAwayFrame(uint32_t stream_id, ErrorCode error_code, std::string &&debug_data)
+GoAwayFrame *FrameFactory::CreateGoAwayFrame(uint32_t last_stream_id, ErrorCode error_code, std::string &&debug_data)
 {
     FrameHeader header;
     header.type = FrameType::GOAWAY;
-    header.stream_id = stream_id;
+    header.stream_id = 0;
     header.flags = 0x0;
     GoAwayFrame *frame = new GoAwayFrame(header);
+    frame->m_last_stream_id = last_stream_id;
     frame->m_error_code = error_code;
     frame->m_debug_data = std::move(debug_data);
     return frame;
@@ -246,9 +380,11 @@ bool HeadersFrame::DeSerialize(std::string_view data)
         if (data.size() - offset < 5) return false;
         
         // 解析流依赖和权重（RFC 7540 Section 6.2）
-        m_exclusive = (ptr[offset] & 0x80) != 0;
-        m_stream_dependency = Parse31Bit(ptr + offset) & 0x7FFFFFFF;
-        m_weight = ptr[offset + 4] + 1;  // 权重范围1-256
+        bool exclusive = (ptr[offset] & 0x80) != 0;
+        uint32_t stream_dependency = Parse31Bit(ptr + offset) & 0x7FFFFFFF;
+        uint16_t weight = ptr[offset + 4] + 1;  // 权重范围1-256
+
+        m_priority = Priority(stream_dependency, weight, exclusive);
         offset += 5;
     }
 
@@ -279,25 +415,25 @@ std::string HeadersFrame::Serialize()
     }
 
     // 2. 处理优先级（PRIORITY 标志）
-    const bool has_priority = (m_weight >= 1 && m_weight <= 256);
+    const bool has_priority = (m_priority.weight >= 1 && m_priority.weight <= 256);
     if (has_priority) {
         // 验证权重和流依赖合法性
-        if (m_weight < 1 || m_weight > 256) {
+        if (m_priority.weight < 1 || m_priority.weight > 256) {
             throw std::runtime_error("HeadersFrame: Invalid weight (1-256)");
         }
-        if (m_stream_dependency > 0x7FFFFFFF) {
+        if (m_priority.streamDependency > 0x7FFFFFFF) {
             throw std::runtime_error("HeadersFrame: Stream dependency exceeds 31 bits");
         }
 
         // 构造 4 字节流依赖（大端序，最高位为独占标志）
-        uint32_t stream_dep = m_stream_dependency;
-        if (m_exclusive) stream_dep |= 0x80000000;
+        uint32_t stream_dep = m_priority.streamDependency;
+        if (m_priority.exclusive) stream_dep |= 0x80000000;
         payload.push_back(static_cast<char>((stream_dep >> 24) & 0xFF));
         payload.push_back(static_cast<char>((stream_dep >> 16) & 0xFF));
         payload.push_back(static_cast<char>((stream_dep >> 8) & 0xFF));
         payload.push_back(static_cast<char>(stream_dep & 0xFF));
         // 写入权重（weight-1 存储为 1 字节）
-        payload.push_back(static_cast<char>(m_weight - 1));
+        payload.push_back(static_cast<char>(m_priority.weight - 1));
     }
     // 更新 Frame 头部标志位和长度
     FrameHeader& header = this->m_header; // 假设基类 Frame 有公有成员 header
@@ -315,12 +451,12 @@ std::string HeadersFrame::Serialize()
         {
             bool is_end = (offset + m_max_payload_length >= m_header_block_fragment.size());
             uint32_t chunk_size = std::min(m_max_payload_length, static_cast<uint32_t>(m_header_block_fragment.size() - offset));
-            auto frame = FrameFactory::CreateContinuationFrame(
+            std::unique_ptr<ContinuationFrame> frame(FrameFactory::CreateContinuationFrame(
                 m_header.stream_id, 
                 is_end,
                 m_header_block_fragment.substr(offset, chunk_size),
                 chunk_size
-            );
+            ));
             ss << frame->Serialize();
             offset += chunk_size;
         }
@@ -351,11 +487,12 @@ bool PriorityFrame::DeSerialize(std::string_view data) {
     // 解析前 4 字节（Exclusive 标志和依赖流 ID）
     const auto* bytes = reinterpret_cast<const uint8_t*>(data.data());
     uint32_t e_and_dep_stream = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-    m_exclusive = (e_and_dep_stream & 0x80000000) != 0;         // 取最高位
-    m_dependent_stream_id = e_and_dep_stream & 0x7FFFFFFF;      // 取低 31 位
+    bool exclusive = (e_and_dep_stream & 0x80000000) != 0;         // 取最高位
+    uint32_t stream_dependency = e_and_dep_stream & 0x7FFFFFFF;      // 取低 31 位
 
     // 解析第 5 字节（Weight）
-    m_weight = bytes[4] + 1;  // 实际权重 = 存储值 +1（RFC 规定）
+    uint16_t weight = bytes[4] + 1;  // 实际权重 = 存储值 +1（RFC 规定）
+    m_priority = Priority{stream_dependency, weight, exclusive};
 
     return true;
 }
@@ -368,12 +505,12 @@ std::string PriorityFrame::Serialize()
     }
 
     // 验证依赖流 ID 是31位有效值（0x7FFFFFFF为最大值）
-    if (m_dependent_stream_id > 0x7FFFFFFF) {
+    if (m_priority.streamDependency > 0x7FFFFFFF) {
         throw std::runtime_error("PriorityFrame: Dependent Stream ID exceeds 31 bits");
     }
 
     // 验证权重范围（实际值 1~256）
-    if (m_weight < 1 || m_weight > 256) {
+    if (m_priority.weight < 1 || m_priority.weight > 256) {
         throw std::runtime_error("PriorityFrame: Weight must be 1~256");
     }
 
@@ -381,8 +518,8 @@ std::string PriorityFrame::Serialize()
     std::string payload(5, 0); 
 
     // 1. 处理依赖流 ID 和独占标志
-    uint32_t stream_dep = m_dependent_stream_id;
-    if (m_exclusive) {
+    uint32_t stream_dep = m_priority.streamDependency;
+    if (m_priority.exclusive) {
         stream_dep |= 0x80000000; // 设置最高位为1（独占标志）
     }
     // 转为大端序（4字节）
@@ -392,7 +529,7 @@ std::string PriorityFrame::Serialize()
     payload[3] = static_cast<char>(stream_dep & 0xFF);
 
     // 2. 处理权重（存储为 weight-1）
-    payload[4] = static_cast<char>(m_weight - 1);
+    payload[4] = static_cast<char>(m_priority.weight - 1);
     m_header.length = 5;                                       // 固定负载长度
 
     // 序列化：头部 + 负载
@@ -419,38 +556,38 @@ bool SettingsFrame::DeSerialize(std::string_view data)
         if (id < 0x1 || id > 0x6) {
             continue;
         }
-
+        SettingIdentifier setting_id = static_cast<SettingIdentifier>(id);
         // 检查参数值合法性
-        switch (id) {
-            case 0x1:  // HEADER_TABLE_SIZE
+        switch (setting_id) {
+            case SettingIdentifier::HEADER_TABLE_SIZE :  // HEADER_TABLE_SIZE
                 // 无范围限制（但实现可定义上限）
                 break;
-            case 0x2:  // ENABLE_PUSH
+            case SettingIdentifier::ENABLE_PUSH :  // ENABLE_PUSH
                 if (value != 0 && value != 1) {
                     return false;  // 非法值
                 }
                 break;
-            case 0x3:  // MAX_CONCURRENT_STREAMS
+            case SettingIdentifier::MAX_CONCURRENT_STREAMS :  // MAX_CONCURRENT_STREAMS
                 // 无范围限制
                 break;
-            case 0x4:  // INITIAL_WINDOW_SIZE
+            case SettingIdentifier::INITIAL_WINDOW_SIZE :  // INITIAL_WINDOW_SIZE
                 if (value > 0x7FFFFFFF) {  // 最大允许2^31-1
                     return false;
                 }
                 break;
-            case 0x5:  // MAX_FRAME_SIZE
+            case SettingIdentifier::MAX_FRAME_SIZE :  // MAX_FRAME_SIZE
                 if (value < 16384 || value > 16777215) {
                     return false;
                 }
                 break;
-            case 0x6:  // MAX_HEADER_LIST_SIZE
+            case SettingIdentifier::MAX_HEADER_LIST_SIZE :  // MAX_HEADER_LIST_SIZE
                 // 无范围限制
                 break;
             default:
                 break;
         }
 
-        m_settings[id] = value;
+        m_settings[setting_id] = value;
     }
     return true;
 }
@@ -462,9 +599,11 @@ std::string SettingsFrame::Serialize()
     // 检查是否是ACK，ACK帧的payload必须为空
     if (!(Flags() & 0x01)) { // 非ACK帧才序列化键值对
         for (const auto& [id, value] : m_settings) {
+
+            uint16_t tid = static_cast<uint16_t>(id);
              // ID（2字节大端）
-            payload.push_back(static_cast<char>((id >> 8) & 0xFF));
-            payload.push_back(static_cast<char>(id & 0xFF));
+            payload.push_back(static_cast<char>(( tid >> 8) & 0xFF));
+            payload.push_back(static_cast<char>(tid & 0xFF));
 
             // Value（4字节大端）
             payload.push_back(static_cast<char>((value >> 24) & 0xFF));
@@ -665,27 +804,23 @@ std::string PushPromiseFrame::Serialize()
         {
             bool is_end = (offset + m_max_payload_length >= m_header_block_fragment.size());
             uint32_t chunk_size = std::min(m_max_payload_length, static_cast<uint32_t>(m_header_block_fragment.size() - offset));
-            auto frame = FrameFactory::CreateContinuationFrame(
+            std::unique_ptr<ContinuationFrame> frame(FrameFactory::CreateContinuationFrame(
                 m_header.stream_id, 
                 is_end,
                 m_header_block_fragment.substr(offset, chunk_size),
                 chunk_size
-            );
+            ));
             ss << frame->Serialize();
             offset += chunk_size;
         }
         return ss.str();
     }  else {
-        // 3. 添加头部块片段（HPACK 压缩数据）
         payload += m_header_block_fragment;
-        // 4. 添加填充数据（全0填充）
         if (has_padding) {
             payload.append(m_padding_length, '\0');
         }
         m_header.flags |= 0x04; //end of headers
         m_header.length = static_cast<uint32_t>(payload.size());      // 负载长度
-
-        // 序列化：头部 + 负载
         std::string frame_data = m_header.Serialize(); // 假设 FrameHeader 已实现序列化
         frame_data += payload;
         return frame_data;
@@ -824,270 +959,5 @@ bool ContinuationFrame::Validate(Frame* last_frame) const
             last_frame->Type() == FrameType::PUSH_PROMISE);
 }
 
-
-
-std::list<Http2Stream::ptr> 
-Http2StreamManager::ProcessFrames(std::list<Frame*> frames)
-{
-    std::list<Http2Stream::ptr> affected_streams;
-    std::unordered_set<uint32_t> processed_streams; // 去重用
-
-    for (Frame* frame : frames) {
-        // 基础校验
-        const uint32_t stream_id = frame->StreamId();
-        if (stream_id == 0 && frame->Type() != FrameType::SETTINGS) {
-            continue; // 连接级帧不关联具体流
-        }
-        // ----------------------
-        //  1. 流ID合法性校验
-        // ----------------------
-        bool is_client_stream = (stream_id % 2 == 1);
-        if (stream_id != 0 && !ValidateStreamId(stream_id, is_client_stream)) {
-            SendGoAway(ErrorCode::PROTOCOL_ERROR);
-            continue;
-        }
-        // ----------------------
-        //  2. 获取或创建流对象
-        // ----------------------
-        Http2Stream::ptr stream;
-        auto it = m_streams.find(stream_id);
-        
-        // 流不存在时的处理
-        if (it == m_streams.end()) {
-            switch (frame->Type()) {
-                case FrameType::HEADERS: { // 客户端发起的流
-                    stream = std::make_shared<Http2Stream>();
-                    stream->m_stream_id = stream_id;
-                    stream->m_state = StreamState::OPEN;
-                    m_streams[stream_id] = stream;
-                    break;
-                }
-                case FrameType::PUSH_PROMISE: { // 服务端承诺的流
-                    if (auto pp_frame = dynamic_cast<PushPromiseFrame*>(frame)) {
-                        const uint32_t promised_id = pp_frame->GetPromisedStreamId();
-                        if (!ValidateStreamId(promised_id, false)) { // 服务端流需为偶数
-                            SendRstStream(stream_id, ErrorCode::PROTOCOL_ERROR);
-                            continue;
-                        }
-                        auto promised_stream = std::make_shared<Http2Stream>();
-                        promised_stream->m_stream_id = promised_id;
-                        promised_stream->m_state = StreamState::RESERVED;
-                        m_streams[promised_id] = promised_stream;
-                        if (processed_streams.insert(promised_id).second) {
-                            affected_streams.push_back(promised_stream);
-                        }
-                    }
-                    break;
-                }
-                default: { // 其他帧类型需关联已存在的流
-                    SendRstStream(stream_id, ErrorCode::PROTOCOL_ERROR);
-                    continue;
-                }
-            }
-        } else {
-            stream = it->second;
-        }
-
-        // ----------------------
-        //  3. 处理帧类型逻辑
-        // ----------------------
-        switch (frame->Type()) {
-            // HEADERS 帧处理
-            case FrameType::HEADERS: {
-                if (stream->m_state == StreamState::IDLE) {
-                    stream->m_state = StreamState::OPEN;
-                }
-                if (frame->Flags() & 0x01) {
-                    stream->m_state = StreamState::CLOSED;
-                }
-                break;
-            }
-
-            // DATA 帧流量控制
-            case FrameType::DATA: {
-                if (auto data_frame = dynamic_cast<DataFrame*>(frame)) {
-                    const size_t data_size = data_frame->DataLength();
-                    stream->m_recv_window_size = 
-                        (data_size > stream->m_recv_window_size) ? 
-                        0 : stream->m_recv_window_size - data_size;
-                    
-                    if (frame->Flags() & 0x01) {
-                        stream->m_state = StreamState::CLOSED;
-                    }
-                }
-                break;
-            }
-
-            // RST_STREAM 立即关闭流
-            case FrameType::RST_STREAM: {
-                stream->m_state = StreamState::CLOSED;
-                break;
-            }
-
-            // WINDOW_UPDATE 窗口更新
-            case FrameType::WINDOW_UPDATE: {
-                if (auto wu_frame = dynamic_cast<WindowUpdateFrame*>(frame)) {
-                    stream->m_recv_window_size += wu_frame->WindowSizeIncrement();
-                }
-                break;
-            }
-        }
-        // ----------------------
-        //  4. 记录受影响的流
-        // ----------------------
-        if (stream && processed_streams.insert(stream_id).second) {
-            affected_streams.push_back(stream);
-        }
-    }
-    return affected_streams;
-
-}
-
-void Http2StreamManager::SendGoAway(ErrorCode code)
-{
-    
-}
-
-bool Http2StreamManager::ValidateStreamId(uint32_t stream_id, bool is_client_initiated_stream) const {
-    // ------------------------------
-    // 1. 基础校验：流ID不能为0
-    // ------------------------------
-    if (stream_id == 0) {
-        return false; // 流ID 0仅用于连接控制帧（如SETTINGS）
-    }
-    // ------------------------------
-    // 2. 奇偶性校验（RFC 7540 Section 5.1.1）
-    // ------------------------------
-    bool is_even = (stream_id % 2 == 0);
-    if (is_client_initiated_stream) {
-        // 客户端发起的流必须为奇数
-        if (is_even) {
-            return false; // 非法：客户端流应为奇数
-        }
-    } else {
-        // 服务端发起的流必须为偶数
-        if (!is_even) {
-            return false; // 非法：服务端流应为偶数
-        }
-    }
-    // ------------------------------
-    // 3. 流ID必须单调递增（RFC 7540 Section 5.1.1）
-    // ------------------------------
-    if (!m_streams.empty()) {
-        // 获取当前最大流ID（假设流按创建顺序插入）
-        if (stream_id <= m_max_stream_id) {
-            return false; // 非法：流ID必须大于所有已存在的流
-        }
-    }
-
-    return true;
-}
-
-
-Http2_0::Http2_0()
-{
-
-}
-
-
-std::pair<bool, size_t> Http2_0::DecodePdu(const std::string_view &buffer)
-{
-    size_t total_length = 0;
-    while(true) {
-        std::string_view data = buffer.substr(total_length);
-        if (data.length() < 9) return {false, 0};
-        // 解析帧头
-        FrameHeader header;
-        header.DeSerialize(data.substr(0, 9));
-
-        const size_t frame_length = 9 + header.length;
-        if (data.length() < frame_length) return {false, 0};
-        total_length += frame_length;
-        // 创建对应帧对象
-        Frame* frame = nullptr;
-        try {
-            switch (header.type) {
-                case FrameType::DATA:
-                    frame = new DataFrame(header);
-                    break;
-                case FrameType::HEADERS:
-                    frame = new HeadersFrame(header);
-                    break;
-                case FrameType::PRIORITY:
-                    frame = new PriorityFrame(header);
-                    break;
-                case FrameType::RST_STREAM:
-                    frame = new RstStreamFrame(header);
-                    break;
-                case FrameType::SETTINGS:
-                    frame = new SettingsFrame(header);
-                    break;
-                case FrameType::PUSH_PROMISE:
-                    frame = new PushPromiseFrame(header);
-                    break;
-                case FrameType::PING:
-                    frame = new PingFrame(header);
-                    break;
-                case FrameType::GOAWAY:
-                    frame = new GoAwayFrame(header);
-                    break;
-                case FrameType::WINDOW_UPDATE:
-                    frame = new WindowUpdateFrame(header);
-                    break;
-                case FrameType::CONTINUATION:
-                    frame = new ContinuationFrame(header);
-                    break;
-                default:
-                    return {false, 0}; // 不支持的帧类型
-            }
-        } catch (...) {
-            return {false, 0};
-        }
-
-        // 解析payload
-        if (!frame->DeSerialize(data.substr(9, header.length))) {
-            delete frame;
-            frame = nullptr;
-            return {false, 0};
-        }
-        m_recv_frames.push_back(frame);
-    }
-    return {true, total_length};
-}
-
-std::string Http2_0::EncodePdu() const
-{
-    std::stringstream ss;
-    for(auto frame : m_send_frames) {
-        ss << frame->Serialize();
-    }
-    return ss.str();
-}
-
-std::list<Frame*> Http2_0::GetRecvFrames()
-{
-    return m_recv_frames;
-}
-
-void Http2_0::AppendSendFrame(Frame *frame)
-{
-    m_send_frames.push_back(frame);
-}
-
-void Http2_0::ClearRecvFrames()
-{
-    for(auto frame : m_recv_frames) {
-        delete frame;
-    }
-    m_recv_frames.clear();
-}
-
-void Http2_0::ClearSendFrames()
-{
-    for(auto frame : m_send_frames) {
-        delete frame;
-    }
-    m_send_frames.clear();
-}
 
 }

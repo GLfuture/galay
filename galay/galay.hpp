@@ -1,8 +1,6 @@
 #ifndef GALAY_HPP
 #define GALAY_HPP
 
-#include "helper/HttpHelper.h"
-
 //common
 #include "common/Base.h"
 #include "common/SignalHandler.h"
@@ -19,9 +17,10 @@
 #include "kernel/Time.hpp"
 
 //protocol
-#include "protocol/Http.h"
+#include "protocol/Http.hpp"
 #include "protocol/Smtp.h"
 #include "protocol/Dns.h"
+#include "protocol/Http2_0.hpp"
 
 //utils
 #include "utils/Parser.h"

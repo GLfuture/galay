@@ -7,9 +7,15 @@ namespace galay
 {
 
 template<typename Socket>
-Connection<Socket>::Connection(Socket* socket) 
+Connection<Socket>::Connection(details::EventScheduler* scheduler, Socket* socket) 
     :m_socket(socket) 
 {
+}
+
+template <typename Socket>
+inline details::EventScheduler *Connection<Socket>::GetScheduler() const
+{
+    return m_scheduler;
 }
 
 template<typename Socket>
@@ -31,13 +37,6 @@ template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> Connection<Socket>::Close()
 {
     return m_socket->Close();
-}
-
-
-template <typename Socket>
-inline void Connection<Socket>::Destroy()
-{
-    delete this;
 }
 
 template<typename Socket>

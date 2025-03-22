@@ -1,11 +1,13 @@
-#ifndef GALAY_HTTP_H
-#define GALAY_HTTP_H
+#ifndef GALAY_HTTP_HPP
+#define GALAY_HTTP_HPP
 
 #include "Protocol.h"
+#include "galay/kernel/Server.hpp"
 #include <map>
 #include <unordered_set>
 #include <string_view>
 #include <sstream>
+#include <variant>
 
 
 namespace galay::error
@@ -300,6 +302,175 @@ private:
     error::HttpError::ptr m_error;
 };
 
+template<typename T>
+concept ProtoType = std::default_initializable<T> && requires(T type, const std::string_view& buffer)
+{
+    { type.DecodePdu(buffer) } -> std::same_as<std::pair<bool, size_t>>;
+    { type.EncodePdu() }-> std::same_as<std::string>;
+    { type.HasError() } -> std::same_as<bool>;
+    { type.GetErrorCode() } -> std::same_as<int>;
+    { type.GetErrorString() } -> std::same_as<std::string>;
+    { type.Reset() } -> std::same_as<void>;
+};
+
+#define DEFAULT_HTTP_KEEPALIVE_TIME_MS              (7500 * 1000)
+
+
+enum FormsType
+{
+    kFormsType_NoFrom,
+    kFormsType_FormData,
+    kFormsType_XWwwFormUrlencoded,
+    kFormsType_Json,
+    kFormsType_Xml,
+    kFormsType_Raw,
+    kFormsType_Binary,
+    kFormsType_GraphQL,
+    kFormsType_MsgPack,
+};
+
+class FormDataHeader
+{
+public:
+    bool HasKey(const std::string& key);
+    std::string GetValue(const std::string& key);
+    bool RemoveHeaderPair(const std::string& key);
+    bool SetHeaderPair(const std::string& key, const std::string& value);
+    bool AddHeaderPair(const std::string& key, const std::string& value);
+    std::string ToString();
+private:
+    std::map<std::string, std::string> m_headerPairs;
+};
+
+enum FormDataType
+{
+    kFormDataType_File,
+    kFormDataType_String,
+    kFormDataType_Number,
+    kFormDataType_Double,
+};
+
+struct FormFile
+{
+    std::string m_fileName;
+    std::string m_body;
+};
+
+class FormDataValue
+{
+public:
+    FormDataValue() = default;
+    FormDataHeader& Header();
+    std::string Name() const;
+    void SetName(const std::string& name);
+    bool IsFile() const;
+    bool IsString() const;
+    bool IsNumber() const;
+    bool IsDouble() const;
+
+    FormFile ToFile() const;
+    std::string ToString() const;
+    int ToNumber() const;
+    double ToDouble() const;
+    
+    void SetValue(const FormFile& file);
+    void SetValue(const std::string& body);
+    void SetValue(int number);
+    void SetValue(double number);
+private:
+    FormDataType m_type;
+    FormDataHeader m_header;
+    std::string m_name;
+    std::variant<int, double, std::string, FormFile> m_body;
+};
+
+class HttpFormDataHelper
+{
+public:
+    static bool IsFormData(HttpRequest::ptr request);
+    static bool ParseFormData(HttpRequest::ptr request, std::vector<FormDataValue>& values);
+    static void FormDataToString(HttpRequest::ptr request, const std::string& boundary, const std::vector<FormDataValue>& values);
+};
+
+class HttpHelper
+{
+public:
+    using HttpResponseCode = HttpStatusCode;
+    //request
+    static bool DefaultGet(HttpRequest* request, const std::string& url, bool keepalive = true);
+    static bool DefaultPost(HttpRequest* request, const std::string& url, bool keepalive = true);
+    //response
+    static bool DefaultRedirect(HttpResponse* response, const std::string& url, HttpResponseCode code);
+    static bool DefaultOK(HttpResponse* response, HttpVersion version);
+
+    static bool DefaultHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string type, std::string &&body);
+};
+
+template<HttpStatusCode Code>
+class CodeResponse
+{
+public:
+    static std::string ResponseStr(HttpVersion version);
+    static bool RegisterResponse(HttpResponse response);
+private:
+    static std::string DefaultResponse(HttpVersion version);
+    static std::string DefaultResponseBody() { return ""; }
+private:
+    static std::string m_responseStr;
+};
+
+
+template<HttpStatusCode Code>
+std::string CodeResponse<Code>::m_responseStr = "";
+
+template<typename SocketType>
+class HttpRouteHandler 
+{
+    using SessionPtr = typename galay::Session<SocketType, HttpRequest, HttpResponse>::ptr;
+public:
+    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>>>;
+    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>&& handler);
+    
+    static HttpRouteHandler<SocketType>* GetInstance();
+    Coroutine<std::string> Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, SessionPtr session);
+    
+private:
+    static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
+    HandlerMap m_handler_map;
+};
+
+template<typename SocketType>
+std::unique_ptr<HttpRouteHandler<SocketType>> HttpRouteHandler<SocketType>::m_instance = nullptr;
+
+
+template<typename SocketType>
+class HttpServer
+{
+public:
+    using SessionPtr = typename galay::Session<SocketType, HttpRequest, HttpResponse>::ptr;
+    explicit HttpServer(HttpServerConfig::ptr config);
+
+    template <HttpMethod ...Methods>
+    void RouteHandler(const std::string& path, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>&& handler);
+    void Start(THost host);
+    void Stop();
+    bool IsRunning() const;
+private:
+    Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session);
+    void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
+private:
+    TcpServer<SocketType> m_server;
+};
+
+template<typename SocketType>
+extern Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session);
+
+
+template<typename SocketType>
+extern Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string& path,\
+                                        typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session, \
+                                        typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap);
+
 
 }
 
@@ -320,7 +491,11 @@ namespace galay
 #define HTTP_1_1 HttpVersion::Http_Version_1_1
 #define HTTP_2_0 HttpVersion::Http_Version_2_0
 
+using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
+using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
+
 }
-    
+
+#include "Http.tcc"
 
 #endif

@@ -9,7 +9,6 @@
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include "Async.hpp"
 #include "Session.hpp"
-#include "galay/helper/HttpHelper.h"
 
 namespace galay::details
 {
@@ -53,7 +52,7 @@ private:
 };
 
 
-namespace galay::server 
+namespace galay 
 {
 
 #define DEFAULT_SERVER_BACKLOG                          32
@@ -103,86 +102,6 @@ protected:
     std::vector<details::ListenEvent<SocketType>*> m_listen_events;
 };
 
-
-template<typename T>
-concept ProtoType = std::default_initializable<T> && requires(T type, const std::string_view& buffer)
-{
-    { type.DecodePdu(buffer) } -> std::same_as<std::pair<bool, size_t>>;
-    { type.EncodePdu() }-> std::same_as<std::string>;
-    { type.HasError() } -> std::same_as<bool>;
-    { type.GetErrorCode() } -> std::same_as<int>;
-    { type.GetErrorString() } -> std::same_as<std::string>;
-    { type.Reset() } -> std::same_as<void>;
-};
-
-#define DEFAULT_HTTP_KEEPALIVE_TIME_MS              (7500 * 1000)
-
-using namespace galay::http;
-
-template<HttpStatusCode Code>
-class CodeResponse
-{
-public:
-    static std::string ResponseStr(HttpVersion version);
-    static bool RegisterResponse(HttpResponse response);
-private:
-    static std::string DefaultResponse(HttpVersion version);
-    static std::string DefaultResponseBody() { return ""; }
-private:
-    static std::string m_responseStr;
-};
-
-
-template<HttpStatusCode Code>
-std::string CodeResponse<Code>::m_responseStr = "";
-
-template<typename SocketType>
-class HttpRouteHandler 
-{
-    using SessionPtr = typename galay::Session<SocketType, HttpRequest, HttpResponse>::ptr;
-public:
-    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>>>;
-    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>&& handler);
-    
-    static HttpRouteHandler<SocketType>* GetInstance();
-    Coroutine<std::string> Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, SessionPtr session);
-    
-private:
-    static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
-    HandlerMap m_handler_map;
-};
-
-template<typename SocketType>
-std::unique_ptr<HttpRouteHandler<SocketType>> HttpRouteHandler<SocketType>::m_instance = nullptr;
-
-
-template<typename SocketType>
-class HttpServer
-{
-public:
-    using SessionPtr = typename galay::Session<SocketType, HttpRequest, HttpResponse>::ptr;
-    explicit HttpServer(HttpServerConfig::ptr config);
-
-    template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>&& handler);
-    void Start(THost host);
-    void Stop();
-    bool IsRunning() const;
-private:
-    Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session);
-    void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
-private:
-    TcpServer<SocketType> m_server;
-};
-
-template<typename SocketType>
-extern Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session);
-
-
-template<typename SocketType>
-extern Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string& path,\
-                                        typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session, \
-                                        typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap);
 
 }
 

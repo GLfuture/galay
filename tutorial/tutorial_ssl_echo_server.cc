@@ -9,10 +9,10 @@ int main(int argc, char** argv)
         return -1;
     }
     spdlog::set_level(spdlog::level::debug);
-    auto config = galay::server::HttpServerConfig::Create();
+    auto config = galay::HttpServerConfig::Create();
     galay::GalayEnv env({});
     galay::InitializeSSLServerEnv(argv[1], argv[2]);
-    galay::server::HttpServer<galay::AsyncTcpSslSocket> server(config);
+    galay::http::HttpServer<galay::AsyncTcpSslSocket> server(config);
     server.Start({"", 2333});
     getchar();
     server.Stop();

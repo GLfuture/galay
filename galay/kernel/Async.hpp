@@ -72,6 +72,15 @@ using TcpIOVecHolder = IOVecHolder<TcpIOVec>;
 using UdpIOVecHolder = IOVecHolder<UdpIOVec>;
 using FileIOVecHolder = IOVecHolder<FileIOVec>;
 
+enum CommonTcpIORtnType
+{
+    eCommonOtherFailed = -3,
+    eCommonTimeOutFailed = -2,
+    eCommonNonBlocking = -1,
+    eCommonDisConnect = 0,
+};
+
+
 class HandleOption
 {
 public:
@@ -317,9 +326,6 @@ private:
 
 namespace galay::details
 {
-
-
-
 enum NetWaitEventType
 {
     kWaitEventTypeError,
@@ -335,14 +341,6 @@ enum NetWaitEventType
     kWaitEventTypeSslClose,
     kUdpWaitEventTypeRecvFrom,
     kUdpWaitEventTypeSendTo,
-};
-
-enum CommonFailedType
-{
-    eCommonOtherFailed = -3,
-    eCommonTimeOutFailed = -2,
-    eCommonNonBlocking = -1,
-    eCommonDisConnect = 0,
 };
 
 class NetWaitEvent: public WaitEvent
