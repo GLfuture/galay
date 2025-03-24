@@ -5,7 +5,7 @@
 
 galay::Coroutine<void> func(galay::RoutineCtx ctx)
 {
-    galay::etcd::EtcdClient client("http://127.0.0.1:2379", 0);
+    galay::etcd::EtcdClient client("http://127.0.0.1:2379");
     auto res = co_await client.DiscoverServicePrefix<void>("/app/api/login");
     auto resp = client.GetResponse();
     auto result = resp.GetKeyValues();
