@@ -38,8 +38,7 @@ std::vector<std::pair<std::string,std::string>> EtcdResponse::GetKeyValues()
     return std::move(result);
 }
 
-EtcdClient::EtcdClient(const std::string& EtcdAddrs, int co_sche_index)
-    : m_co_sche_index(co_sche_index)
+EtcdClient::EtcdClient(const std::string& EtcdAddrs)
 {
     m_client = std::make_unique<::etcd::Client>(EtcdAddrs);
 }
@@ -89,4 +88,3 @@ EtcdClient::CheckExist(const std::string& key)
 }
 
 }
-

@@ -39,7 +39,8 @@ namespace galay::etcd
     class EtcdClient
     {
     public:
-        EtcdClient(const std::string& EtcdAddrs, int co_sche_index);
+        using uptr = std::unique_ptr<EtcdClient>;
+        EtcdClient(const std::string& EtcdAddrs);
         template<typename CoRtn>
         AsyncResult<bool, CoRtn> RegisterService(const std::string& ServiceName, const std::string& ServiceAddr);
         template<typename CoRtn>
@@ -59,7 +60,6 @@ namespace galay::etcd
     private:
         bool CheckExist(const std::string& key);
     private:
-        int m_co_sche_index;
         ::etcd::Response m_response;
         details::EtcdAction m_action;
         std::shared_ptr<::etcd::Client> m_client;
