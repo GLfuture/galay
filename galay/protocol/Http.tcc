@@ -80,24 +80,21 @@ inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::Defaul
 }
 
 template <typename SocketType>
-inline void HttpRouteHandler<SocketType>::AddHandler(HttpMethod method, const std::string &path, std::function<Coroutine<void>(RoutineCtx, SessionPtr)> &&handler)
+inline HttpStream<SocketType>::HttpStream(typename Connection<SocketType>::uptr connection)
+    : m_connection(std::move(connection))
 {
-    m_handler_map[method][path] = std::move(handler);
 }
 
 template <typename SocketType>
-inline HttpRouteHandler<SocketType> *HttpRouteHandler<SocketType>::GetInstance()
+inline Coroutine<HttpRequest::uptr> HttpStream<SocketType>::WaitForRequest(RoutineCtx ctx)
 {
-    if(m_instance == nullptr) {
-        m_instance = std::make_unique<HttpRouteHandler<SocketType>>();
-    }
-    return m_instance.get();
+    return Coroutine<HttpRequest::uptr>();
 }
 
 template <typename SocketType>
-inline Coroutine<std::string> HttpRouteHandler<SocketType>::Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, SessionPtr session)
+inline Coroutine<bool> HttpStream<SocketType>::WaitForResponse(RoutineCtx ctx, HttpResponse::uptr request)
 {
-    return Handle<SocketType>(ctx.Copy(), method, path, session, m_handler_map);
+    return Coroutine<bool>();
 }
 
 template <typename SocketType>
@@ -109,9 +106,9 @@ inline HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config)
 template <typename SocketType>
 inline void HttpServer<SocketType>::Start(THost host)
 {
-    m_server.Prepare([this](RoutineCtx ctx, Connection<SocketType>::ptr connection) {
-        typename Session<SocketType, HttpRequest, HttpResponse>::ptr session = std::make_shared<Session<SocketType, HttpRequest, HttpResponse>>(connection);
-        return HttpRouteForward(ctx, session);
+    m_server.OnCall([this](RoutineCtx ctx, Connection<SocketType>::uptr connection) {
+        auto stream = std::make_unique<HttpStream>(std::move(connection));
+        return HttpRouteForward(ctx, std::move(stream));
     });
     m_server.Start(host);
 }
@@ -130,151 +127,23 @@ inline bool HttpServer<SocketType>::IsRunning() const
 
 template <typename SocketType>
 template <HttpMethod... Methods>
-inline void HttpServer<SocketType>::RouteHandler(const std::string &path, std::function<galay::Coroutine<void>(RoutineCtx,SessionPtr)> &&handler)
+inline void HttpServer<SocketType>::RouteHandler(const std::string &path, Handler&& handler)
 {
     ([&](){
-        HttpRouteHandler<SocketType>::GetInstance()->AddHandler(Methods, path, std::move(handler));
+        this->m_map[Methods][path] = std::move(handler);
     }(), ...);
 }
 
 template <typename SocketType>
-inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session)
+inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, typename HttpStream<SocketType>::uptr stream)
 {
-    return HttpRoute<SocketType>(ctx.Copy(), std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig())->m_max_header_size, session);
+    return Handle(ctx, std::move(stream));
 }
-
-template <typename SocketType> 
-inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body)
-{
-    http::HttpHelper::DefaultHttpResponse(response, version, code, "text/html", std::move(body));
-}
-
-
-template<typename SocketType>
-inline Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session)
-{
-    auto connection = session->GetConnection();
-    IOVecHolder<TcpIOVec> rholder(max_header_size), wholder;
-    std::atomic_bool close_connection = false;
-    while(true)
-    {
-step1:
-        while(true) {
-            int length = co_await connection->Recv(rholder, max_header_size, 5000);
-            if( length <= 0 ) {
-                if( length == CommonTcpIORtnType::eCommonDisConnect || length == CommonTcpIORtnType::eCommonOtherFailed ) {
-                    bool res = co_await connection->Close();
-                    co_return;
-                } else if( length == CommonTcpIORtnType::eCommonTimeOutFailed ) {
-                    wholder.Reset(CodeResponse<HttpStatusCode::RequestTimeout_408>::ResponseStr(HttpVersion::Http_Version_1_1));
-                    co_await connection->Send(wholder, wholder->m_size, 5000);
-                    co_await connection->Close();
-                    co_return;
-                }
-            } 
-            else { 
-                std::string_view data(rholder->m_buffer, rholder->m_offset);
-                auto result = session->GetRequest()->DecodePdu(data);
-                if(!result.first) { //解析失败
-                    switch (session->GetRequest()->GetErrorCode())
-                    {
-                    case error::HttpErrorCode::kHttpError_HeaderInComplete:
-                    case error::HttpErrorCode::kHttpError_BodyInComplete:
-                    {
-                        if( rholder->m_offset >= rholder->m_size) {
-                            rholder.Realloc(rholder->m_size * 2);
-                        }
-                        break;
-                    }
-                    case galay::error::HttpErrorCode::kHttpError_BadRequest:
-                    {
-                        wholder.Reset(CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1));
-                        close_connection = true;
-                        goto step2;
-                    }
-                    case galay::error::HttpErrorCode::kHttpError_HeaderTooLong:
-                    {
-                        wholder.Reset(CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::ResponseStr(HttpVersion::Http_Version_1_1));
-                        close_connection = true;
-                        goto step2;
-                    }
-                    case galay::error::HttpErrorCode::kHttpError_UriTooLong:
-                    {
-                        wholder.Reset(CodeResponse<HttpStatusCode::UriTooLong_414>::ResponseStr(HttpVersion::Http_Version_1_1));
-                        close_connection = true;
-                        goto step2;
-                    }
-                    default:
-                        break;
-                    }
-                }
-                else { //解析成功
-                    HttpMethod method = session->GetRequest()->Header()->Method();
-                    auto co = co_await this_coroutine::WaitAsyncExecute<std::string, void>(\
-                                HttpRouteHandler<SocketType>::GetInstance()->Handler(ctx, method,\
-                                    session->GetRequest()->Header()->Uri(), session));
-                    std::string resp = (*co)().value();
-                    wholder.Reset(std::move(resp));
-                    if(session->IsClose()) close_connection = true;
-                    goto step2;
-                }
-            }
-        }
-
-step2:
-        while (true)
-        {
-            int length = co_await connection->Send(wholder, wholder->m_size, 5000);
-            if( length <= 0 ) {
-                close_connection = true;
-                break;
-            } else {
-                if(wholder->m_offset >= wholder->m_size) {
-                    break;
-                }
-            }
-        }
-        // clear
-        rholder.ClearBuffer(), wholder.ClearBuffer();
-        session->GetRequest()->Reset(), session->GetResponse()->Reset();
-        if(close_connection) {
-            break;
-        }
-    }
-    bool res = co_await connection->Close();
-    co_return;
-}
-
 
 template <typename SocketType>
-inline Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string &path, \
-                                    typename galay::Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session, \
-                                    typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap)
+inline void HttpServer<SocketType>::CreateHttpResponse(HttpResponse *response, HttpVersion version, HttpStatusCode code, std::string &&body)
 {
-    auto it = handlerMap.find(method);
-    auto version = session->GetRequest()->Header()->Version();
-    if(it == handlerMap.end()) {
-        session->Close();
-        co_return CodeResponse<HttpStatusCode::MethodNotAllowed_405>::ResponseStr(version);
-    }
-    auto uriit = it->second.find(path);
-    if(uriit != it->second.end()) {
-        http::HttpHelper::DefaultOK(session->GetResponse(), HttpVersion::Http_Version_1_1);
-        co_await this_coroutine::WaitAsyncExecute<void, std::string>(uriit->second(ctx, session));
-        if(session->IsClose()) {
-            if(session->GetResponse()->Header()->HeaderPairs().HasKey("Connection")) {
-                session->GetResponse()->Header()->HeaderPairs().SetHeaderPair("Connection", "close");
-            } else {
-                session->GetResponse()->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-            }
-        }
-        co_return session->GetResponse()->EncodePdu();
-    } else {
-        session->Close();
-        co_return CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(version);
-    }
-    session->Close();
-    co_return CodeResponse<HttpStatusCode::InternalServerError_500>::ResponseStr(version);
+    http::HttpHelper::DefaultHttpResponse(response, version, code, "text/html", std::move(body));
 }
 
 

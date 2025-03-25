@@ -1,14 +1,47 @@
 #ifndef GALAY_SERVER_HPP
 #define GALAY_SERVER_HPP
 
+#include <any>
 #include <string>
 #include <vector>
 #include <atomic>
 #include <string_view>
 #include <unordered_map>
+#include <functional>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
+#include "Coroutine.hpp"
 #include "Async.hpp"
-#include "Session.hpp"
+
+namespace galay
+{
+
+template <typename Socket>
+class Connection: public std::enable_shared_from_this<Connection<Socket>>
+{
+public:
+    using uptr = std::unique_ptr<Connection>;
+    using EventScheduler = details::EventScheduler;
+    using timeout_callback_t = std::function<void(typename Connection<Socket>::uptr)>;
+
+    explicit Connection(EventScheduler* scheduler, Socket* socket);
+    
+    template <typename CoRtn = void>
+    AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
+
+    template <typename CoRtn = void>
+    AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
+
+    template <typename CoRtn = void>
+    AsyncResult<bool, CoRtn> Close();
+
+    EventScheduler *GetScheduler() const;
+private:
+    EventScheduler* m_scheduler;
+    std::unique_ptr<Socket> m_socket;
+};
+
+
+}
 
 namespace galay::details
 {
@@ -21,7 +54,7 @@ template <typename Socket>
 class CallbackStore
 {
 public:
-    using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<Socket>::ptr)>;
+    using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<Socket>::uptr)>;
     static void RegisteCallback(callback_t callback);
     static void CreateConnAndExecCallback(EventScheduler* scheduler, Socket* socket);
 private:
@@ -83,13 +116,14 @@ struct HttpServerConfig final: public TcpServerConfig
 
 };
 
+
 template<typename SocketType>
 class TcpServer
 {
 public:
-    using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<SocketType>::ptr)>;
+    using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<SocketType>::uptr)>;
     explicit TcpServer(TcpServerConfig::ptr config) :m_config(config) {}
-    void Prepare(callback_t callback);
+    void OnCall(callback_t callback);
     //no block
     void Start(THost host);
     void Stop() ;

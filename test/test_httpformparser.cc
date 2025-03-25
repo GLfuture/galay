@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "galay/helper/HttpHelper.h"
+#include "galay/protocol/Http.hpp"
 
 using namespace galay;
 

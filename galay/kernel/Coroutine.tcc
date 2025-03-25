@@ -32,6 +32,13 @@ namespace galay
 {
 
 template <typename T>
+inline T *CoroutineBase::ConvertTo()
+{
+    return static_cast<T*>(this);
+}
+    
+
+template <typename T>
 template <typename...Args>
 inline PromiseType<T>::PromiseType(RoutineCtx ctx, Args&&...args)
     : m_ctx(std::move(ctx))
@@ -42,8 +49,6 @@ template <typename T>
 inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
-    auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
-    m_ctx.m_privateCtx->GetThisSequence() = m_ctx.m_sharedCtx->AddToGraph(++m_ctx.m_privateCtx->GetThisLayer(), m_coroutine);
     return *m_coroutine;
 }
 
@@ -73,7 +78,6 @@ inline PromiseType<T>::~PromiseType()
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
-    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_privateCtx->GetThisLayer(), m_ctx.m_privateCtx->GetThisSequence());
 }
 
 template<typename ...Args>
@@ -85,8 +89,6 @@ inline PromiseType<void>::PromiseType(RoutineCtx ctx, Args&&... agrs)
 inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<void>>(std::coroutine_handle<PromiseType<void>>::from_promise(*this));
-    auto& graph = m_ctx.m_sharedCtx->GetRoutineGraph();
-    m_ctx.m_privateCtx->GetThisSequence() = m_ctx.m_sharedCtx->AddToGraph(++m_ctx.m_privateCtx->GetThisLayer(), m_coroutine);
     return *m_coroutine;
 }
 
@@ -105,18 +107,20 @@ inline PromiseType<void>::~PromiseType()
     if(m_coroutine) {
         m_coroutine->ToExit();
     }
-    m_ctx.m_sharedCtx->RemoveFromGraph(m_ctx.m_privateCtx->GetThisLayer(), m_ctx.m_privateCtx->GetThisSequence());
 }
 
 
 template<typename T>
 inline Coroutine<T>::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
 {
+    m_father = nullptr;
     m_status = std::make_shared<std::atomic<CoroutineStatus>>(CoroutineStatus::Running);
     m_result = std::make_shared<std::optional<T>>();
     m_handle = handle;
     m_awaiter = nullptr;
-    m_exit_cbs = std::make_shared<std::list<std::function<void()>>>();
+    m_exit_cbs = std::make_shared<std::list<ExitHandle>>();
+    m_father = std::make_shared<CoroutineBase::wptr>();
+    m_childs = std::make_shared<std::list<CoroutineBase::wptr>>();
 }
 
 template<typename T>
@@ -132,6 +136,10 @@ inline Coroutine<T>::Coroutine(Coroutine&& other) noexcept
     other.m_result.reset();
     m_exit_cbs = other.m_exit_cbs;
     other.m_exit_cbs.reset();
+    m_father = other.m_father;
+    other.m_father = nullptr;
+    m_childs = other.m_childs;
+    other.m_childs = nullptr;
 }
 
 template<typename T>
@@ -142,6 +150,8 @@ inline Coroutine<T>::Coroutine(const Coroutine& other) noexcept
     m_exit_cbs = other.m_exit_cbs;
     m_status = other.m_status;
     m_result = other.m_result;
+    m_father = other.m_father;
+    m_childs = other.m_childs;
 }
 
 template<typename T>
@@ -157,6 +167,10 @@ inline Coroutine<T>& Coroutine<T>::operator=(Coroutine&& other) noexcept
     other.m_result.reset();
     m_exit_cbs = other.m_exit_cbs;
     other.m_exit_cbs.reset();
+    m_father = other.m_father;
+    other.m_father = nullptr;
+    m_childs = other.m_childs;
+    other.m_childs = nullptr;
     return *this;
 }
 
@@ -168,6 +182,8 @@ Coroutine<T>& Coroutine<T>::operator=(const Coroutine& other) noexcept
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
     m_result = other.m_result;
+    m_father = other.m_father;
+    m_childs = other.m_childs;
     return *this;
 }
 
@@ -216,10 +232,31 @@ inline bool Coroutine<T>::SetAwaiter(AwaiterBase* awaiter)
     return true;
 }
 
-template<typename T>
-inline void Coroutine<T>::AppendExitCallback(const std::function<void()>& callback)
+template <typename T>
+inline bool Coroutine<T>::AppendChild(CoroutineBase::wptr child)
+{
+    m_childs->push_back(child);
+    return true;
+}
+
+template <typename T>
+inline bool Coroutine<T>::SetDependency(CoroutineBase::wptr father)
+{
+    *m_father = father;
+    father.lock()->AppendChild(m_handle.promise().GetCoroutine());
+    return true;
+}
+
+template <typename T>
+inline void Coroutine<T>::AppendExitCallback(const ExitHandle &callback)
 {
     m_exit_cbs->emplace_front(callback);
+}
+
+template <typename T>
+inline std::optional<T> Coroutine<T>::Result()
+{
+    return *(m_result);
 }
 
 template <typename T>
@@ -245,6 +282,18 @@ inline AwaiterBase* Coroutine<T>::GetAwaiter() const
 }
 
 template<typename T>
+inline CoroutineBase::wptr Coroutine<T>::GetDependency() const
+{
+    return *m_father;
+}
+
+template <typename T>
+inline std::list<CoroutineBase::wptr> Coroutine<T>::GetChilds() const
+{
+    return *m_childs;
+}
+
+template<typename T>
 inline void Coroutine<T>::Destroy() 
 { 
     m_handle.destroy(); 
@@ -260,8 +309,13 @@ inline void Coroutine<T>::Resume()
 template<typename T>
 inline void Coroutine<T>::ToExit()
 {
+    while(!m_childs->empty()) {
+        auto child = m_childs->front();
+        child.lock()->GetCoScheduler()->ToDestroyCoroutine(child);
+        m_childs->pop_front();
+    }
     while(!m_exit_cbs->empty()) {
-        m_exit_cbs->front()();
+        m_exit_cbs->front()(weak_from_this());
         m_exit_cbs->pop_front();
     }
 }
@@ -269,9 +323,11 @@ inline void Coroutine<T>::ToExit()
 inline Coroutine<void>::Coroutine(const std::coroutine_handle<promise_type> handle) noexcept
 {
     m_status = std::make_shared<std::atomic<CoroutineStatus>>(CoroutineStatus::Running);
-    m_exit_cbs = std::make_shared<std::list<std::function<void()>>>();
+    m_exit_cbs = std::make_shared<std::list<ExitHandle>>();
     m_handle = handle;
     m_awaiter = nullptr;
+    m_father = std::make_shared<CoroutineBase::wptr>();
+    m_childs = std::make_shared<std::list<CoroutineBase::wptr>>();
 }
 
 inline Coroutine<void>::Coroutine(Coroutine&& other) noexcept
@@ -284,6 +340,10 @@ inline Coroutine<void>::Coroutine(Coroutine&& other) noexcept
     other.m_exit_cbs.reset();
     m_status = other.m_status;
     other.m_status.reset();
+    m_father = other.m_father;
+    other.m_father = nullptr;
+    m_childs = other.m_childs;
+    other.m_childs = nullptr;
 }
 
 inline Coroutine<void>::Coroutine(const Coroutine& other) noexcept
@@ -292,6 +352,8 @@ inline Coroutine<void>::Coroutine(const Coroutine& other) noexcept
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
     m_status = other.m_status;
+    m_father = other.m_father;
+    m_childs = other.m_childs;
 }
 
 inline Coroutine<void>& Coroutine<void>::operator=(Coroutine&& other) noexcept
@@ -304,6 +366,10 @@ inline Coroutine<void>& Coroutine<void>::operator=(Coroutine&& other) noexcept
     other.m_status.reset();
     m_exit_cbs = other.m_exit_cbs;
     other.m_exit_cbs.reset();
+    m_father = other.m_father;
+    other.m_father = nullptr;
+    m_childs = other.m_childs;
+    other.m_childs = nullptr;
     return *this;
 }
 
@@ -313,6 +379,8 @@ inline Coroutine<void>& Coroutine<void>::operator=(const Coroutine &other) noexc
     m_handle = other.m_handle;
     m_exit_cbs = other.m_exit_cbs;
     m_status = other.m_status;
+    m_father = other.m_father;
+    m_childs = other.m_childs;
     return *this;
 }
 
@@ -355,7 +423,19 @@ inline bool Coroutine<void>::SetAwaiter(AwaiterBase* awaiter)
     return true;
 }
 
-inline void Coroutine<void>::AppendExitCallback(const std::function<void()>& callback)
+inline std::optional<std::monostate> Coroutine<void>::Result()
+{
+    return std::nullopt;
+}
+
+inline bool Coroutine<void>::SetDependency(CoroutineBase::wptr father)
+{
+    m_father = std::make_shared<CoroutineBase::wptr>(father);
+    father.lock()->AppendChild(m_handle.promise().GetCoroutine());
+    return true;
+}
+
+inline void Coroutine<void>::AppendExitCallback(const ExitHandle& callback)
 {
     m_exit_cbs->emplace_front(callback);
 }
@@ -384,10 +464,31 @@ inline AwaiterBase* Coroutine<void>::GetAwaiter() const
     return m_awaiter.load();
 }
 
+inline CoroutineBase::wptr Coroutine<void>::GetDependency() const
+{
+    return *m_father;
+}
+
+inline std::list<CoroutineBase::wptr> Coroutine<void>::GetChilds() const
+{
+    return *m_childs;
+}
+
+inline bool Coroutine<void>::AppendChild(CoroutineBase::wptr child)
+{
+    m_childs->push_back(child);
+    return true;
+}
+
 inline void Coroutine<void>::ToExit()
 {
+    while(!m_childs->empty()) {
+        auto child = m_childs->front();
+        child.lock()->GetCoScheduler()->ToDestroyCoroutine(child);
+        m_childs->pop_front();
+    }
     while(!m_exit_cbs->empty()) {
-        m_exit_cbs->front()();
+        m_exit_cbs->front()(weak_from_this());
         m_exit_cbs->pop_front();
     }
 }

@@ -423,53 +423,45 @@ private:
 template<HttpStatusCode Code>
 std::string CodeResponse<Code>::m_responseStr = "";
 
-template<typename SocketType>
-class HttpRouteHandler 
-{
-    using SessionPtr = typename galay::Session<SocketType, HttpRequest, HttpResponse>::ptr;
-public:
-    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>>>;
-    void AddHandler(HttpMethod method, const std::string& path, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>&& handler);
-    
-    static HttpRouteHandler<SocketType>* GetInstance();
-    Coroutine<std::string> Handler(RoutineCtx ctx, HttpMethod method, const std::string &path, SessionPtr session);
-    
-private:
-    static std::unique_ptr<HttpRouteHandler<SocketType>> m_instance;
-    HandlerMap m_handler_map;
-};
 
 template<typename SocketType>
-std::unique_ptr<HttpRouteHandler<SocketType>> HttpRouteHandler<SocketType>::m_instance = nullptr;
+class HttpStream {
+public:
+    using ptr = std::shared_ptr<HttpStream>;
+    HttpStream(typename Connection<SocketType>::uptr connection);
+    
+private:
+    Coroutine<HttpRequest::uptr> WaitForRequest(RoutineCtx ctx);
+    Coroutine<bool> WaitForResponse(RoutineCtx ctx, HttpResponse::uptr request);
+private:
+    typename Connection<SocketType>::uptr m_connection;
+};
 
 
 template<typename SocketType>
 class HttpServer
 {
 public:
-    using SessionPtr = typename galay::Session<SocketType, HttpRequest, HttpResponse>::ptr;
+    using HttpStreamPtr = typename HttpStream<SocketType>::ptr;
+    using Handler = std::function<Coroutine<void>(RoutineCtx,HttpStreamPtr)>;
+    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, Handler>>;
     explicit HttpServer(HttpServerConfig::ptr config);
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, std::function<Coroutine<void>(RoutineCtx,SessionPtr)>&& handler);
+    void RouteHandler(const std::string& path, Handler&& handler);
     void Start(THost host);
     void Stop();
     bool IsRunning() const;
 private:
-    Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session);
+    Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename HttpStream<SocketType>::uptr stream);
     void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
 private:
+    HandlerMap m_map;
     TcpServer<SocketType> m_server;
 };
 
 template<typename SocketType>
-extern Coroutine<void> HttpRoute(RoutineCtx ctx, size_t max_header_size, typename Session<SocketType, HttpRequest, HttpResponse>::ptr session);
-
-
-template<typename SocketType>
-extern Coroutine<std::string> Handle(RoutineCtx ctx, http::HttpMethod method, const std::string& path,\
-                                        typename Session<SocketType, http::HttpRequest, http::HttpResponse>::ptr session, \
-                                        typename HttpRouteHandler<SocketType>::HandlerMap& handlerMap);
+Coroutine<HttpRequest::uptr> GetHttpRequest(RoutineCtx ctx, typename HttpStream<SocketType>::uptr stream);
 
 
 }
@@ -491,8 +483,6 @@ namespace galay
 #define HTTP_1_1 HttpVersion::Http_Version_1_1
 #define HTTP_2_0 HttpVersion::Http_Version_2_0
 
-using HttpSession = Session<AsyncTcpSocket, http::HttpRequest, http::HttpResponse>;
-using HttpsSession = Session<AsyncTcpSslSocket, http::HttpRequest, http::HttpResponse>;
 
 }
 

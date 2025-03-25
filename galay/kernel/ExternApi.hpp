@@ -25,7 +25,7 @@ struct IOVec
 {
     char* m_buffer = nullptr;           // buffer
     size_t m_size = 0;                  // buffer size
-    size_t m_offset = 0;                // offset
+    size_t m_offset = 0;                // offset, recv和send都会改变值
     size_t m_length = 0;                // operation length
 };
 
@@ -145,7 +145,7 @@ extern AsyncResult<void, CoRtn> Sleepfor(details::EventScheduler* scheduler, int
     注意和AutoDestructor的回调区别，DeferExit的callback会在协程正常和非正常退出时调用
 */
 template<typename CoRtn>
-extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(void)>& callback);
+extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(CoroutineBase::wptr)>& callback);
 
 
 template<typename CoRtn, typename FCoRtn>
@@ -153,9 +153,10 @@ extern AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coro
 /*
     协程内部同步接口
 */
-template<typename CoRtn, typename T, typename ...Args>
-concept AsyncFuncType = requires(T func, galay::RoutineCtx ctx, Args... args) {
-    std::is_same_v<decltype(func(ctx, args...)), Coroutine<CoRtn>>; // 要求 T 类型的对象可以调用，并且第一个参数必须是 RoutineCtx 类型
+template<typename Func, typename CoRtn, typename ...Args>
+concept AsyncFuncType = requires(Func func, galay::RoutineCtx ctx, Args... args) {
+    { std::forward<Func>(func)(ctx, std::forward<Args>(args)...) } 
+    -> std::same_as<galay::Coroutine<CoRtn>>;
 };
 
 template<typename T>
@@ -163,8 +164,11 @@ concept RoutineCtxType = requires() {
     std::is_same_v<T, galay::RoutineCtx>;
 };
 
-template<typename CoRtn, typename FCoRtn, AsyncFuncType<CoRtn> Func, RoutineCtxType FirstArg, typename ...Args>
+template<typename CoRtn, typename FCoRtn, typename... Args, AsyncFuncType<CoRtn, Args...> Func, RoutineCtxType FirstArg>
 extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func func, FirstArg first, Args&&... args);
+
+template<typename CoRtn, typename FCoRtn, typename... Args, AsyncFuncType<CoRtn, Args...> Func, RoutineCtxType FirstArg>
+extern galay::AsyncResult<CoRtn, FCoRtn> WaitBlockExecute(Func func, FirstArg first, Args&&... args);
 
 template<typename CoRtn, typename T>
 concept CoroutineType = requires() {
@@ -173,6 +177,11 @@ concept CoroutineType = requires() {
 
 template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
 extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
+
+template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
+extern galay::AsyncResult<CoRtn, FCoRtn> WaitBlockExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
+
+
 
 }
 

@@ -6,6 +6,7 @@
 #include <coroutine>
 #include <mutex>
 #include <list>
+#include <variant>
 #include <optional>
 #include <shared_mutex>
 #include <string>
@@ -64,13 +65,9 @@ public:
     RoutineSharedCtx(RoutineSharedCtx&& ctx);
     details::CoroutineScheduler* GetCoScheduler();
     details::EventScheduler* GetEventScheduler();
-    int32_t AddToGraph(uint16_t layer, std::weak_ptr<CoroutineBase> coroutine);
-    void RemoveFromGraph(uint16_t layer, int32_t sequence);
-    std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>>& GetRoutineGraph();
 private:
     std::atomic<details::EventScheduler*> m_src_scheduler;
     std::atomic<details::CoroutineScheduler*> m_dest_scheduler;
-    std::vector<std::unordered_map<int32_t, std::weak_ptr<CoroutineBase>>> m_coGraph;
 };
 
 class RoutinePrivateCtx
@@ -80,11 +77,7 @@ public:
     using ptr = std::shared_ptr<RoutinePrivateCtx>;
     static RoutinePrivateCtx::ptr Create();
     RoutinePrivateCtx();
-    uint16_t& GetThisLayer();
-    int32_t& GetThisSequence();
 private:
-    uint16_t m_layer = 0;
-    int32_t m_sequence = -1;
 };
 
 class RoutineCtx
@@ -103,17 +96,18 @@ public:
     RoutineCtx Copy();
 
     RoutineSharedCtx::wptr GetSharedCtx();
-    uint16_t GetThisLayer() const;
 private:
     RoutineSharedCtx::ptr m_sharedCtx;
     RoutinePrivateCtx::ptr m_privateCtx;
 };
 
-class CoroutineBase
+class CoroutineBase: public std::enable_shared_from_this<CoroutineBase>
 {
 public:
     using ptr = std::shared_ptr<CoroutineBase>;
     using wptr = std::weak_ptr<CoroutineBase>;
+
+    using ExitHandle = std::function<void(CoroutineBase::wptr)>;
     
     virtual bool IsRunning() const = 0;
     virtual bool IsSuspend() const = 0;
@@ -121,11 +115,18 @@ public:
     virtual details::CoroutineScheduler* GetCoScheduler() const = 0;
     virtual details::EventScheduler* GetEventScheduler() const = 0;
     virtual AwaiterBase* GetAwaiter() const = 0;
-    virtual void AppendExitCallback(const std::function<void()>& callback) = 0;
+    virtual void AppendExitCallback(const ExitHandle& callback) = 0;
     virtual bool SetAwaiter(AwaiterBase* awaiter) = 0; 
+    virtual bool SetDependency(CoroutineBase::wptr father) = 0;
+    virtual CoroutineBase::wptr GetDependency() const = 0;
+    virtual bool AppendChild(CoroutineBase::wptr child) = 0;
+    virtual std::list<CoroutineBase::wptr> GetChilds() const = 0;
     virtual void Resume() = 0;
     virtual void Destroy() = 0;
     virtual ~CoroutineBase() = default;
+
+    template <typename T>
+    T* ConvertTo();
 };
 
 template<typename T>
@@ -204,8 +205,14 @@ public:
     bool IsDone() const override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
     AwaiterBase* GetAwaiter() const override;
+    CoroutineBase::wptr GetDependency() const override;
+    std::list<CoroutineBase::wptr> GetChilds() const override;
 
-    void AppendExitCallback(const std::function<void()>& callback) override;
+    bool AppendChild(CoroutineBase::wptr child) override;
+    bool SetDependency(CoroutineBase::wptr father) override;
+    void AppendExitCallback(const ExitHandle& callback) override;
+
+    std::optional<T> Result();
     std::optional<T> operator()();
 
     bool Become(CoroutineStatus status);
@@ -215,11 +222,13 @@ private:
     void Resume() override;
     void ToExit();
 private:
+    std::shared_ptr<CoroutineBase::wptr> m_father;
+    std::shared_ptr<std::list<CoroutineBase::wptr>> m_childs;
     std::shared_ptr<std::optional<T>> m_result;
     std::shared_ptr<std::atomic<CoroutineStatus>> m_status;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;
-    std::shared_ptr<std::list<std::function<void()>>> m_exit_cbs;
+    std::shared_ptr<std::list<ExitHandle>> m_exit_cbs;
 };
 
 template<>
@@ -245,8 +254,14 @@ public:
     bool IsDone() const  override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
     AwaiterBase* GetAwaiter() const override;
+    CoroutineBase::wptr GetDependency() const override;
+    std::list<CoroutineBase::wptr> GetChilds() const override;
 
-    void AppendExitCallback(const std::function<void()>& callback) override;
+    bool AppendChild(CoroutineBase::wptr child) override;
+    bool SetDependency(CoroutineBase::wptr father) override;
+    void AppendExitCallback(const ExitHandle& callback) override;
+
+    std::optional<std::monostate> Result();
     void operator()() {}
 
     bool Become(CoroutineStatus status);
@@ -257,10 +272,12 @@ private:
 
     void ToExit();
 private:
+    std::shared_ptr<CoroutineBase::wptr> m_father;
+    std::shared_ptr<std::list<CoroutineBase::wptr>> m_childs;
     std::shared_ptr<std::atomic<CoroutineStatus>> m_status;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;
-    std::shared_ptr<std::list<std::function<void()>>> m_exit_cbs;
+    std::shared_ptr<std::list<ExitHandle>> m_exit_cbs;
 };
 
 
@@ -297,8 +314,6 @@ private:
     details::WaitAction* m_action;
     std::coroutine_handle<typename Coroutine<CoRtn>::promise_type> m_handle;
 };
-
-
 
 }
 

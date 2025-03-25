@@ -56,8 +56,8 @@ public:
 int main(int argc, char* argv[])
 {
     galay::GalayEnv env({});
-    auto config = galay::server::HttpServerConfig::Create();
-    galay::server::HttpServer<galay::AsyncTcpSocket> server(config);
+    auto config = galay::HttpServerConfig::Create();
+    galay::HttpServer<galay::AsyncTcpSocket> server(config);
     server.RouteHandler<galay::http::GET>("/", Handler::GetHelloWorldHandler);
     server.Start({"", 8060});
     getchar();

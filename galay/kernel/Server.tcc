@@ -3,6 +3,44 @@
 
 #include "Server.hpp"
 
+namespace galay
+{
+
+template<typename Socket>
+Connection<Socket>::Connection(details::EventScheduler* scheduler, Socket* socket) 
+    :m_socket(socket) 
+{
+}
+
+template <typename Socket>
+inline details::EventScheduler *Connection<Socket>::GetScheduler() const
+{
+    return m_scheduler;
+}
+
+template<typename Socket>
+template <typename CoRtn>
+AsyncResult<int, CoRtn> Connection<Socket>::Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms)
+{
+    return m_socket->Recv(holder, size, timeout_ms);
+}
+
+template <typename Socket>
+template <typename CoRtn>
+inline AsyncResult<int, CoRtn> Connection<Socket>::Send(TcpIOVecHolder& holder, int size, int64_t timeout_ms)
+{
+    return m_socket->Send(holder, size, timeout_ms);
+}
+
+template <typename Socket>
+template <typename CoRtn>
+inline AsyncResult<bool, CoRtn> Connection<Socket>::Close()
+{
+    return m_socket->Close();
+}
+
+}
+
 namespace galay::details
 {
 
@@ -18,8 +56,8 @@ void CallbackStore<Socket>::RegisteCallback(callback_t callback)
 template <typename Socket>
 void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, Socket* socket) 
 {
-    auto connection = std::make_shared<Connection<Socket>>(scheduler, socket);
-    if(m_callback) m_callback(RoutineCtx::Create(scheduler), connection);
+    auto connection = std::make_unique<Connection<Socket>>(scheduler, socket);
+    if(m_callback) m_callback(RoutineCtx::Create(scheduler), std::move(connection));
 }
 
 template <typename SocketType>
@@ -99,9 +137,8 @@ inline std::string ListenEvent<AsyncTcpSslSocket>::Name()
 namespace galay
 {
 
-
 template <typename SocketType>
-inline void TcpServer<SocketType>::Prepare(callback_t callback)
+inline void TcpServer<SocketType>::OnCall(callback_t callback)
 {
     details::CallbackStore<SocketType>::RegisteCallback(callback);
 }
