@@ -6,16 +6,19 @@
 namespace galay::error{
 
 static const char* HttpErrors[] = {
-    "No error",
-    "Header is incomplete",
-    "Body is incomplete",
-    "Header is too long",
-    "Uri too long",
-    "Chunck has error",
-    "Http code is invalid",
-    "Header pair exists",
-    "Header pair not exist",
+    "No Error",
+    "Connection Close",
+    "Recv Timeout"
+    "Header Incomplete",
+    "Body Incomplete",
+    "Header Too Long",
+    "Uri Too Long",
+    "Chunck Error",
+    "Invalid Httpcode",
+    "Header Pair Exist",
+    "Header Pair Not Exist",
     "Bad Request",
+    "Unkown Error"
 };
 
 bool 
@@ -901,54 +904,48 @@ HttpRequestHeader::FromHexToI(const std::string& s, size_t i, size_t cnt, int& v
     return true;
 }
 
-
-std::pair<bool,size_t> 
-HttpRequest::DecodePdu(const std::string_view& buffer)
+bool HttpRequest::ParseHeader(const std::string_view& buffer)
 {
     m_error->Reset();
-    size_t n = buffer.length();
-    //header
-    if(m_status < HttpDecodeStatus::kHttpHeadEnd) 
-    {
-        error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
-        if( errCode != error::kHttpError_NoError ) {
-            m_error->Code() = errCode;
-            return {false, 0};
-        }
-        if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-            LogError("[Header is too long, Header Len: {} Bytes]", buffer.length());
-            m_error->Code() = error::kHttpError_HeaderTooLong;
-            return {false, 0};
-        } 
-        if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
-            m_error->Code() = error::kHttpError_HeaderInComplete;
-            return {false, 0};
-        }
+    error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
+    if( errCode != error::kHttpError_NoError ) {
+        m_error->Code() = errCode;
+        return false;
+    }
+    if( m_next_index > HTTP_HEADER_MAX_LEN ) {
+        LogError("[Header is too long, Header Len: {} Bytes]", buffer.length());
+        m_error->Code() = error::kHttpError_HeaderTooLong;
+        return false;
     } 
+    if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
+        m_error->Code() = error::kHttpError_HeaderInComplete;
+        return false;
+    }
+    return true;
+}
 
-    if(m_status >= HttpDecodeStatus::kHttpHeadEnd) 
+bool HttpRequest::ParseBody(const std::string_view &buffer)
+{
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
+        || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
     {
-        if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
-            || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
-        {
-            if(GetChunkBody(buffer)){
-                m_status = HttpDecodeStatus::kHttpBody;
-            }  else {
-                return {false, 0};
-            }
+        if(GetChunkBody(buffer)){
+            m_status = HttpDecodeStatus::kHttpBody;
+        }  else {
+            return false;
         }
-        else if (m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length"))
-        {
-            if(GetHttpBody(buffer)) {
-                m_status = HttpDecodeStatus::kHttpBody;
-            } else {
-                return {false, 0};
-            }
+    }
+    else if (m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length"))
+    {
+        if(GetHttpBody(buffer)) {
+            m_status = HttpDecodeStatus::kHttpBody;
+        } else {
+            return false;
         }
     }
     size_t length = m_next_index;
     m_next_index = 0;
-    return {true, length};
+    return true;
 }
 
 std::string 
@@ -958,8 +955,18 @@ HttpRequest::EncodePdu() const
         (m_header->HeaderPairs().HasKey("transfer-encoding") && "chunked" == m_header->HeaderPairs().GetValue("transfer-encoding"))){
         return m_header->ToString();
     }
-    if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
-        m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
+    if(!m_body.empty()){
+        if(!m_body.empty() ){
+            if(!m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")) {
+                m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
+            } else {
+                if(m_header->HeaderPairs().HasKey("Content-Length")) {
+                    m_header->HeaderPairs().SetHeaderPair("Content-Length", std::to_string(m_body.length()));
+                } else {
+                    m_header->HeaderPairs().SetHeaderPair("content-length", std::to_string(m_body.length()));
+                }
+            }
+        }
     }
     return std::move(m_header->ToString() + m_body);
 }
@@ -1037,17 +1044,17 @@ HttpRequest::Header()
     return m_header;
 }
 
-void http::HttpRequest::SetContent(const std::string& type, std::string &&content)
+void http::HttpRequest::SetContent(std::string &&content, const std::string& type)
 {
-    m_header->HeaderPairs().AddHeaderPair("Content-Type", MimeType::ConvertToMimeType(type));
+    if(!type.empty()) m_header->HeaderPairs().AddHeaderPair("Content-Type", MimeType::ConvertToMimeType(type));
     m_body = std::move(content);
 }
-
 std::string_view
 HttpRequest::GetContent()
 {
     return this->m_body;
 }
+
 
 bool 
 HttpRequest::GetHttpBody(const std::string_view &buffer)
@@ -1288,8 +1295,16 @@ HttpResponse::EncodePdu() const
         ( 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked") || 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked") )){
         return m_header->ToString();
     }
-    if(!m_body.empty() && !m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")){
-        m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
+    if(!m_body.empty() ){
+        if(!m_header->HeaderPairs().HasKey("Content-Length") && !m_header->HeaderPairs().HasKey("content-length")) {
+            m_header->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(m_body.length()));
+        } else {
+            if(m_header->HeaderPairs().HasKey("Content-Length")) {
+                m_header->HeaderPairs().SetHeaderPair("Content-Length", std::to_string(m_body.length()));
+            } else {
+                m_header->HeaderPairs().SetHeaderPair("content-length", std::to_string(m_body.length()));
+            }
+        }
     }
     std::string header = m_header->ToString();
     return std::move( header + m_body);
@@ -1759,7 +1774,7 @@ HttpFormDataHelper::FormDataToString(HttpRequest::ptr request, const std::string
         }
     }
     stream << "--" << boundary << "--\r\n\r\n";
-    request->SetContent("", stream.str());
+    request->SetContent(stream.str());
     if(request->Header()->HeaderPairs().HasKey("Content-Type"))
     {
         request->Header()->HeaderPairs().SetHeaderPair("Content-Type", "multipart/form-data; boundary=" + boundary);

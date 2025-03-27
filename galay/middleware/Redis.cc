@@ -713,7 +713,7 @@ RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, details::EventSche
         }
         m_scheduler = EventSchedulerHolder::GetInstance()->GetScheduler();
     }
-    m_action = new details::IOEventAction(new details::RedisEvent(this));
+    m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::RedisEvent>(this));
 }
 
 RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::EventScheduler* scheduler, details::CoroutineScheduler* coroutine_scheduler)
@@ -726,7 +726,7 @@ RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger
         }
         m_scheduler = EventSchedulerHolder::GetInstance()->GetScheduler();
     }
-    m_action = new details::IOEventAction(new details::RedisEvent(this));
+    m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::RedisEvent>(this));
 }
 
 bool RedisAsyncSession::Connect(const std::string &ehost, int32_t port)
@@ -801,10 +801,6 @@ int RedisAsyncSession::RedisAsyncCommand(const std::string &command)
 
 RedisAsyncSession::~RedisAsyncSession()
 {
-    if(m_action) {
-        delete m_action;
-        m_action = nullptr; 
-    }
     if(!m_redis) {
         redisAsyncFree(m_redis);
         m_redis = nullptr;

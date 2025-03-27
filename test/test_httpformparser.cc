@@ -7,7 +7,7 @@ TEST(HttpFormParser, RequestParser)
 {
     auto request = std::make_shared<http::HttpRequest>();
     std::string msg = "POST /forms HTTP/1.1\r\n\
-Content-Length: 624\r\n\
+Content-Length: 626\r\n\
 Content-Type: multipart/form-data; boundary=--------------------------225416638845415405984661\r\n\
 \r\n\
 ----------------------------225416638845415405984661\r\n\
@@ -25,15 +25,14 @@ message TokenReq {\r\n\
 ----------------------------225416638845415405984661\r\n\
 Content-Disposition: form-data; name=\"id\"\r\n\
 \r\n\
-1.1231\r\n\
+1.123100\r\n\
 ----------------------------225416638845415405984661\r\n\
 Content-Disposition: form-data; name=\"status\"\r\n\
 \r\n\
 1\r\n\
 ----------------------------225416638845415405984661--\r\n\r\n";
-    auto result = request->DecodePdu(msg);
-    ASSERT_TRUE(result.first);
-    ASSERT_EQ(result.second, (int)msg.length());
+    auto result = request->ParseHeader(msg);
+    auto t = request->ParseBody(msg);
     ASSERT_TRUE(http::HttpFormDataHelper::IsFormData(request));
     std::vector<http::FormDataValue> values;
     http::HttpFormDataHelper::ParseFormData(request, values);
@@ -65,7 +64,7 @@ TEST(HttpFormParser, ResponseParser)
 {
     auto response = std::make_shared<http::HttpResponse>();
     std::string msg = "HTTP/1.1 200 OK\r\n\
-Content-Length: 624\r\n\
+Content-Length: 626\r\n\
 Content-Type: multipart/form-data; boundary=--------------------------225416638845415405984661\r\n\
 \r\n\
 ----------------------------225416638845415405984661\r\n\
@@ -83,7 +82,7 @@ message TokenReq {\r\n\
 ----------------------------225416638845415405984661\r\n\
 Content-Disposition: form-data; name=\"id\"\r\n\
 \r\n\
-1.1231\r\n\
+1.123100\r\n\
 ----------------------------225416638845415405984661\r\n\
 Content-Disposition: form-data; name=\"status\"\r\n\
 \r\n\
@@ -93,7 +92,7 @@ Content-Disposition: form-data; name=\"status\"\r\n\
     auto result = response->DecodePdu(msg);
     ASSERT_TRUE(result.first);
     ASSERT_EQ(result.second, (int)msg.length());
-    ASSERT_EQ(response->Header()->HeaderPairs().GetValue("Content-Length"), std::string("624"));
+    ASSERT_EQ(response->Header()->HeaderPairs().GetValue("Content-Length"), std::string("626"));
     ASSERT_EQ(response->Header()->Version(), http::HttpVersion::Http_Version_1_1);
     ASSERT_EQ(msg, response->EncodePdu());
 }
@@ -104,5 +103,8 @@ TEST(HttpFormDataHelper, ParseHeadData)
     std::string msg = "GET / HTTP/1.1\r\n\
 Host: localhost:8080\r\n\r\n";
     http::HttpRequest request;
-    request.DecodePdu(msg);
+    request.ParseHeader(msg);
+    ASSERT_EQ(request.Header()->Method(), http::HttpMethod::Http_Method_Get);
+    ASSERT_EQ(request.Header()->Uri(), "/");
+    ASSERT_EQ(request.Header()->Version(), http::HttpVersion::Http_Version_1_1);
 }

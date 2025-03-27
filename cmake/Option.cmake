@@ -1,6 +1,6 @@
 option(ENABLE_DEBUG "Enable debug" ON)
 option(ENABLE_INSTALL_SYSTEM "Enable install system" ON) 
-option(ENABLE_BUILD_ETCD "Enable build mysql" ON)
+option(ENABLE_BUILD_ETCD "Enable build etcd" ON)
 option(ENABLE_BUILD_MYSQL "Enable build mysql" ON)
 option(ENABLE_BUILD_REDIS "Enable build redis" ON)
 
@@ -62,7 +62,7 @@ endif()
 #json
 find_path(NLOHMANN_JSON_INCLUDE_DIR NAMES nlohmann/json.hpp)
 if(NLOHMANN_JSON_INCLUDE_DIR)
-  set(NLOHMANN_JSON_FOUND TRUE)
+  set(NLOHMANN_JSON_FOUND TRUE) 
 endif()
 
 if(NLOHMANN_JSON_FOUND)

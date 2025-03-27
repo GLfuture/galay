@@ -158,7 +158,7 @@ DnsRequest::EncodePdu() const
     return std::string(begin, len);
 }
 
-std::pair<bool,size_t> DnsRequest::DecodePdu(const std::string_view &buffer)
+bool DnsRequest::DecodePdu(const std::string_view &buffer)
 {
     char *begin = static_cast<char*>(calloc(buffer.length(), sizeof(char)));
     char *temp = begin;
@@ -212,7 +212,7 @@ std::pair<bool,size_t> DnsRequest::DecodePdu(const std::string_view &buffer)
         q.m_class = ntohs(qclass);
         m_question = q;
     }
-    return {true, buffer.length()};
+    return true;
 }
 
 bool DnsRequest::HasError() const
@@ -297,7 +297,7 @@ DnsRequest::IsPointer(int in)
 }
 
 
-std::pair<bool,size_t> 
+bool 
 DnsResponse::DecodePdu(const std::string_view &buffer)
 {
     char *begin = static_cast<char*>(calloc(buffer.length(), sizeof(char)));
@@ -380,7 +380,7 @@ DnsResponse::DecodePdu(const std::string_view &buffer)
         m_answers.push(a);
     }
     delete[] begin;
-    return {true, buffer.length()};
+    return true;
 }
 
 std::string 

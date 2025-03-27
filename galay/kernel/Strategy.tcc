@@ -11,7 +11,9 @@ inline Type* RoundRobinLoadBalancer<Type>::Select()
 {
     if(m_nodes.empty()) return nullptr;
     uint32_t index = m_index.load(std::memory_order_relaxed);
-    if( !m_index.compare_exchange_strong(index, (index + 1) % m_nodes.size())) return nullptr;
+    while( !m_index.compare_exchange_strong(index, (index + 1) % m_nodes.size())) {
+        index = m_index.load(std::memory_order_relaxed);
+    }
     return m_nodes[index];
 }
 

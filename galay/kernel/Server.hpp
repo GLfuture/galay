@@ -23,7 +23,7 @@ public:
     using EventScheduler = details::EventScheduler;
     using timeout_callback_t = std::function<void(typename Connection<Socket>::uptr)>;
 
-    explicit Connection(EventScheduler* scheduler, Socket* socket);
+    explicit Connection(EventScheduler* scheduler, std::unique_ptr<Socket> socket);
     
     template <typename CoRtn = void>
     AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
@@ -35,6 +35,7 @@ public:
     AsyncResult<bool, CoRtn> Close();
 
     EventScheduler *GetScheduler() const;
+    std::unique_ptr<Socket>& GetSocket();
 private:
     EventScheduler* m_scheduler;
     std::unique_ptr<Socket> m_socket;
@@ -56,7 +57,7 @@ class CallbackStore
 public:
     using callback_t = std::function<Coroutine<void>(RoutineCtx,typename Connection<Socket>::uptr)>;
     static void RegisteCallback(callback_t callback);
-    static void CreateConnAndExecCallback(EventScheduler* scheduler, Socket* socket);
+    static void CreateConnAndExecCallback(EventScheduler* scheduler, std::unique_ptr<Socket> socket);
 private:
     static callback_t m_callback;
 };
@@ -76,7 +77,7 @@ public:
 private:
     void CreateConnection(RoutineCtx ctx, EventScheduler* scheduler);
 private:
-    SocketType* m_socket;
+    std::unique_ptr<SocketType> m_socket;
     std::atomic<EventScheduler*> m_scheduler;
 };
 
@@ -90,7 +91,6 @@ namespace galay
 
 #define DEFAULT_SERVER_BACKLOG                          32
 
-#define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
 
 #define DEFAULT_REQUIRED_EVENT_SCHEDULER_NUM            4
 
@@ -105,17 +105,6 @@ struct TcpServerConfig
     int m_requiredEventSchedulerNum = DEFAULT_REQUIRED_EVENT_SCHEDULER_NUM;     // 占用前m_requiredEventSchedulerNum个框架eventscheduler
     int m_backlog = DEFAULT_SERVER_BACKLOG;                                     // 半连接队列长度
 };
-
-struct HttpServerConfig final: public TcpServerConfig
-{
-    using ptr = std::shared_ptr<HttpServerConfig>;
-    static HttpServerConfig::ptr Create();
-    ~HttpServerConfig() override = default;
-
-    uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
-
-};
-
 
 template<typename SocketType>
 class TcpServer

@@ -86,7 +86,6 @@ ScrambleThreadPool::Start(int num)
             LogInfo("[Thread Exit Normally]");
             Done();
         });
-        th->detach();
         m_threads.push_back(std::move(th));
     }
 }
@@ -133,6 +132,9 @@ ScrambleThreadPool::Stop()
     {
         m_terminate.store(true, std::memory_order_relaxed);
         m_workCond.notify_all();
+    }
+    for(auto& thread : m_threads) {
+        if(thread->joinable()) thread->join();
     }
 }
 

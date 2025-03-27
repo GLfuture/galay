@@ -1,8 +1,8 @@
 #ifndef __GALAY_SMTP_H__
 #define __GALAY_SMTP_H__
 
-#include "Protocol.h"
 #include "galay/security/Base64.h"
+#include <memory>
 #include <queue>
 
 namespace galay::error
@@ -54,7 +54,7 @@ namespace galay::smtp
         static std::string Quit(SmtpRequest& request);
     };
 
-    class SmtpRequest: public Request, public common::DynamicCreator<Request,SmtpRequest>
+    class SmtpRequest
     {
         friend class SmtpHelper;
     public:
@@ -62,12 +62,13 @@ namespace galay::smtp
         using wpt = std::weak_ptr<SmtpRequest>;
         using uptr = std::unique_ptr<SmtpRequest>;
         SmtpRequest();
-        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-        [[nodiscard]] std::string EncodePdu() const override;
-        [[nodiscard]] bool HasError() const override;
-        [[nodiscard]] int GetErrorCode() const override;
-        std::string GetErrorString() override;
-        void Reset() override;
+        // > 0 解析长度， 0 解析不完全
+        size_t DecodePdu(const std::string_view &buffer);
+        [[nodiscard]] std::string EncodePdu() const;
+        [[nodiscard]] bool HasError() const;
+        [[nodiscard]] int GetErrorCode() const;
+        std::string GetErrorString();
+        void Reset();
         std::string& GetContent();
     private:
         //content不带\r\n
@@ -78,19 +79,20 @@ namespace galay::smtp
         error::SmtpError::ptr m_error;
     };
 
-    class SmtpResponse: public Response, public common::DynamicCreator<Response,SmtpResponse>
+    class SmtpResponse
     {
     public:
         using ptr = std::shared_ptr<SmtpResponse>;
         using wptr = std::weak_ptr<SmtpResponse>;
         using uptr = std::unique_ptr<SmtpResponse>;
         SmtpResponse();
-        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-        [[nodiscard]] std::string EncodePdu() const override;
-        [[nodiscard]] bool HasError() const override;
-        [[nodiscard]] int GetErrorCode() const override;
-        std::string GetErrorString() override;
-        void Reset() override;
+        // > 0 解析长度， 0 解析不完全
+        size_t DecodePdu(const std::string_view &buffer);
+        [[nodiscard]] std::string EncodePdu() const;
+        [[nodiscard]] bool HasError() const;
+        [[nodiscard]] int GetErrorCode() const;
+        std::string GetErrorString();
+        void Reset();
         std::string& GetContent();
     private:
         uint32_t m_next_index;

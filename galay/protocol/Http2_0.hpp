@@ -1,7 +1,6 @@
 #ifndef GALAY_HTTP2_HPP
 #define GALAY_HTTP2_HPP
 
-#include "Protocol.h"
 #include "galay/kernel/Server.hpp"
 #include "Http2Hpack.hpp"
 #include <vector>

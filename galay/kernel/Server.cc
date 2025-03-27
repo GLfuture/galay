@@ -17,14 +17,13 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, galay::AsyncTcpSocket *socket, 
             }
             co_return;
         }
-        auto new_socket = new galay::AsyncTcpSocket();
+        auto new_socket = std::make_unique<galay::AsyncTcpSocket>();
         if( !new_socket->Socket(handle) ) {
-            delete new_socket;
             co_return;
         }
         LogTrace("[Handle:{}, Acceot Success]", new_socket->GetHandle().fd);
         scheduler->GetEngine()->ResetMaxEventSize(handle.fd);
-        CallbackStore<galay::AsyncTcpSocket>::CreateConnAndExecCallback(scheduler ,new_socket);
+        CallbackStore<galay::AsyncTcpSocket>::CreateConnAndExecCallback(scheduler, std::move(new_socket));
     }
     co_return;
 }
@@ -41,43 +40,30 @@ Coroutine<void> CreateConnection(RoutineCtx ctx, AsyncTcpSslSocket *socket, Even
             }
             co_return;
         }
-        auto new_socket = new AsyncTcpSslSocket();
+        auto new_socket = std::unique_ptr<AsyncTcpSslSocket>();
         if( bool res = new_socket->Socket(handle); !res ) {
-            delete new_socket;
             co_return;
         }
         LogTrace("[Handle:{}, Accept Success]", new_socket->GetHandle().fd);
         if(bool success = co_await new_socket->SSLAccept(); !success ){
             LogError("[{}]", error::GetErrorString(new_socket->GetErrorCode()));
             close(handle.fd);
-            delete new_socket;
             co_return;
         }
         LogTrace("[Handle:{}, SSL_Acceot Success]", new_socket->GetHandle().fd);
         scheduler->GetEngine()->ResetMaxEventSize(handle.fd);
-        CallbackStore<AsyncTcpSslSocket>::CreateConnAndExecCallback(scheduler, new_socket);
+        CallbackStore<AsyncTcpSslSocket>::CreateConnAndExecCallback(scheduler, std::move(new_socket));
     }
     co_return;
 }
 
-
-
 }
 
-
-namespace galay
-{
+namespace galay {
 
 TcpServerConfig::ptr TcpServerConfig::Create()
 {
     return std::make_shared<TcpServerConfig>();
 }
-
-
-HttpServerConfig::ptr HttpServerConfig::Create()
-{
-    return std::make_shared<HttpServerConfig>();
-}
-
 
 }

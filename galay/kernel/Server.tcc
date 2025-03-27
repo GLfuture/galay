@@ -7,8 +7,8 @@ namespace galay
 {
 
 template<typename Socket>
-Connection<Socket>::Connection(details::EventScheduler* scheduler, Socket* socket) 
-    :m_socket(socket) 
+Connection<Socket>::Connection(details::EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
+    :m_socket(std::move(socket)) 
 {
 }
 
@@ -18,18 +18,24 @@ inline details::EventScheduler *Connection<Socket>::GetScheduler() const
     return m_scheduler;
 }
 
+template <typename Socket>
+inline std::unique_ptr<Socket> &Connection<Socket>::GetSocket()
+{
+    return m_socket;
+}
+
 template<typename Socket>
 template <typename CoRtn>
 AsyncResult<int, CoRtn> Connection<Socket>::Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms)
 {
-    return m_socket->Recv(holder, size, timeout_ms);
+    return m_socket->template Recv<CoRtn>(holder, size, timeout_ms);
 }
 
 template <typename Socket>
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> Connection<Socket>::Send(TcpIOVecHolder& holder, int size, int64_t timeout_ms)
 {
-    return m_socket->Send(holder, size, timeout_ms);
+    return m_socket->template Send<CoRtn>(holder, size, timeout_ms);
 }
 
 template <typename Socket>
@@ -54,9 +60,9 @@ void CallbackStore<Socket>::RegisteCallback(callback_t callback)
 }
 
 template <typename Socket>
-void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, Socket* socket) 
+void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
 {
-    auto connection = std::make_unique<Connection<Socket>>(scheduler, socket);
+    auto connection = std::make_unique<Connection<Socket>>(scheduler, std::move(socket));
     if(m_callback) m_callback(RoutineCtx::Create(scheduler), std::move(connection));
 }
 
@@ -108,14 +114,13 @@ inline EventEngine* ListenEvent<SocketType>::BelongEngine()
 
 template <typename SocketType>
 inline void ListenEvent<SocketType>::CreateConnection(RoutineCtx ctx, EventScheduler* scheduler) {
-    galay::details::CreateConnection(ctx.Copy(), m_socket, scheduler);
+    galay::details::CreateConnection(ctx, m_socket.get(), scheduler);
 }
 
 template <typename SocketType>
 inline ListenEvent<SocketType>::~ListenEvent()
 {
     if(m_scheduler) m_scheduler.load()->GetEngine()->DelEvent(this, nullptr);
-    delete m_socket;
 }
 
 template<>

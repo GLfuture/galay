@@ -376,7 +376,7 @@ bool NetWaitEvent::OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void *ct
     if( handle.fd < 0 ) {
         if( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR ) {
             awaiter->SetResult(std::move(handle));
-            return true;
+            return false;
         }else{
             m_async_context->m_error_code = error::MakeErrorCode(error::Error_AcceptError, errno);
         }
@@ -569,7 +569,7 @@ int NetWaitEvent::TcpDealRecv(TcpIOVec* iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_RecvError, errno);
-            return eCommonOtherFailed;
+            return eCommonUnknown;
         } else {
             return eCommonNonBlocking;
         }
@@ -588,7 +588,7 @@ int NetWaitEvent::TcpDealSend(TcpIOVec* iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SendError, errno);
-            return eCommonOtherFailed;
+            return eCommonUnknown;
         } else {
             return eCommonNonBlocking;
         }
@@ -609,7 +609,7 @@ int NetWaitEvent::UdpDealRecvfrom(UdpIOVec *iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_RecvError, errno);
-            return eCommonOtherFailed;
+            return eCommonUnknown;
         } else {
             return eCommonNonBlocking;
         }
@@ -634,7 +634,7 @@ int NetWaitEvent::UdpDealSendto(UdpIOVec *iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SendError, errno);
-            return eCommonOtherFailed;
+            return eCommonUnknown;
         } else {
             spdlog::info("{}", strerror(errno));
             return eCommonNonBlocking;
@@ -1004,7 +1004,7 @@ int NetSslWaitEvent::TcpDealRecv(TcpIOVec* iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_RecvError, errno);
-            return eCommonOtherFailed;
+            return eCommonUnknown;
         } else {
             return eCommonNonBlocking;
         }
@@ -1023,7 +1023,7 @@ int NetSslWaitEvent::TcpDealSend(TcpIOVec* iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SendError, errno);
-            return eCommonOtherFailed;
+            return eCommonUnknown;
         } else {
             return eCommonNonBlocking;
         }
@@ -1202,7 +1202,7 @@ bool FileIoWaitEvent::OnKReadWaitPrepare(const CoroutineBase::wptr co, void *ctx
             return true;
         } else {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_FileReadError, errno);
-            length = eCommonOtherFailed;
+            length = eCommonUnknown;
         }        
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", this->m_async_context->m_handle.fd, length);
@@ -1222,7 +1222,7 @@ void FileIoWaitEvent::HandleKReadEvent(EventEngine *engine)
             length = eCommonNonBlocking;
         } else {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_FileReadError, errno);
-            length = eCommonOtherFailed;
+            length = eCommonUnknown;
         }
     }
     LogTrace("[Handle: {}, ReadBytes: {}]", this->m_async_context->m_handle.fd, length);
@@ -1243,7 +1243,7 @@ bool FileIoWaitEvent::OnKWriteWaitPrepare(CoroutineBase::wptr co, void *ctx)
             return true;
         }else {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_FileReadError, errno);
-            length = eCommonOtherFailed;
+            length = eCommonUnknown;
         }
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", this->m_async_context->m_handle.fd, length);
@@ -1263,7 +1263,7 @@ void FileIoWaitEvent::HandleKWriteEvent(EventEngine *engine)
             length = eCommonNonBlocking;
         }else {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_FileReadError, errno);
-            length = eCommonOtherFailed;
+            length = eCommonUnknown;
         }
     }
     LogTrace("[Handle: {}, WriteBytes: {}]", this->m_async_context->m_handle.fd, length);

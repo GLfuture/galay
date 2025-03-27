@@ -54,7 +54,6 @@ public:
 private:
     std::atomic_bool m_running;
     std::unique_ptr<std::thread> m_thread;
-    std::shared_ptr<thread::ThreadWaiters> m_waiter;
     moodycamel::BlockingConcurrentQueue<std::pair<Action, Coroutine_wptr>> m_coroutines_queue;
 };
 
@@ -83,7 +82,6 @@ public:
     void AddTimer(timer_ptr timer, int64_t ms);
     ~EventScheduler() = default;
 protected:
-    std::latch m_latch;
     std::unique_ptr<std::thread> m_thread;
     std::shared_ptr<EventEngine> m_engine;
     std::shared_ptr<TimeEvent> m_timer_event;

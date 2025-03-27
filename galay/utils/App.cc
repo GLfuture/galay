@@ -36,9 +36,9 @@ args::InputValue::InputValue(Arg *arg)
 {
 }
 
-Arg *Arg::Create(const std::string &name)
+Arg::ptr Arg::Create(const std::string &name)
 {
-    return new Arg(name);
+    return std::make_shared<Arg>(name);
 }
 
 Arg::Arg(const std::string &name)
@@ -103,9 +103,9 @@ InputValue args::Arg::Value()
     return InputValue(this);
 }
 
-Cmd *Cmd::Create(const std::string &name)
+Cmd::uptr Cmd::Create(const std::string &name)
 {
-    return new Cmd(name);
+    return std::make_unique<Cmd>(name);
 }
 
 Cmd::Cmd(const std::string &name)
@@ -113,13 +113,13 @@ Cmd::Cmd(const std::string &name)
 {
 }
 
-Cmd& Cmd::AddCmd(Cmd* cmd, bool auto_free)
+Cmd& Cmd::AddCmd(Cmd::uptr cmd)
 {
-    m_sub_cmds.emplace(cmd->m_name, cmd);
+    m_sub_cmds.emplace(cmd->m_name, std::move(cmd));
     return *this;
 }
 
-Cmd& Cmd::AddArg(Arg *arg, bool auto_free)
+Cmd& Cmd::AddArg(Arg::ptr arg)
 {
     if(m_sub_args.find(arg->m_name) != m_sub_args.end()) {
         throw std::runtime_error("Arg already exists");
@@ -140,9 +140,9 @@ Cmd& Cmd::AddArg(Arg *arg, bool auto_free)
 
 void args::Cmd::Help(const std::string &help_str)
 {
-    Arg* arg = Arg::Create("help");
+    Arg::ptr arg = Arg::Create("help");
     arg->Output(help_str).Short('h').Unique(true);
-    AddArg(arg, true);
+    AddArg(arg);
 }
 
 void args::Cmd::ShowHelp()
@@ -155,22 +155,8 @@ void args::Cmd::ShowHelp()
     std::cout << it->second->m_output << std::endl;
 }
 
-Cmd::~Cmd()
-{
-    for(auto& [_ , arg]: m_sub_args) {
-        if(arg->m_auto_free) {
-            delete arg;
-        }
-    }
-    m_sub_args.clear();
-    for(auto& [_, sub_cmd]: m_sub_cmds) {
-        if(sub_cmd->m_auto_free) {
-            delete sub_cmd;
-        }
-    }
-}
 
-bool Cmd::Collect(Arg *arg)
+bool Cmd::Collect(Arg::ptr arg)
 {
     if( m_collector.m_output_arg && !arg->m_output.empty()) {
         std::string msg = "--" + m_collector.m_output_arg->m_name + " does not use with --" + arg->m_name;
@@ -192,7 +178,7 @@ bool Cmd::Parse(int argc, int index, const char **argv)
             //long name
             std::string real_name = arg.substr(2);
             if(m_sub_args.find(real_name) != m_sub_args.end()) {
-                Arg* arg_ptr = m_sub_args[real_name];
+                Arg::ptr arg_ptr = m_sub_args[real_name];
                 m_required.erase(arg_ptr->m_name);
                 //has input
                 if(arg_ptr->m_input) {
@@ -223,7 +209,7 @@ bool Cmd::Parse(int argc, int index, const char **argv)
             if( real_name.length() == 1) {
                 //只有一个字母
                 if(m_sub_args.find(real_name) != m_sub_args.end()) {
-                    Arg* arg_ptr = m_sub_args[real_name];
+                    Arg::ptr arg_ptr = m_sub_args[real_name];
                     m_required.erase(arg_ptr->m_name);
                     //has input
                     if(arg_ptr->m_input) {
@@ -256,7 +242,7 @@ bool Cmd::Parse(int argc, int index, const char **argv)
                     }
                     std::string short_name(1, c);
                     if(m_sub_args.find(short_name) != m_sub_args.end()) {
-                        Arg* arg_ptr = m_sub_args[short_name];
+                        Arg::ptr arg_ptr = m_sub_args[short_name];
                         m_required.erase(arg_ptr->m_name);
                         //has input
                         if(arg_ptr->m_input) {
@@ -277,7 +263,7 @@ bool Cmd::Parse(int argc, int index, const char **argv)
             //cmd
             std::string real_name = arg;
             if(m_sub_cmds.find(real_name) != m_sub_cmds.end()) {
-                Cmd* cmd_ptr = m_sub_cmds[real_name];
+                Cmd* cmd_ptr = m_sub_cmds[real_name].get();
                 return cmd_ptr->Parse(argc, index + 1, argv);
             } else {
                 std::cout << real_name << " is invaild argument" << std::endl;
@@ -296,7 +282,7 @@ bool Cmd::Parse(int argc, int index, const char **argv)
                 return false;
             } else {
                 auto arg = (*m_collector.m_complete_args.begin());
-                if(arg->m_success_callback) arg->m_success_callback(arg);
+                if(arg->m_success_callback) arg->m_success_callback(arg.get());
                 if( m_collector.m_output_arg ) {
                     std::cout << m_collector.m_output_arg->m_output << std::endl;
                 }
@@ -315,7 +301,7 @@ bool Cmd::Parse(int argc, int index, const char **argv)
     }
     for( auto& arg: m_collector.m_complete_args ) {
         if( arg->m_success_callback ) {
-            arg->m_success_callback(arg);
+            arg->m_success_callback(arg.get());
         }
     }
     if( m_collector.m_output_arg ) {

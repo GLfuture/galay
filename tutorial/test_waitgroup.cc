@@ -107,7 +107,7 @@ Coroutine<void> test(RoutineCtx ctx)
     });
     p = co_await this_coroutine::GetThisCoroutine<void>();
     int a = 0;
-    auto res = co_await this_coroutine::WaitBlockExecute<int, void>(do_things, ctx, a);
+    auto res = co_await this_coroutine::WaitAsyncRtnExecute<int, void>(do_things, ctx, a);
     std::cout << "res = " << res << std::endl;
     co_return;
 }

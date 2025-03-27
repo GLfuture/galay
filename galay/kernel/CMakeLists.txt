@@ -17,7 +17,7 @@ add_library(${PROJECT_NAME} OBJECT ${SRC_LIST})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${DEPEND_LIBS})
 if(ENABLE_TRACE_LOG)
     message(STATUS "ENABLE_DISPLAY_GALAY_LOG ON")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "ENABLE_DISPLAY_GALAY_LOG")
+    target_compile_definitions(${PROJECT_NAME} PUBLIC "ENABLE_DISPLAY_GALAY_LOG")
 endif()
 
 install(TARGETS kernel EXPORT GalayTargets)

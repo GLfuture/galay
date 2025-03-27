@@ -397,7 +397,7 @@ private:
 	Logger::ptr m_logger;
 	redisAsyncContext* m_redis;
 	RedisConfig::ptr m_config;
-	details::IOEventAction* m_action;
+	details::IOEventAction::uptr m_action;
 	details::EventScheduler* m_scheduler;
 	details::CoroutineScheduler* m_coScheduler;
 };

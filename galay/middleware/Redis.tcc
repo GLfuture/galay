@@ -158,7 +158,7 @@ inline AsyncResult<bool, CoRtn> RedisAsyncSession::AsyncConnect(THost host)
         return {false};
     }
     static_cast<details::RedisEvent*>(m_action->GetBindEvent())->ResetRedisWaitEventType(details::RedisWaitEventType_Write);
-    return {m_action, nullptr};
+    return {m_action.get(), nullptr};
 }
 
 template <typename CoRtn>
@@ -169,7 +169,7 @@ inline AsyncResult<RedisAsyncValue, CoRtn> RedisAsyncSession::AsyncCommand(const
         return {std::move(value)};
     }
     static_cast<details::RedisEvent*>(m_action->GetBindEvent())->ResetRedisWaitEventType(details::RedisWaitEventType_Write);
-    return {m_action, nullptr};
+    return {m_action.get(), nullptr};
 }
 
 }

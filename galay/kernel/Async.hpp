@@ -7,7 +7,7 @@
 #include "ExternApi.hpp"
 #include "WaitAction.h"
 #include <openssl/ssl.h>
-
+#include <iostream>
 #ifdef __linux__
     #include <libaio.h>
 #endif
@@ -74,8 +74,8 @@ using FileIOVecHolder = IOVecHolder<FileIOVec>;
 
 enum CommonTcpIORtnType
 {
-    eCommonOtherFailed = -3,
-    eCommonTimeOutFailed = -2,
+    eCommonUnknown = -3,
+    eCommonTimeOut = -2,
     eCommonNonBlocking = -1,
     eCommonDisConnect = 0,
 };
@@ -104,28 +104,30 @@ private:
 class AsyncNetEventContext
 {
 public:
+    using uptr = std::unique_ptr<AsyncNetEventContext>;
 
-    static AsyncNetEventContext* Create();
-    static AsyncNetEventContext* Create(GHandle handle);
+    static AsyncNetEventContext::uptr Create();
+    static AsyncNetEventContext::uptr Create(GHandle handle);
 
     void Resume();
 
-    virtual ~AsyncNetEventContext();
+    virtual ~AsyncNetEventContext() = default;
 
     GHandle m_handle = {};
     uint32_t m_error_code = 0;
     int64_t m_timeout = 0;
     details::Resumer::ptr m_resumer = nullptr;
-    details::IOEventAction* m_action = nullptr;
+    details::IOEventAction::uptr m_action;
 };
 
 
 class AsyncSslNetEventContext: public AsyncNetEventContext
 {
 public:
-    static AsyncSslNetEventContext* Create();
-    static AsyncSslNetEventContext* Create(GHandle handle);
-    static AsyncSslNetEventContext* Create(SSL* ssl);
+    using uptr = std::unique_ptr<AsyncSslNetEventContext>;
+    static AsyncSslNetEventContext::uptr Create();
+    static AsyncSslNetEventContext::uptr Create(GHandle handle);
+    static AsyncSslNetEventContext::uptr Create(SSL* ssl);
 
     virtual ~AsyncSslNetEventContext();
 
@@ -136,11 +138,10 @@ public:
 class AsyncFileEventContext
 {
 public:
-
-    static AsyncFileEventContext* Create();
-    static AsyncFileEventContext* Create(GHandle handle);
+    using uptr = std::unique_ptr<AsyncFileEventContext>;
+    static AsyncFileEventContext::uptr Create();
+    static AsyncFileEventContext::uptr Create(GHandle handle);
     
-    virtual ~AsyncFileEventContext();
 
     void Resume();
 
@@ -148,7 +149,7 @@ public:
     int64_t m_timeout = 0;
     uint32_t m_error_code = 0;
     details::Resumer::ptr m_resumer = nullptr;
-    details::IOEventAction* m_action = nullptr;
+    details::IOEventAction::uptr m_action;
 };
 
 #ifdef  __linux__
@@ -163,9 +164,9 @@ public:
 class AsyncLinuxFileEventContext: public AsyncFileEventContext
 {
 public:
-
-    static AsyncLinuxFileEventContext* Create(int maxevents);
-    static AsyncLinuxFileEventContext* Create(GHandle handle, int maxevents);
+    using uptr = std::unique_ptr<AsyncLinuxFileEventContext>;
+    static AsyncLinuxFileEventContext::uptr Create(int maxevents);
+    static AsyncLinuxFileEventContext::uptr Create(GHandle handle, int maxevents);
 
     explicit AsyncLinuxFileEventContext(int maxevents);
     
@@ -207,10 +208,9 @@ public:
 
     GHandle GetHandle() const;
     uint32_t GetErrorCode() const;
-    virtual ~AsyncTcpSocket();
 private:
     details::IOEventAction::ptr m_action;
-    AsyncNetEventContext* m_async_context;
+    AsyncNetEventContext::uptr m_async_context;
 };
 
 
@@ -244,7 +244,7 @@ public:
     uint32_t GetErrorCode() const;
     ~AsyncTcpSslSocket() = default;
 private:
-    AsyncSslNetEventContext* m_async_context;
+    AsyncSslNetEventContext::uptr m_async_context;
 };
 
 
@@ -264,9 +264,8 @@ public:
     AsyncResult<bool, CoRtn> Close();
     GHandle GetHandle() const;
     uint32_t GetErrorCode() const;
-    virtual ~AsyncUdpSocket();
 private:
-    AsyncNetEventContext* m_async_context;
+    AsyncNetEventContext::uptr m_async_context;
 };
 
 
@@ -285,9 +284,8 @@ public:
     AsyncResult<bool, CoRtn> Close();
     GHandle GetHandle() const;
     uint32_t GetErrorCode() const;
-    virtual ~AsyncFileDescriptor();
 private:
-    AsyncFileEventContext* m_async_context;
+    AsyncFileEventContext::uptr m_async_context;
 };
 
 #ifdef  __linux__
@@ -315,7 +313,7 @@ public:
     uint32_t GetErrorCode() const { return m_async_context->m_error_code; }
     ~AsyncFileNativeAioDescriptor();
 private:
-    AsyncLinuxFileEventContext* m_async_context;
+    AsyncLinuxFileEventContext::uptr m_async_context;
 };
 
 #endif

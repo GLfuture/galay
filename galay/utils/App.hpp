@@ -2,6 +2,7 @@
 #define GALAY_APP_HPP
 
 #include <list>
+#include <memory>
 #include <string>
 #include <concepts>
 #include <optional>
@@ -62,7 +63,8 @@ class Arg
     friend class ArgInputType;
     friend class InputValue;
 public:
-    static Arg* Create(const std::string& name);
+    using ptr = std::shared_ptr<Arg>;
+    static Arg::ptr Create(const std::string& name);
 
     Arg(const std::string& name);
     Arg& Short(char short_name);
@@ -79,7 +81,6 @@ public:
 
     InputValue Value();
 private:
-    bool m_auto_free = false;
     Cmd* m_cmd = nullptr;
     std::string m_name;
     std::string m_short_name;
@@ -95,35 +96,33 @@ private:
 
 struct ArgCollector
 {
-    Arg* m_output_arg = nullptr;
-    std::list<Arg*> m_complete_args;
+    Arg::ptr m_output_arg = nullptr;
+    std::list<Arg::ptr> m_complete_args;
 };
 
 class Cmd
 {
 public:
-    static Cmd* Create(const std::string& name);
+    using uptr = std::unique_ptr<Cmd>;
+    static Cmd::uptr Create(const std::string& name);
     
     Cmd(const std::string& name);
-    Cmd& AddCmd(Cmd* cmd, bool auto_free = false);
-    Cmd& AddArg(Arg* arg, bool auto_free = false);
+    Cmd& AddCmd(Cmd::uptr cmd);
+    Cmd& AddArg(Arg::ptr arg);
     void Help(const std::string& help_str);
 
     void ShowHelp();
-    ~Cmd();
 protected:
-    bool Collect(Arg* arg);
+    bool Collect(Arg::ptr arg);
 
     bool Parse(int argc, int index, const char** argv);
 protected:
     std::string m_name;
 
-    bool m_auto_free = false;
     std::unordered_set<std::string> m_required;
-    std::unordered_map<std::string, Cmd*> m_sub_cmds;
+    std::unordered_map<std::string, Cmd::uptr> m_sub_cmds;
 
-    std::unordered_map<std::string, Arg*> m_sub_args;
-
+    std::unordered_map<std::string, Arg::ptr> m_sub_args;
     ArgCollector m_collector;
 };
 
@@ -137,7 +136,6 @@ public:
     void Help(const std::string& help_str);
 
     void ShowHelp();
-    
 };
 
 template <>

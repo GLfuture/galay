@@ -19,13 +19,13 @@ inline AsyncResult<Coroutine<ErrorCode>::ptr, CoRtn> Http2Stream<SocketType>::Se
     , Priority priority, uint8_t padding_length)
 {
     if(m_manager->m_co_scheduler) {
-        return this_coroutine::WaitAsyncExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(\
+        return this_coroutine::WaitAsyncRtnExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(\
             RoutineCtx::Create(m_manager->m_scheduler, m_manager->m_co_scheduler),
             m_manager->m_connection,
             FrameFactory::CreateHeadersFrame(m_stream_id, end_headers, std::move(header_block), m_max_frame_size, priority, padding_length)
         ));
     }
-    return this_coroutine::WaitAsyncExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(RoutineCtx::Create(m_manager->m_scheduler), 
+    return this_coroutine::WaitAsyncRtnExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(RoutineCtx::Create(m_manager->m_scheduler), 
         m_manager->m_connection,
         FrameFactory::CreateHeadersFrame(m_stream_id, end_headers, std::move(header_block), m_max_frame_size, priority, padding_length)
     ));
@@ -36,13 +36,13 @@ template <typename CoRtn>
 inline AsyncResult<Coroutine<ErrorCode>::ptr, CoRtn> Http2Stream<SocketType>::SendData(std::string&& data, bool end_stream, uint8_t padding_length)
 {
     if(m_manager->m_co_scheduler) {
-        return this_coroutine::WaitAsyncExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(\
+        return this_coroutine::WaitAsyncRtnExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(\
             RoutineCtx::Create(m_manager->m_scheduler, m_manager->m_co_scheduler),
             m_manager->m_connection,
             FrameFactory::CreateDataFrame(m_stream_id, end_stream, std::move(data), m_max_frame_size, padding_length)
         ));
     }
-    return this_coroutine::WaitAsyncExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(RoutineCtx::Create(m_manager->m_scheduler), 
+    return this_coroutine::WaitAsyncRtnExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(RoutineCtx::Create(m_manager->m_scheduler), 
         m_manager->m_connection,
         FrameFactory::CreateDataFrame(m_stream_id, end_stream, std::move(data), m_max_frame_size, padding_length)
     ));
@@ -54,13 +54,13 @@ inline AsyncResult<Coroutine<ErrorCode>::ptr, CoRtn> Http2Stream<SocketType>::Wi
 {
     InCreaseThisWindowSize(window_size);
     if(m_manager->m_co_scheduler) {
-        return this_coroutine::WaitAsyncExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(\
+        return this_coroutine::WaitAsyncRtnExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(\
             RoutineCtx::Create(m_manager->m_scheduler, m_manager->m_co_scheduler),
             m_manager->m_connection,
             FrameFactory::CreateWindowUpdateFrame(m_stream_id, window_size)
         ));
     }
-    return this_coroutine::WaitAsyncExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(RoutineCtx::Create(m_manager->m_scheduler), 
+    return this_coroutine::WaitAsyncRtnExecute<Coroutine<ErrorCode>::ptr, CoRtn>(sendFrame(RoutineCtx::Create(m_manager->m_scheduler), 
         m_manager->m_connection,
         FrameFactory::CreateWindowUpdateFrame(m_stream_id, window_size)
     ));

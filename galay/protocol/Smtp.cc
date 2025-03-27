@@ -122,7 +122,7 @@ SmtpRequest::SmtpRequest()
     m_error = std::make_shared<error::SmtpError>();    
 }
 
-std::pair<bool,size_t> 
+size_t 
 SmtpRequest::DecodePdu(const std::string_view& buffer)
 {
     m_error->Reset();
@@ -130,11 +130,11 @@ SmtpRequest::DecodePdu(const std::string_view& buffer)
     if(pos == std::string::npos) {
         m_error->Code() = error::kSmtpError_Incomplete;
         m_next_index = buffer.length();
-        return {false, 0};
+        return 0;
     }
     this->m_content = buffer.substr(0,pos);
     m_next_index = 0;
-    return {true, pos + 2};
+    return pos + 2;
 }
 
 std::string 
@@ -181,7 +181,7 @@ SmtpResponse::SmtpResponse()
     m_error = std::make_shared<error::SmtpError>();
 }
 
-std::pair<bool,size_t> 
+size_t 
 SmtpResponse::DecodePdu(const std::string_view &buffer)
 {
     m_error->Reset();
@@ -189,11 +189,11 @@ SmtpResponse::DecodePdu(const std::string_view &buffer)
     if(pos == std::string::npos) {
         m_error->Code() = error::kSmtpError_Incomplete;
         m_next_index = buffer.length();
-        return {false, 0};
+        return 0;
     }
     this->m_content = buffer.substr(0,pos);
     m_next_index = 0;
-    return {true, pos + 2};
+    return pos + 2;
 }
 
 

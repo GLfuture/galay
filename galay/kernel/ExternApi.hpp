@@ -136,10 +136,6 @@ extern AsyncResult<typename CoroutineBase::wptr, CoRtn> GetThisCoroutine();
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
 
-template<typename CoRtn>
-extern AsyncResult<void, CoRtn> Sleepfor(details::EventScheduler* scheduler, int64_t ms);
-
-
 /*
     注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
     注意和AutoDestructor的回调区别，DeferExit的callback会在协程正常和非正常退出时调用
@@ -150,6 +146,14 @@ extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(CoroutineBase
 
 template<typename CoRtn, typename FCoRtn>
 extern AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Coroutine<CoRtn>&& co);
+
+template<typename CoRtn, typename FCoRtn\
+    , std::enable_if_t<!std::is_void_v<CoRtn>, int> = 0>
+extern AsyncResult<CoRtn, FCoRtn> WaitAsyncRtnExecute(Coroutine<CoRtn>&& co);
+
+template<typename FCoRtn>
+extern AsyncResult<void, FCoRtn> WaitAsyncRtnExecute(Coroutine<void>&& co);
+
 /*
     协程内部同步接口
 */
@@ -164,22 +168,33 @@ concept RoutineCtxType = requires() {
     std::is_same_v<T, galay::RoutineCtx>;
 };
 
-template<typename CoRtn, typename FCoRtn, typename... Args, AsyncFuncType<CoRtn, Args...> Func, RoutineCtxType FirstArg>
+template<typename CoRtn, typename FCoRtn, typename... Args, AsyncFuncType<CoRtn, Args...> Func\
+    , RoutineCtxType FirstArg>
 extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Func func, FirstArg first, Args&&... args);
 
-template<typename CoRtn, typename FCoRtn, typename... Args, AsyncFuncType<CoRtn, Args...> Func, RoutineCtxType FirstArg>
-extern galay::AsyncResult<CoRtn, FCoRtn> WaitBlockExecute(Func func, FirstArg first, Args&&... args);
+template<typename CoRtn, typename FCoRtn, typename... Args, AsyncFuncType<CoRtn, Args...> Func\
+    , RoutineCtxType FirstArg, std::enable_if_t<!std::is_void_v<CoRtn>, int> = 0>
+extern galay::AsyncResult<CoRtn, FCoRtn> WaitAsyncRtnExecute(Func func, FirstArg first, Args&&... args);
+
+template<typename FCoRtn, typename... Args, AsyncFuncType<void, Args...> Func, RoutineCtxType FirstArg>
+extern galay::AsyncResult<void, FCoRtn> WaitAsyncRtnExecute(Func func, FirstArg first, Args&&... args);
 
 template<typename CoRtn, typename T>
 concept CoroutineType = requires() {
     std::is_same_v<T, galay::Coroutine<CoRtn>>;
 };
 
-template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
+template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret\
+    , RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
 extern galay::AsyncResult<typename Coroutine<CoRtn>::ptr, FCoRtn> WaitAsyncExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
 
-template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret, RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args>
-extern galay::AsyncResult<CoRtn, FCoRtn> WaitBlockExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
+template<typename CoRtn,  typename FCoRtn, typename Class, CoroutineType<CoRtn> Ret\
+    , RoutineCtxType FirstArg, typename ...FuncArgs, typename ...Args, std::enable_if_t<!std::is_void_v<CoRtn>, int> = 0>
+extern galay::AsyncResult<CoRtn, FCoRtn> WaitAsyncRtnExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
+
+template<typename FCoRtn, typename Class, CoroutineType<void> Ret, RoutineCtxType FirstArg
+    , typename ...FuncArgs, typename ...Args>
+extern galay::AsyncResult<void, FCoRtn> WaitAsyncRtnExecute(Ret(Class::*func)(FirstArg, FuncArgs...), Class* obj, FirstArg first, Args&&... args);
 
 
 

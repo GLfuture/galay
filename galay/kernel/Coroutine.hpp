@@ -117,10 +117,6 @@ public:
     virtual AwaiterBase* GetAwaiter() const = 0;
     virtual void AppendExitCallback(const ExitHandle& callback) = 0;
     virtual bool SetAwaiter(AwaiterBase* awaiter) = 0; 
-    virtual bool SetDependency(CoroutineBase::wptr father) = 0;
-    virtual CoroutineBase::wptr GetDependency() const = 0;
-    virtual bool AppendChild(CoroutineBase::wptr child) = 0;
-    virtual std::list<CoroutineBase::wptr> GetChilds() const = 0;
     virtual void Resume() = 0;
     virtual void Destroy() = 0;
     virtual ~CoroutineBase() = default;
@@ -205,11 +201,6 @@ public:
     bool IsDone() const override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
     AwaiterBase* GetAwaiter() const override;
-    CoroutineBase::wptr GetDependency() const override;
-    std::list<CoroutineBase::wptr> GetChilds() const override;
-
-    bool AppendChild(CoroutineBase::wptr child) override;
-    bool SetDependency(CoroutineBase::wptr father) override;
     void AppendExitCallback(const ExitHandle& callback) override;
 
     std::optional<T> Result();
@@ -222,8 +213,6 @@ private:
     void Resume() override;
     void ToExit();
 private:
-    std::shared_ptr<CoroutineBase::wptr> m_father;
-    std::shared_ptr<std::list<CoroutineBase::wptr>> m_childs;
     std::shared_ptr<std::optional<T>> m_result;
     std::shared_ptr<std::atomic<CoroutineStatus>> m_status;
     std::coroutine_handle<promise_type> m_handle;
@@ -254,11 +243,6 @@ public:
     bool IsDone() const  override;
     bool SetAwaiter(AwaiterBase* awaiter) override;
     AwaiterBase* GetAwaiter() const override;
-    CoroutineBase::wptr GetDependency() const override;
-    std::list<CoroutineBase::wptr> GetChilds() const override;
-
-    bool AppendChild(CoroutineBase::wptr child) override;
-    bool SetDependency(CoroutineBase::wptr father) override;
     void AppendExitCallback(const ExitHandle& callback) override;
 
     std::optional<std::monostate> Result();
@@ -272,8 +256,6 @@ private:
 
     void ToExit();
 private:
-    std::shared_ptr<CoroutineBase::wptr> m_father;
-    std::shared_ptr<std::list<CoroutineBase::wptr>> m_childs;
     std::shared_ptr<std::atomic<CoroutineStatus>> m_status;
     std::coroutine_handle<promise_type> m_handle;
     std::atomic<AwaiterBase*> m_awaiter = nullptr;

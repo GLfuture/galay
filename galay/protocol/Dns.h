@@ -1,7 +1,8 @@
 #ifndef __GALAY_DNS_H__
 #define __GALAY_DNS_H__
-#include "Protocol.h"
+#include <memory>
 #include <queue>
+#include <string>
 #include <string.h>
 #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
     #include <arpa/inet.h>
@@ -110,33 +111,33 @@ namespace galay::dns
         std::queue<DnsAnswer> m_answers;
     };
 
-    class DnsRequest : public DnsProtocol, public Request, public galay::common::DynamicCreator<Request,DnsRequest>
+    class DnsRequest: public DnsProtocol
     {
     public:
         using ptr = std::shared_ptr<DnsRequest>;
-        [[nodiscard]] std::string EncodePdu() const override;
-        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-        [[nodiscard]] bool HasError() const override;
-        [[nodiscard]] int GetErrorCode() const override;
-        std::string GetErrorString() override;
-        void Reset() override;
+        [[nodiscard]] std::string EncodePdu() const;
+        bool DecodePdu(const std::string_view &buffer);
+        [[nodiscard]] bool HasError() const;
+        [[nodiscard]] int GetErrorCode() const;
+        std::string GetErrorString();
+        void Reset();
     protected:
         std::string ModifyHostname(std::string hostname) const;
         int DnsParseName(unsigned char *buffer, unsigned char *ptr, std::string &out);
         bool IsPointer(int in);
     };
 
-    class DnsResponse : public DnsProtocol, public Response, public galay::common::DynamicCreator<Response,DnsResponse>
+    class DnsResponse: public DnsProtocol
     {
     public:
         using ptr = std::shared_ptr<DnsResponse>;
-        std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
+        bool DecodePdu(const std::string_view &buffer);
         // ignore
-        [[nodiscard]] std::string EncodePdu() const override;
-        [[nodiscard]] bool HasError() const override;
-        [[nodiscard]] int GetErrorCode() const override;
-        std::string GetErrorString() override;
-        void Reset() override;
+        [[nodiscard]] std::string EncodePdu() const;
+        [[nodiscard]] bool HasError() const;
+        [[nodiscard]] int GetErrorCode() const;
+        std::string GetErrorString();
+        void Reset();
     protected:
         std::string ModifyHostname(std::string hostname);
         static bool IsPointer(int in);

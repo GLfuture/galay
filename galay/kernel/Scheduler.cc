@@ -10,7 +10,6 @@ namespace galay::details
 {
 
 EventScheduler::EventScheduler()
-    : m_latch(1)
 {
 #if defined(USE_EPOLL)
     m_engine = std::make_shared<details::EpollEventEngine>();
@@ -40,9 +39,7 @@ bool EventScheduler::Loop()
         if( m_timer_event ) timeout = m_timer_event->OnceLoopTimeout();
         m_engine->Loop(timeout);
         LogTrace("[{}({}) exist successfully]", Name(), GetEngine()->GetHandle().fd);
-        m_latch.count_down();
     });
-    this->m_thread->detach();
     return true;
 }
 
@@ -51,14 +48,8 @@ bool EventScheduler::Stop()
     m_timer_event.reset();
     if(!m_engine->IsRunning()) return false;
     m_engine->Stop();
-    int count = 1;
-    do {
-        if(count ++ >= 5) {
-            if(m_latch.try_wait()) return true;
-        } else break;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while(true);
-    return m_latch.try_wait();
+    if(m_thread->joinable()) m_thread->join();
+    return true;
 }
 
 bool EventScheduler::IsRunning() const
@@ -80,7 +71,6 @@ void EventScheduler::AddTimer(timer_ptr timer, int64_t ms)
 CoroutineScheduler::CoroutineScheduler()
     : m_running(false)
 {
-    m_waiter = std::make_shared<thread::ThreadWaiters>(1);
 }
 
 void 
@@ -125,9 +115,7 @@ bool CoroutineScheduler::Loop()
             }
         }
         LogTrace("[{} exist successfully]", Name());
-        m_waiter->Decrease();
     });
-    this->m_thread->detach();
     return true;
 }
 
@@ -138,7 +126,8 @@ bool CoroutineScheduler::Stop()
     }
     //GetCoroutineStore()->Clear(); 
     m_coroutines_queue.enqueue({});
-    return m_waiter->Wait(5000);
+    if(m_thread->joinable()) m_thread->join();
+    return true;
 }
 
 bool CoroutineScheduler::IsRunning() const

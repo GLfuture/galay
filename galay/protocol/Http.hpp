@@ -1,8 +1,8 @@
 #ifndef GALAY_HTTP_HPP
 #define GALAY_HTTP_HPP
 
-#include "Protocol.h"
 #include "galay/kernel/Server.hpp"
+#include "galay/kernel/ExternApi.hpp"
 #include <map>
 #include <unordered_set>
 #include <string_view>
@@ -16,6 +16,8 @@ namespace galay::error
 enum HttpErrorCode
 {
     kHttpError_NoError = 0,
+    kHttpError_ConnectionClose,
+    kHttpError_RecvTimeOut,
     kHttpError_HeaderInComplete,
     kHttpError_BodyInComplete,
     kHttpError_HeaderTooLong,
@@ -25,6 +27,7 @@ enum HttpErrorCode
     kHttpError_HeaderPairExist,
     kHttpError_HeaderPairNotExist,
     kHttpError_BadRequest,
+    kHttpError_UnkownError,
 };
 
 class HttpError
@@ -46,6 +49,9 @@ protected:
 
 namespace galay::http
 {
+
+ #define DEFAULT_HTTP_RECV_TIME_MS                       10000
+#define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
 
 #define HTTP_HEADER_MAX_LEN         4096    // 头部最大长度4k
 #define HTTP_URI_MAX_LEN            2048    // uri最大长度2k
@@ -222,7 +228,7 @@ private:
     HeaderPair m_headerPairs;                                   // 字段
 };
 
-class HttpRequest final : public Request, public galay::common::DynamicCreator<Request,HttpRequest>
+class HttpRequest
 {
 public:
     using ptr = std::shared_ptr<HttpRequest>;
@@ -231,14 +237,15 @@ public:
     
     HttpRequest();
     HttpRequestHeader::ptr Header();
-    void SetContent(const std::string& type, std::string&& content);
+    void SetContent(std::string&& content, const std::string& type = "");
     std::string_view GetContent();
-    std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-    [[nodiscard]] std::string EncodePdu() const override;
-    [[nodiscard]] bool HasError() const override;
-    [[nodiscard]] int GetErrorCode() const override;
-    std::string GetErrorString() override;
-    void Reset() override;
+    bool ParseHeader(const std::string_view &buffer);
+    bool ParseBody(const std::string_view &buffer);
+    [[nodiscard]] std::string EncodePdu() const;
+    [[nodiscard]] bool HasError() const;
+    [[nodiscard]] int GetErrorCode() const;
+    std::string GetErrorString();
+    void Reset();
     //chunk
     bool StartChunk();
     std::string ToChunkData(std::string&& buffer);
@@ -248,10 +255,10 @@ private:
     bool GetChunkBody(const std::string_view& buffer);
 private:
     HttpDecodeStatus m_status;
-    HttpRequestHeader::ptr m_header;
     size_t m_next_index;
     std::string m_body;
     error::HttpError::ptr m_error;
+    HttpRequestHeader::ptr m_header;
 };
 
 class HttpResponseHeader
@@ -270,22 +277,22 @@ private:
     HeaderPair m_headerPairs;
 };
 
-class HttpResponse : public Response, public galay::common::DynamicCreator<Response,HttpResponse>
+class HttpResponse
 {
 public:
     using ptr = std::shared_ptr<HttpResponse>;
     using wptr = std::weak_ptr<HttpResponse>;
-    using uptr = std::weak_ptr<HttpResponse>;
+    using uptr = std::unique_ptr<HttpResponse>;
     HttpResponse();
     HttpResponseHeader::ptr Header();
     void SetContent(const std::string& type, std::string&& content);
     std::string_view GetContent();
-    [[nodiscard]] std::string EncodePdu() const override;
-    std::pair<bool,size_t> DecodePdu(const std::string_view &buffer) override;
-    [[nodiscard]] bool HasError() const override;
-    [[nodiscard]] int GetErrorCode() const override;
-    std::string GetErrorString() override;
-    void Reset() override;
+    [[nodiscard]] std::string EncodePdu() const;
+    std::pair<bool,size_t> DecodePdu(const std::string_view &buffer);
+    [[nodiscard]] bool HasError() const;
+    [[nodiscard]] int GetErrorCode() const;
+    std::string GetErrorString();
+    void Reset();
     
     //chunck
     bool StartChunck();
@@ -423,20 +430,74 @@ private:
 template<HttpStatusCode Code>
 std::string CodeResponse<Code>::m_responseStr = "";
 
+struct HttpStreamConfig
+{
+    int32_t m_recv_timeout_ms = DEFAULT_HTTP_RECV_TIME_MS;
+    uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
+};
 
 template<typename SocketType>
-class HttpStream {
+class HttpStream;
+
+template<typename SocketType>
+Coroutine<bool> RecvHttpRequestAndHandle(RoutineCtx ctx, typename HttpStream<SocketType>::ptr stream);
+
+template<typename SocketType>
+Coroutine<bool> SendHttpResponse(RoutineCtx ctx, typename HttpStream<SocketType>::ptr stream, std::string&& response);
+
+template<typename SocketType>
+Coroutine<void> Handle(RoutineCtx ctx, typename HttpStream<SocketType>::ptr stream, const typename HttpStream<SocketType>::HandlerMap &handlerMap);
+
+
+template<typename SocketType>
+class HttpStream: public std::enable_shared_from_this<HttpStream<SocketType>>
+{
 public:
     using ptr = std::shared_ptr<HttpStream>;
-    HttpStream(typename Connection<SocketType>::uptr connection);
+    using HttpError = galay::error::HttpError;
+    using HttpStreamPtr = typename HttpStream<SocketType>::ptr;
+    using Handler = std::function<Coroutine<void>(RoutineCtx,HttpStreamPtr)>;
+    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, Handler>>;
+
+    template <typename T>
+    friend Coroutine<bool> RecvHttpRequestAndHandle(RoutineCtx ctx, typename HttpStream<T>::ptr stream);
+    template<typename T>
+    friend Coroutine<bool> SendHttpResponse(RoutineCtx ctx, typename HttpStream<T>::ptr stream, std::string&& response);
+public:
     
+    HttpStream(typename Connection<SocketType>::uptr connection, HttpStreamConfig conf, HandlerMap& map);
+    HttpError LastError();
+    HttpStreamConfig& GetConfig();
+
+    AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpStatusCode code\
+        , std::string&& content, const std::string& contentType = "");
+
+    AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse::uptr request);
+
+    AsyncResult<bool, void> Close();
+
+    bool Closed();
+
+    HttpRequest::uptr& GetRequest();
 private:
-    Coroutine<HttpRequest::uptr> WaitForRequest(RoutineCtx ctx);
-    Coroutine<bool> WaitForResponse(RoutineCtx ctx, HttpResponse::uptr request);
-private:
+    bool m_close = false;
+    HttpError m_error;
+    HandlerMap& m_handlerMap;
+    HttpStreamConfig m_config;
+
+    HttpRequest::uptr m_request;
     typename Connection<SocketType>::uptr m_connection;
 };
 
+struct HttpServerConfig final: public TcpServerConfig
+{
+    using ptr = std::shared_ptr<HttpServerConfig>;
+    static HttpServerConfig::ptr Create();
+    ~HttpServerConfig() = default;
+
+    int32_t m_recv_timeout_ms = DEFAULT_HTTP_RECV_TIME_MS;
+    uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
+};
 
 template<typename SocketType>
 class HttpServer
@@ -453,15 +514,11 @@ public:
     void Stop();
     bool IsRunning() const;
 private:
-    Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename HttpStream<SocketType>::uptr stream);
-    void CreateHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string&& body);
+    Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename HttpStream<SocketType>::ptr stream);
 private:
     HandlerMap m_map;
     TcpServer<SocketType> m_server;
 };
-
-template<typename SocketType>
-Coroutine<HttpRequest::uptr> GetHttpRequest(RoutineCtx ctx, typename HttpStream<SocketType>::uptr stream);
 
 
 }

@@ -1,7 +1,6 @@
 #include <nlohmann/json.hpp>
-
-#include "galay/galay.hpp"
 #include <iostream>
+#include "galay/galay.hpp"
 
 
 

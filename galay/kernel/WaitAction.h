@@ -9,6 +9,7 @@ namespace galay::details
 class WaitEvent: public Event
 {
 public:
+    using uptr = std::unique_ptr<WaitEvent>;
     WaitEvent();
     /*
         OnWaitPrepare() return false coroutine will not suspend, else suspend
@@ -28,17 +29,16 @@ protected:
 class IOEventAction: public WaitAction
 {
 public:
+    using uptr = std::unique_ptr<IOEventAction>;
     using ptr = std::shared_ptr<IOEventAction>;
 
-    IOEventAction(WaitEvent* event);
+    IOEventAction(WaitEvent::uptr event);
     bool HasEventToDo() override;
     // Add NetEvent to EventEngine
     bool DoAction(CoroutineBase::wptr co, void* ctx) override;
-    void ResetEvent(details::WaitEvent* event);
-    details::WaitEvent* GetBindEvent() const { return m_event; };
-    ~IOEventAction() override;
+    details::WaitEvent* GetBindEvent() const { return m_event.get(); };
 private:
-    WaitEvent* m_event;
+    WaitEvent::uptr m_event;
 };
 
 

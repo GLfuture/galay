@@ -75,7 +75,7 @@ inline AsyncResult<GHandle, CoRtn> AsyncAccept(AsyncNetEventContext* async_conte
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Accept);
     async_context->m_timeout = timeout;
-    return {async_context->m_action, addr};
+    return {async_context->m_action.get(), addr};
 }
 
 template<typename CoRtn>
@@ -85,7 +85,7 @@ inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetEventContext* async_context
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Connect);
     async_context->m_timeout = timeout;
-    return {async_context->m_action, addr};
+    return {async_context->m_action.get(), addr};
 }
 
 template<typename CoRtn>
@@ -99,7 +99,7 @@ inline AsyncResult<int, CoRtn> AsyncRecv(AsyncNetEventContext* async_context, Tc
     if(iov->m_buffer == nullptr) {
         iov->m_buffer = new char[length];
     }
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -110,7 +110,7 @@ inline AsyncResult<int, CoRtn> AsyncSend(AsyncNetEventContext* async_context, Tc
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Send);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -121,7 +121,7 @@ inline AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetEventContext* async_context
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_RecvFrom);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -132,7 +132,7 @@ inline AsyncResult<int, CoRtn> AsyncSendTo(AsyncNetEventContext* async_context, 
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SendTo);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -140,7 +140,7 @@ inline AsyncResult<bool, CoRtn> AsyncNetClose(AsyncNetEventContext* async_contex
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeClose);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {async_context->m_action, nullptr};
+    return {async_context->m_action.get(), nullptr};
 }
 
 inline bool AsyncSSLSocket(AsyncSslNetEventContext* async_context, SSL_CTX *ctx)
@@ -162,7 +162,7 @@ inline AsyncResult<bool, CoRtn> AsyncSSLAccept(AsyncSslNetEventContext* async_co
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLAccept);
     async_context->m_timeout = timeout;
-    return {async_context->m_action, nullptr};
+    return {async_context->m_action.get(), nullptr};
 }
 
 template<typename CoRtn>
@@ -172,7 +172,7 @@ inline AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetEventContext* async_c
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLConnect);
     async_context->m_timeout = timeout;
-    return {async_context->m_action, nullptr};
+    return {async_context->m_action.get(), nullptr};
 }
 
 template<typename CoRtn>
@@ -183,7 +183,7 @@ inline AsyncResult<int, CoRtn> AsyncSSLRecv(AsyncSslNetEventContext* async_conte
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLRead);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -194,7 +194,7 @@ inline AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetEventContext* async_conte
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLWrite);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -202,7 +202,7 @@ inline AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetEventContext* async_con
 {
     static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kWaitEventTypeSslClose);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {async_context->m_action, nullptr};
+    return {async_context->m_action.get(), nullptr};
 }
 
 
@@ -228,7 +228,7 @@ inline AsyncResult<int, CoRtn> AsyncFileRead(AsyncFileEventContext* async_contex
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_FileRead);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -239,7 +239,7 @@ inline AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileEventContext* async_conte
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_FileWrite);
     async_context->m_timeout = timeout;
     iov->m_length = length;
-    return {async_context->m_action, iov};
+    return {async_context->m_action.get(), iov};
 }
 
 template<typename CoRtn>
@@ -247,7 +247,7 @@ inline AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileEventContext* async_cont
 {
     static_cast<FileIoWaitEvent*>(async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(kFileIoWaitEventTypeClose);
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
-    return {async_context->m_action, nullptr};
+    return {async_context->m_action.get(), nullptr};
 }
 
 }
@@ -257,18 +257,18 @@ namespace galay
 {
 
 
-inline AsyncNetEventContext* AsyncNetEventContext::Create()
+inline AsyncNetEventContext::uptr AsyncNetEventContext::Create()
 {
-    auto context = new AsyncNetEventContext;
-    context->m_action = new details::IOEventAction(new details::NetWaitEvent(context));
+    auto context = std::make_unique<AsyncNetEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::NetWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncNetEventContext* AsyncNetEventContext::Create(GHandle handle)
+inline AsyncNetEventContext::uptr AsyncNetEventContext::Create(GHandle handle)
 {
-    auto context = new AsyncNetEventContext;
-    context->m_action = new details::IOEventAction(new details::NetWaitEvent(context));
+    auto context = std::make_unique<AsyncNetEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::NetWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = handle;
     return context;
@@ -280,36 +280,28 @@ inline void AsyncNetEventContext::Resume()
     m_resumer->Resume();
 }
 
-inline AsyncNetEventContext::~AsyncNetEventContext()
-{
-    if(m_action) {
-        delete m_action;
-        m_action = nullptr;
-    }
-}
 
-
-inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create()
+inline AsyncSslNetEventContext::uptr AsyncSslNetEventContext::Create()
 {
-    auto context = new AsyncSslNetEventContext;
-    context->m_action = new details::IOEventAction(new details::NetSslWaitEvent(context));
+    auto context = std::make_unique<AsyncSslNetEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::NetSslWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(GHandle handle)
+inline AsyncSslNetEventContext::uptr AsyncSslNetEventContext::Create(GHandle handle)
 {
-    auto context = new AsyncSslNetEventContext;
-    context->m_action = new details::IOEventAction(new details::NetSslWaitEvent(context));
+    auto context = std::make_unique<AsyncSslNetEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::NetSslWaitEvent>(context.get()));
     context->m_handle = handle;
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncSslNetEventContext* AsyncSslNetEventContext::Create(SSL *ssl)
+inline AsyncSslNetEventContext::uptr AsyncSslNetEventContext::Create(SSL *ssl)
 {
-    auto context = new AsyncSslNetEventContext;
-    context->m_action = new details::IOEventAction(new details::NetSslWaitEvent(context));
+    auto context = std::make_unique<AsyncSslNetEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::NetSslWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = {SSL_get_fd(ssl)};
     context->m_ssl = ssl;
@@ -324,26 +316,21 @@ inline AsyncSslNetEventContext::~AsyncSslNetEventContext()
     }
 }
 
-inline AsyncFileEventContext* galay::AsyncFileEventContext::Create()
+inline AsyncFileEventContext::uptr galay::AsyncFileEventContext::Create()
 {
-    auto context = new AsyncFileEventContext;
-    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    auto context = std::make_unique<AsyncFileEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::FileIoWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncFileEventContext* AsyncFileEventContext::Create(GHandle handle)
+inline AsyncFileEventContext::uptr AsyncFileEventContext::Create(GHandle handle)
 {
-    auto context = new AsyncFileEventContext;
-    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    auto context = std::make_unique<AsyncFileEventContext>();
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::FileIoWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = handle;
     return context;
-}
-
-inline AsyncFileEventContext::~AsyncFileEventContext()
-{
-    delete m_action;
 }
 
 inline void AsyncFileEventContext::Resume()
@@ -354,18 +341,18 @@ inline void AsyncFileEventContext::Resume()
 
 #ifdef __linux__
 
-inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(int maxevents)
+inline AsyncLinuxFileEventContext::uptr AsyncLinuxFileEventContext::Create(int maxevents)
 {
-    auto context = new AsyncLinuxFileEventContext(maxevents);
-    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    auto context = std::make_unique<AsyncLinuxFileEventContext>(maxevents);
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::FileIoWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     return context;
 }
 
-inline AsyncLinuxFileEventContext* AsyncLinuxFileEventContext::Create(GHandle handle, int maxevents)
+inline AsyncLinuxFileEventContext::uptr AsyncLinuxFileEventContext::Create(GHandle handle, int maxevents)
 {
-    auto context = new AsyncLinuxFileEventContext(maxevents);
-    context->m_action = new details::IOEventAction(new details::FileIoWaitEvent(context));
+    auto context = std::make_unique<AsyncLinuxFileEventContext>(maxevents);
+    context->m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::FileIoWaitEvent>(context.get()));
     context->m_resumer = std::make_shared<details::Resumer>(context->m_timeout);
     context->m_handle = handle;
     return context;
@@ -419,7 +406,7 @@ inline AsyncTcpSocket::AsyncTcpSocket(GHandle handle)
 
 inline bool AsyncTcpSocket::Socket(bool noblock) const
 {
-    return details::AsyncTcpSocket(m_async_context, noblock);
+    return details::AsyncTcpSocket(m_async_context.get(), noblock);
 }
 
 
@@ -433,13 +420,13 @@ inline bool AsyncTcpSocket::Socket(GHandle handle)
 
 inline bool AsyncTcpSocket::Bind(const std::string& addr, int port)
 {
-    return details::Bind(m_async_context, addr, port);
+    return details::Bind(m_async_context.get(), addr, port);
 }
 
 
 inline bool AsyncTcpSocket::Listen(int backlog)
 {
-    return details::Listen(m_async_context, backlog);
+    return details::Listen(m_async_context.get(), backlog);
 }
 
 inline GHandle AsyncTcpSocket::GetHandle() const
@@ -452,42 +439,34 @@ inline uint32_t AsyncTcpSocket::GetErrorCode() const
     return m_async_context->m_error_code;
 }
 
-inline AsyncTcpSocket::~AsyncTcpSocket()
-{
-    if(m_async_context) {
-        delete m_async_context;
-        m_async_context = nullptr;
-    }
-}
-
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Connect(THost *addr, int64_t timeout)
 {
-    return details::AsyncConnect<CoRtn>(m_async_context, addr, timeout);
+    return details::AsyncConnect<CoRtn>(m_async_context.get(), addr, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<GHandle, CoRtn> AsyncTcpSocket::Accept(THost *addr, int64_t timeout)
 {
-    return details::AsyncAccept<CoRtn>(m_async_context, addr, timeout);
+    return details::AsyncAccept<CoRtn>(m_async_context.get(), addr, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncTcpSocket::Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncRecv<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncRecv<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncTcpSocket::Send(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSend<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncSend<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Close()
 {
-    return details::AsyncNetClose<CoRtn>(m_async_context);
+    return details::AsyncNetClose<CoRtn>(m_async_context.get());
 }
 
 
@@ -523,10 +502,10 @@ inline AsyncTcpSslSocket::AsyncTcpSslSocket(SSL *ssl)
 
 inline bool AsyncTcpSslSocket::Socket(bool noblock) const
 {
-    if(!details::AsyncTcpSocket(m_async_context, noblock)){
+    if(!details::AsyncTcpSocket(m_async_context.get(), noblock)){
         return false;
     }
-    return details::AsyncSSLSocket(m_async_context, SslCtx);
+    return details::AsyncSSLSocket(m_async_context.get(), SslCtx);
 }
 
 
@@ -537,19 +516,19 @@ inline bool AsyncTcpSslSocket::Socket(GHandle handle)
     if(!option.HandleNonBlock()) {
         return false;
     }
-    return details::AsyncSSLSocket(m_async_context, SslCtx);;
+    return details::AsyncSSLSocket(m_async_context.get(), SslCtx);;
 }
 
 
 inline bool AsyncTcpSslSocket::Bind(const std::string& addr, int port)
 {
-    return details::Bind(m_async_context, addr, port);
+    return details::Bind(m_async_context.get(), addr, port);
 }
 
 
 inline bool AsyncTcpSslSocket::Listen(int backlog)
 {
-    return details::Listen(m_async_context, backlog);
+    return details::Listen(m_async_context.get(), backlog);
 }
 
 template <typename CoRtn>
@@ -561,37 +540,37 @@ inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Connect(THost *addr, int64_t 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::AsyncSSLConnect(int64_t timeout)
 {
-    return details::AsyncSSLConnect<CoRtn>(m_async_context);
+    return details::AsyncSSLConnect<CoRtn>(m_async_context.get());
 }
 
 template <typename CoRtn>
 inline AsyncResult<GHandle, CoRtn> AsyncTcpSslSocket::Accept(THost *addr, int64_t timeout)
 {
-    return details::AsyncAccept<CoRtn>(m_async_context, addr, timeout);
+    return details::AsyncAccept<CoRtn>(m_async_context.get(), addr, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::SSLAccept(int64_t timeout)
 {
-    return details::AsyncSSLAccept<CoRtn>(m_async_context, timeout);
+    return details::AsyncSSLAccept<CoRtn>(m_async_context.get(), timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSSLRecv<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncSSLRecv<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Send(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSSLSend<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncSSLSend<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::Close()
 {
-    return details::AsyncSSLClose<CoRtn>(m_async_context);
+    return details::AsyncSSLClose<CoRtn>(m_async_context.get());
 }
 
 inline GHandle AsyncTcpSslSocket::GetHandle() const
@@ -618,13 +597,13 @@ inline AsyncUdpSocket::AsyncUdpSocket(GHandle handle)
 
 inline bool AsyncUdpSocket::Socket(bool noblock) const
 {
-    return details::AsyncUdpSocket(m_async_context, noblock);
+    return details::AsyncUdpSocket(m_async_context.get(), noblock);
 }
 
 
 inline bool AsyncUdpSocket::Bind(const std::string& addr, int port)
 {
-    return details::Bind(m_async_context, addr, port);
+    return details::Bind(m_async_context.get(), addr, port);
 }
 
 inline GHandle AsyncUdpSocket::GetHandle() const
@@ -637,30 +616,23 @@ inline uint32_t AsyncUdpSocket::GetErrorCode() const
     return m_async_context->m_error_code;
 }
 
-inline AsyncUdpSocket::~AsyncUdpSocket()
-{
-    if(m_async_context) {
-        delete m_async_context;
-        m_async_context = nullptr;
-    }
-}
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncUdpSocket::RecvFrom(UdpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncRecvFrom<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncRecvFrom<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncUdpSocket::SendTo(UdpIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncSendTo<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncSendTo<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncUdpSocket::Close()
 {
-    return details::AsyncNetClose<CoRtn>(m_async_context);
+    return details::AsyncNetClose<CoRtn>(m_async_context.get());
 }
 
 
@@ -678,7 +650,7 @@ inline AsyncFileDescriptor::AsyncFileDescriptor(GHandle handle)
 
 inline bool AsyncFileDescriptor::Open(const char *path, int flags, mode_t mode)
 {
-    return details::AsyncFileOpen(m_async_context, path, flags, mode);
+    return details::AsyncFileOpen(m_async_context.get(), path, flags, mode);
 }
 
 inline GHandle AsyncFileDescriptor::GetHandle() const
@@ -691,30 +663,23 @@ inline uint32_t AsyncFileDescriptor::GetErrorCode() const
     return m_async_context->m_error_code;
 }
 
-inline AsyncFileDescriptor::~AsyncFileDescriptor()
-{
-    if( m_async_context ) {
-        delete m_async_context;
-        m_async_context = nullptr;
-    }
-}
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Read(FileIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncFileRead<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncFileRead<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncFileDescriptor::Write(FileIOVecHolder& holder, size_t length, int64_t timeout)
 {
-    return details::AsyncFileWrite<CoRtn>(m_async_context, &holder, length, timeout);
+    return details::AsyncFileWrite<CoRtn>(m_async_context.get(), &holder, length, timeout);
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncFileDescriptor::Close()
 {
-    return details::AsyncFileClose<CoRtn>(m_async_context);
+    return details::AsyncFileClose<CoRtn>(m_async_context.get());
 }
 
 
@@ -737,7 +702,7 @@ inline AsyncFileNativeAioDescriptor::AsyncFileNativeAioDescriptor(GHandle handle
 
 inline bool AsyncFileNativeAioDescriptor::Open(const char *path, int flags, mode_t mode)
 {
-    return details::AsyncFileOpen(m_async_context, path, flags, mode);
+    return details::AsyncFileOpen(m_async_context.get(), path, flags, mode);
 }
 
 
@@ -802,23 +767,19 @@ inline AsyncResult<int, CoRtn> AsyncFileNativeAioDescriptor::Commit()
     }
     m_async_context->m_current_index = 0;
     static_cast<details::FileIoWaitEvent*>(m_async_context->m_action->GetBindEvent())->ResetFileIoWaitEventType(details::kFileIoWaitEventTypeLinuxAio);
-    return {m_async_context->m_action, nullptr};
+    return {m_async_context->m_action.get(), nullptr};
 }
 
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncFileNativeAioDescriptor::Close()
 {
-    return details::AsyncFileClose<CoRtn>(m_async_context);
+    return details::AsyncFileClose<CoRtn>(m_async_context.get());
 }
 
 
 inline AsyncFileNativeAioDescriptor::~AsyncFileNativeAioDescriptor()
 {
     if(m_async_context->m_event_handle.fd > 0) close(m_async_context->m_event_handle.fd);
-    if( m_async_context ) {
-        delete m_async_context;
-        m_async_context = nullptr;
-    }
 }
 
 #endif
