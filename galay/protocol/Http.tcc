@@ -200,9 +200,13 @@ inline Coroutine<bool> RecvHttpRequestAndHandle(RoutineCtx ctx, typename HttpStr
             co_return false;
         } else if (ret == CommonTcpIORtnType::eCommonTimeOut) {
             stream->m_error.Code() = error::HttpErrorCode::kHttpError_RecvTimeOut;
+            std::string response = CodeResponse<HttpStatusCode::RequestTimeout_408>::ResponseStr(HttpVersion::Http_Version_1_1);
+            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponse<SocketType>(ctx, stream, std::move(response)));
             co_return false;
         } else if( ret == CommonTcpIORtnType::eCommonUnknown) {
             stream->m_error.Code() = error::HttpErrorCode::kHttpError_UnkownError;
+            std::string response = CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1);
+            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponse<SocketType>(ctx, stream, std::move(response)));
             co_return false;
         } else {
             offset += ret;

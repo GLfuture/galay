@@ -9,7 +9,6 @@
 #include <sstream>
 #include <variant>
 
-
 namespace galay::error
 {
 

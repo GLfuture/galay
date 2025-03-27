@@ -1,16 +1,11 @@
 #include "galay/galay.hpp"
 #include <iostream>
 
-std::atomic_uint32_t g_count = 0;
-
 class Handler {
 public:
     static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::http::HttpStream<galay::AsyncTcpSocket>::ptr stream) {
         auto& req = stream->GetRequest();
-        std::string body = "count: ";
-        uint32_t count = g_count.fetch_add(1);
-        body += std::to_string(count);
-        bool res = co_await stream->SendResponse(ctx, galay::http::HttpStatusCode::OK_200, std::move(body), "text/plain");
+        bool res = co_await stream->SendResponse(ctx, galay::http::HttpStatusCode::OK_200, "Hello World", "text/plain");
         co_await stream->Close();
         co_return;
     }
