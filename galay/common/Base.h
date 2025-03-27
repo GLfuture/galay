@@ -65,5 +65,8 @@ enum EventType
     kEventTypeTimer,
 };
 
+#ifndef GALAY_VERSION
+#define GALAY_VERSION "0.0.2"
+#endif
 
 #endif

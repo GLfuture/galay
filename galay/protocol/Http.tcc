@@ -3,6 +3,9 @@
 
 #include "Http.hpp"
 
+#define SERVER_NAME "galay"
+#define GALAY_SERVER SERVER_NAME "/" GALAY_VERSION
+
 namespace galay::http
 {
 template <HttpStatusCode Code>
@@ -29,7 +32,7 @@ inline std::string CodeResponse<Code>::DefaultResponse(HttpVersion version)
     response.Header()->Code() = Code;
     response.Header()->Version() = version;
     response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
-    response.Header()->HeaderPairs().AddHeaderPair("Server", "galay");
+    response.Header()->HeaderPairs().AddHeaderPair("Server", GALAY_SERVER);
     response.Header()->HeaderPairs().AddHeaderPair("Date", utils::GetCurrentGMTTimeString());
     response.Header()->HeaderPairs().AddHeaderPair("Connection", "close");
     response.SetContent("html", DefaultResponseBody());

@@ -36,9 +36,6 @@
 
 namespace galay 
 {
-#ifndef GALAY_VERSION
-#define GALAY_VERSION "0.0.2"
-#endif
 
 #define DEFAULT_COROUTINE_SCHEDULER_THREAD_NUM          4
 #define DEFAULT_EVENT_SCHEDULER_THREAD_NUM              4
