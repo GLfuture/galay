@@ -40,6 +40,13 @@ inline AsyncResult<int, CoRtn> Connection<Socket>::Send(TcpIOVecHolder& holder, 
 
 template <typename Socket>
 template <typename CoRtn>
+inline AsyncResult<int, CoRtn> Connection<Socket>::SendFile(FileDesc* desc, int64_t timeout_ms)
+{
+    return m_socket->template SendFile<CoRtn>(desc, timeout_ms);
+}
+
+template <typename Socket>
+template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> Connection<Socket>::Close()
 {
     return m_socket->Close();

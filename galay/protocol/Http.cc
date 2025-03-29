@@ -1825,7 +1825,7 @@ bool HttpHelper::DefaultHttpResponse(HttpResponse *response, HttpVersion version
 {
     response->Header()->Version() = version;
     response->Header()->Code() = code;
-    response->Header()->HeaderPairs().AddHeaderPair("Server", "galay");
+    response->Header()->HeaderPairs().AddHeaderPair("Server", GALAY_SERVER);
     response->Header()->HeaderPairs().AddHeaderPair("Date", utils::GetCurrentGMTTimeString());
     if(!body.empty()) response->SetContent(type, std::move(body));
     return true;

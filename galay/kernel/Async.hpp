@@ -7,7 +7,6 @@
 #include "ExternApi.hpp"
 #include "WaitAction.h"
 #include <openssl/ssl.h>
-#include <iostream>
 #ifdef __linux__
     #include <libaio.h>
 #endif
@@ -32,7 +31,10 @@ enum ResumeInterfaceType
     kResumeInterfaceType_SSLRead,
     kResumeInterfaceType_SSLWrite,
     kResumeInterfaceType_FileRead,
-    kResumeInterfaceType_FileWrite
+    kResumeInterfaceType_FileWrite,
+#ifdef  __linux__
+    kResumeInterfaceType_SendFile,
+#endif
 };
 
 class Resumer: public std::enable_shared_from_this<Resumer>
@@ -95,6 +97,18 @@ private:
     uint32_t m_error_code;
 };
 
+struct FileDesc
+{
+    GHandle m_file_handle = {};
+    uint64_t m_file_size = 0;
+    off_t m_offset = 0;
+
+    FileDesc(GHandle handle, uint64_t size) :
+        m_file_handle(handle),
+        m_file_size(size)
+    {
+    }
+};
 
 // one coroutine one context
 
@@ -204,6 +218,8 @@ public:
     template<typename CoRtn = void>
     AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
+    AsyncResult<int, CoRtn> SendFile(FileDesc* desc, int64_t timeout = -1);
+    template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
     GHandle GetHandle() const;
@@ -237,6 +253,8 @@ public:
     AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, size_t length, int64_t timeout = -1);
+    template<typename CoRtn = void>
+    AsyncResult<bool, CoRtn> SendFile(FileDesc* desc, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
@@ -332,6 +350,9 @@ enum NetWaitEventType
     kTcpWaitEventTypeRecv,
     kTcpWaitEventTypeSslRecv,
     kTcpWaitEventTypeSend,
+#ifdef __linux__
+    kTcpWaitEventTypeSendfile,
+#endif
     kTcpWaitEventTypeSslSend,
     kTcpWaitEventTypeConnect,
     kTcpWaitEventTypeSslConnect,
@@ -357,6 +378,9 @@ protected:
     bool OnTcpAcceptWaitPrepare(const CoroutineBase::wptr co, void* ctx);
     bool OnTcpRecvWaitPrepare(const CoroutineBase::wptr co, void* ctx);
     bool OnTcpSendWaitPrepare(const CoroutineBase::wptr co, void* ctx);
+#ifdef __linux__
+    bool OnTcpSendfileWaitPrepare(const CoroutineBase::wptr co, void* ctx);
+#endif
     bool OnTcpConnectWaitPrepare(const CoroutineBase::wptr co, void* ctx);
     bool OnCloseWaitPrepare(const CoroutineBase::wptr co, void* ctx);
     bool OnUdpRecvfromWaitPrepare(const CoroutineBase::wptr co, void* ctx);
@@ -367,18 +391,24 @@ protected:
     void HandleTcpAcceptEvent(EventEngine* engine);
     void HandleTcpRecvEvent(EventEngine* engine);
     void HandleTcpSendEvent(EventEngine* engine);
+#ifdef __linux__
+    void HandleTcpSendfileEvent(EventEngine* engine);
+#endif
     void HandleTcpConnectEvent(EventEngine* engine);
     void HandleCloseEvent(EventEngine* engine);
     void HandleUdpRecvfromEvent(EventEngine* engine);
     void HandleUdpSendtoEvent(EventEngine* engine);
 
     // return recvByte
-    virtual int TcpDealRecv(TcpIOVec* iov);
+    int TcpDealRecv(TcpIOVec* iov);
     // return sendByte
-    virtual int TcpDealSend(TcpIOVec* iov);
+    int TcpDealSend(TcpIOVec* iov);
+#ifdef __linux__
+    int TcpDealSendfile(FileDesc* desc);
+#endif
 
-    virtual int UdpDealRecvfrom(UdpIOVec *iov);
-    virtual int UdpDealSendto(UdpIOVec* iov);
+    int UdpDealRecvfrom(UdpIOVec *iov);
+    int UdpDealSendto(UdpIOVec* iov);
 protected:
     NetWaitEventType m_type;
     void *m_ctx = nullptr;
@@ -410,9 +440,9 @@ protected:
 
     EventType CovertSSLErrorToEventType() const;
     // return recvByte
-    int TcpDealRecv(TcpIOVec* iovc) override;
+    int TcpDealRecv(TcpIOVec* iovc);
     // return sendByte
-    int TcpDealSend(TcpIOVec* iovc) override;
+    int TcpDealSend(TcpIOVec* iovc);
 private:
     int m_ssl_error = 0;
 };
@@ -498,6 +528,10 @@ AsyncResult<int, CoRtn> AsyncRecv(AsyncNetEventContext* async_context, TcpIOVec*
 */
 template<typename CoRtn = void>
 AsyncResult<int, CoRtn> AsyncSend(AsyncNetEventContext* async_context, TcpIOVec* iov, size_t length, int64_t timeout);
+#ifdef __linux__
+template<typename CoRtn = void>
+extern AsyncResult<int, CoRtn> AsyncSendFile(AsyncNetEventContext* async_context, FileDesc* desc, int64_t timeout);
+#endif
 /*
 
 */
@@ -526,6 +560,8 @@ AsyncResult<int, CoRtn> AsyncSSLSend(AsyncSslNetEventContext* async_context, Tcp
 template<typename CoRtn = void>
 AsyncResult<bool, CoRtn> AsyncSSLClose(AsyncSslNetEventContext* async_context);
 
+
+
 /*
     ****************************
                 file 
@@ -539,8 +575,6 @@ template<typename CoRtn = void>
 extern AsyncResult<int, CoRtn> AsyncFileWrite(AsyncFileEventContext* afile, FileIOVec* iov, size_t length, int64_t timeout);
 template<typename CoRtn = void>
 extern AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileEventContext* afile);
-
-
 
 
 }

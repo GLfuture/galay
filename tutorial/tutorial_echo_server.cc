@@ -3,7 +3,7 @@
 
 class Handler {
 public:
-    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::http::HttpStream<galay::AsyncTcpSocket>::ptr stream) {
+    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::http::HttpStreamImpl<galay::AsyncTcpSocket>::ptr stream) {
         auto& req = stream->GetRequest();
         bool res = co_await stream->SendResponse(ctx, galay::http::HttpStatusCode::OK_200, "Hello World", "text/plain");
         co_await stream->Close();
@@ -37,6 +37,7 @@ int main(int argc, const char* argv[])
     auto config = galay::http::HttpServerConfig::Create();
     galay::http::HttpServer<galay::AsyncTcpSocket> server(config);
     server.RouteHandler<galay::http::GET>("/", Handler::GetHelloWorldHandler);
+    server.RegisterStaticFileGetMiddleware("/static", "/home/gong/projects/static");
     server.Start({"", port});
     getchar();
     server.Stop();

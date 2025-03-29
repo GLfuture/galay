@@ -4,6 +4,7 @@
     #include <sys/socket.h>
     #include <arpa/inet.h>
     #include <fcntl.h>
+    #include <sys/sendfile.h>
 #ifdef __linux__
     #include <sys/eventfd.h>
 #endif
@@ -187,6 +188,9 @@ void Resumer::DoingAsyncTimeout(Resumer::ptr resumer, time_event_wptr event, Tim
             case kResumeInterfaceType_Send:
                 static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
                 break;
+            case kResumeInterfaceType_SendFile:
+                static_cast<Awaiter<bool>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(false);
+                break;
             case kResumeInterfaceType_RecvFrom:
                 static_cast<Awaiter<int>*>(resumer->m_waitco.lock()->GetAwaiter())->SetResult(-2);
                 break;
@@ -239,6 +243,8 @@ std::string NetWaitEvent::Name()
         return "TcpRecvEvent";
     case kTcpWaitEventTypeSend:
         return "TcpSendEvent";
+    case kTcpWaitEventTypeSendfile:
+        return "TcpSendfileEvent";
     case kTcpWaitEventTypeConnect:
         return "TcpConnectEvent";
     case kWaitEventTypeClose:
@@ -270,6 +276,9 @@ bool NetWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void* ctx)
         break;
     case kTcpWaitEventTypeSend:
         res = OnTcpSendWaitPrepare(co, ctx);
+        break;
+    case kTcpWaitEventTypeSendfile:
+        res = OnTcpSendfileWaitPrepare(co, ctx);
         break;
     case kTcpWaitEventTypeConnect:
         res = OnTcpConnectWaitPrepare(co, ctx);
@@ -310,6 +319,9 @@ void NetWaitEvent::HandleEvent(EventEngine *engine)
     case kTcpWaitEventTypeSend:
         HandleTcpSendEvent(engine);
         return;
+    case kTcpWaitEventTypeSendfile:
+        HandleTcpSendfileEvent(engine);
+        return;
     case kTcpWaitEventTypeConnect:
         HandleTcpConnectEvent(engine);
         return;
@@ -337,6 +349,7 @@ EventType NetWaitEvent::GetEventType()
     case kTcpWaitEventTypeRecv:
         return kEventTypeRead;
     case kTcpWaitEventTypeSend:
+    case kTcpWaitEventTypeSendfile:
     case kTcpWaitEventTypeConnect:
         return kEventTypeWrite;
     case kWaitEventTypeClose:
@@ -405,6 +418,18 @@ bool NetWaitEvent::OnTcpSendWaitPrepare(const CoroutineBase::wptr co, void* ctx)
         return true;
     }
     auto awaiter = static_cast<Awaiter<int>*>(co.lock()->GetAwaiter());
+    awaiter->SetResult(std::move(sendBytes));
+    return false;
+}
+
+bool NetWaitEvent::OnTcpSendfileWaitPrepare(const CoroutineBase::wptr co, void *ctx)
+{
+    auto* desc = static_cast<FileDesc*>(ctx);
+    int sendBytes = TcpDealSendfile(desc);
+    if( sendBytes == eCommonNonBlocking){
+        return true;
+    }
+    auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter());
     awaiter->SetResult(std::move(sendBytes));
     return false;
 }
@@ -527,6 +552,14 @@ void NetWaitEvent::HandleTcpSendEvent(EventEngine *engine)
     this->m_async_context->Resume();
 }
 
+void NetWaitEvent::HandleTcpSendfileEvent(EventEngine *engine)
+{
+    auto* desc = static_cast<FileDesc*>(m_ctx);
+    int sendBytes = TcpDealSendfile(desc);
+    auto awaiter = static_cast<Awaiter<int>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
+    awaiter->SetResult(std::move(sendBytes));
+    m_async_context->Resume();
+}
 
 void NetWaitEvent::HandleTcpConnectEvent(EventEngine *engine)
 {
@@ -569,7 +602,7 @@ int NetWaitEvent::TcpDealRecv(TcpIOVec* iov)
     if( length == -1 ) {
         if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_RecvError, errno);
-            return eCommonUnknown;
+            return eCommonDisConnect;
         } else {
             return eCommonNonBlocking;
         }
@@ -586,9 +619,9 @@ int NetWaitEvent::TcpDealSend(TcpIOVec* iov)
     size_t writeBytes = iov->m_offset + iov->m_length > iov->m_size ? iov->m_size - iov->m_offset : iov->m_length;
     const int length = send(fd, iov->m_buffer + iov->m_offset, writeBytes, 0);
     if( length == -1 ) {
-        if( errno != EAGAIN && errno != EWOULDBLOCK && errno == EINTR ) {
+        if( errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) {
             this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SendError, errno);
-            return eCommonUnknown;
+            return eCommonDisConnect;
         } else {
             return eCommonNonBlocking;
         }
@@ -598,6 +631,23 @@ int NetWaitEvent::TcpDealSend(TcpIOVec* iov)
     return length;
 }
 
+#ifdef __linux__
+int NetWaitEvent::TcpDealSendfile(FileDesc* desc)
+{
+    int length = sendfile(this->m_async_context->m_handle.fd, desc->m_file_handle.fd, &desc->m_offset, desc->m_file_size - desc->m_offset);
+    if(length == -1) {
+        if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            return eCommonNonBlocking;
+        } else {
+            this->m_async_context->m_error_code = error::MakeErrorCode(error::Error_SendError, errno);
+            return eCommonDisConnect;
+        }
+    }
+    LogTrace("[SendFile, From File Handle: {} To Handle: {}, Byte: {}]", this->m_async_context->m_handle.fd, desc->m_file_handle.fd, length);
+    return length;
+}
+
+#endif
 
 int NetWaitEvent::UdpDealRecvfrom(UdpIOVec *iov)
 {
@@ -668,6 +718,8 @@ std::string NetSslWaitEvent::Name()
         return "SslRecvEvent";
     case kTcpWaitEventTypeSend:
         return "SendEvent";
+    case kTcpWaitEventTypeSendfile:
+        return "SendfileEvent";
     case kTcpWaitEventTypeSslSend:
         return "SslSendEvent";
     case kTcpWaitEventTypeConnect:
@@ -699,6 +751,7 @@ EventType NetSslWaitEvent::GetEventType()
     case kTcpWaitEventTypeSslRecv:
         return kEventTypeRead;
     case kTcpWaitEventTypeSend:
+    case kTcpWaitEventTypeSendfile:
     case kTcpWaitEventTypeSslSend:
     case kTcpWaitEventTypeConnect:
         return kEventTypeWrite;
@@ -737,6 +790,9 @@ bool NetSslWaitEvent::OnWaitPrepare(CoroutineBase::wptr co, void* ctx)
         break;
     case kTcpWaitEventTypeSend:
         res = OnTcpSendWaitPrepare(co, ctx);
+        break;
+    case kTcpWaitEventTypeSendfile:
+        res = OnTcpSendfileWaitPrepare(co, ctx);
         break;
     case kTcpWaitEventTypeSslSend:
         res = OnTcpSslSendWaitPrepare(co, ctx);
@@ -786,6 +842,9 @@ void NetSslWaitEvent::HandleEvent(EventEngine *engine)
         return;
     case kTcpWaitEventTypeSend:
         this->HandleTcpSendEvent(engine);
+        return;
+    case kTcpWaitEventTypeSendfile:
+        this->HandleTcpSendfileEvent(engine);
         return;
     case kTcpWaitEventTypeSslSend:
         this->HandleTcpSslSendEvent(engine);

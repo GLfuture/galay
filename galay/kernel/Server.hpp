@@ -32,6 +32,9 @@ public:
     AsyncResult<int, CoRtn> Send(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
 
     template <typename CoRtn = void>
+    AsyncResult<int, CoRtn> SendFile(FileDesc* desc, int64_t timeout_ms);
+
+    template <typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
     EventScheduler *GetScheduler() const;

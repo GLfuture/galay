@@ -113,6 +113,16 @@ inline AsyncResult<int, CoRtn> AsyncSend(AsyncNetEventContext* async_context, Tc
     return {async_context->m_action.get(), iov};
 }
 
+template <typename CoRtn>
+AsyncResult<int, CoRtn> AsyncSendFile(AsyncNetEventContext *async_context, FileDesc* desc, int64_t timeout)
+{
+    static_cast<NetWaitEvent*>(async_context->m_action->GetBindEvent())->ResetNetWaitEventType(kTcpWaitEventTypeSendfile);
+    async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
+    async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SendFile);
+    async_context->m_timeout = timeout;
+    return {async_context->m_action.get(), desc};
+}
+
 template<typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncRecvFrom(AsyncNetEventContext* async_context, UdpIOVec *iov, size_t length, int64_t timeout)
 {
@@ -249,6 +259,8 @@ inline AsyncResult<bool, CoRtn> AsyncFileClose(AsyncFileEventContext* async_cont
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     return {async_context->m_action.get(), nullptr};
 }
+
+
 
 }
 
@@ -464,6 +476,12 @@ inline AsyncResult<int, CoRtn> AsyncTcpSocket::Send(TcpIOVecHolder& holder, size
 }
 
 template <typename CoRtn>
+inline AsyncResult<int, CoRtn> AsyncTcpSocket::SendFile(FileDesc *desc, int64_t timeout)
+{
+    return details::AsyncSendFile<CoRtn>(m_async_context.get(), desc, timeout);
+}
+
+template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> AsyncTcpSocket::Close()
 {
     return details::AsyncNetClose<CoRtn>(m_async_context.get());
@@ -565,6 +583,13 @@ template <typename CoRtn>
 inline AsyncResult<int, CoRtn> AsyncTcpSslSocket::Send(TcpIOVecHolder& holder, size_t length, int64_t timeout)
 {
     return details::AsyncSSLSend<CoRtn>(m_async_context.get(), &holder, length, timeout);
+}
+
+template <typename CoRtn>
+inline AsyncResult<bool, CoRtn> AsyncTcpSslSocket::SendFile(FileDesc *desc, int64_t timeout)
+{
+    bool result = false;
+    return AsyncResult<bool, CoRtn>(std::move(result));
 }
 
 template <typename CoRtn>
