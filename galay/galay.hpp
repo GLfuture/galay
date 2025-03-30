@@ -16,10 +16,10 @@
 #include "kernel/Time.hpp"
 
 //protocol
-#include "protocol/Http.hpp"
-#include "protocol/Smtp.h"
-#include "protocol/Dns.h"
-#include "protocol/Http2_0.hpp"
+#include "protocol/http/Http.hpp"
+#include "protocol/smtp/Smtp.h"
+#include "protocol/dns/Dns.h"
+#include "protocol/http2/Http2_0.hpp"
 
 //utils
 #include "utils/Parser.h"

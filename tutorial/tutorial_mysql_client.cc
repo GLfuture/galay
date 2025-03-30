@@ -1,64 +1,76 @@
-#include "galay/middleware/Mysql.hpp"
+#include "galay/middleware/mysql/Mysql.hpp"
 #include "galay/galay.hpp"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
 
+using namespace galay::mysql;
+
+void CreateUserTable(MysqlSession* session)
+{
+    MysqlTable table("user");
+    table.PrimaryKeyFiled().Name("uid").Type("int").AutoIncrement();
+    table.SimpleFiled().Name("name").Type("varchar(20)").NotNull();
+    table.SimpleFiled().Name("age").Type("int").NotNull();
+    session->CreateTable(table);
+    auto sel_query = MysqlSelectQuery();
+    sel_query.From("user").Fields("name","age").Where("uid==0");
+    auto res = session->Select(sel_query);
+    auto res_table = res.ToResultTable();
+    for(auto &v: res_table){
+        for(auto &c: v) std::cout << c <<" ";
+        std::cout << '\n';
+    }
+}
+
+void CreateImageTable(MysqlSession* session)
+{
+    MysqlTable table("images");
+    table.PrimaryKeyFiled().Name("uid").AutoIncrement().Type("int");
+    table.SimpleFiled().Name("image").Type("longblob").NotNull();
+    session->CreateTable(table);
+
+    std::string indata = galay::utils::ReadFile("1.1.png");
+    auto params = session->GetMysqlStmtExecutor();
+    params->Prepare("insert into images(uid,image) values (15,?);");
+    MYSQL_BIND binds1[1];
+    binds1[0].buffer_type = MYSQL_TYPE_LONG_BLOB;
+    binds1[0].buffer = indata.data();
+    binds1[0].buffer_length = indata.length();
+    params->BindParam(binds1);
+    params->LongDataToParam(indata, 0);
+    params->Execute();
+    params->Close();
+    auto executor = session->GetMysqlStmtExecutor();
+    executor->Prepare("select image from images where uid > 1;");
+    int uid = 0;
+    bool error1;
+    unsigned long resLen0 = 0;
+    MYSQL_BIND binds[1] = {0};
+    binds[0].buffer_type = MYSQL_TYPE_LONG_BLOB;
+    binds[0].length = &resLen0;
+    binds[0].error = &error1;
+    executor->BindResult(binds);
+    executor->Execute();
+    std::vector<std::string> res;
+    while(executor->GetARow(binds)){
+        
+    }
+    delete[] (char*)binds[0].buffer;
+    std::string outpng((char*)binds[0].buffer, resLen0);
+    galay::utils::WriteFile("out.png", outpng);
+
+}
 
 int main()
 {
-    // galay::mysql::MysqlConfig config;
-    // galay::mysql::MysqlSession mysqlclient(config);
-    // mysqlclient.Connect("127.0.0.1","gong","123456","test",3306);
-    // std::cout << mysqlclient.GetSocket() << '\n';
-    // mysqlclient.CreateTable("user",{{"name","varchar(10)","NOT NULL PRIMARY KEY"},{"age","int",""}});
-    // auto res = mysqlclient.Select("user",{"name","age"});
-    // for(auto &v: res){
-    //     for(auto &c: v) std::cout << c <<" ";
-    //     std::cout << '\n';
-    // }
-    // mysqlclient.CreateTable("images2",{{"uid","int","primary key"},{"image","longblob","not null"},{"image2","longblob","not null"}});
-    // std::string indata1 = galay::io::file::SyncFileStream::ReadFile("out1.jpeg");
-    // auto params = mysqlclient.GetMysqlStmtExecutor();
-    // params->Prepare("insert into images2(uid,image,image2) values (15,?,?);");
-    // galay::middleware::mysql::MysqlStmtValue value1,value2;
-    // value1.SetValue( galay::middleware::mysql::MysqlStmtValue::BlobType::kBlobTypeLongBlob, indata1);
-    // value2.SetValue( galay::middleware::mysql::MysqlStmtValue::BlobType::kBlobTypeLongBlob, indata1);
-    // std::vector<galay::middleware::mysql::MysqlStmtValue> values = {value1, value2};
-    // params->BindParam(values);
-    // params->StringToParam(value1, 0);
-    // params->StringToParam(value2, 1);
-    // params->Execute();
-    // params->Close();
-    // std::string outdata;
-    // mysqlclient.ParamRecvBinaryData("select image from images2 where uid = 15;",outdata);
-    // galay::io::file::SyncFileStream::WriteFile("out3.jpeg",outdata);
-    // mysqlclient.DropTable("user");
-    // mysqlclient.DropTable("images2");
-    // auto executor = mysqlclient.GetMysqlStmtExecutor();
-    // executor->Prepare("select uid from images where uid > 1;");
-    // MYSQL_BIND binds[2] = {0};
-    // unsigned long resLen0 = 0,resLen1 = 0;
-    // binds[0].buffer_type = MYSQL_TYPE_LONG;
-    // int uid = 0;
-    // bool error1,error2;
-    // binds[0].buffer = &uid;
-    // binds[0].length = &resLen0;
-    // binds[0].error = &error1;
-    // binds[1].buffer_type = MYSQL_TYPE_LONG_BLOB;
-    // binds[1].length = &resLen1;
-    // binds[1].buffer_length = 0;
-    // binds[1].buffer = nullptr;
-    // binds[1].error = &error2;
-    // executor->BindResult(binds);
-    // executor->Execute();
-    // std::vector<std::string> res;
-    // while(executor->GetARow(binds)){
-    //     std::cout << uid << '\n';
-    // }
-    // std::cout << error1 << '\n';
-    // std::cout << error2 << '\n';
-    // std::cout << res.size() << '\n'; 
-    // mysqlclient.DisConnect();
+    auto config = galay::mysql::MysqlConfig::CreateConfig();
+    MysqlClient<MysqlSession> mysqlclient(config);
+    mysqlclient.GetSession()->Connect("127.0.0.1","gong","123456","test",3306);
+    CreateUserTable(mysqlclient.GetSession());
+    CreateImageTable(mysqlclient.GetSession());
+    mysqlclient.GetSession()->DropTable("user");
+    mysqlclient.GetSession()->DropTable("images");
+    mysqlclient.GetSession()->DisConnect();
     return 0;
 }

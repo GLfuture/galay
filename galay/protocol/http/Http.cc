@@ -3,50 +3,6 @@
 #include "galay/utils/String.h"
 #include <regex>
 
-namespace galay::error{
-
-static const char* HttpErrors[] = {
-    "No Error",
-    "Connection Close",
-    "Recv Timeout"
-    "Header Incomplete",
-    "Body Incomplete",
-    "Header Too Long",
-    "Uri Too Long",
-    "Chunck Error",
-    "Invalid Httpcode",
-    "Header Pair Exist",
-    "Header Pair Not Exist",
-    "Bad Request",
-    "Unkown Error"
-};
-
-bool 
-HttpError::HasError() const
-{
-    return this->m_code != error::kHttpError_NoError;
-}
-
-HttpErrorCode& 
-HttpError::Code()
-{
-    return this->m_code;
-}
-
-void HttpError::Reset()
-{
-    this->m_code = kHttpError_NoError;
-}
-
-std::string 
-HttpError::ToString(const HttpErrorCode code) const
-{
-    return HttpErrors[code];
-}
-
-
-}
-
 namespace galay::http
 {
 

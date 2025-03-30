@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include "galay/galay.hpp"
-#include "galay/middleware/Redis.hpp"
+#include "galay/middleware/redis/Redis.hpp"
 
 using namespace galay::redis;
 

@@ -3,6 +3,7 @@ set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     tutorial_client.cc
     tutorial_echo_server.cc
+    tutorial_static_server.cc
     tutorial_ssl_echo_server.cc
     tutorial_cmd_parser.cc
     test_time.cc

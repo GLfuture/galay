@@ -1,4 +1,4 @@
-#include "galay/middleware/Etcd.hpp"
+#include "galay/middleware/etcd/Etcd.hpp"
 #include "galay/galay.hpp"
 //middleware需在galay.hpp之前引入
 #include <iostream>

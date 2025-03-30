@@ -10,7 +10,7 @@
 #include <string.h>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include "galay/kernel/Coroutine.hpp"
-#include "galay/utils/Pool.hpp"
+#include <iostream>
 
 namespace galay::mysql
 {
@@ -46,10 +46,20 @@ public:
     MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger);
     bool Prepare(const std::string& ParamQuery);
     bool BindParam(MYSQL_BIND* params);
-    //MysqlStmtValue 类型为blob或string 需要调用
-    bool StringToParam(const std::string& data, unsigned int index);
+    bool LongDataToParam(const std::string& data, unsigned int index);
     bool BindResult(MYSQL_BIND* result);
     bool Execute();
+
+    /*
+        if buffer_type is:
+            MYSQL_TYPE_BLOB 
+            MYSQL_TYPE_STRING
+            MYSQL_TYPE_VAR_STRING 
+            MYSQL_TYPE_TINY_BLOB 
+            MYSQL_TYPE_MEDIUM_BLOB 
+            MYSQL_TYPE_LONG_BLOB
+        you should delete buffer when unuse (MYSQL_BIND*)result
+    */
     bool GetARow(MYSQL_BIND* result);
 
     bool Close();
@@ -134,9 +144,10 @@ class MysqlTable
 {
 public:
     MysqlTable(const std::string& name);
-    MysqlField& PrimaryKey();
+    MysqlField& PrimaryKeyFiled();
     /* such as user(uid) */
-    MysqlField& ForeignKey(const std::string& name);
+    MysqlField& ForeignKeyField(const std::string& name);
+    MysqlField& SimpleFiled();
     MysqlField& CreateUpdateTimeStampField();
     MysqlTable& ExtraAction(const std::string& action);
     std::string ToString() const;

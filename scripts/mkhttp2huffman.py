@@ -304,6 +304,6 @@ const std::unordered_map<uint32_t, std::string> HPACK_HUFFMAN_TABLE = {{
     )
     
     hpp_content = hpp_content.rstrip(",\n") + "\n"
-    with open("../galay/protocol/Http2HpackHuffman.hpp", "w") as f:
+    with open("../galay/protocol/http2/Http2HpackHuffman.hpp", "w") as f:
         f.write(hpp_content)
     

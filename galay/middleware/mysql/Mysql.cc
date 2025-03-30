@@ -110,13 +110,13 @@ MysqlTable::MysqlTable(const std::string &name)
 {
 }
 
-MysqlField &MysqlTable::PrimaryKey()
+MysqlField &MysqlTable::PrimaryKeyFiled()
 {
     m_primary_keys.emplace_back();
     return m_primary_keys.back();
 }
 
-MysqlField &MysqlTable::ForeignKey(const std::string &name)
+MysqlField &MysqlTable::ForeignKeyField(const std::string &name)
 {
     m_foreign_keys.emplace_back(MysqlField{}, name);
     return m_foreign_keys.back().first;
@@ -126,6 +126,12 @@ MysqlField &MysqlTable::CreateUpdateTimeStampField()
 {
     m_other_fields.emplace_back();
     m_other_fields.back().Type("TIMESTAMP").Default("CURRENT_TIMESTAMP");
+    return m_other_fields.back();
+}
+
+MysqlField &MysqlTable::SimpleFiled()
+{
+    m_other_fields.emplace_back();
     return m_other_fields.back();
 }
 
@@ -381,7 +387,7 @@ MysqlStmtExecutor::BindParam(MYSQL_BIND* params)
 
 
 bool  
-MysqlStmtExecutor::StringToParam(const std::string& data, unsigned int index)
+MysqlStmtExecutor::LongDataToParam(const std::string& data, unsigned int index)
 {
     unsigned long offset = 0;
     const unsigned long chunkSize = 1024;
@@ -463,7 +469,6 @@ MysqlStmtExecutor::GetARow(MYSQL_BIND* result)
             || result[i].buffer_type == MYSQL_TYPE_VAR_STRING || result[i].buffer_type == MYSQL_TYPE_TINY_BLOB || result[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB || result[i].buffer_type == MYSQL_TYPE_LONG_BLOB)
         {
             char* str = new char[*result[i].length];
-            bzero(str,*result[i].length);
             result[i].buffer = str;
             result[i].buffer_length = *result[i].length;
             if(mysql_stmt_fetch_column(this->m_stmt, &result[i], i, 0))
@@ -594,6 +599,10 @@ bool MysqlSession::Connect(const std::string &url)
 bool 
 MysqlSession::Connect(const std::string& host, const std::string& username, const std::string& password, const std::string& db_name, uint32_t port)
 {
+    if(!m_mysql) {
+        std::cout << "mysql is null" << std::endl;
+        return false;
+    }
     if (!mysql_real_connect(this->m_mysql, host.c_str(), username.c_str(), password.c_str(), db_name.c_str(), port, nullptr, 0))
     {
         MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));

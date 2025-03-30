@@ -3,6 +3,7 @@
 
 #include <cinttypes>
 #include <string>
+#include <memory>
 
 namespace galay::error
 {
@@ -38,6 +39,38 @@ enum ErrorCode
     Error_LinuxAioSetupError,
     Error_LinuxAioSubmitError,
 };
+
+enum HttpErrorCode
+{
+    kHttpError_NoError = 0,
+    kHttpError_ConnectionClose,
+    kHttpError_RecvTimeOut,
+    kHttpError_HeaderInComplete,
+    kHttpError_BodyInComplete,
+    kHttpError_HeaderTooLong,
+    kHttpError_UriTooLong,
+    kHttpError_ChunckHasError,
+    kHttpError_HttpCodeInvalid,
+    kHttpError_HeaderPairExist,
+    kHttpError_HeaderPairNotExist,
+    kHttpError_BadRequest,
+    kHttpError_UnkownError,
+};
+
+class HttpError
+{
+public:
+    using ptr = std::shared_ptr<HttpError>;
+    using wptr = std::weak_ptr<HttpError>;
+    using uptr = std::unique_ptr<HttpError>;
+    bool HasError() const;
+    HttpErrorCode& Code();
+    void Reset();
+    std::string ToString(HttpErrorCode code) const;
+protected:
+    HttpErrorCode m_code = kHttpError_NoError;
+};
+
 
 /*
     16bits for galay error code

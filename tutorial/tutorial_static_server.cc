@@ -1,19 +1,9 @@
 #include "galay/galay.hpp"
 
-class Handler {
-public:
-    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::http::HttpStreamImpl<galay::AsyncTcpSocket>::ptr stream) {
-        auto& req = stream->GetRequest();
-        bool res = co_await stream->SendResponse(ctx, galay::http::HttpStatusCode::OK_200, "Hello World", "text/plain");
-        co_await stream->Close();
-        co_return;
-    }
-};
-
 int main(int argc, const char* argv[])
 {
-    galay::args::App app("tutorial_echo_server");
-    app.Help("./tutorial_echo_server [OPTION] COMMAND\nOptions:\n  -p,\t--port number\tremote port.");
+    galay::args::App app("tutorial_static_server");
+    app.Help("./tutorial_static_server [OPTION] COMMAND\nOptions:\n  -p,\t--port number\tremote port.");
     galay::args::Arg::ptr port_arg = galay::args::Arg::Create("port");
     port_arg->Short('p').Required(true).Input(true).IsInt();
     app.AddArg(port_arg);
@@ -33,7 +23,7 @@ int main(int argc, const char* argv[])
     galay::GalayEnv env({});
     auto config = galay::http::HttpServerConfig::Create();
     galay::http::HttpServer<galay::AsyncTcpSocket> server(config);
-    server.RouteHandler<galay::http::GET>("/hello", Handler::GetHelloWorldHandler);
+    server.RegisterStaticFileGetMiddleware("/static", "/home/gong/projects/static");
     server.Start({"", port});
     getchar();
     server.Stop();
