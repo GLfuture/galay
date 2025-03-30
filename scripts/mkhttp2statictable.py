@@ -135,7 +135,7 @@ inline std::pair<std::string, std::string> GetKeyValueFromIndex(HpackStaticHeade
         )
     )
     hpp_content = hpp_content.rstrip(",\n") + "\n"
-    with open("Http2HpackStaticTable.hpp", "w") as f:
+    with open("../galay/protocol/Http2HpackStaticTable.hpp", "w") as f:
         f.write(hpp_content)
 
 if __name__ == "__main__":
