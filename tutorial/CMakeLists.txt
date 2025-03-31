@@ -1,5 +1,4 @@
 project(tutorial)
-set(CMAKE_BUILD_TYPE Debug)
 set(SRC_LIST 
     tutorial_client.cc
     tutorial_echo_server.cc
@@ -15,7 +14,7 @@ set(SRC_LIST
 
 
 set(COMMON_LIB ssl crypto)
-if(LINUX)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND COMMON_LIB aio)
 endif()
 

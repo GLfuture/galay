@@ -187,7 +187,7 @@ inline bool Http2Stream<SocketType>::ProcessHeadersFrame(HeadersFrame *frame)
     std::unique_ptr<HeadersFrame> frame_ptr(frame);
     m_header_block_fragment.clear();
     if(frame->IsEndHeaders()) {
-        m_headers = m_hpack.decodeHeaderBlock(stringviewToUint8(frame->GetHeaderBlockFragment()));
+        m_headers = m_hpack.decodeHeaderBlock(utils::stringviewToUint8(frame->GetHeaderBlockFragment()));
     } else {
         m_header_block_fragment += frame->GetHeaderBlockFragment();
     }
@@ -200,7 +200,7 @@ inline bool Http2Stream<SocketType>::ProcessContinuationFrame(ContinuationFrame 
     std::unique_ptr<HeadersFrame> frame_ptr(frame);
     if(frame->IsEndHeader()) {
         m_header_block_fragment += frame->GetHeaderBlockFragment();
-        m_headers = m_hpack.decodeHeaderBlock(stringToUint8(m_header_block_fragment));
+        m_headers = m_hpack.decodeHeaderBlock(utils::stringToUint8(m_header_block_fragment));
     } else {
         m_header_block_fragment += frame->GetHeaderBlockFragment();
     }

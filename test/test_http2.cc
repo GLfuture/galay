@@ -4,6 +4,7 @@
 #include <utility> // for pair
 #include <iostream>
 #include "galay/protocol/http2/Http2_0.hpp"
+#include "galay/utils/String.h"
 
 // ------------------------------------------------------------------------
 // 辅助工具函数
@@ -152,7 +153,7 @@ void testDynamicTableEviction() {
 
     // 第三次编码 headers2 应使用动态表索引
     std::string encoded3 = encoder.encodeHeaderBlock(headers2);
-    std::cout << "encoded3: " << uint8ToHex(StringToUint8Vector(encoded3)) << std::endl;
+    std::cout << "encoded3: " << galay::utils::uint8ToVisibleHex(StringToUint8Vector(encoded3)) << std::endl;
     assert(encoded3.size() ==  1); // 索引编码（0x80 | index） + 可能的其他字节
 
     // 解码验证

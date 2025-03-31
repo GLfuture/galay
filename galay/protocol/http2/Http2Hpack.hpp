@@ -4,12 +4,11 @@
 #include "Http2HpackHuffman.hpp"
 #include "Http2HpackStaticTable.hpp"
 #include "galay/utils/Huffman.hpp"
+#include "galay/utils/String.h"
 #include <deque>
 #include <optional>
 #include <cstdint>
 #include <stdexcept>
-#include <sstream>
-#include <iomanip>
 
 namespace galay::http2
 {
@@ -110,37 +109,6 @@ private:
 
 };
 
-inline std::string uint8ToHex(const std::vector<uint8_t>& data) {
-    std::ostringstream oss;
-    oss << std::hex << std::setw(2) << std::setfill('0');
-    bool first = true;
-    for (uint8_t byte : data) {
-        if (!first) {
-            oss << " ";
-        }
-        oss << static_cast<int>(byte);
-        first = false;
-    }
-    return oss.str();
-}
-
-inline std::vector<uint8_t> stringToUint8(const std::string& data) {
-    std::vector<uint8_t> result;
-    result.reserve(data.length());
-    for (size_t i = 0; i < data.length(); ++i) {
-        result.push_back(static_cast<uint8_t>(data[i]));
-    }
-    return result;
-}
-
-inline std::vector<uint8_t> stringviewToUint8(std::string_view data) {
-    std::vector<uint8_t> result;
-    result.reserve(data.length());
-    for (size_t i = 0; i < data.length(); ++i) {
-        result.push_back(static_cast<uint8_t>(data[i]));
-    }
-    return result;
-}
 
 }
 

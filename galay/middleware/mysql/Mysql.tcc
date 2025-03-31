@@ -71,7 +71,7 @@ inline MysqlSelectQuery &MysqlSelectQuery::OrderBy(OrderType... orders)
     return *this;
 }
 
-template <FiledValueType... FieldsValue>
+template <FieldValueType... FieldsValue>
 inline MysqlInsertQuery &MysqlInsertQuery::FieldValues(FieldsValue... values)
 {
     m_stream << "(";
@@ -81,7 +81,7 @@ inline MysqlInsertQuery &MysqlInsertQuery::FieldValues(FieldsValue... values)
             return;
         } 
         if(!first) m_stream << ',';
-        m_stream << values.first;
+        m_stream << std::get<0>(values);
         first = false;
     }()));
     m_stream << ") VALUES (";
@@ -91,14 +91,14 @@ inline MysqlInsertQuery &MysqlInsertQuery::FieldValues(FieldsValue... values)
             return;
         }
         if(!first) m_stream << ',';
-        m_stream << values.second;
+        m_stream << std::get<1>(values);
         first = false;
     }()));
     m_stream << ")";
     return *this;
 }
 
-template <FiledValueType... FieldsValue>
+template <FieldValueType... FieldsValue>
 inline MysqlUpdateQuery &MysqlUpdateQuery::FieldValues(FieldsValue... values)
 {
     m_stream << " SET ";

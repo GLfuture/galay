@@ -1,5 +1,5 @@
-#ifndef __GALAY_STRINGUTIL_H__
-#define __GALAY_STRINGUTIL_H__
+#ifndef __GALAY_STRING_H__
+#define __GALAY_STRING_H__
 
 #include <string>
 #include <vector>
@@ -8,6 +8,8 @@
 #include <string_view>
 #endif
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 namespace galay::utils
 {
@@ -65,6 +67,47 @@ namespace galay::utils
             return std::count(str.begin(), str.end(), symbol[0]);
         }
     };
+
+    inline std::string uint8ToString(const std::vector<uint8_t>& data) {
+        std::ostringstream oss;
+        for (uint8_t byte : data) {
+            oss << static_cast<char>(byte);
+        }
+        return oss.str();
+    }
+
+    inline std::string uint8ToVisibleHex(const std::vector<uint8_t>& data) {
+        std::ostringstream oss;
+        oss << std::hex << std::setw(2) << std::setfill('0');
+        bool first = true;
+        for (uint8_t byte : data) {
+            if (!first) {
+                oss << " ";
+            }
+            oss << static_cast<int>(byte);
+            first = false;
+        }
+        return oss.str();
+    }
+    
+    inline std::vector<uint8_t> stringToUint8(const std::string& data) {
+        std::vector<uint8_t> result;
+        result.reserve(data.length());
+        for (size_t i = 0; i < data.length(); ++i) {
+            result.push_back(static_cast<uint8_t>(data[i]));
+        }
+        return result;
+    }
+    
+    inline std::vector<uint8_t> stringviewToUint8(std::string_view data) {
+        std::vector<uint8_t> result;
+        result.reserve(data.length());
+        for (size_t i = 0; i < data.length(); ++i) {
+            result.push_back(static_cast<uint8_t>(data[i]));
+        }
+        return result;
+    }
+    
 }
 
 #endif

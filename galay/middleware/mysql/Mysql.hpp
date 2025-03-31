@@ -8,9 +8,10 @@
 #include <cxxabi.h>
 #include <memory>
 #include <string.h>
+#include <sstream>
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include "galay/kernel/Coroutine.hpp"
-#include <iostream>
+
 
 namespace galay::mysql
 {
@@ -41,36 +42,51 @@ private:
 
 class MysqlStmtExecutor
 {
+    struct BlobBuffer {
+        int field_index; 
+        char* data;             // 动态缓冲区
+        unsigned long allocated; // 已分配的内存大小
+        unsigned long actual;    // 实际数据长度
+    };
 public:
     using ptr = std::shared_ptr<MysqlStmtExecutor>;
     MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger);
     bool Prepare(const std::string& ParamQuery);
     bool BindParam(MYSQL_BIND* params);
     bool LongDataToParam(const std::string& data, unsigned int index);
-    bool BindResult(MYSQL_BIND* result);
+    bool BindResult();
     bool Execute();
+    bool StoreResult();
+    
+    bool IsNull(int column) const;
+    bool IsInt(int column) const;          // 整数类型（TINY/SHORT/LONG/LONGLONG）
+    bool IsFloat(int column) const;         // 浮点类型（FLOAT/DOUBLE）
+    bool IsString(int column) const;         // 字符串（CHAR/VARCHAR）
+    bool IsBlob(int column) const;          // BLOB类型
+    bool IsDateTime(int column) const;      // 日期时间类型（DATE/TIME/DATETIME）
 
-    /*
-        if buffer_type is:
-            MYSQL_TYPE_BLOB 
-            MYSQL_TYPE_STRING
-            MYSQL_TYPE_VAR_STRING 
-            MYSQL_TYPE_TINY_BLOB 
-            MYSQL_TYPE_MEDIUM_BLOB 
-            MYSQL_TYPE_LONG_BLOB
-        you should delete buffer when unuse (MYSQL_BIND*)result
-    */
-    bool GetARow(MYSQL_BIND* result);
+    // 数据获取接口
+    int64_t GetInt(int column) const;
+    double GetDouble(int column) const;
+    std::string GetString(int column) const;
+    std::vector<uint8_t> GetBlob(int column) const;
+    MYSQL_TIME GetDateTime(int column) const;
+
+    bool NextRow(int &row);
+    bool NextColumn(int &column);
 
     bool Close();
     std::string GetLastError();
     ~MysqlStmtExecutor();
 private:
-    bool StoreResult();
+    void ValidateColumn(int column, std::initializer_list<enum_field_types> expected_types) const;
 private:
     MYSQL_STMT* m_stmt;
-    bool m_storeResult;
     Logger::ptr m_logger;
+    int m_current_row;
+    int m_current_col;
+    std::vector<MYSQL_BIND> m_result_binds;
+    std::vector<BlobBuffer> m_blob_buffers;
 };
 
 class MysqlSession;
@@ -146,7 +162,7 @@ public:
     MysqlTable(const std::string& name);
     MysqlField& PrimaryKeyFiled();
     /* such as user(uid) */
-    MysqlField& ForeignKeyField(const std::string& name);
+    MysqlField& ForeignKeyField(const std::string &table_name, const std::string& field_name);
     MysqlField& SimpleFiled();
     MysqlField& CreateUpdateTimeStampField();
     MysqlTable& ExtraAction(const std::string& action);
@@ -178,10 +194,12 @@ concept OrderByType = requires (T type) {
     std::is_convertible_v<decltype(type.second), MysqlOrderBy>;
 };
 
+
 template <typename T>
-concept FiledValueType = requires (T type) {
-    std::is_convertible_v<decltype(type.first), std::string>;
-    std::is_convertible_v<decltype(type.second), std::string>;
+concept FieldValueType = requires(T t) {
+    requires std::tuple_size<T>::value == 2;  // 必须是二元组类型
+    requires std::is_convertible_v<decltype(std::get<0>(t)), std::string>;
+    requires std::is_convertible_v<decltype(std::get<1>(t)), std::string>;
 };
 
 class MysqlQuery
@@ -221,7 +239,7 @@ class MysqlInsertQuery: public MysqlQuery
 public:
     MysqlInsertQuery() = default;
     MysqlInsertQuery& Table(const std::string& table);
-    template<FiledValueType... FieldsValue>
+    template<FieldValueType... FieldsValue>
     MysqlInsertQuery& FieldValues(FieldsValue... values);
 };
 
@@ -230,7 +248,7 @@ class MysqlUpdateQuery: public MysqlQuery
 public:
     MysqlUpdateQuery() = default;
     MysqlUpdateQuery& Table(const std::string& table);
-    template<FiledValueType... FieldsValue>
+    template<FieldValueType... FieldsValue>
     MysqlUpdateQuery& FieldValues(FieldsValue... values);
     MysqlUpdateQuery& Where(const std::string& condition);
 };
@@ -324,24 +342,6 @@ public:
 private:
     MYSQL* m_mysql;
 };
-
-template<typename SessionType>
-class MysqlClient {
-public:
-    MysqlClient(MysqlConfig::ptr config) {
-        mysql_library_init(0, nullptr, nullptr);
-        m_session = std::make_unique<SessionType>(config);
-    }
-    SessionType* GetSession() {
-        return m_session.get();
-    }
-    ~MysqlClient(){
-        mysql_library_end();
-    }
-private:
-    std::unique_ptr<SessionType> m_session;
-};
-
 }
 
 #include "Mysql.tcc"

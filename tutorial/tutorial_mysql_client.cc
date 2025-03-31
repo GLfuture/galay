@@ -13,8 +13,11 @@ void CreateUserTable(MysqlSession* session)
     table.SimpleFiled().Name("name").Type("varchar(20)").NotNull();
     table.SimpleFiled().Name("age").Type("int").NotNull();
     session->CreateTable(table);
+    auto ins_query = MysqlInsertQuery();
+    ins_query.Table("user").FieldValues(std::pair{ "name", "\"zhangsan\"" }, std::pair{ "age", "18" });
+    session->Insert(ins_query);
     auto sel_query = MysqlSelectQuery();
-    sel_query.From("user").Fields("name","age").Where("uid==0");
+    sel_query.Fields("name","age").From("user").Where("uid=1");
     auto res = session->Select(sel_query);
     auto res_table = res.ToResultTable();
     for(auto &v: res_table){
@@ -26,51 +29,70 @@ void CreateUserTable(MysqlSession* session)
 void CreateImageTable(MysqlSession* session)
 {
     MysqlTable table("images");
-    table.PrimaryKeyFiled().Name("uid").AutoIncrement().Type("int");
+    table.PrimaryKeyFiled().Name("image_id").Type("int").AutoIncrement();
+    table.ForeignKeyField("user", "uid").Name("uid").Type("int");
     table.SimpleFiled().Name("image").Type("longblob").NotNull();
     session->CreateTable(table);
 
     std::string indata = galay::utils::ReadFile("1.1.png");
+    std::cout << "indata size: " << indata.size() << std::endl;
     auto params = session->GetMysqlStmtExecutor();
-    params->Prepare("insert into images(uid,image) values (15,?);");
+    params->Prepare("insert into images(uid,image) values (1,?);");
     MYSQL_BIND binds1[1];
-    binds1[0].buffer_type = MYSQL_TYPE_LONG_BLOB;
-    binds1[0].buffer = indata.data();
-    binds1[0].buffer_length = indata.length();
+    memset(&binds1[0], 0, sizeof(MYSQL_BIND)); // 清零初始化
+    binds1[0].buffer_type = MYSQL_TYPE_LONG_BLOB; // 仅设置类型
     params->BindParam(binds1);
     params->LongDataToParam(indata, 0);
     params->Execute();
     params->Close();
     auto executor = session->GetMysqlStmtExecutor();
-    executor->Prepare("select image from images where uid > 1;");
+    executor->Prepare("select image from images where uid = 1;");
     int uid = 0;
     bool error1;
     unsigned long resLen0 = 0;
     MYSQL_BIND binds[1] = {0};
-    binds[0].buffer_type = MYSQL_TYPE_LONG_BLOB;
-    binds[0].length = &resLen0;
-    binds[0].error = &error1;
-    executor->BindResult(binds);
     executor->Execute();
+    executor->StoreResult();
+    executor->BindResult();
     std::vector<std::string> res;
-    while(executor->GetARow(binds)){
-        
+    int i = 0, j = 0;
+    while(executor->NextRow(i)){
+        while(executor->NextColumn(j)) {
+            if(executor->IsNull(j)) {
+                std::cout << "null ";
+            } else if(executor->IsBlob(j)) {
+                galay::utils::WriteFile("out.png", galay::utils::uint8ToString(executor->GetBlob(j)));
+            }
+        }
+        std::cout << std::endl;
     }
-    delete[] (char*)binds[0].buffer;
-    std::string outpng((char*)binds[0].buffer, resLen0);
-    galay::utils::WriteFile("out.png", outpng);
 
 }
 
 int main()
 {
     auto config = galay::mysql::MysqlConfig::CreateConfig();
-    MysqlClient<MysqlSession> mysqlclient(config);
-    mysqlclient.GetSession()->Connect("127.0.0.1","gong","123456","test",3306);
-    CreateUserTable(mysqlclient.GetSession());
-    CreateImageTable(mysqlclient.GetSession());
-    mysqlclient.GetSession()->DropTable("user");
-    mysqlclient.GetSession()->DropTable("images");
-    mysqlclient.GetSession()->DisConnect();
+    //MysqlClient<MysqlSession> mysqlclient(config);
+    // MYSQL* mysql = mysql_init(nullptr);
+    // if(mysql_real_connect(mysql, "127.0.0.1", "gong", "123456", "test", 3306, nullptr, 0) == nullptr) {
+    //     std::cout << mysql_error(mysql) << std::endl;
+    //     return 0;
+    // }
+    std::cout << "mysql version: " << mysql_get_client_info() << std::endl;
+    try
+    {
+        MysqlSession session(config);
+        session.Connect("127.0.0.1", "gong", "123456", "test", 3306);
+        // 或者 session.Connect("mysql://user:password@host:port/db_name")
+        CreateUserTable(&session);
+        CreateImageTable(&session);
+        session.DropTable("user");
+        session.DropTable("images");
+        session.DisConnect();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
     return 0;
 }

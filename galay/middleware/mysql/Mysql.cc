@@ -116,9 +116,9 @@ MysqlField &MysqlTable::PrimaryKeyFiled()
     return m_primary_keys.back();
 }
 
-MysqlField &MysqlTable::ForeignKeyField(const std::string &name)
+MysqlField &MysqlTable::ForeignKeyField(const std::string &table_name, const std::string& field_name)
 {
-    m_foreign_keys.emplace_back(MysqlField{}, name);
+    m_foreign_keys.emplace_back(MysqlField{}, table_name + "(" + field_name + ")");
     return m_foreign_keys.back().first;
 }
 
@@ -143,31 +143,57 @@ MysqlTable &MysqlTable::ExtraAction(const std::string &action)
 
 std::string MysqlTable::ToString() const
 {
-    std::ostringstream query, primaryinfo, foreigninfo;
-    query << "CREATE TABLE IF NOT EXISTS ";
-    query << m_name << "(";
-    for(int i = 0; i < m_primary_keys.size(); ++i) {
-        query << m_primary_keys[i].ToString() << ",";
-        if(i == 0){
-            primaryinfo << "PRIMARY KEY(";
-        } 
-        if(i == m_primary_keys.size() - 1) {
-            primaryinfo << ')';
+    std::ostringstream query, constraints;
+    query << "CREATE TABLE IF NOT EXISTS " << m_name << "(";
+
+    // 添加所有字段（主键、外键字段视为普通字段）
+    for (const auto& pk : m_primary_keys) {
+        query << pk.ToString() << ",";
+    }
+    for (const auto& fk : m_foreign_keys) {
+        query << fk.first.ToString() << ",";
+    }
+    for (const auto& field : m_other_fields) {
+        query << field.ToString() << ",";
+    }
+
+    // 构建主键约束
+    if (!m_primary_keys.empty()) {
+        constraints << "PRIMARY KEY(";
+        for (size_t i = 0; i < m_primary_keys.size(); ++i) {
+            if (i > 0) {
+                constraints << ",";
+            }
+            constraints << m_primary_keys[i].m_name;
         }
-        primaryinfo << m_primary_keys[i].m_name << ","; 
+        constraints << "),";
     }
-    for(int i = 0; i < m_foreign_keys.size(); ++i) {
-        query << m_foreign_keys[i].first.ToString() << ",";
-        foreigninfo << "FOREIGN KEY(" << m_foreign_keys[i].first.m_name << ") REFERENCES " \
-            << m_foreign_keys[i].second << " ON DELETE CASCADE ON UPDATE CASCADE,";
+
+    // 构建外键约束
+    for (const auto& fk : m_foreign_keys) {
+        constraints << "FOREIGN KEY(" << fk.first.m_name << ") REFERENCES "
+                    << fk.second << " ON DELETE CASCADE ON UPDATE CASCADE,";
     }
-    for(auto& field :m_other_fields) {
-        query << field.ToString() + ",";
+
+    // 将约束添加到query，并移除末尾的逗号
+    std::string constraintStr = constraints.str();
+    if (!constraintStr.empty()) {
+        if (constraintStr.back() == ',') {
+            constraintStr.pop_back();
+        }
+        query << constraintStr << ","; // 添加约束后加逗号
     }
-    std::string temp = foreigninfo.str();
-    temp[temp.length() - 1] = ')';
-    query << primaryinfo.str() << temp << m_extra_action << ";";
-    return query.str();
+
+    // 处理最后的逗号并闭合括号，添加表选项
+    std::string final_query = query.str();
+    size_t last_comma = final_query.find_last_of(',');
+    if (last_comma != std::string::npos) {
+        final_query = final_query.substr(0, last_comma) + ") " + m_extra_action + ";";
+    } else {
+        final_query += ") " + m_extra_action + ";";
+    }
+
+    return final_query;
 }
 
 std::string OrderByToString(MysqlOrderBy orderby)
@@ -357,7 +383,7 @@ uint64_t MysqlResult::GetAffectedRows()
 }
 
 MysqlStmtExecutor::MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger)
-    : m_stmt(stmt), m_storeResult(false), m_logger(logger)
+    : m_stmt(stmt), m_logger(logger)
 {
 }
 
@@ -382,7 +408,7 @@ MysqlStmtExecutor::BindParam(MYSQL_BIND* params)
         MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
         return false;
     }
-    return 0;
+    return true;
 }
 
 
@@ -404,20 +430,103 @@ MysqlStmtExecutor::LongDataToParam(const std::string& data, unsigned int index)
 }
 
 bool 
-MysqlStmtExecutor::BindResult(MYSQL_BIND* result)
+MysqlStmtExecutor::BindResult()
 {
-    int ret = mysql_stmt_bind_result(this->m_stmt, result);
-    if (ret)
-    {
-        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
+    // 1. 获取结果集元数据
+    MYSQL_RES* metadata = mysql_stmt_result_metadata(m_stmt);
+    if (!metadata) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: No result metadata]");
         return false;
     }
+
+    const int num_fields = mysql_num_fields(metadata);
+    MYSQL_FIELD* fields = mysql_fetch_fields(metadata);
+    m_result_binds.resize(num_fields);
+
+    for (int i = 0; i < num_fields; ++i) {
+        MYSQL_BIND& bind = m_result_binds[i];
+        memset(&bind, 0, sizeof(MYSQL_BIND));
+
+        // 2.1 设置基础类型
+        bind.buffer_type = fields[i].type;
+        bind.is_null = new bool(false);
+        bind.length = new unsigned long(0);
+
+        // 2.2 根据字段类型分配缓冲区
+        switch (fields[i].type) {
+            // 整数类型
+            case MYSQL_TYPE_TINY:
+                bind.buffer = new int8_t(0);
+                bind.buffer_length = sizeof(int8_t);
+                break;
+            case MYSQL_TYPE_SHORT:
+                bind.buffer = new int16_t(0);
+                bind.buffer_length = sizeof(int16_t);
+                break;
+            case MYSQL_TYPE_LONG:
+                bind.buffer = new int32_t(0);
+                bind.buffer_length = sizeof(int32_t);
+                break;
+            case MYSQL_TYPE_LONGLONG:
+                bind.buffer = new int64_t(0);
+                bind.buffer_length = sizeof(int64_t);
+                break;
+
+            // 浮点类型
+            case MYSQL_TYPE_FLOAT:
+                bind.buffer = new float(0.0f);
+                bind.buffer_length = sizeof(float);
+                break;
+            case MYSQL_TYPE_DOUBLE:
+                bind.buffer = new double(0.0);
+                bind.buffer_length = sizeof(double);
+                break;
+
+            // 字符串和BLOB
+            case MYSQL_TYPE_STRING:
+            case MYSQL_TYPE_VAR_STRING:
+            case MYSQL_TYPE_BLOB: {
+                const unsigned long init_size = (fields[i].max_length > 0) ? 
+                fields[i].max_length + 1 : 1024;
+                bind.buffer = malloc(init_size);
+                bind.buffer_length = init_size;
+                m_blob_buffers.emplace_back(BlobBuffer{
+                    .field_index = i,
+                    .data = static_cast<char*>(bind.buffer),
+                    .allocated = init_size,
+                    .actual = 0
+                });
+                break;
+            }
+            default:
+            {   
+                MysqlLogError(m_logger->SpdLogger(), 
+                    "[Error: Unsupported type {} for column {}]", 
+                    fields[i].type, fields[i].name);
+                mysql_free_result(metadata);
+                return false;
+            }
+        }
+    }
+
+    // 3. 绑定结果到预处理语句
+    if (mysql_stmt_bind_result(m_stmt, m_result_binds.data()) != 0) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_stmt_error(m_stmt));
+        mysql_free_result(metadata);
+        return false;
+    }
+
+    mysql_free_result(metadata);
     return true;
 }
 
 bool 
 MysqlStmtExecutor::Execute()
 {
+    if(!m_stmt) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: MysqlStmtExecutor's stmt is nullptr]");
+        return false;
+    }
     int ret = mysql_stmt_execute(this->m_stmt);
     if (ret)
     {
@@ -439,50 +548,160 @@ MysqlStmtExecutor::StoreResult()
     return true;
 }
 
-bool 
-MysqlStmtExecutor::GetARow(MYSQL_BIND* result)
-{
-    if(!this->m_storeResult)
-    {
-        if(!StoreResult())
-        {
-            MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
-            return false;
-        }
-        m_storeResult = true;
-    }
-    int ret = mysql_stmt_fetch(this->m_stmt);
-    if (ret == MYSQL_DATA_TRUNCATED || ret == MYSQL_NO_DATA)
-    {
-        m_storeResult = false;
+bool MysqlStmtExecutor::IsNull(int column) const {
+    if (column < 0 || column >= m_result_binds.size()) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: Column index out of range]");
         return false;
     }
-    if(ret != 0)
-    {
-        m_storeResult = false;
-        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
+    const MYSQL_BIND& bind = m_result_binds[column];
+    if (!bind.is_null) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: is_null pointer not initialized]");
         return false;
     }
-    for(int i = 0 ; i < mysql_stmt_param_count(this->m_stmt); ++i)
-    {
-        if(result[i].buffer_type == MYSQL_TYPE_BLOB || result[i].buffer_type == MYSQL_TYPE_STRING
-            || result[i].buffer_type == MYSQL_TYPE_VAR_STRING || result[i].buffer_type == MYSQL_TYPE_TINY_BLOB || result[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB || result[i].buffer_type == MYSQL_TYPE_LONG_BLOB)
-        {
-            char* str = new char[*result[i].length];
-            result[i].buffer = str;
-            result[i].buffer_length = *result[i].length;
-            if(mysql_stmt_fetch_column(this->m_stmt, &result[i], i, 0))
-            {
-                MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", this->m_stmt->last_error);
-                return false;
-            }
-        }
-        else
-        {
-            mysql_stmt_fetch_column(this->m_stmt, &result[i], i, 0);
-        }
+    return (*bind.is_null) != 0;
+}
 
+bool MysqlStmtExecutor::IsInt(int column) const {
+    ValidateColumn(column, {});
+    const auto type = m_result_binds[column].buffer_type;
+    return (type == MYSQL_TYPE_TINY || 
+            type == MYSQL_TYPE_SHORT || 
+            type == MYSQL_TYPE_LONG || 
+            type == MYSQL_TYPE_LONGLONG);
+}
+
+bool MysqlStmtExecutor::IsString(int column) const {
+    ValidateColumn(column, {});
+    const auto type = m_result_binds[column].buffer_type;
+    return (type == MYSQL_TYPE_STRING || 
+            type == MYSQL_TYPE_VAR_STRING);
+}
+
+bool MysqlStmtExecutor::IsBlob(int column) const {
+    ValidateColumn(column, {});
+    const auto type = m_result_binds[column].buffer_type;
+    return (type == MYSQL_TYPE_BLOB || 
+            type == MYSQL_TYPE_LONG_BLOB);
+}
+
+bool MysqlStmtExecutor::IsFloat(int column) const {
+    ValidateColumn(column, {});
+    const auto type = m_result_binds[column].buffer_type;
+    return (type == MYSQL_TYPE_FLOAT || type == MYSQL_TYPE_DOUBLE);
+}
+
+bool MysqlStmtExecutor::IsDateTime(int column) const {
+    ValidateColumn(column, {});
+    const auto type = m_result_binds[column].buffer_type;
+    return (type == MYSQL_TYPE_DATE || 
+            type == MYSQL_TYPE_TIME || 
+            type == MYSQL_TYPE_DATETIME || 
+            type == MYSQL_TYPE_TIMESTAMP);
+}
+
+int64_t MysqlStmtExecutor::GetInt(int column) const {
+    ValidateColumn(column, {MYSQL_TYPE_TINY, MYSQL_TYPE_SHORT, MYSQL_TYPE_LONG, MYSQL_TYPE_LONGLONG});
+    if (IsNull(column)) throw std::runtime_error("Column is NULL");
+
+    const MYSQL_BIND& bind = m_result_binds[column];
+    switch (bind.buffer_type) {
+        case MYSQL_TYPE_TINY:   return *static_cast<int8_t*>(bind.buffer);
+        case MYSQL_TYPE_SHORT:  return *static_cast<int16_t*>(bind.buffer);
+        case MYSQL_TYPE_LONG:   return *static_cast<int32_t*>(bind.buffer);
+        case MYSQL_TYPE_LONGLONG: return *static_cast<int64_t*>(bind.buffer);
+        default: throw std::logic_error("Invalid type for integer");
     }
+}
+
+double MysqlStmtExecutor::GetDouble(int column) const {
+    ValidateColumn(column, {MYSQL_TYPE_FLOAT, MYSQL_TYPE_DOUBLE});
+    if (IsNull(column)) throw std::runtime_error("Column is NULL");
+    
+    const MYSQL_BIND& bind = m_result_binds[column];
+    switch (bind.buffer_type) {
+        case MYSQL_TYPE_FLOAT:  return *static_cast<float*>(bind.buffer);
+        case MYSQL_TYPE_DOUBLE: return *static_cast<double*>(bind.buffer);
+        default: throw std::logic_error("Invalid type for double");
+    }
+}
+
+std::string MysqlStmtExecutor::GetString(int column) const {
+    ValidateColumn(column, {MYSQL_TYPE_STRING, MYSQL_TYPE_VAR_STRING});
+    if (IsNull(column)) return "";
+
+    const MYSQL_BIND& bind = m_result_binds[column];
+    return std::string(static_cast<char*>(bind.buffer), *bind.length);
+}
+
+std::vector<uint8_t> MysqlStmtExecutor::GetBlob(int column) const {
+    ValidateColumn(column, {MYSQL_TYPE_BLOB, MYSQL_TYPE_LONG_BLOB});
+    if (IsNull(column)) return {};
+
+    const MYSQL_BIND& bind = m_result_binds[column];
+    const uint8_t* data = static_cast<uint8_t*>(bind.buffer);
+    return std::vector<uint8_t>(data, data + *bind.length);
+}
+
+MYSQL_TIME MysqlStmtExecutor::GetDateTime(int column) const {
+    ValidateColumn(column, {MYSQL_TYPE_DATE, MYSQL_TYPE_TIME, MYSQL_TYPE_DATETIME, MYSQL_TYPE_TIMESTAMP});
+    if (IsNull(column)) throw std::runtime_error("Column is NULL");
+    
+    const MYSQL_BIND& bind = m_result_binds[column];
+    return *static_cast<MYSQL_TIME*>(bind.buffer);
+}
+
+bool MysqlStmtExecutor::NextRow(int &row)
+{
+    if (!m_stmt) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: Statement handle is null]");
+        return false;
+    }
+    const int ret = mysql_stmt_fetch(m_stmt);
+    if (ret == MYSQL_NO_DATA) {
+        return false; // 无更多数据
+    } else if (ret == MYSQL_DATA_TRUNCATED) {
+        for (int i = 0; i < m_result_binds.size(); ++i) {
+            MYSQL_BIND& bind = m_result_binds[i];
+            if (bind.buffer_type != MYSQL_TYPE_BLOB) continue;
+            const unsigned long actual_length = *bind.length;
+            BlobBuffer& blob = m_blob_buffers[i];
+
+            if (actual_length > blob.allocated) {
+                free(blob.data);
+                blob.data = static_cast<char*>(malloc(actual_length));
+                blob.allocated = actual_length;
+                bind.buffer = blob.data;
+                bind.buffer_length = actual_length;
+                if (mysql_stmt_fetch_column(m_stmt, &bind, blob.field_index, 0) != 0) {
+                    return false;
+                }
+            }
+
+            blob.actual = actual_length;
+        }
+    } else if (ret != 0) {
+        MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_stmt_error(m_stmt));
+        return false;
+    }
+    m_current_row++;
+    m_current_col = -1; // 重置列索引，准备遍历新行
+    row = m_current_row;
+    return true;
+}
+
+bool MysqlStmtExecutor::NextColumn(int &column)
+{
+    if (m_result_binds.empty()) {
+        MysqlLogError(m_logger->SpdLogger(), 
+            "[Error: Result set not bound]");
+        return false;
+    }
+    m_current_col++;
+    const int total_columns = mysql_stmt_field_count(m_stmt);
+    if (m_current_col >= total_columns) {
+        return false; // 列遍历结束
+    }
+    column = m_current_col;
     return true;
 }
 
@@ -507,23 +726,89 @@ MysqlStmtExecutor::GetLastError()
 
 MysqlStmtExecutor::~MysqlStmtExecutor()
 {
+    for (auto& bind : m_result_binds) {
+        // 释放基础指针
+        delete bind.is_null;
+        delete bind.length;
 
+        // 按类型释放缓冲区
+        switch (bind.buffer_type) {
+            // 整数类型
+            case MYSQL_TYPE_TINY:
+                delete static_cast<int8_t*>(bind.buffer);
+                break;
+            case MYSQL_TYPE_SHORT:
+                delete static_cast<int16_t*>(bind.buffer);
+                break;
+            case MYSQL_TYPE_LONG:
+                delete static_cast<int32_t*>(bind.buffer);
+                break;
+            case MYSQL_TYPE_LONGLONG:
+                delete static_cast<int64_t*>(bind.buffer);
+                break;
+
+            // 浮点类型
+            case MYSQL_TYPE_FLOAT:
+                delete static_cast<float*>(bind.buffer);
+                break;
+            case MYSQL_TYPE_DOUBLE:
+                delete static_cast<double*>(bind.buffer);
+                break;
+
+            // 字符串和BLOB
+            case MYSQL_TYPE_STRING:
+            case MYSQL_TYPE_VAR_STRING:
+            case MYSQL_TYPE_BLOB:
+                free(bind.buffer);
+                break;
+
+            default:
+                break;
+        }
+    }
+    m_result_binds.clear();
+
+    m_result_binds.clear();
+
+    // 关闭预处理语句
+    if (m_stmt) {
+        mysql_stmt_close(m_stmt);
+        m_stmt = nullptr;
+    }
+    if(m_stmt) {
+        Close();
+    }
+}
+
+void MysqlStmtExecutor::ValidateColumn(int column, std::initializer_list<enum_field_types> expected_types) const
+{
+    if (column < 0 || column >= m_result_binds.size()) {
+        throw std::out_of_range("Column index out of range");
+    }
+    if (!expected_types.size()) return;
+
+    const auto actual_type = m_result_binds[column].buffer_type;
+    for (auto expected : expected_types) {
+        if (actual_type == expected) return;
+    }
+    throw std::runtime_error("Column type mismatch");
 }
 
 MysqlSession::MysqlSession(MysqlConfig::ptr config)
+    :MysqlSession(config, Logger::CreateStdoutLoggerMT("MysqlLogger"))
 {
-    auto logger = Logger::CreateStdoutLoggerMT("MysqlLogger");
-    MysqlSession(config, logger);
 }
 
 MysqlSession::MysqlSession(MysqlConfig::ptr config, Logger::ptr logger)
     : m_logger(logger)
 {
-    this->m_mysql = mysql_init(nullptr);
-    if(this->m_mysql==nullptr) {
+    mysql_library_init(0, nullptr, nullptr);
+    m_mysql = mysql_init(nullptr);
+    if(this->m_mysql == nullptr) {
         MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException(mysql_error(this->m_mysql));
     }
+
     if(mysql_options(this->m_mysql, MYSQL_SET_CHARSET_NAME, config->m_charset.c_str()) == -1){
         MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         throw MySqlException( mysql_error(this->m_mysql));
@@ -557,6 +842,7 @@ MysqlSession::MysqlSession(MysqlConfig::ptr config, Logger::ptr logger)
             throw MySqlException( mysql_error(this->m_mysql));
         }
     }
+    
 }
 
 bool MysqlSession::Connect(const std::string &url)
@@ -599,11 +885,10 @@ bool MysqlSession::Connect(const std::string &url)
 bool 
 MysqlSession::Connect(const std::string& host, const std::string& username, const std::string& password, const std::string& db_name, uint32_t port)
 {
-    if(!m_mysql) {
-        std::cout << "mysql is null" << std::endl;
+    if(m_mysql == nullptr) {
         return false;
     }
-    if (!mysql_real_connect(this->m_mysql, host.c_str(), username.c_str(), password.c_str(), db_name.c_str(), port, nullptr, 0))
+    if (!mysql_real_connect(m_mysql, host.c_str(), username.c_str(), password.c_str(), db_name.c_str(), port, nullptr, 0))
     {
         MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         return false;
@@ -732,6 +1017,7 @@ MysqlSession::~MysqlSession()
         mysql_close(this->m_mysql);
         this->m_mysql = nullptr;
     }
+    mysql_library_end();
 }
 
 AsyncMysqlSession::AsyncMysqlSession(MysqlConfig::ptr config)
