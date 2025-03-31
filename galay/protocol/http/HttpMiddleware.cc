@@ -34,8 +34,7 @@ Coroutine<void> HttpStaticFileMiddleware::OnStreamHandleImpl(RoutineCtx ctx, Htt
     auto& response = stream->GetResponse();
     std::string& uri = request->Header()->Uri();
     if(request->Header()->Method() != HttpMethod::Http_Method_Get \
-        && uri.length() <= middleware->m_url_path.length() \
-        && uri.compare(0, middleware->m_url_path.length(), middleware->m_url_path) != 0) {
+        && !uri.starts_with(middleware->m_url_path)) {
         middleware->m_result = true;
         co_return;
     }
