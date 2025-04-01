@@ -24,6 +24,9 @@ void CreateUserTable(MysqlSession* session)
         for(auto &c: v) std::cout << c <<" ";
         std::cout << '\n';
     }
+    MysqlUpdateQuery upd_query;
+    upd_query.Table("user").FieldValues(std::pair{"name", "\"lisi\""}).Where("uid=1");
+    session->Update(upd_query);
 }
 
 void CreateImageTable(MysqlSession* session)
@@ -35,7 +38,6 @@ void CreateImageTable(MysqlSession* session)
     session->CreateTable(table);
 
     std::string indata = galay::utils::ReadFile("1.1.png");
-    std::cout << "indata size: " << indata.size() << std::endl;
     auto params = session->GetMysqlStmtExecutor();
     params->Prepare("insert into images(uid,image) values (1,?);");
     MYSQL_BIND binds1[1];
@@ -86,8 +88,18 @@ int main()
         // 或者 session.Connect("mysql://user:password@host:port/db_name")
         CreateUserTable(&session);
         CreateImageTable(&session);
-        session.DropTable("user");
+        MysqlDeleteQuery del_query;
+        del_query.Table("user").Where("uid=1");
+        session.Delete(del_query);
+        // 错误drop顺序
+        // auto res = session.DropTable("user");
+        // if(!res.Success()) {
+        //     std::cout << res.GetError() << std::endl;
+        // }
+        // session.DropTable("images");
+        // 正确drop顺序
         session.DropTable("images");
+        session.DropTable("user");
         session.DisConnect();
     }
     catch(const std::exception& e)

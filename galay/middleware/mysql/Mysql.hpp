@@ -283,7 +283,7 @@ public:
     * select query result
     */
     MysqlResultTable ToResultTable();
-    bool IsSuccess();
+    bool Success();
     std::string GetError();
     uint64_t GetAffectedRows();
     ~MysqlResult() = default;

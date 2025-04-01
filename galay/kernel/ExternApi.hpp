@@ -136,10 +136,6 @@ extern AsyncResult<typename CoroutineBase::wptr, CoRtn> GetThisCoroutine();
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> Sleepfor(int64_t ms);
 
-/*
-    注意，直接传lambda会导致shared_ptr引用计数不增加，推荐使用bind,或者传lambda对象
-    注意和AutoDestructor的回调区别，DeferExit的callback会在协程正常和非正常退出时调用
-*/
 template<typename CoRtn>
 extern AsyncResult<void, CoRtn> DeferExit(const std::function<void(CoroutineBase::wptr)>& callback);
 

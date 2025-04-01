@@ -367,7 +367,7 @@ MysqlResult::MysqlResultTable MysqlResult::ToResultTable()
     return result;
 }
 
-bool MysqlResult::IsSuccess()
+bool MysqlResult::Success()
 {
     return m_result == 0;
 }
