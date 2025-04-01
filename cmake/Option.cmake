@@ -3,7 +3,7 @@ option(ENABLE_INSTALL_SYSTEM "Enable install system" ON)
 option(ENABLE_BUILD_ETCD "Enable build etcd" ON)
 option(ENABLE_BUILD_MYSQL "Enable build mysql" ON)
 option(ENABLE_BUILD_REDIS "Enable build redis" ON)
-
+option(ENABLE_BUILD_GRPC "Enable grpc" ON)
 
 #gtest
 find_path(GTEST_INCLUDE_DIR NAMES gtest)
@@ -71,12 +71,21 @@ else()
   option(ENABLE_NLOHMANN_JSON "Not Enable nlohmann/json" OFF)
 endif()
 
-# all
+# middlewares
 if(ENABLE_MYSQL OR ENABLE_ETCD OR ENABLE_REDIS)
-  message(STATUS "Enable middleware")
+  message(STATUS "Enable all middlewares")
   option(ENABLE_MIDDLEWARE "Enable middleware" ON)
 else()
   option(ENABLE_MIDDLEWARE "Not Enable middleware" OFF)
+endif()
+
+#grpc
+find_library(GRPC_LIBRARY NAMES grpc)
+find_library(GRPCPP_LIBRARY NAMES grpc++)
+find_library(PROTOBUF NAMES protobuf)
+if(GRPC_LIBRARY AND GRPCPP_LIBRARY AND PROTOBUF)
+  message(STATUS "Enable grpc")
+  option(ENABLE_GRPC "Enable grpc" ON)
 endif()
 
 # log

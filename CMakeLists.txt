@@ -33,15 +33,21 @@ include(cmake/Dependence.cmake)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(MIDDLEWARE)
+set(SERVICE)
+
 if(ENABLE_MIDDLEWARE)
     list(APPEND MIDDLEWARE middleware)
+endif()
+
+if(ENABLE_GRPC)
+    list(APPEND SERVICE service)
 endif()
 
 include_directories(thirdparty)
 
 set(THIRDPARTY_INCLUDE_DIRS concurrentqueue)
 
-set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common)
+set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common ${SERVICE})
 set(STATIC_LIB galay-static)
 set(SHARED_LIB galay)
 
