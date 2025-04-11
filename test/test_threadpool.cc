@@ -1,0 +1,33 @@
+#include "galay/galay.hpp"
+#include <iostream>
+
+galay::thread::ScrambleThreadPool::ptr tp;
+std::atomic_int count = 4;
+
+void print(int i)
+{
+    std::cout << i << std::endl;
+}
+
+void test()
+{
+    for(int i = 0 ; i < 100; i++)
+    {
+        print(i);
+    }
+    count.fetch_sub(1);
+    if(count.load() == 0){
+        tp->Stop();
+    }
+}
+
+int main()
+{
+    tp = std::make_shared<galay::thread::ScrambleThreadPool>();
+    tp->Start(4);
+    for(int i = 0 ; i < 4 ; i ++){
+        tp->AddTask(test);
+    }
+    tp->WaitForAllDone();
+    return 0;
+}
