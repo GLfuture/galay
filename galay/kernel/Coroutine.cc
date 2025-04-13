@@ -8,6 +8,11 @@ RoutineSharedCtx::ptr RoutineSharedCtx::Create(details::EventScheduler* src_sche
     return std::make_shared<RoutineSharedCtx>(src_scheduler, CoroutineSchedulerHolder::GetInstance()->GetScheduler());
 }
 
+RoutineSharedCtx::ptr RoutineSharedCtx::Create(details::EventScheduler *src_scheduler, details::CoroutineScheduler *dest_scheduler)
+{
+    return std::make_shared<RoutineSharedCtx>(src_scheduler, dest_scheduler);
+}
+
 RoutineSharedCtx::RoutineSharedCtx(details::EventScheduler* src_scheduler, details::CoroutineScheduler *dest_scheduler)
     : m_src_scheduler(src_scheduler), m_dest_scheduler(dest_scheduler)
 {
@@ -55,7 +60,7 @@ RoutineCtx RoutineCtx::Create(details::EventScheduler* src_scheduler)
 
 RoutineCtx RoutineCtx::Create(details::EventScheduler* src_scheduler, details::CoroutineScheduler *dest_scheduler)
 {
-    return RoutineCtx(std::make_shared<RoutineSharedCtx>(src_scheduler, dest_scheduler));
+    return RoutineCtx(RoutineSharedCtx::Create(src_scheduler, dest_scheduler));
 }
 
 RoutineCtx::RoutineCtx(RoutineSharedCtx::ptr sharedData)

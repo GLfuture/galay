@@ -20,4 +20,10 @@ if(ENABLE_TRACE_LOG)
     target_compile_definitions(${PROJECT_NAME} PUBLIC "ENABLE_DISPLAY_GALAY_LOG")
 endif()
 
-install(TARGETS kernel EXPORT GalayTargets)
+install(TARGETS ${PROJECT_NAME} EXPORT GalayTargets)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)

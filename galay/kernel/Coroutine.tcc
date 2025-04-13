@@ -92,7 +92,7 @@ inline Coroutine<void> PromiseType<void>::get_return_object() noexcept
     return *m_coroutine;
 }
 
-inline std::suspend_always PromiseType<void>::yield_value() noexcept
+inline std::suspend_always PromiseType<void>::yield_value(std::monostate) noexcept
 {
     m_coroutine->Become(CoroutineStatus::Suspended);
     return std::suspend_always();

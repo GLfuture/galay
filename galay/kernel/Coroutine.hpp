@@ -60,6 +60,7 @@ public:
     using wptr = std::weak_ptr<RoutineSharedCtx>;
 
     static RoutineSharedCtx::ptr Create(details::EventScheduler* src_scheduler);
+    static RoutineSharedCtx::ptr Create(details::EventScheduler* src_scheduler, details::CoroutineScheduler* dest_scheduler);
     RoutineSharedCtx(details::EventScheduler* src_scheduler, details::CoroutineScheduler* dest_scheduler);
     RoutineSharedCtx(const RoutineSharedCtx& ctx);
     RoutineSharedCtx(RoutineSharedCtx&& ctx);
@@ -161,7 +162,7 @@ public:
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<void> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
-    std::suspend_always yield_value() noexcept;
+    std::suspend_always yield_value(std::monostate) noexcept;
     std::suspend_never final_suspend() noexcept { return {};  }
     void unhandled_exception() noexcept {}
     void return_void () const noexcept {};

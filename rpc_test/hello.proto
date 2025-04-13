@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+message HelloRequest {
+    string msg = 1;
+}
+
+message HelloResponse {
+    string msg = 1;
+}
+
+message WorldRequest {
+    string msg = 1;
+}
+
+message WorldResponse {
+    string msg = 1;
+}
+
+message ExitRequest {
+    int32 code = 1;
+}
+
+message ExitResponse {
+    int32 code = 1;
+}
+
+service Hello {
+    rpc SayHello(HelloRequest) returns (HelloResponse);
+    rpc SayWorld(WorldRequest) returns (WorldResponse);
+};
+
+service System {
+    rpc Exit(ExitRequest) returns (ExitResponse);
+}

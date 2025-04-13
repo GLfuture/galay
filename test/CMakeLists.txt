@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.21)
 project(MyTest)
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -42,6 +42,13 @@ foreach(SRC ${SRC_FILES})
         ${GTEST_LIBRARY}
         ${GTEST_MAIN_LIBRARY}
     )
+
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+    )
+
     
     # 仅在 test_conf_parser.cc 存在且检测到 json.hpp 时添加宏
     if(SRC STREQUAL "test_conf_parser.cc" AND HAVE_NLOHMANN_JSON_HPP)

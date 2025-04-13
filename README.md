@@ -19,6 +19,7 @@
     - [protocol](doc/galay/5.protocol.md)
     - [security](doc/galay/6.security.md)
     - [utils](doc/galay/7.utils.md)
+    - [service](doc/galay/8.service.md)
 
 ## 安装
 

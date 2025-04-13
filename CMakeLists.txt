@@ -4,9 +4,7 @@ project(Galay VERSION 1.0)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-set(CXX_STANDARD_REQUIRED on)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_STANDARD 20)
 
 set(HEADER_SRC_DIR galay)
 set(HEADER_DST_DIR include)
@@ -77,6 +75,18 @@ target_link_libraries(${STATIC_LIB} PRIVATE ${DEPEND_LIBS})
 add_library(${SHARED_LIB} SHARED ${OBJECT_LIBS})
 target_link_libraries(${SHARED_LIB} PRIVATE ${DEPEND_LIBS})
 
+set_target_properties(${STATIC_LIB} PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
+set_target_properties(${SHARED_LIB} PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 target_compile_features(${STATIC_LIB} PRIVATE cxx_std_20)
 target_compile_features(${SHARED_LIB} PRIVATE cxx_std_20)
 
@@ -126,6 +136,11 @@ add_subdirectory(tutorial)
 if(ENABLE_GTEST)
     message(STATUS "Add test directory")
     add_subdirectory(test)
+endif()
+
+if(ENABLE_GRPC)
+    message(STATUS "Add grpc directory")
+    add_subdirectory(rpc_test)
 endif()
 
 install(DIRECTORY ${HEADER_SRC_DIR}
