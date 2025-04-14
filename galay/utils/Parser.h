@@ -71,6 +71,7 @@ namespace galay::parser
         std::any GetValue(const std::string &key) override;
     private:
         int ParseContent(const std::string &content);
+        std::string ParseEscapes(const std::string& input);
     private:
         std::unordered_map<std::string, std::string> m_fields;
     };

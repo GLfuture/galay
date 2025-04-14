@@ -66,6 +66,10 @@ ConfigParser::ParseContent(const std::string& content)
                 break;
             }
         }
+        if(*value.begin() == '\"' && *value.rbegin() == '\"') {
+            value = value.substr(1, value.size() - 2);
+            ParseEscapes(value);
+        }
         m_fields.insert({key, value});
     }
     return 0;
@@ -79,6 +83,28 @@ ConfigParser::GetValue(const std::string &key)
         return "";
     return it->second;
 }
+
+
+std::string 
+ConfigParser::ParseEscapes(const std::string& input) {
+    std::stringstream ss;
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (input[i] == '\\' && i + 1 < input.size()) {
+            switch (input[i + 1]) {
+                case 'n':  ss << '\n'; break;
+                case 't':  ss << '\t'; break;
+                case '"':  ss << '"';  break;  
+                case '\\': ss << '\\'; break;
+                default:   ss << input[i] << input[i + 1]; 
+            }
+            ++i;
+        } else {
+            ss << input[i];
+        }
+    }
+    return ss.str();
+}
+
 
 #ifdef USE_NLOHMANN_JSON
 int 
