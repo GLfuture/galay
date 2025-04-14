@@ -1,7 +1,7 @@
-#ifndef GALAY_HTTP_TCC
-#define GALAY_HTTP_TCC
+#ifndef GALAY_HTTP_SERVER_TCC
+#define GALAY_HTTP_SERVER_TCC
 
-#include "Http.hpp"
+#include "HttpServer.hpp"
 
 #define SERVER_NAME "galay"
 #define GALAY_SERVER SERVER_NAME "/" GALAY_VERSION
