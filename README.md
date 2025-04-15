@@ -56,10 +56,9 @@
 
 class Handler {
 public:
-    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::http::HttpStreamImpl<galay::AsyncTcpSocket>::ptr stream) {
-        auto& req = stream->GetRequest();
-        bool res = co_await stream->SendResponse(ctx, galay::http::HttpStatusCode::OK_200, "Hello World", "text/plain");
-        co_await stream->Close();
+    static galay::Coroutine<void> GetHelloWorldHandler(galay::RoutineCtx ctx, galay::http::HttpContext context) {
+        bool res = co_await context.GetStream()->SendResponse(ctx, galay::http::HttpStatusCode::OK_200, "Hello World", "text/plain");
+        co_await context.GetStream()->Close();
         co_return;
     }
 };

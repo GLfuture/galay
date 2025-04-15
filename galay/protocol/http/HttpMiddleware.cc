@@ -4,13 +4,13 @@
 namespace galay::http 
 {
 
-Coroutine<bool> HttpMiddleware::HandleRequestImpl(RoutineCtx ctx, HttpMiddleware *middleware, HttpStream_Ptr stream)
+Coroutine<bool> HttpMiddleware::HandleRequestImpl(RoutineCtx ctx, HttpMiddleware *middleware, HttpContext& context)
 {
-    co_await this_coroutine::WaitAsyncExecute<void, bool>(middleware->OnStreamHandle(ctx, stream));
+    co_await this_coroutine::WaitAsyncExecute<void, bool>(middleware->OnStreamHandle(ctx, context));
     bool result = middleware->StreamHandleSuccess();
     if(result) {
         if(middleware->m_next.get()) { 
-            bool next_res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(HandleRequestImpl(ctx, middleware->m_next.get(), stream));
+            bool next_res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(HandleRequestImpl(ctx, middleware->m_next.get(), context));
             co_return std::move(next_res);
         }
         co_return std::move(result);
@@ -18,9 +18,9 @@ Coroutine<bool> HttpMiddleware::HandleRequestImpl(RoutineCtx ctx, HttpMiddleware
     co_return std::move(result);
 }
 
-Coroutine<void> HttpStaticFileMiddleware::OnStreamHandle(RoutineCtx ctx, HttpStream_Ptr stream)
+Coroutine<void> HttpStaticFileMiddleware::OnStreamHandle(RoutineCtx ctx, HttpContext& context)
 {
-    return OnStreamHandleImpl(ctx, this, stream);
+    return OnStreamHandleImpl(ctx, this, context);
 }
 
 bool HttpStaticFileMiddleware::StreamHandleSuccess()
@@ -28,12 +28,12 @@ bool HttpStaticFileMiddleware::StreamHandleSuccess()
     return m_result;
 }
 
-Coroutine<void> HttpStaticFileMiddleware::OnStreamHandleImpl(RoutineCtx ctx, HttpStaticFileMiddleware *middleware, HttpStream_Ptr stream)
+Coroutine<void> HttpStaticFileMiddleware::OnStreamHandleImpl(RoutineCtx ctx, HttpStaticFileMiddleware *middleware, HttpContext& context)
 {
-    auto& request = stream->GetRequest();
-    auto& response = stream->GetResponse();
-    std::string& uri = request->Header()->Uri();
-    if(request->Header()->Method() != HttpMethod::Http_Method_Get \
+    auto& request = context.GetRequest();
+    auto stream = context.GetStream();
+    std::string& uri = request.Header()->Uri();
+    if(request.Header()->Method() != HttpMethod::Http_Method_Get \
         && !uri.starts_with(middleware->m_url_path)) {
         middleware->m_result = true;
         co_return;
@@ -41,10 +41,11 @@ Coroutine<void> HttpStaticFileMiddleware::OnStreamHandleImpl(RoutineCtx ctx, Htt
     std::string path = middleware->m_root_path + uri.substr(middleware->m_url_path.length());
     if(std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
         unsigned long file_size = std::filesystem::file_size(path);
-        HttpHelper::DefaultHttpResponse(response.get(), HttpVersion::Http_Version_1_1, HttpStatusCode::OK_200\
+        HttpResponse response;
+        HttpHelper::DefaultHttpResponse(&response, HttpVersion::Http_Version_1_1, HttpStatusCode::OK_200\
             , MimeType::ConvertToMimeType(path.substr(path.find_last_of('.') + 1)), "");
-        response->Header()->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(file_size));
-        bool res = co_await stream->SendResponse(ctx);
+        response.Header()->HeaderPairs().AddHeaderPair("Content-Length", std::to_string(file_size));
+        bool res = co_await stream->SendResponse(ctx, std::move(response));
         if(!res) {
             co_await stream->Close();
             middleware->m_result = false;

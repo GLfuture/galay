@@ -4,6 +4,7 @@
 #include "galay/kernel/Server.hpp"
 #include "HttpMiddleware.hpp"
 #include "HttpFormData.hpp"
+#include "HttpRoute.hpp"
 #include <unordered_set>
 #include <string_view>
 #include <filesystem>
@@ -55,7 +56,9 @@ template<typename SocketType>
 class HttpStreamImpl;
 
 template<typename SocketType>
-Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream);
+Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx\
+    , typename HttpStreamImpl<SocketType>::ptr stream\
+    , HttpRequest& request);
 
 template<typename SocketType>
 Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx\
@@ -70,28 +73,26 @@ Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx\
 template<typename SocketType>
 Coroutine<void> Handle(RoutineCtx ctx\
     , typename HttpStreamImpl<SocketType>::ptr stream\
-    , const typename HttpStreamImpl<SocketType>::HandlerMap &handlerMap\
+    , std::unordered_map<HttpMethod, HttpRouter>& routers\
     , HttpMiddleware* middleware);
 
 class HttpStream
 {
 public:
     using HttpError = galay::error::HttpError;
+    using ptr = std::shared_ptr<HttpStream>;
+
     virtual HttpError LastError() = 0;
     virtual HttpStreamConfig& GetConfig() = 0;
 
     virtual AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpStatusCode code\
         , std::string&& content, const std::string& contentType = "") = 0;
 
-    virtual AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse::uptr response) = 0;
-    virtual AsyncResult<bool, void> SendResponse(RoutineCtx ctx) = 0;
+    virtual AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse&& response) = 0;
     virtual AsyncResult<bool, void> SendFile(RoutineCtx ctx, FileDesc* desc) = 0;
     virtual AsyncResult<bool, void> Close() = 0;
 
     virtual bool Closed() = 0;
-
-    virtual HttpRequest::uptr& GetRequest() = 0;
-    virtual HttpResponse::uptr& GetResponse() = 0;
 };
 
 template<typename SocketType>
@@ -105,37 +106,29 @@ public:
     using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, Handler>>;
 
     template <typename T>
-    friend Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream);
+    friend Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, HttpRequest& request);
     template<typename T>
     friend Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, std::string&& response);
     template<typename T>
     friend Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, FileDesc* desc);
 public:
     
-    HttpStreamImpl(typename Connection<SocketType>::uptr connection, HttpStreamConfig conf, HandlerMap& map);
+    HttpStreamImpl(typename Connection<SocketType>::uptr connection, HttpStreamConfig conf);
     HttpError LastError() override;
     HttpStreamConfig& GetConfig() override;
 
     AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpStatusCode code\
         , std::string&& content, const std::string& contentType = "") override;
 
-    AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse::uptr response) override;
-    AsyncResult<bool, void> SendResponse(RoutineCtx ctx) override;
+    AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse&& response) override;
     AsyncResult<bool, void> SendFile(RoutineCtx ctx, FileDesc* desc) override;
     AsyncResult<bool, void> Close() override;
 
     bool Closed() override;
-
-    HttpRequest::uptr& GetRequest() override;
-    HttpResponse::uptr& GetResponse() override;
 private:
     bool m_close = false;
     HttpError m_error;
-    HandlerMap& m_handlerMap;
     HttpStreamConfig m_config;
-
-    HttpRequest::uptr m_request;
-    HttpResponse::uptr m_response;
     typename Connection<SocketType>::uptr m_connection;
 };
 
@@ -150,13 +143,51 @@ struct HttpServerConfig final: public TcpServerConfig
     uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
 };
 
+class HttpContext final
+{
+    template<typename SocketType>
+    friend Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, std::unordered_map<HttpMethod, HttpRouter>& routers, HttpMiddleware* middleware);
+public:
+    HttpContext(HttpRequest&& request, HttpStream::ptr stream)
+        : m_request(std::move(request)), m_stream(stream) {}
+    HttpRequest& GetRequest() {     return m_request;   }
+    HttpStream::ptr GetStream() {   return m_stream;    }
+
+    std::string GetParam(const std::string& key)
+    {
+        if(m_params.find(key) != m_params.end()) {
+            return m_params[key];
+        }
+        return "";
+    }
+
+    bool AddParam(const std::string& key, const std::string& value)
+    {
+        if(m_params.find(key) == m_params.end()) {
+            m_params[key] = value;
+            return true;
+        }
+        return false;
+    }
+
+    bool AddParam(std::unordered_map<std::string, std::string>&& params)
+    {
+        m_params = std::move(params);
+        return true;
+    }
+
+private:
+    HttpRequest m_request;
+    HttpStream::ptr m_stream;
+    std::unordered_map<std::string, std::string> m_params;
+};
+
 template<typename SocketType>
 class HttpServer
 {
 public:
-    using HttpStreamPtr = typename HttpStreamImpl<SocketType>::ptr;
-    using Handler = std::function<Coroutine<void>(RoutineCtx,HttpStreamPtr)>;
-    using HandlerMap = std::unordered_map<HttpMethod, std::unordered_map<std::string, Handler>>;
+    using Handler = std::function<Coroutine<void>(RoutineCtx,HttpContext)>;
+
     explicit HttpServer(HttpServerConfig::ptr config);
 
     template <HttpMethod ...Methods>
@@ -177,9 +208,9 @@ public:
 private:
     Coroutine<void> HttpRouteForward(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream);
 private:
-    HandlerMap m_map;
     TcpServer<SocketType> m_server;
     HttpMiddleware::uptr m_middleware;
+    std::unordered_map<HttpMethod, HttpRouter> m_routers;
 };
 
 
