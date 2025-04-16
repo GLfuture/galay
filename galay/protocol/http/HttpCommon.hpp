@@ -3,6 +3,8 @@
 
 #include <string>
 #include <unordered_map>
+#include "galay/common/Base.h"
+#include "galay/kernel/Log.h"
 
 namespace galay::http 
 {
@@ -13,10 +15,21 @@ namespace galay::http
 
 #define DEFAULT_LIBAIO_MAX_EVENT                        1024
 
-#define HTTP_HEADER_MAX_LEN         4096    // 头部最大长度4k
-#define HTTP_URI_MAX_LEN            2048    // uri最大长度2k
+#define HTTP_HEADER_MAX_LEN                             4096    // 头部最大长度4k
+#define HTTP_URI_MAX_LEN                                2048    // uri最大长度2k
 
-#define DEFAULT_HTTP_KEEPALIVE_TIME_MS              (7500 * 1000)
+#define DEFAULT_HTTP_KEEPALIVE_TIME_MS                  (7500 * 1000)
+
+#define SERVER_NAME "galay"
+
+#define GALAY_SERVER SERVER_NAME "/" GALAY_VERSION
+
+
+//log
+#define DEFAULT_LOG_METHOD_LENGTH       10
+#define DEFAULT_LOG_URI_PEER_LIMIT      40
+#define DEFAULT_LOG_STATUS_LENGTH       5
+#define DEFAULT_LOG_STATUS_TEXT_LENGTH  40
 
 enum class HttpDecodeStatus: int
 {
@@ -143,7 +156,96 @@ public:
 private:
     static std::unordered_map<std::string, std::string> mimeTypeMap;
 };
-    
+
+static std::unique_ptr<Logger> CreateDefaultHttpLogger();
+
+extern std::unique_ptr<Logger> http_logger;
+
+const spdlog::string_view_t RESET_COLOR = "\033[0m";
+const spdlog::string_view_t GRAY_COLOR = "\033[37m";
+
+inline spdlog::string_view_t status_color(HttpStatusCode status_code) {
+    using enum HttpStatusCode;
+    int status = static_cast<int>(status_code);
+    if (status >= 100 && status < 200) { // 1xx Informational
+        return "\033[36m";  // 青色
+    } else if (status >= 200 && status < 300) { // 2xx Success
+        return "\033[32m";  // 绿色
+    } else if (status >= 300 && status < 400) { // 3xx Redirection
+        return "\033[33m";  // 黄色
+    } else if (status >= 400 && status < 500) { // 4xx Client Error
+        return "\033[31m";  // 红色
+    } else if (status >= 500) { // 5xx Server Error
+        return "\033[35m";  // 品红
+    }
+    return "\033[90m"; // 未知状态码用暗灰色
 }
+
+inline spdlog::string_view_t method_color(HttpMethod method) {
+    using enum HttpMethod; 
+
+    switch (method) {
+    case Http_Method_Get:     return "\033[32m"; // 绿色 - 安全操作
+    case Http_Method_Post:    return "\033[33m"; // 黄色 - 数据修改
+    case Http_Method_Put:     return "\033[34m"; // 蓝色 - 更新操作  
+    case Http_Method_Delete:  return "\033[31m"; // 红色 - 危险操作
+    case Http_Method_Head:    return "\033[36m"; // 青色 - 元数据操作
+    case Http_Method_Options: return "\033[35m"; // 品红 - 调试用途
+    case Http_Method_Patch:   return "\033[35;1m"; // 亮品红 - 部分更新
+    case Http_Method_Trace:   return "\033[37m"; // 灰色 - 诊断用途
+    case Http_Method_Connect: return "\033[33;1m"; // 亮黄色 - 隧道连接
+    case Http_Method_Unknown: 
+    default:                  return "\033[90m"; // 暗灰色 - 未知方法
+    }
+    return "\033[0m";
+}
+
+inline spdlog::string_view_t resp_time_color(size_t ms) {
+    if (ms < 100) return "\033[32m";      // 绿色：优秀性能
+    if (ms < 500) return "\033[33m";     // 黄色：需关注
+    return "\033[31m";                   // 红色：严重延迟
+}
+
+inline int method_length(HttpMethod method)
+{
+    return DEFAULT_LOG_METHOD_LENGTH;
+}
+
+inline int uri_length(const std::string& uri) 
+{
+    int length = uri.length() + 2;
+    return (length / DEFAULT_LOG_URI_PEER_LIMIT + 1) * DEFAULT_LOG_URI_PEER_LIMIT; 
+}
+
+inline int status_length(HttpStatusCode code)
+{
+    return DEFAULT_LOG_STATUS_LENGTH;
+}
+
+inline int status_code_length(HttpStatusCode code)
+{
+    return DEFAULT_LOG_STATUS_TEXT_LENGTH;
+}
+
+#define REQUEST_LOG(METHOD, URI, REMOTE) {\
+    std::string method = fmt::format("[{}{}{}]", method_color(METHOD), HttpMethodToString(METHOD), RESET_COLOR);\
+    std::string uri = fmt::format("[{}{}{}]", method_color(METHOD), URI, RESET_COLOR);\
+    http_logger->SpdLogger()->info( \
+    "{:<{}} {:<{}} [{}Remote: {}{}]", \
+    method, method_length(METHOD), \
+    uri, uri_length(URI), \
+    "\033[38;5;39m", REMOTE, RESET_COLOR); }
+
+#define RESPONSE_LOG(STATUS, DURING_MS)   {\
+    std::string status = fmt::format("[{}{}{}]", status_color(STATUS), std::to_string(static_cast<int>(STATUS)), RESET_COLOR);\
+    std::string status_text = fmt::format("[{}{}{}]", status_color(STATUS), HttpStatusCodeToString(STATUS), RESET_COLOR);\
+    http_logger->SpdLogger()->info( \
+    "{:<{}} {:<{}} [{}During: {}ms{}]", \
+    status, status_length(STATUS),\
+    status_text, status_code_length(STATUS), \
+    resp_time_color(DURING_MS), std::to_string(DURING_MS), RESET_COLOR); }
+}
+
+
 
 #endif

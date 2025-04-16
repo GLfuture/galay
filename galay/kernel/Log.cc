@@ -68,7 +68,7 @@ std::unique_ptr<InternelLogger> InternelLogger::m_instance = nullptr;
 InternelLogger::InternelLogger() {
     spdlog::init_thread_pool(DEFAULT_LOG_QUEUE_SIZE, DEFAULT_LOG_THREADS);
     auto logger = std::make_shared<spdlog::logger>("galay", std::make_shared<spdlog::sinks::rotating_file_sink_mt>(DEFAULT_LOG_FILE_PATH, DEFAULT_MAX_LOG_FILE_SIZE, DEFAULT_MAX_LOG_FILES));
-    logger->set_pattern("[%Y-%m-%d %H:%M:%S.%f][%L][%t][%25!s:%4!#][%20!!] %v");
+    logger->set_pattern("[%Y-%m-%d %H:%M:%S.%f][%^%L%$][%t][%25!s:%4!#][%20!!] %v");
     logger->set_level(spdlog::level::debug);
     logger->flush_on(spdlog::level::debug);
     m_logger = std::make_shared<Logger>(logger);

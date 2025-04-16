@@ -5,6 +5,7 @@
 #include "HttpMiddleware.hpp"
 #include "HttpFormData.hpp"
 #include "HttpRoute.hpp"
+#include "HttpHelper.hpp"
 #include <unordered_set>
 #include <string_view>
 #include <filesystem>
@@ -12,38 +13,6 @@
 
 namespace galay::http
 {
-
-
-class HttpHelper
-{
-public:
-    using HttpResponseCode = HttpStatusCode;
-    //request
-    static bool DefaultGet(HttpRequest* request, const std::string& url, bool keepalive = true);
-    static bool DefaultPost(HttpRequest* request, const std::string& url, bool keepalive = true);
-    //response
-    static bool DefaultRedirect(HttpResponse* response, const std::string& url, HttpResponseCode code);
-    static bool DefaultOK(HttpResponse* response, HttpVersion version);
-
-    static bool DefaultHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string type, std::string &&body);
-};
-
-template<HttpStatusCode Code>
-class CodeResponse
-{
-public:
-    static std::string ResponseStr(HttpVersion version, bool keepAlive);
-    static bool RegisterResponse(HttpResponse response);
-private:
-    static std::string DefaultResponse(HttpVersion version, bool keepAlive);
-    static std::string DefaultResponseBody() { return ""; }
-private:
-    static std::string m_responseStr;
-};
-
-
-template<HttpStatusCode Code>
-std::string CodeResponse<Code>::m_responseStr = "";
 
 struct HttpStreamConfig
 {
@@ -91,8 +60,10 @@ public:
     virtual AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse&& response) = 0;
     virtual AsyncResult<bool, void> SendFile(RoutineCtx ctx, FileDesc* desc) = 0;
     virtual AsyncResult<bool, void> Close() = 0;
-
+    virtual std::pair<std::string, uint16_t> GetRemoteAddr() = 0;
     virtual bool Closed() = 0;
+    virtual void RefreshActiveTime() = 0;
+    virtual std::chrono::steady_clock::time_point GetLastActiveTime() = 0;
 };
 
 template<typename SocketType>
@@ -123,12 +94,16 @@ public:
     AsyncResult<bool, void> SendResponse(RoutineCtx ctx, HttpResponse&& response) override;
     AsyncResult<bool, void> SendFile(RoutineCtx ctx, FileDesc* desc) override;
     AsyncResult<bool, void> Close() override;
-
+    std::pair<std::string, uint16_t> GetRemoteAddr() override;
     bool Closed() override;
+
+    void RefreshActiveTime() override;
+    std::chrono::steady_clock::time_point GetLastActiveTime() override;
 private:
     bool m_close = false;
     HttpError m_error;
     HttpStreamConfig m_config;
+    std::chrono::steady_clock::time_point m_last_active_time;
     typename Connection<SocketType>::uptr m_connection;
 };
 
@@ -176,6 +151,7 @@ public:
         return true;
     }
 
+
 private:
     HttpRequest m_request;
     HttpStream::ptr m_stream;
@@ -188,7 +164,7 @@ class HttpServer
 public:
     using Handler = std::function<Coroutine<void>(RoutineCtx,HttpContext)>;
 
-    explicit HttpServer(HttpServerConfig::ptr config);
+    explicit HttpServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
 
     template <HttpMethod ...Methods>
     void RouteHandler(const std::string& path, Handler&& handler);
@@ -212,8 +188,6 @@ private:
     HttpMiddleware::uptr m_middleware;
     std::unordered_map<HttpMethod, HttpRouter> m_routers;
 };
-
-
 
 }
 

@@ -3,86 +3,8 @@
 
 #include "HttpServer.hpp"
 
-#define SERVER_NAME "galay"
-#define GALAY_SERVER SERVER_NAME "/" GALAY_VERSION
-
 namespace galay::http
 {
-
-template <HttpStatusCode Code>
-inline std::string CodeResponse<Code>::ResponseStr(HttpVersion version, bool keepAlive)
-{
-    if(m_responseStr.empty()) {
-        m_responseStr = DefaultResponse(version, keepAlive);
-    }
-    return m_responseStr;
-}
-
-template <HttpStatusCode Code>
-inline bool CodeResponse<Code>::RegisterResponse(HttpResponse response)
-{
-    static_assert(response.Header()->Code() == Code , "HttpStatusCode not match");
-    m_responseStr = response.EncodePdu();
-    return true;
-}
-
-template <HttpStatusCode Code>
-inline std::string CodeResponse<Code>::DefaultResponse(HttpVersion version, bool keepAlive)
-{
-    HttpResponse response;
-    response.Header()->Code() = Code;
-    response.Header()->Version() = version;
-    response.Header()->HeaderPairs().AddHeaderPair("Content-Type", "text/html");
-    response.Header()->HeaderPairs().AddHeaderPair("Server", GALAY_SERVER);
-    response.Header()->HeaderPairs().AddHeaderPair("Date", utils::GetCurrentGMTTimeString());
-    if(!keepAlive) response.Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-    else response.Header()->HeaderPairs().AddHeaderPair("Connection", "keep-alive");
-    response.SetContent("html", DefaultResponseBody());
-    return response.EncodePdu();
-}
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::BadRequest_400>::DefaultResponseBody()
-{
-    return "<html>400 Bad Request</html>";
-}
-
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::NotFound_404>::DefaultResponseBody()
-{
-    return "<html>404 Not Found</html>";
-}
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::MethodNotAllowed_405>::DefaultResponseBody()
-{
-    return "<html>405 Method Not Allowed</html>";
-}
-
-template <>
-inline std::string CodeResponse<HttpStatusCode::UriTooLong_414>::DefaultResponseBody()
-{
-    return "<html>414 Uri Too Long</html>";
-}
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::RequestTimeout_408>::DefaultResponseBody()
-{
-    return "<html>408 Request Timeout</html>";
-}
-
-template <>
-inline std::string CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::DefaultResponseBody()
-{
-    return "<html>431 Header Too Long</html>";
-}
-
-template<>
-inline std::string CodeResponse<HttpStatusCode::InternalServerError_500>::DefaultResponseBody()
-{
-    return "<html>500 Internal Server Error</html>";
-}
 
 template <typename SocketType>
 inline HttpStreamImpl<SocketType>::HttpStreamImpl(typename Connection<SocketType>::uptr connection, HttpStreamConfig conf)
@@ -111,6 +33,8 @@ inline bool HttpStreamImpl<SocketType>::Closed()
 template <typename SocketType>
 inline AsyncResult<bool, void> HttpStreamImpl<SocketType>::SendResponse(RoutineCtx ctx, HttpStatusCode code, std::string &&content, const std::string &contentType)
 {
+    std::chrono::time_point end = std::chrono::steady_clock::now();
+    RESPONSE_LOG(code, std::chrono::duration_cast<std::chrono::milliseconds>(end - m_last_active_time).count());
     HttpResponse response;
     HttpHelper::DefaultHttpResponse(&response, HttpVersion::Http_Version_1_1, code, contentType, std::move(content));
     return this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, this->shared_from_this(), response.EncodePdu()));;
@@ -119,6 +43,8 @@ inline AsyncResult<bool, void> HttpStreamImpl<SocketType>::SendResponse(RoutineC
 template <typename SocketType>
 inline AsyncResult<bool, void> HttpStreamImpl<SocketType>::SendResponse(RoutineCtx ctx, HttpResponse&& response)
 {
+    std::chrono::time_point end = std::chrono::steady_clock::now();
+    RESPONSE_LOG(response.Header()->Code(), std::chrono::duration_cast<std::chrono::milliseconds>(end - m_last_active_time).count());
     return this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, this->shared_from_this(), response.EncodePdu()));
 }
 
@@ -135,6 +61,24 @@ inline AsyncResult<bool, void> HttpStreamImpl<SocketType>::Close()
     return m_connection->template Close<void>();
 }
 
+template <typename SocketType>
+inline std::pair<std::string, uint16_t> HttpStreamImpl<SocketType>::GetRemoteAddr()
+{
+    return m_connection->GetRemoteAddr();
+}
+
+template <typename SocketType>
+inline void HttpStreamImpl<SocketType>::RefreshActiveTime()
+{
+    m_last_active_time = std::chrono::steady_clock::now();
+}
+
+template <typename SocketType>
+inline std::chrono::steady_clock::time_point HttpStreamImpl<SocketType>::GetLastActiveTime()
+{
+    return m_last_active_time;
+}
+
 inline HttpServerConfig::ptr HttpServerConfig::Create()
 {
     return std::make_shared<HttpServerConfig>();
@@ -142,9 +86,10 @@ inline HttpServerConfig::ptr HttpServerConfig::Create()
 
 
 template <typename SocketType>
-inline HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config)
+inline HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger)
     :m_server(config)
 {
+    if(logger) http_logger = std::move(logger);
 }
 
 template <typename SocketType>
@@ -209,7 +154,7 @@ inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, 
 
 
 template <typename SocketType>
-inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, HttpRequest& request)
+inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, HttpRequest& request    )
 {
     stream->m_error.Code() = error::HttpErrorCode::kHttpError_NoError;
     uint32_t max_header_size = stream->GetConfig().m_max_header_size;
@@ -238,6 +183,10 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
         if(!request.ParseHeader(view) ) {
             if(request.GetErrorCode() == error::HttpErrorCode::kHttpError_HeaderInComplete) {
                 continue;
+            } else if(request.GetErrorCode() == error::HttpErrorCode::kHttpError_UriTooLong) {
+                std::string response = CodeResponse<HttpStatusCode::UriTooLong_414>::ResponseStr(HttpVersion::Http_Version_1_1, false);
+                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
+                co_return false;
             } else {
                 std::string response = CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1, false);
                 bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
@@ -286,6 +235,8 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
             request.ParseBody(view);
         }
     }
+    auto remote = stream->GetRemoteAddr();
+    REQUEST_LOG(request.Header()->Method(), request.Header()->Uri(), remote.first + ":" + std::to_string(remote.second));
     co_return true;
 }
 
@@ -342,20 +293,24 @@ inline Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType
         HttpContext context(HttpRequest(), stream);
         auto& request = context.GetRequest();
         bool result = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(RecvHttpRequestImpl<SocketType>(ctx, stream, request));
+        stream->RefreshActiveTime();
         if(!result) {
             bool closed = co_await stream->Close();
             co_return;
         }
         if( middleware ){
             bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(middleware->HandleRequest(ctx, context));
+            if(!res) {
+                bool closed = co_await stream->Close();
+                co_return;
+            }
         }
         auto it = routers.find(request.Header()->Method()); 
         if(it == routers.end()) {
             bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, stream,\
                 CodeResponse<HttpStatusCode::MethodNotAllowed_405>::ResponseStr(HttpVersion::Http_Version_1_1, false)));
             if(!res) {
-                bool closed = co_await stream->Close();
-                co_return;
+                continue;
             }
         } else {
             auto& router = it->second;

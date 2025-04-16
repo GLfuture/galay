@@ -68,9 +68,9 @@ public:
     std::string_view GetContent();
     bool ParseHeader(const std::string_view &buffer);
     bool ParseBody(const std::string_view &buffer);
-    [[nodiscard]] std::string EncodePdu() const;
-    [[nodiscard]] bool HasError() const;
-    [[nodiscard]] int GetErrorCode() const;
+    std::string EncodePdu() const;
+    bool HasError() const;
+    int GetErrorCode() const;
     std::string GetErrorString();
     void Reset();
     //chunk
@@ -92,6 +92,7 @@ class HttpResponseHeader
 {
 public:
     using ptr = std::shared_ptr<HttpResponseHeader>;
+    HttpResponseHeader() = default;
     HttpVersion& Version();
     HttpStatusCode& Code();
     HeaderPair& HeaderPairs();
@@ -114,10 +115,10 @@ public:
     HttpResponseHeader::ptr Header();
     void SetContent(const std::string& type, std::string&& content);
     std::string_view GetContent();
-    [[nodiscard]] std::string EncodePdu() const;
+    std::string EncodePdu() const;
     std::pair<bool,size_t> DecodePdu(const std::string_view &buffer);
-    [[nodiscard]] bool HasError() const;
-    [[nodiscard]] int GetErrorCode() const;
+    bool HasError() const;
+    int GetErrorCode() const;
     std::string GetErrorString();
     void Reset();
     

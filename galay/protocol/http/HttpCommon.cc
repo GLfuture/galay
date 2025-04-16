@@ -1,4 +1,5 @@
 #include "HttpCommon.hpp"
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <vector>
 
 namespace galay::http 
@@ -181,6 +182,18 @@ std::string HttpStatusCodeToString(HttpStatusCode code)
     }
     return "";
 }
+
+std::unique_ptr<Logger> CreateDefaultHttpLogger()
+{
+    auto spd = spdlog::stdout_color_mt("HTTP");
+    spd->set_level(spdlog::level::level_enum::info);
+    spd->set_pattern("[%Y-%m-%d %T.%e] [%^%L%$] %v");
+    auto logger = std::make_unique<Logger>(spd);
+    return std::move(logger);
+}
+
+std::unique_ptr<Logger> http_logger = CreateDefaultHttpLogger();
+
 
 std::unordered_map<std::string, std::string> MimeType::mimeTypeMap = {
     {"html", "text/html"},

@@ -7,9 +7,32 @@ namespace galay
 {
 
 template<typename Socket>
-Connection<Socket>::Connection(details::EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
+inline Connection<Socket>::Connection(details::EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
     :m_socket(std::move(socket)) 
 {
+}
+
+template <typename Socket>
+inline std::pair<std::string, uint16_t> Connection<Socket>::GetRemoteAddr() const
+{
+    struct sockaddr_storage addr;
+    socklen_t addr_len = sizeof(addr);
+    char ip_str[INET6_ADDRSTRLEN];
+    uint16_t port = 0;
+
+    if (getpeername(m_socket->GetHandle().fd, (struct sockaddr*)&addr, &addr_len) == 0) {
+        if (addr.ss_family == AF_INET) {
+            struct sockaddr_in* s = (struct sockaddr_in*)&addr;
+            inet_ntop(AF_INET, &s->sin_addr, ip_str, sizeof(ip_str));
+            port = ntohs(s->sin_port);
+        } else if (addr.ss_family == AF_INET6) {
+            struct sockaddr_in6* s = (struct sockaddr_in6*)&addr;
+            inet_ntop(AF_INET6, &s->sin6_addr, ip_str, sizeof(ip_str));
+            port = ntohs(s->sin6_port);
+        }
+    }
+    
+    return {ip_str, port};
 }
 
 template <typename Socket>
@@ -61,13 +84,13 @@ template <typename Socket>
 CallbackStore<Socket>::callback_t CallbackStore<Socket>::m_callback = nullptr;
 
 template <typename Socket>
-void CallbackStore<Socket>::RegisteCallback(callback_t callback)
+inline void CallbackStore<Socket>::RegisteCallback(callback_t callback)
 {
     m_callback = callback;
 }
 
 template <typename Socket>
-void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
+inline void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
 {
     auto connection = std::make_unique<Connection<Socket>>(scheduler, std::move(socket));
     if(m_callback) m_callback(RoutineCtx::Create(scheduler), std::move(connection));

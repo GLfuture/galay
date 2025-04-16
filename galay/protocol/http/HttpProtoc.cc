@@ -1,6 +1,5 @@
 #include "HttpProtoc.hpp"
 #include "assert.h"
-#include "galay/kernel/Log.h"
 
 namespace galay::http 
 {
@@ -145,7 +144,6 @@ HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, si
             {
                 if (m_uri.length() > HTTP_URI_MAX_LEN)
                 {
-                    LogError("[Uri is too long, Uri:{}]", this->m_uri);
                     return error::kHttpError_UriTooLong;
                 }
                 this->m_uri = ConvertFromUri(std::move(this->m_uri), false);
@@ -508,7 +506,6 @@ bool HttpRequest::ParseHeader(const std::string_view& buffer)
         return false;
     }
     if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-        LogError("[Header is too long, Header Len: {} Bytes]", buffer.length());
         m_error->Code() = error::kHttpError_HeaderTooLong;
         return false;
     } 
@@ -665,9 +662,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
         }
         catch(const std::exception& e)
         {
-            LogError("[Content-length is not Integer, content-length:{}]]", contentLength);
             m_error->Code() = error::kHttpError_BadRequest;
-
         }
         
         if(length + m_next_index <= n) {
@@ -676,9 +671,7 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
             if(m_next_index + 4 < n && buffer.substr(m_next_index,4) == "\r\n\r\n") {
                 m_next_index += 4;
             }  
-            LogTrace("[Body is completed, Len:{} Bytes, Body Package:{}]", length , this->m_body);
         }else{
-            LogWarn("[body is incomplete, len:{} Bytes, expect {} Bytes]", n, length);
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }
@@ -686,7 +679,6 @@ HttpRequest::GetHttpBody(const std::string_view &buffer)
         size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
-                LogWarn("[Body is incomplete, header not has length and not end with '\\r\\n\\r\\n']");
                 m_error->Code() = error::kHttpError_BodyInComplete;
                 return false;
             }
@@ -712,16 +704,13 @@ HttpRequest::GetChunkBody(const std::string_view& buffer)
         }
         catch (const std::exception &e)
         {
-            LogError("[Chunck is Illegal, ErrMsg:{}]", e.what());
             m_error->Code() = error::kHttpError_ChunckHasError;
             return false;
         }
         if(length == 0){
             m_next_index = pos + 4;
-            LogTrace("[Chunck is finished, Chunck Len:{} Bytes]", pos+4);
             break;
         }else if(length + 4 + pos > buffer.length()){
-            LogDebug("[Chunck is incomplete, Chunck Len:{} Bytes, Buffer Len:{} Bytes]", length + pos + 4, buffer.length());
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }
@@ -794,7 +783,6 @@ HttpResponseHeader::FromString(HttpDecodeStatus& status, std::string_view str, s
                 }
                 catch (std::invalid_argument &e)
                 {
-                    LogError("[Http status code is illegal]");
                     return error::kHttpError_HttpCodeInvalid;
                 }
                 m_code = static_cast<HttpStatusCode>(code);
@@ -919,7 +907,6 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
             return {false, 0};
         }
         if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-            LogError("[Header is too long, Header Len: {} Bytes]", buffer.length());
             m_error->Code() = error::kHttpError_HeaderTooLong;
             return {false, 0};
         } 
@@ -1026,7 +1013,6 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
         }
         catch(const std::exception& e)
         {
-            LogError("[Content-length is not a number, content-length:{}]", contentLength);
             m_error->Code() = error::kHttpError_BadRequest;
 
         }
@@ -1037,9 +1023,7 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
             if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
                 m_next_index += 4;
             }  
-            LogTrace("[Body is completed, Body Len:{} Bytes, Body Package:{}]", length , this->m_body);
         }else{
-            LogWarn("[Body is incomplete, Body len:{} Bytes, expect {} Bytes]", n, length);
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }
@@ -1047,7 +1031,6 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
         size_t pos = buffer.find("\r\n\r\n", m_next_index);
         if(pos == std::string::npos){
             if(!buffer.empty()){
-                LogWarn("[Body is incomplete, header not has length and not end with '\\r\\n\\r\\n']]");
                 m_error->Code() = error::kHttpError_BodyInComplete;
                 return false;
             }
@@ -1074,16 +1057,13 @@ HttpResponse::GetChunckBody(const std::string_view& buffer)
         }
         catch (const std::exception &e)
         {
-            LogError("[Chunck is Illegal, ErrMsg:{}]", e.what());
             m_error->Code() = error::kHttpError_ChunckHasError;
             return false;
         }
         if(length == 0){
             m_next_index = pos + 4;
-            LogTrace("[Chunck is finished, Chunck Len:{} Bytes]", pos+4);
             break;
         }else if(length + 4 + pos > buffer.length()){
-            LogTrace("[Chunck is incomplete, Chunck Len:{} Bytes, Buffer Len:{} Bytes]", length + pos + 4, buffer.length());
             m_error->Code() = error::kHttpError_BodyInComplete;
             return false;
         }

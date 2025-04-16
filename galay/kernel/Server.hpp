@@ -37,6 +37,8 @@ public:
     template <typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
 
+    std::pair<std::string, uint16_t> GetRemoteAddr() const;
+
     EventScheduler *GetScheduler() const;
     std::unique_ptr<Socket>& GetSocket();
 private:
@@ -118,9 +120,9 @@ public:
     void OnCall(callback_t callback);
     //no block
     void Start(THost host);
-    void Stop() ;
+    void Stop();
     TcpServerConfig::ptr GetConfig() { return m_config; }
-    inline bool IsRunning() { return m_is_running; }
+    bool IsRunning() { return m_is_running; }
     ~TcpServer() = default;
 protected:
     TcpServerConfig::ptr m_config;
