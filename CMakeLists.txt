@@ -49,6 +49,11 @@ set(DEPEND_LIBS kernel utils protocol ${MIDDLEWARE} security common ${SERVICE})
 set(STATIC_LIB galay-static)
 set(SHARED_LIB galay)
 
+#增加ABI兼容性
+# set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+# set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+add_compile_options(-fPIC)
+
 include_directories(${PROJECT_SOURCE_DIR})
 
 #添加子目录

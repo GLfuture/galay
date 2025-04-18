@@ -40,7 +40,7 @@ public:
     void CopyFrom(const HttpRequestHeader::ptr& header);
     void Reset();
 private:
-    void ParseArgs(const std::string& uri);
+    void ParseArgs(std::string uri);
     std::string ConvertFromUri(std::string&& url, bool convert_plus_to_space);
     std::string ConvertToUri(std::string&& url);
     bool IsHex(char c, int &v);
@@ -72,6 +72,9 @@ public:
     bool HasError() const;
     int GetErrorCode() const;
     std::string GetErrorString();
+
+    size_t GetNextIndex() const; 
+
     void Reset();
     //chunk
     bool StartChunk();

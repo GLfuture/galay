@@ -255,14 +255,14 @@ void HttpRequestHeader::Reset()
 }
 
 void 
-HttpRequestHeader::ParseArgs(const std::string& uri)
+HttpRequestHeader::ParseArgs(std::string uri)
 {
     size_t argindx = uri.find('?');
     if (argindx != std::string::npos)
     {
         int cur = 0;
         this->m_uri = uri.substr(cur, argindx - cur);
-        const std::string args = uri.substr(argindx + 1);
+        std::string args = uri.substr(argindx + 1);
         std::string key, value;
         int status = 0;
         for (int i = 0; i < args.length(); i++)
@@ -571,6 +571,11 @@ int HttpRequest::GetErrorCode() const
 std::string HttpRequest::GetErrorString()
 {
     return m_error->ToString(m_error->Code());
+}
+
+size_t HttpRequest::GetNextIndex() const
+{
+    return m_next_index;
 }
 
 void HttpRequest::Reset()

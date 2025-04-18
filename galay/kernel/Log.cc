@@ -7,34 +7,50 @@
 namespace galay
 {
 
-Logger::ptr Logger::CreateStdoutLoggerST(const std::string &name)
+Logger::uptr Logger::CreateStdoutLoggerST(const std::string &name)
 {
-    return std::make_shared<Logger>(spdlog::stdout_color_st(name));
+    auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
+    auto spd_logger = std::make_shared<spdlog::logger>(name, sink);
+    return std::make_unique<Logger>(spd_logger);
 }
 
-Logger::ptr Logger::CreateStdoutLoggerMT(const std::string &name)
+Logger::uptr Logger::CreateStdoutLoggerMT(const std::string &name)
 {
-    return std::make_shared<Logger>(spdlog::stdout_color_mt(name));
+    auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    auto spd_logger = std::make_shared<spdlog::logger>(name, sink);
+    return std::make_unique<Logger>(spd_logger);
 }
 
-Logger::ptr Logger::CreateDailyFileLoggerST(const std::string &name, const std::string &file_path, int hour, int minute)
+Logger::uptr Logger::CreateDailyFileLoggerST(const std::string &name, const std::string &file_path, int hour, int minute)
 {
-    return std::make_shared<Logger>(spdlog::daily_logger_st(name, file_path, hour, minute));
+    auto sink = std::make_shared<spdlog::sinks::daily_file_sink_st>(
+        file_path, hour, minute, false, 0);
+    auto spd_logger = std::make_shared<spdlog::logger>(name, sink);
+    return std::make_unique<Logger>(spd_logger);
 }
 
-Logger::ptr Logger::CreateDailyFileLoggerMT(const std::string &name, const std::string &file_path, int hour, int minute)
+Logger::uptr Logger::CreateDailyFileLoggerMT(const std::string &name, const std::string &file_path, int hour, int minute)
 {
-    return std::make_shared<Logger>(spdlog::daily_logger_mt(name, file_path, hour, minute));
+    auto sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(
+        file_path, hour, minute, false, 0);
+    auto spd_logger = std::make_shared<spdlog::logger>(name, sink);
+    return std::make_unique<Logger>(spd_logger);
 }
 
-Logger::ptr Logger::CreateRotingFileLoggerST(const std::string &name, const std::string &file_path, size_t max_size, size_t max_files)
+Logger::uptr Logger::CreateRotingFileLoggerST(const std::string &name, const std::string &file_path, size_t max_size, size_t max_files)
 {
-    return std::make_shared<Logger>(spdlog::rotating_logger_st(name, file_path, max_size, max_files));
+    auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_st>(
+        file_path, max_size, max_files, false);
+    auto spd_logger = std::make_shared<spdlog::logger>(name, sink);
+    return std::make_unique<Logger>(spd_logger);
 }
 
-Logger::ptr Logger::CreateRotingFileLoggerMT(const std::string &name, const std::string &file_path, size_t max_size, size_t max_files)
+Logger::uptr Logger::CreateRotingFileLoggerMT(const std::string &name, const std::string &file_path, size_t max_size, size_t max_files)
 {
-    return std::make_shared<Logger>(spdlog::rotating_logger_mt(name, file_path, max_size, max_files));  
+    auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
+        file_path, max_size, max_files, false);
+    auto spd_logger = std::make_shared<spdlog::logger>(name, sink);
+    return std::make_unique<Logger>(spd_logger);
 }
 
 Logger::Logger(std::shared_ptr<spdlog::logger> logger)
@@ -59,6 +75,11 @@ Logger &Logger::Level(spdlog::level::level_enum level)
     m_logger->set_level(level);
     return *this;
 }
+
+Logger::~Logger()
+{
+}
+
 }
 
 namespace galay::details
@@ -66,12 +87,13 @@ namespace galay::details
 std::unique_ptr<InternelLogger> InternelLogger::m_instance = nullptr;
 
 InternelLogger::InternelLogger() {
-    spdlog::init_thread_pool(DEFAULT_LOG_QUEUE_SIZE, DEFAULT_LOG_THREADS);
-    auto logger = std::make_shared<spdlog::logger>("galay", std::make_shared<spdlog::sinks::rotating_file_sink_mt>(DEFAULT_LOG_FILE_PATH, DEFAULT_MAX_LOG_FILE_SIZE, DEFAULT_MAX_LOG_FILES));
+    m_thread_pool = std::make_shared<spdlog::details::thread_pool>( DEFAULT_LOG_QUEUE_SIZE, DEFAULT_LOG_THREADS);
+    auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(DEFAULT_LOG_FILE_PATH, DEFAULT_MAX_LOG_FILE_SIZE, DEFAULT_MAX_LOG_FILES);
+    auto logger = std::make_shared<spdlog::async_logger>("galay", sink, m_thread_pool, spdlog::async_overflow_policy::overrun_oldest);
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%f][%^%L%$][%t][%25!s:%4!#][%20!!] %v");
     logger->set_level(spdlog::level::debug);
     logger->flush_on(spdlog::level::debug);
-    m_logger = std::make_shared<Logger>(logger);
+    m_logger = std::make_unique<Logger>(logger); 
 }
 
 InternelLogger *InternelLogger::GetInstance()
@@ -82,14 +104,28 @@ InternelLogger *InternelLogger::GetInstance()
     return m_instance.get();
 }
 
-void InternelLogger::SetLogger(Logger::ptr logger)
+void InternelLogger::SetLogger(Logger::uptr logger)
 {
-    m_logger = logger;
+    m_logger = std::move(logger);
 }
 
-Logger::ptr InternelLogger::GetLogger()
+Logger* InternelLogger::GetLogger()
 {
-    return m_logger;
-}
+    return m_logger.get();
 }
 
+
+void InternelLogger::Shutdown() {
+    if (m_instance) {
+        m_instance->m_logger->SpdLogger()->flush();
+        m_instance->m_logger.reset();
+        // 再释放线程池（此时线程池引用计数可能已为 0）
+        m_instance->m_thread_pool.reset();
+        m_instance.reset(); 
+    }
+}
+
+InternelLogger::~InternelLogger()
+{
+}
+}

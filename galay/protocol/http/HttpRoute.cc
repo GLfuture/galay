@@ -3,7 +3,7 @@
 namespace galay::http
 {
 
-void HttpRouter::AddHandler(const std::string &path, Handler &&handler)
+void HttpRouter::AddHandler(const std::string &path, Handler handler)
 {
     if(IsTemplate(path)) {
         m_template_handlers.emplace(path, std::move(handler));

@@ -1,6 +1,7 @@
 #include "HttpCommon.hpp"
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <vector>
+#include <spdlog/async_logger.h>
 
 namespace galay::http 
 {
@@ -183,18 +184,6 @@ std::string HttpStatusCodeToString(HttpStatusCode code)
     return "";
 }
 
-std::unique_ptr<Logger> CreateDefaultHttpLogger()
-{
-    auto spd = spdlog::stdout_color_mt("HTTP");
-    spd->set_level(spdlog::level::level_enum::info);
-    spd->set_pattern("[%Y-%m-%d %T.%e] [%^%L%$] %v");
-    auto logger = std::make_unique<Logger>(spd);
-    return std::move(logger);
-}
-
-std::unique_ptr<Logger> http_logger = CreateDefaultHttpLogger();
-
-
 std::unordered_map<std::string, std::string> MimeType::mimeTypeMap = {
     {"html", "text/html"},
     {"htm", "text/html"},
@@ -374,6 +363,23 @@ std::string http::MimeType::ConvertToMimeType(const std::string &type)
         return "text/plain";
     }
     return it->second;
+}
+
+HttpLogger::HttpLogger()
+{
+    m_thread_pool = std::make_shared<spdlog::details::thread_pool>( DEFAULT_LOG_QUEUE_SIZE, DEFAULT_LOG_THREADS);
+    auto logger = std::make_shared<spdlog::async_logger>("galay", std::make_shared<spdlog::sinks::stdout_color_sink_mt>(), m_thread_pool);
+    logger->set_level(spdlog::level::level_enum::info);
+    logger->set_pattern("[%Y-%m-%d %T.%e] [%^%L%$] %v");
+    m_logger = std::make_unique<Logger>(logger);
+}   
+
+HttpLogger *HttpLogger::GetInstance()
+{
+    if(!m_instance) {
+        m_instance = std::make_unique<HttpLogger>();
+    }
+    return m_instance.get();
 }
 
 }

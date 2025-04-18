@@ -33,19 +33,15 @@ inline bool HttpStreamImpl<SocketType>::Closed()
 template <typename SocketType>
 inline AsyncResult<bool, void> HttpStreamImpl<SocketType>::SendResponse(RoutineCtx ctx, HttpStatusCode code, std::string &&content, const std::string &contentType)
 {
-    std::chrono::time_point end = std::chrono::steady_clock::now();
-    RESPONSE_LOG(code, std::chrono::duration_cast<std::chrono::milliseconds>(end - m_last_active_time).count());
     HttpResponse response;
     HttpHelper::DefaultHttpResponse(&response, HttpVersion::Http_Version_1_1, code, contentType, std::move(content));
-    return this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, this->shared_from_this(), response.EncodePdu()));;
+    return this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, this->shared_from_this(), response.Header()->Code(), response.EncodePdu()));;
 }
 
 template <typename SocketType>
 inline AsyncResult<bool, void> HttpStreamImpl<SocketType>::SendResponse(RoutineCtx ctx, HttpResponse&& response)
 {
-    std::chrono::time_point end = std::chrono::steady_clock::now();
-    RESPONSE_LOG(response.Header()->Code(), std::chrono::duration_cast<std::chrono::milliseconds>(end - m_last_active_time).count());
-    return this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, this->shared_from_this(), response.EncodePdu()));
+    return this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, this->shared_from_this(), response.Header()->Code(), response.EncodePdu()));
 }
 
 template <typename SocketType>
@@ -89,7 +85,7 @@ template <typename SocketType>
 inline HttpServer<SocketType>::HttpServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger)
     :m_server(config)
 {
-    if(logger) http_logger = std::move(logger);
+    if(logger) HttpLogger::GetInstance()->ResetLogger(std::move(logger));
 }
 
 template <typename SocketType>
@@ -139,10 +135,10 @@ inline bool HttpServer<SocketType>::RegisterMiddleware(HttpMiddleware::uptr midd
 
 template <typename SocketType>
 template <HttpMethod... Methods>
-inline void HttpServer<SocketType>::RouteHandler(const std::string &path, Handler&& handler)
+inline void HttpServer<SocketType>::RouteHandler(const std::string &path, Handler handler)
 {
     ([&](){
-        this->m_routers[Methods].AddHandler(path, std::move(handler));
+        this->m_routers[Methods].AddHandler(path, handler);
     }(), ...);
 }
 
@@ -154,7 +150,7 @@ inline Coroutine<void> HttpServer<SocketType>::HttpRouteForward(RoutineCtx ctx, 
 
 
 template <typename SocketType>
-inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, HttpRequest& request    )
+inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, HttpRequest& request)
 {
     stream->m_error.Code() = error::HttpErrorCode::kHttpError_NoError;
     uint32_t max_header_size = stream->GetConfig().m_max_header_size;
@@ -169,12 +165,12 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
         } else if (ret == CommonTcpIORtnType::eCommonTimeOut) {
             stream->m_error.Code() = error::HttpErrorCode::kHttpError_RecvTimeOut;
             std::string response = CodeResponse<HttpStatusCode::RequestTimeout_408>::ResponseStr(HttpVersion::Http_Version_1_1, false);
-            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
+            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::RequestTimeout_408, std::move(response)));
             co_return false;
         } else if( ret == CommonTcpIORtnType::eCommonUnknown) {
             stream->m_error.Code() = error::HttpErrorCode::kHttpError_UnkownError;
             std::string response = CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1, false);
-            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
+            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::BadRequest_400, std::move(response)));
             co_return false;
         } else {
             offset += ret;
@@ -185,19 +181,19 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
                 continue;
             } else if(request.GetErrorCode() == error::HttpErrorCode::kHttpError_UriTooLong) {
                 std::string response = CodeResponse<HttpStatusCode::UriTooLong_414>::ResponseStr(HttpVersion::Http_Version_1_1, false);
-                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
+                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::UriTooLong_414, std::move(response)));
                 co_return false;
             } else {
                 std::string response = CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1, false);
-                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
+                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::BadRequest_400, std::move(response)));
                 co_return false;
             }
         } else {
             break;
         }
     }
-    holder.ClearBuffer();
-    offset = 0;
+    size_t header_size = request.GetNextIndex();
+    offset = request.GetNextIndex();
     uint32_t body_length = 0;
     if( request.Header()->HeaderPairs().HasKey("Content-Length") ) {
         bool right = true;
@@ -211,13 +207,20 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
         }
         if(!right) {
             std::string response = CodeResponse<HttpStatusCode::BadRequest_400>::ResponseStr(HttpVersion::Http_Version_1_1, false);
-            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, std::move(response)));
+            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::BadRequest_400, std::move(response)));
             co_return false;
         }
     }
-    holder.Realloc(body_length);
-    while(offset < body_length) {
-        int ret = co_await stream->m_connection->template Recv<bool>(holder, body_length - offset, recv_timeout);
+    size_t expect = header_size + body_length;
+    if( holder->m_offset == expect) {
+        offset += body_length;
+        request.ParseBody(std::string_view(holder->m_buffer, offset));
+    }
+    else {
+        holder.Realloc(expect);
+    }
+    while(offset < expect) {
+        int ret = co_await stream->m_connection->template Recv<bool>(holder, expect - offset, recv_timeout);
         if( ret == CommonTcpIORtnType::eCommonDisConnect ) {
             stream->m_error.Code() = error::HttpErrorCode::kHttpError_ConnectionClose;
             co_return false;
@@ -241,8 +244,10 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
 }
 
 template <typename SocketType>
-inline Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream , std::string &&response)
+inline Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, HttpStatusCode code , std::string &&response)
 {
+    std::chrono::time_point end = std::chrono::steady_clock::now();
+    RESPONSE_LOG(code, std::chrono::duration_cast<std::chrono::milliseconds>(end - stream->m_last_active_time).count());
     int length = response.length(), offset = 0;
     TcpIOVecHolder holder(std::move(response));
     bool res = false;
@@ -292,6 +297,7 @@ inline Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType
     while(!stream->Closed()) {
         HttpContext context(HttpRequest(), stream);
         auto& request = context.GetRequest();
+        stream->RefreshActiveTime();
         bool result = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(RecvHttpRequestImpl<SocketType>(ctx, stream, request));
         stream->RefreshActiveTime();
         if(!result) {
@@ -307,7 +313,7 @@ inline Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType
         }
         auto it = routers.find(request.Header()->Method()); 
         if(it == routers.end()) {
-            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, stream,\
+            bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::MethodNotAllowed_405,\
                 CodeResponse<HttpStatusCode::MethodNotAllowed_405>::ResponseStr(HttpVersion::Http_Version_1_1, false)));
             if(!res) {
                 continue;
@@ -317,7 +323,7 @@ inline Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType
             HttpRouter::Handler handler;
             std::unordered_map<std::string, std::string> params;
             if(!router.Find(request.Header()->Uri(), handler, params)) {
-                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, stream,\
+                bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::NotFound_404,\
                     CodeResponse<HttpStatusCode::NotFound_404>::ResponseStr(HttpVersion::Http_Version_1_1, false)));
                 if(!res) {
                     bool closed = co_await stream->Close();

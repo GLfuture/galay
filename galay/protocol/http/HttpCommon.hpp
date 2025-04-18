@@ -26,10 +26,10 @@ namespace galay::http
 
 
 //log
-#define DEFAULT_LOG_METHOD_LENGTH       10
-#define DEFAULT_LOG_URI_PEER_LIMIT      40
-#define DEFAULT_LOG_STATUS_LENGTH       5
-#define DEFAULT_LOG_STATUS_TEXT_LENGTH  40
+#define DEFAULT_LOG_METHOD_LENGTH       16
+#define DEFAULT_LOG_URI_PEER_LIMIT      46
+#define DEFAULT_LOG_STATUS_LENGTH       16
+#define DEFAULT_LOG_STATUS_TEXT_LENGTH  46
 
 enum class HttpDecodeStatus: int
 {
@@ -47,14 +47,14 @@ enum class HttpDecodeStatus: int
 enum class HttpMethod: int
 {
     Http_Method_Get = 0,
-    Http_Method_Post,
-    Http_Method_Head,
-    Http_Method_Put,
-    Http_Method_Delete,
-    Http_Method_Trace,
-    Http_Method_Options,
-    Http_Method_Connect,
-    Http_Method_Patch,
+    Http_Method_Post = 1,
+    Http_Method_Head = 2,
+    Http_Method_Put = 3,
+    Http_Method_Delete = 4,
+    Http_Method_Trace = 5,
+    Http_Method_Options = 6,
+    Http_Method_Connect = 7,
+    Http_Method_Patch = 8,
     Http_Method_Unknown,
 };
 
@@ -157,9 +157,30 @@ private:
     static std::unordered_map<std::string, std::string> mimeTypeMap;
 };
 
-static std::unique_ptr<Logger> CreateDefaultHttpLogger();
 
-extern std::unique_ptr<Logger> http_logger;
+class HttpLogger
+{
+public:
+    using uptr = std::unique_ptr<HttpLogger>;
+
+    HttpLogger();
+
+    static HttpLogger* GetInstance();
+
+    Logger* GetLogger() {
+        return m_logger.get();
+    }
+
+    void ResetLogger(std::unique_ptr<Logger> logger) {
+        m_logger = std::move(logger);
+    }
+private:
+    static HttpLogger::uptr m_instance;
+    std::unique_ptr<Logger> m_logger;
+    std::shared_ptr<spdlog::details::thread_pool> m_thread_pool;
+};
+
+inline HttpLogger::uptr HttpLogger::m_instance = nullptr;
 
 const spdlog::string_view_t RESET_COLOR = "\033[0m";
 const spdlog::string_view_t GRAY_COLOR = "\033[37m";
@@ -230,7 +251,7 @@ inline int status_code_length(HttpStatusCode code)
 #define REQUEST_LOG(METHOD, URI, REMOTE) {\
     std::string method = fmt::format("[{}{}{}]", method_color(METHOD), HttpMethodToString(METHOD), RESET_COLOR);\
     std::string uri = fmt::format("[{}{}{}]", method_color(METHOD), URI, RESET_COLOR);\
-    http_logger->SpdLogger()->info( \
+    HttpLogger::GetInstance()->GetLogger()->SpdLogger()->info( \
     "{:<{}} {:<{}} [{}Remote: {}{}]", \
     method, method_length(METHOD), \
     uri, uri_length(URI), \
@@ -239,7 +260,7 @@ inline int status_code_length(HttpStatusCode code)
 #define RESPONSE_LOG(STATUS, DURING_MS)   {\
     std::string status = fmt::format("[{}{}{}]", status_color(STATUS), std::to_string(static_cast<int>(STATUS)), RESET_COLOR);\
     std::string status_text = fmt::format("[{}{}{}]", status_color(STATUS), HttpStatusCodeToString(STATUS), RESET_COLOR);\
-    http_logger->SpdLogger()->info( \
+    HttpLogger::GetInstance()->GetLogger()->SpdLogger()->info( \
     "{:<{}} {:<{}} [{}During: {}ms{}]", \
     status, status_length(STATUS),\
     status_text, status_code_length(STATUS), \

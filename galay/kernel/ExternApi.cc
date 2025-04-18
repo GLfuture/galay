@@ -94,12 +94,15 @@ void StartGalayEnv()
 {
     CoroutineSchedulerHolder::GetInstance()->StartAll();
     EventSchedulerHolder::GetInstance()->StartAll();
+    LogInfo("Galay Env Inited");
 }
 
 void DestroyGalayEnv()
 {
+    LogInfo("Galay Env Destroyed");
     CoroutineSchedulerHolder::GetInstance()->StopAll();
     EventSchedulerHolder::GetInstance()->StopAll();
+    details::InternelLogger::GetInstance()->Shutdown();
 }
 
 }

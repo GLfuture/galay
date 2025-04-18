@@ -10,6 +10,7 @@
 #include <string_view>
 #include <filesystem>
 #include <concurrentqueue/moodycamel/blockingconcurrentqueue.h>
+#include <iostream>
 
 namespace galay::http
 {
@@ -32,7 +33,7 @@ Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx\
 template<typename SocketType>
 Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx\
     , typename HttpStreamImpl<SocketType>::ptr stream\
-    , std::string&& response);
+    , HttpStatusCode code, std::string&& response);
 
 template<typename SocketType>
 Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx\
@@ -79,7 +80,7 @@ public:
     template <typename T>
     friend Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, HttpRequest& request);
     template<typename T>
-    friend Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, std::string&& response);
+    friend Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, HttpStatusCode code, std::string&& response);
     template<typename T>
     friend Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx, typename HttpStreamImpl<T>::ptr stream, FileDesc* desc);
 public:
@@ -167,7 +168,7 @@ public:
     explicit HttpServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
 
     template <HttpMethod ...Methods>
-    void RouteHandler(const std::string& path, Handler&& handler);
+    void RouteHandler(const std::string& path, Handler handler);
 
     
     void Start(THost host);

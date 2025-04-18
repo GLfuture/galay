@@ -18,7 +18,7 @@ public:
     using Handler = std::function<Coroutine<void>(RoutineCtx,HttpContext)>;
     using HandlerMap = std::unordered_map<std::string, Handler>;
 
-    void AddHandler(const std::string& path, Handler&& handler);
+    void AddHandler(const std::string& path, Handler handler);
     bool Find(const std::string& path, Handler& handler, std::unordered_map<std::string, std::string> &params);
 private:
     static std::string NormalizePath(const std::string& path);
