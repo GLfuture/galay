@@ -11,12 +11,8 @@ namespace galay::http
 
 #define DEFAULT_HTTP_RECV_TIME_MS                       10000
 #define DEFAULT_HTTP_SEND_TIME_MS                       10000
-#define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096
-
-#define DEFAULT_LIBAIO_MAX_EVENT                        1024
-
-#define HTTP_HEADER_MAX_LEN                             4096    // 头部最大长度4k
-#define HTTP_URI_MAX_LEN                                2048    // uri最大长度2k
+#define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096    // http头最大长度4k
+#define DEFAULT_HTTP_MAX_URI_LEN                        2048    // uri最大长度2k
 
 #define DEFAULT_HTTP_KEEPALIVE_TIME_MS                  (7500 * 1000)
 
@@ -24,12 +20,15 @@ namespace galay::http
 
 #define GALAY_SERVER SERVER_NAME "/" GALAY_VERSION
 
+inline std::atomic_int32_t gHttpMaxHeaderSize = DEFAULT_HTTP_MAX_HEADER_SIZE;
+inline std::atomic_int32_t gHttpMaxUriSize = DEFAULT_HTTP_MAX_URI_LEN;
+
 
 //log
-#define DEFAULT_LOG_METHOD_LENGTH       16
-#define DEFAULT_LOG_URI_PEER_LIMIT      46
-#define DEFAULT_LOG_STATUS_LENGTH       16
-#define DEFAULT_LOG_STATUS_TEXT_LENGTH  46
+#define DEFAULT_LOG_METHOD_LENGTH       20
+#define DEFAULT_LOG_URI_PEER_LIMIT      50
+#define DEFAULT_LOG_STATUS_LENGTH       20
+#define DEFAULT_LOG_STATUS_TEXT_LENGTH  50
 
 enum class HttpDecodeStatus: int
 {

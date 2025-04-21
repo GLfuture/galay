@@ -101,7 +101,6 @@ inline void HttpServer<SocketType>::Start(THost host)
     m_server.OnCall([this](RoutineCtx ctx, Connection<SocketType>::uptr connection) {
         HttpStreamConfig config;
         auto server_conf = std::dynamic_pointer_cast<HttpServerConfig>(m_server.GetConfig());
-        config.m_max_header_size = server_conf->m_max_header_size;
         config.m_recv_timeout_ms = server_conf->m_recv_timeout_ms;
         config.m_send_timeout_ms = server_conf->m_send_timeout_ms;
         auto stream = std::make_shared<HttpStreamImpl<SocketType>>(std::move(connection), config);
@@ -153,10 +152,10 @@ template <typename SocketType>
 inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, HttpRequest& request)
 {
     stream->m_error.Code() = error::HttpErrorCode::kHttpError_NoError;
-    uint32_t max_header_size = stream->GetConfig().m_max_header_size;
+    int32_t max_header_size = gHttpMaxHeaderSize.load();
     int32_t recv_timeout = static_cast<int64_t>(stream->GetConfig().m_recv_timeout_ms);
     TcpIOVecHolder holder(max_header_size);
-    uint32_t offset = 0;
+    int32_t offset = 0;
     while(offset < max_header_size) {
         int ret = co_await stream->m_connection->template Recv<bool>(holder, max_header_size - offset, recv_timeout);
         if( ret == CommonTcpIORtnType::eCommonDisConnect ) {
@@ -191,6 +190,11 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
         } else {
             break;
         }
+    }
+    if( offset == max_header_size) {
+        std::string response = CodeResponse<HttpStatusCode::RequestHeaderFieldsTooLarge_431>::ResponseStr(HttpVersion::Http_Version_1_1, false);
+        bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, bool>(SendHttpResponseImpl<SocketType>(ctx, stream, HttpStatusCode::UriTooLong_414, std::move(response)));
+        co_return false;
     }
     size_t header_size = request.GetNextIndex();
     offset = request.GetNextIndex();

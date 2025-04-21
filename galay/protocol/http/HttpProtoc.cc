@@ -142,7 +142,7 @@ HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, si
             }
             else
             {
-                if (m_uri.length() > HTTP_URI_MAX_LEN)
+                if (m_uri.length() > gHttpMaxUriSize.load())
                 {
                     return error::kHttpError_UriTooLong;
                 }
@@ -505,10 +505,6 @@ bool HttpRequest::ParseHeader(const std::string_view& buffer)
         m_error->Code() = errCode;
         return false;
     }
-    if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-        m_error->Code() = error::kHttpError_HeaderTooLong;
-        return false;
-    } 
     if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
         m_error->Code() = error::kHttpError_HeaderInComplete;
         return false;
@@ -911,10 +907,6 @@ HttpResponse::DecodePdu(const std::string_view& buffer)
             m_error->Code() = errCode;
             return {false, 0};
         }
-        if( m_next_index > HTTP_HEADER_MAX_LEN ) {
-            m_error->Code() = error::kHttpError_HeaderTooLong;
-            return {false, 0};
-        } 
         if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
             m_error->Code() = error::kHttpError_HeaderInComplete;
             return {false, 0};

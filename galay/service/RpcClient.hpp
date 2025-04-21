@@ -142,7 +142,6 @@ private:
     static galay::Coroutine<void> OnceCall(galay::RoutineCtx ctx, RpcFunctionClientCaller* caller, grpc::Status* status)
     {
         auto co = co_await this_coroutine::GetThisCoroutine<void>();
-        std::cout << (void*)co.lock().get() << std::endl;
         caller->AsyncCall(status, co.lock().get());
         co_yield {};
         co_return;

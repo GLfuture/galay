@@ -19,7 +19,6 @@ struct HttpStreamConfig
 {
     int32_t m_recv_timeout_ms = DEFAULT_HTTP_RECV_TIME_MS;
     int32_t m_send_timeout_ms = DEFAULT_HTTP_SEND_TIME_MS;
-    uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
 };
 
 template<typename SocketType>
@@ -116,7 +115,6 @@ struct HttpServerConfig final: public TcpServerConfig
 
     int32_t m_recv_timeout_ms = DEFAULT_HTTP_RECV_TIME_MS;
     int32_t m_send_timeout_ms = DEFAULT_HTTP_SEND_TIME_MS;
-    uint32_t m_max_header_size = DEFAULT_HTTP_MAX_HEADER_SIZE;
 };
 
 class HttpContext final
