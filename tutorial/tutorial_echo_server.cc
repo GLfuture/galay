@@ -37,7 +37,7 @@ int main(int argc, const char* argv[])
     }
     galay::GalayEnv env({});
     auto config = galay::http::HttpServerConfig::Create();
-    galay::http::HttpServer<galay::AsyncTcpSocket> server(config);
+    galay::http::HttpServer server(config);
     server.RouteHandler<galay::http::GET>("/hello", Handler::GetHelloWorldHandler);
     server.RouteHandler<galay::http::GET>("/params/{key}", Handler::GetKeyHandler);
     server.Start({"", port});

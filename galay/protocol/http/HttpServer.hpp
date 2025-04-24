@@ -25,22 +25,22 @@ template<typename SocketType>
 class HttpStreamImpl;
 
 template<typename SocketType>
-Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx\
+static Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx\
     , typename HttpStreamImpl<SocketType>::ptr stream\
     , HttpRequest& request);
 
 template<typename SocketType>
-Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx\
+static Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx\
     , typename HttpStreamImpl<SocketType>::ptr stream\
     , HttpStatusCode code, std::string&& response);
 
 template<typename SocketType>
-Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx\
+static Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx\
     , typename HttpStreamImpl<SocketType>::ptr stream\
     , FileDesc* desc);
 
 template<typename SocketType>
-Coroutine<void> Handle(RoutineCtx ctx\
+static Coroutine<void> Handle(RoutineCtx ctx\
     , typename HttpStreamImpl<SocketType>::ptr stream\
     , std::unordered_map<HttpMethod, HttpRouter>& routers\
     , HttpMiddleware* middleware);
@@ -158,12 +158,12 @@ private:
 };
 
 template<typename SocketType>
-class HttpServer
+class HttpAbstractServer
 {
 public:
     using Handler = std::function<Coroutine<void>(RoutineCtx,HttpContext)>;
 
-    explicit HttpServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
+    explicit HttpAbstractServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
 
     template <HttpMethod ...Methods>
     void RouteHandler(const std::string& path, Handler handler);
@@ -187,6 +187,10 @@ private:
     HttpMiddleware::uptr m_middleware;
     std::unordered_map<HttpMethod, HttpRouter> m_routers;
 };
+
+using HttpServer = HttpAbstractServer<AsyncTcpSocket>;
+using HttpsServer = HttpAbstractServer<AsyncTcpSslSocket>;
+
 
 }
 

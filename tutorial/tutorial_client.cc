@@ -3,6 +3,8 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 
+
+#ifdef BENCH_TEST
 uint32_t g_port = 8080;
 galay::Coroutine<void> test(galay::RoutineCtx ctx, std::vector<galay::AsyncTcpSocket*>& sockets, int begin, int end)
 {
@@ -51,6 +53,8 @@ galay::AsyncTcpSocket* initSocket()
     return socket;
 }
 
+
+
 int main(int argc, char* argv[])
 {
     if(argc != 2) {
@@ -82,3 +86,41 @@ int main(int argc, char* argv[])
     }
     return 0;
 }
+
+#else
+
+
+int port = 8080;
+
+galay::Coroutine<void> test(galay::RoutineCtx ctx)
+{
+    galay::http::HttpClient client;
+    bool res = co_await client.Connect<void>("http://127.0.0.1:8080", 5000);
+    if (!res)
+    {
+        std::cout << client.GetHttpErrorString() << std::endl;
+        co_return;
+    }
+    auto response = co_await client.Get(ctx, "http://127.0.0.1:8080/hello", 5000);
+    if (!res)
+    {
+        std::cout << client.GetHttpErrorString() << std::endl;
+        co_return;
+    } 
+    std::cout << response.GetContent() << std::endl;
+
+}
+
+
+
+int main(int argc, char* argv[])
+{
+    galay::GalayEnvConf conf;
+    conf.m_coroutineSchedulerConf.m_thread_num = 1;
+    galay::GalayEnv env(conf);
+    test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
+    getchar();
+    return 0;
+}
+
+#endif

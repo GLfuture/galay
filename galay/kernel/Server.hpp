@@ -20,10 +20,9 @@ class Connection: public std::enable_shared_from_this<Connection<Socket>>
 {
 public:
     using uptr = std::unique_ptr<Connection>;
-    using EventScheduler = details::EventScheduler;
     using timeout_callback_t = std::function<void(typename Connection<Socket>::uptr)>;
 
-    explicit Connection(EventScheduler* scheduler, std::unique_ptr<Socket> socket);
+    explicit Connection(std::unique_ptr<Socket> socket);
     
     template <typename CoRtn = void>
     AsyncResult<int, CoRtn> Recv(TcpIOVecHolder& holder, int size, int64_t timeout_ms);
@@ -39,10 +38,8 @@ public:
 
     std::pair<std::string, uint16_t> GetRemoteAddr() const;
 
-    EventScheduler *GetScheduler() const;
     std::unique_ptr<Socket>& GetSocket();
 private:
-    EventScheduler* m_scheduler;
     std::unique_ptr<Socket> m_socket;
 };
 

@@ -1,6 +1,7 @@
 #include "Redis.hpp"
 #include "galay/kernel/ExternApi.hpp"
 #include "galay/kernel/Async.hpp"
+#include "galay/utils/System.h"
 #include <regex>
 
 namespace galay::details
@@ -379,8 +380,8 @@ RedisSession::RedisSession(RedisConfig::ptr config)
     m_logger->Pattern("[%Y-%m-%d %H:%M:%S.%f][%L][%t][%25!s:%4!#][%20!!] %v").Level(spdlog::level::info);
 }
 
-RedisSession::RedisSession(RedisConfig::ptr config, Logger::ptr logger)
-    : m_config(config), m_logger(logger)
+RedisSession::RedisSession(RedisConfig::ptr config, Logger::uptr logger)
+    : m_config(config), m_logger(std::move(logger))
 {
     m_logger->Level(spdlog::level::info);
 }
@@ -388,27 +389,27 @@ RedisSession::RedisSession(RedisConfig::ptr config, Logger::ptr logger)
 // redis://[password@]host[:port][/db_index]
 bool RedisSession::Connect(const std::string &url)
 {
-    std::regex pattern(R"(^redis:\/\/(([^:]+):)?([^@]+)@([^:\/]+)(?::(\d+))?(?:\/(\d+))?)");
+    std::regex pattern(R"(^redis://(?:([^:@]*)(?::([^@]*))?@)?([a-zA-Z0-9\-\.]+)(?::(\d+))?(?:/(\d+))?$)");
     std::smatch matches;
     std::string username, password, host;
     int32_t port = 6379, db_index = 0;
     if (std::regex_match(url, matches, pattern)) {
+        if (matches.size() > 1 && !matches[1].str().empty()) {
+            username = matches[1];
+        }
         if (matches.size() > 2 && !matches[2].str().empty()) {
-            username = matches[2];
+            password = matches[2];
         }
         if (matches.size() > 3 && !matches[3].str().empty()) {
-            password = matches[3];
-        }
-        if (matches.size() > 4 && !matches[4].str().empty()) {
-            host = matches[4];
+            host = matches[3];
         } else {
             RedisLogError(m_logger->SpdLogger(), "[Redis host is invalid]");
             return false;
         }
-        if (matches.size() > 5 && !matches[5].str().empty()) {
+        if (matches.size() > 4 && !matches[4].str().empty()) {
             try
             {
-                port = std::stoi(matches[5]);
+                port = std::stoi(matches[4]);
             }
             catch(const std::exception& e)
             {
@@ -416,10 +417,10 @@ bool RedisSession::Connect(const std::string &url)
                 return false;
             }
         }
-        if (matches.size() > 6 && !matches[6].str().empty()) {
+        if (matches.size() > 5 && !matches[5].str().empty()) {
             try
             {
-                db_index = std::stoi(matches[6]);
+                db_index = std::stoi(matches[5]);
             }
             catch(const std::exception& e)
             {
@@ -432,22 +433,40 @@ bool RedisSession::Connect(const std::string &url)
         RedisLogError(m_logger->SpdLogger(), "[Redis url is invalid]");
         return false;
     }
-    return Connect(host, port, username, password, db_index);
+    using namespace utils;
+    std::string ip;
+    switch (utils::CheckAddressType(host))
+    {
+    case AddressType::IPv4 :
+        ip = host;
+        break;
+    case AddressType::IPv6 :
+        throw std::runtime_error("unsupported address type: IPV6");
+    case AddressType::Domain:
+        ip = utils::GetHostIPV4(host);
+        if (ip.empty()) {
+            throw std::runtime_error("DNS resolution failed");
+        }
+        break;
+    default:
+        throw std::runtime_error("unsupported address type: INVALID");
+    }
+    return Connect(ip, port, username, password, db_index);
 }
 
-bool RedisSession::Connect(const std::string &host, int32_t port, const std::string& username, const std::string &password)
+bool RedisSession::Connect(const std::string &ip, int32_t port, const std::string& username, const std::string &password)
 {
-    return Connect(host, port, username, password, 0);
+    return Connect(ip, port, username, password, 0);
 }
 
-bool RedisSession::Connect(const std::string &host, int32_t port, const std::string& username, const std::string &password, int32_t db_index)
+bool RedisSession::Connect(const std::string &ip, int32_t port, const std::string& username, const std::string &password, int32_t db_index)
 {
-    return Connect(host, port, username, password, db_index, 2);
+    return Connect(ip, port, username, password, db_index, 2);
 }
 
-bool RedisSession::Connect(const std::string &ehost, int32_t port, const std::string& username, const std::string &password, int32_t db_index, int version)
+bool RedisSession::Connect(const std::string &ip, int32_t port, const std::string& username, const std::string &password, int32_t db_index, int version)
 {
-    std::string host = ehost;
+    std::string host = ip;
     if( host == "localhost") {
         host = "127.0.0.1";
     }
@@ -716,8 +735,8 @@ RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, details::EventSche
     m_action = std::make_unique<details::IOEventAction>(std::make_unique<details::RedisEvent>(this));
 }
 
-RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::EventScheduler* scheduler, details::CoroutineScheduler* coroutine_scheduler)
-    : m_config(config), m_logger(logger), m_scheduler(scheduler), m_coScheduler(coroutine_scheduler), m_redis(nullptr)
+RedisAsyncSession::RedisAsyncSession(RedisConfig::ptr config, Logger::uptr logger, details::EventScheduler* scheduler, details::CoroutineScheduler* coroutine_scheduler)
+    : m_config(config), m_logger(std::move(logger)), m_scheduler(scheduler), m_coScheduler(coroutine_scheduler), m_redis(nullptr)
 {
     if(!m_scheduler) {
         if(EventSchedulerHolder::GetInstance()->GetSchedulerSize() == 0) {

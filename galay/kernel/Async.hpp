@@ -124,10 +124,10 @@ public:
     static AsyncNetEventContext::uptr Create(GHandle handle);
 
     void Resume();
-
     virtual ~AsyncNetEventContext() = default;
 
     GHandle m_handle = {};
+    bool m_is_connected = false;
     uint32_t m_error_code = 0;
     int64_t m_timeout = 0;
     details::Resumer::ptr m_resumer = nullptr;
@@ -224,6 +224,8 @@ public:
 
     GHandle GetHandle() const;
     uint32_t GetErrorCode() const;
+
+    bool IsConnected() const;
 private:
     details::IOEventAction::ptr m_action;
     AsyncNetEventContext::uptr m_async_context;
@@ -257,6 +259,8 @@ public:
     AsyncResult<bool, CoRtn> SendFile(FileDesc* desc, int64_t timeout = -1);
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();
+
+    bool IsConnected() const;
 
     GHandle GetHandle() const;
     uint32_t GetErrorCode() const;

@@ -5,29 +5,58 @@
 
 namespace galay::http 
 {
-bool HttpHelper::DefaultGet(HttpRequest *request, const std::string &url, bool keepalive)
-{
-    std::regex urlPattern("^(https?://)?([^:/]+)(?::(\\d+))?(/.*)?$");
+bool HttpHelper::DefaultGet(HttpRequest *request, const std::string &url, bool keepalive) {
+
+    std::regex urlPattern(R"(^(https?)://([^:/?#]+)(?::(\d+))?(/[^?#]*)?$)");
     std::smatch match;
 
-    if (!regex_match(url, match, urlPattern)) {
+    if (!std::regex_match(url, match, urlPattern)) {
         return false;
     }
-    std::string protocol = match[1].matched? match[1].str() : "http://";
-    if( protocol != "http://" || protocol != "https://" ) {
+
+    // 协议处理（强制小写）
+    std::string protocol = match[1].str();
+    std::transform(protocol.begin(), protocol.end(), protocol.begin(), ::tolower);
+    if (protocol != "http" && protocol != "https") {
         return false;
     }
+
+    // 主机处理
     std::string domain = match[2].str();
-    int port = match[3].matched? stoi(match[3].str()) : (protocol == "http://"? 80 : 443);
-    std::string path = match[4].matched? match[4].str() : "/";
+
+    // 端口处理
+    int default_port = (protocol == "http") ? 80 : 443;
+    int port = default_port;
+    if (match[3].matched) {
+        try {
+            port = std::stoi(match[3].str());
+            if (port < 1 || port > 65535) return false;
+        } catch (...) {
+            return false;
+        }
+    }
+
+    // 路径处理（带默认值）
+    std::string path = match[4].matched ? match[4].str() : "/";
+
+    // 构造请求头（带端口的主机头）
     request->Header()->Version() = HttpVersion::Http_Version_1_1;
     request->Header()->Method() = HttpMethod::Http_Method_Get;
+    request->Header()->Uri() = path;
     
-    request->Header()->HeaderPairs().AddHeaderPair("Host", domain);
-    if(!keepalive) request->Header()->HeaderPairs().AddHeaderPair("Connection", "close");
-    else request->Header()->HeaderPairs().AddHeaderPair("Connection", "keep-alive");
+    // 包含端口的主机头（当端口非默认时）
+    std::string host_header = domain;
+    if (port != default_port) {
+        host_header += ":" + std::to_string(port);
+    }
+    request->Header()->HeaderPairs().AddHeaderPair("Host", host_header);
+
+    request->Header()->HeaderPairs().AddHeaderPair("Connection", 
+        keepalive ? "keep-alive" : "close");
+    
     return true;
 }
+
 
 bool HttpHelper::DefaultRedirect(HttpResponse *response, const std::string &url, HttpResponseCode code)
 {

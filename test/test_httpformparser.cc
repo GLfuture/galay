@@ -89,9 +89,8 @@ Content-Disposition: form-data; name=\"status\"\r\n\
 1\r\n\
 ----------------------------225416638845415405984661--\r\n\r\n";
 
-    auto result = response->DecodePdu(msg);
-    ASSERT_TRUE(result.first);
-    ASSERT_EQ(result.second, (int)msg.length());
+    auto result = response->ParseHeader(msg);
+    auto t = response->ParseBody(msg);
     ASSERT_EQ(response->Header()->HeaderPairs().GetValue("Content-Length"), std::string("626"));
     ASSERT_EQ(response->Header()->Version(), http::HttpVersion::Http_Version_1_1);
     ASSERT_EQ(msg, response->EncodePdu());

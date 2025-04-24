@@ -33,27 +33,8 @@ const char* g_error_str[] = {
     "KQueueCreate Error",
     "LinuxAioSetup Error",
     "LinuxAioSubmit Error",
-};
-
-uint32_t MakeErrorCode(uint16_t galay_code, uint16_t system_code)
-{
-    uint32_t ret = galay_code << 16;
-    return ret | system_code;
-}
-
-std::string GetErrorString(uint32_t code)
-{
-    uint16_t galay_code = code >> 16;
-    uint16_t system_code = code & 0xFFFF;
-    std::string result = g_error_str[galay_code];
-    result += ", system error: ";
-    result += strerror(system_code);
-    return std::move(result);
-}
 
 
-static const char* HttpErrors[] = {
-    "No Error",
     "Connection Close",
     "Recv Timeout"
     "Header Incomplete",
@@ -65,8 +46,27 @@ static const char* HttpErrors[] = {
     "Header Pair Exist",
     "Header Pair Not Exist",
     "Bad Request",
+    "Url Invalid",
+    "Port Invalid",
     "Unkown Error"
 };
+
+uint32_t MakeErrorCode(uint16_t galay_code, uint16_t system_code)
+{
+    uint32_t ret = system_code << 16;
+    return ret | galay_code;
+}
+
+std::string GetErrorString(uint32_t code)
+{
+    uint16_t galay_code = code & 0xFFFF;
+    uint16_t system_code = code >> 16;
+    std::string result = g_error_str[galay_code];
+    result += ", system error: ";
+    result += strerror(system_code);
+    return std::move(result);
+}
+
 
 bool 
 HttpError::HasError() const
@@ -74,7 +74,7 @@ HttpError::HasError() const
     return this->m_code != error::kHttpError_NoError;
 }
 
-HttpErrorCode& 
+uint32_t& 
 HttpError::Code()
 {
     return this->m_code;
@@ -86,9 +86,9 @@ void HttpError::Reset()
 }
 
 std::string 
-HttpError::ToString(const HttpErrorCode code) const
+HttpError::ToString(const uint32_t code) const
 {
-    return HttpErrors[code];
+    return GetErrorString(code);
 }
 
 

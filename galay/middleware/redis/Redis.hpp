@@ -187,11 +187,13 @@ class RedisSession
 public:
 
     RedisSession(RedisConfig::ptr config);
-	RedisSession(RedisConfig::ptr config, Logger::ptr logger);
+	RedisSession(RedisConfig::ptr config, Logger::uptr logger);
+
+	//redis://user:password@host:port/db_index
     bool Connect(const std::string& url);
-    bool Connect(const std::string& host, int32_t port, const std::string& username, const std::string& password);
-    bool Connect(const std::string& host, int32_t port, const std::string& username, const std::string& password, int32_t db_index);
-    bool Connect(const std::string& host, int32_t port, const std::string& username, const std::string& password, int32_t db_index, int version);
+    bool Connect(const std::string& ip, int32_t port, const std::string& username, const std::string& password);
+    bool Connect(const std::string& ip, int32_t port, const std::string& username, const std::string& password, int32_t db_index);
+    bool Connect(const std::string& ip, int32_t port, const std::string& username, const std::string& password, int32_t db_index, int version);
     
 	bool DisConnect();
 	/*
@@ -358,7 +360,7 @@ public:
 
     ~RedisSession();
 private:
-	Logger::ptr m_logger;
+	Logger::uptr m_logger;
 	std::ostringstream m_stream;
     redisContext* m_redis;
     RedisConfig::ptr m_config;
@@ -369,14 +371,13 @@ class RedisAsyncSession
 	friend class details::RedisEvent;
 public:
 	RedisAsyncSession(RedisConfig::ptr config, details::EventScheduler* scheduler = nullptr, details::CoroutineScheduler* coroutine_scheduler = nullptr);
-	RedisAsyncSession(RedisConfig::ptr config, Logger::ptr logger, details::EventScheduler* scheduler = nullptr, details::CoroutineScheduler* coroutine_scheduler = nullptr);	
+	RedisAsyncSession(RedisConfig::ptr config, Logger::uptr logger, details::EventScheduler* scheduler = nullptr, details::CoroutineScheduler* coroutine_scheduler = nullptr);	
 	template<typename CoRtn>
 	AsyncResult<bool, CoRtn> AsyncConnect(THost host);
 
 	template<typename CoRtn>
 	AsyncResult<RedisAsyncValue, CoRtn> AsyncCommand(const std::string& command);
 
-	void StartReConnect();
 
 	~RedisAsyncSession();
 private:
@@ -394,7 +395,7 @@ private:
 private:
 	THost m_host;
 	bool m_reconnect = false;
-	Logger::ptr m_logger;
+	Logger::uptr m_logger;
 	redisAsyncContext* m_redis;
 	RedisConfig::ptr m_config;
 	details::IOEventAction::uptr m_action;

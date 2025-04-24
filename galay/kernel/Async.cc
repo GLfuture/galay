@@ -92,7 +92,6 @@ uint32_t& HandleOption::GetErrorCode()
     return m_error_code;
 }
 
-
 }
 
 namespace galay::details
@@ -451,6 +450,7 @@ bool NetWaitEvent::OnTcpConnectWaitPrepare(CoroutineBase::wptr co, void* ctx)
     auto awaiter = static_cast<Awaiter<bool>*>(co.lock()->GetAwaiter());
     if( ret == 0 ){
         awaiter->SetResult(true);
+        m_async_context->m_is_connected = true;
     } else {
         m_async_context->m_error_code = error::MakeErrorCode(error::Error_ConnectError, errno);
         awaiter->SetResult(false);
@@ -474,6 +474,7 @@ bool NetWaitEvent::OnCloseWaitPrepare(const CoroutineBase::wptr co, void* ctx)
         m_async_context->m_error_code = error::MakeErrorCode(error::Error_CloseError, errno);
         awaiter->SetResult(false);
     } else {
+        m_async_context->m_is_connected = false;
         awaiter->SetResult(true);
     }
     return false;
@@ -565,6 +566,7 @@ void NetWaitEvent::HandleTcpConnectEvent(EventEngine *engine)
 {
     auto awaiter = static_cast<Awaiter<bool>*>(this->m_async_context->m_resumer->GetWaitCo().lock()->GetAwaiter());
     awaiter->SetResult(true);
+    m_async_context->m_is_connected = true;
     this->m_async_context->Resume();
 }
 
@@ -903,6 +905,7 @@ bool NetSslWaitEvent::OnTcpSslConnectWaitPrepare(const CoroutineBase::wptr co, v
     LogTrace("[SSL_do_handshake, handle: {}]", this->m_async_context->m_handle.fd);
     if( r == 1 ){
         awaiter->SetResult(true);
+        static_cast<AsyncSslNetEventContext*>(this->m_async_context)->m_is_connected = true;
         return false;
     }
     this->m_ssl_error = SSL_get_error(ssl, r);
@@ -959,6 +962,7 @@ bool NetSslWaitEvent::OnTcpSslCloseWaitPrepare(const CoroutineBase::wptr co, voi
         awaiter->SetResult(false);
         return false;
     } else {
+        m_async_context->m_is_connected = false;
         awaiter->SetResult(true);
     }
     SSL*& ssl = static_cast<AsyncSslNetEventContext*>(this->m_async_context)->m_ssl;
@@ -1000,6 +1004,7 @@ void NetSslWaitEvent::HandleTcpSslConnectEvent(EventEngine *engine)
     LogTrace("[SSL_do_handshake, handle: {}]", this->m_async_context->m_handle.fd);
     if( r == 1 ){
         awaiter->SetResult(true);
+        this->m_async_context->m_is_connected = true;
         this->m_async_context->Resume();
     }
     this->m_ssl_error = SSL_get_error(ssl, r);

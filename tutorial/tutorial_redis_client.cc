@@ -5,7 +5,7 @@
 
 using namespace galay::redis;
 
-#define TEST_ASYNC
+#define TEST_SYNC
 
 #ifdef TEST_ASYNC
 galay::Coroutine<void> test(galay::RoutineCtx ctx)
@@ -34,7 +34,7 @@ void test()
     RedisSession session(config);
     if( !session.Connect(url) ) {
         std::cout << "connect failed" << std::endl;
-        return -1;
+        return;
     }
     session.Set("hello", "world");
     std::cout << session.Get("hello").ToString() << std::endl;

@@ -84,8 +84,9 @@ int main()
     try
     {
         MysqlSession session(config);
-        session.Connect("127.0.0.1", "gong", "123456", "test", 3306);
+        //session.Connect("127.0.0.1", "gong", "123456", "test", 3306);
         // 或者 session.Connect("mysql://user:password@host:port/db_name")
+        session.Connect("mysql://gong:123456@124.70.0.139:3306/test");
         CreateUserTable(&session);
         CreateImageTable(&session);
         MysqlDeleteQuery del_query;

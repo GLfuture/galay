@@ -85,6 +85,7 @@ inline AsyncResult<bool, CoRtn> AsyncConnect(AsyncNetEventContext* async_context
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_Connect);
     async_context->m_timeout = timeout;
+    async_context->m_is_connected = false;
     return {async_context->m_action.get(), addr};
 }
 
@@ -182,6 +183,7 @@ inline AsyncResult<bool, CoRtn> AsyncSSLConnect(AsyncSslNetEventContext* async_c
     async_context->m_error_code = error::MakeErrorCode(error::ErrorCode::Error_NoError, 0);
     async_context->m_resumer->SetResumeInterfaceType(kResumeInterfaceType_SSLConnect);
     async_context->m_timeout = timeout;
+    async_context->m_is_connected = false;
     return {async_context->m_action.get(), nullptr};
 }
 
@@ -446,6 +448,11 @@ inline GHandle AsyncTcpSocket::GetHandle() const
     return m_async_context->m_handle;
 }
 
+inline bool AsyncTcpSocket::IsConnected() const
+{
+    return m_async_context->m_is_connected;
+}
+
 inline uint32_t AsyncTcpSocket::GetErrorCode() const
 {
     return m_async_context->m_error_code;
@@ -602,6 +609,12 @@ inline GHandle AsyncTcpSslSocket::GetHandle() const
 {
     return m_async_context->m_handle;
 }
+
+inline bool AsyncTcpSslSocket::IsConnected() const
+{
+    return m_async_context->m_is_connected;
+}
+
 
 inline uint32_t AsyncTcpSslSocket::GetErrorCode() const
 {

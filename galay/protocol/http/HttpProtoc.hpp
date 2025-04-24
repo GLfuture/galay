@@ -49,7 +49,7 @@ private:
 private:
     std::ostringstream m_stream;
     HttpMethod m_method;
-    std::string m_uri;                                          // uri
+    std::string m_uri = "/";                                    // uri
     HttpVersion m_version;                                      // 版本号
     std::map<std::string, std::string> m_argList;               // 参数
     HeaderPair m_headerPairs;                                   // 字段
@@ -118,8 +118,10 @@ public:
     HttpResponseHeader::ptr Header();
     void SetContent(const std::string& type, std::string&& content);
     std::string_view GetContent();
+    size_t GetNextIndex() const;
     std::string EncodePdu() const;
-    std::pair<bool,size_t> DecodePdu(const std::string_view &buffer);
+    bool ParseHeader(const std::string_view &buffer);
+    bool ParseBody(const std::string_view &buffer);
     bool HasError() const;
     int GetErrorCode() const;
     std::string GetErrorString();
@@ -131,7 +133,7 @@ public:
     std::string EndChunck();
 private:
     bool GetHttpBody(const std::string_view& buffer);
-    bool GetChunckBody(const std::string_view& buffer);
+    bool GetChunkBody(const std::string_view& buffer);
 private:
     HttpDecodeStatus m_status;
     HttpResponseHeader::ptr m_header;

@@ -21,6 +21,14 @@ extern void ZeroWriteFile(const std::string &FileName, const std::string &Conten
 
 extern std::string GetEnvValue(const std::string &name);
 
+//将domain转成ipv4
+extern std::string GetHostIPV4(const std::string &domain);
+
+enum class AddressType { IPv4, IPv6, Domain, Invalid };
+
+//判断字符串是否符合ipv4,ipv6,domain
+extern AddressType CheckAddressType(const std::string& input);
+
 }
 
 #endif

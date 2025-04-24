@@ -1,4 +1,5 @@
 #include "Mysql.hpp"
+#include "galay/utils/System.h"
 #include <regex>
 
 namespace galay::mysql
@@ -382,7 +383,7 @@ uint64_t MysqlResult::GetAffectedRows()
     return mysql_affected_rows(m_mysql);
 }
 
-MysqlStmtExecutor::MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger)
+MysqlStmtExecutor::MysqlStmtExecutor(MYSQL_STMT* stmt, Logger* logger)
     : m_stmt(stmt), m_logger(logger)
 {
 }
@@ -502,7 +503,7 @@ MysqlStmtExecutor::BindResult()
             {   
                 MysqlLogError(m_logger->SpdLogger(), 
                     "[Error: Unsupported type {} for column {}]", 
-                    fields[i].type, fields[i].name);
+                    static_cast<int>(fields[i].type), fields[i].name);
                 mysql_free_result(metadata);
                 return false;
             }
@@ -768,8 +769,6 @@ MysqlStmtExecutor::~MysqlStmtExecutor()
     }
     m_result_binds.clear();
 
-    m_result_binds.clear();
-
     // 关闭预处理语句
     if (m_stmt) {
         mysql_stmt_close(m_stmt);
@@ -799,8 +798,8 @@ MysqlSession::MysqlSession(MysqlConfig::ptr config)
 {
 }
 
-MysqlSession::MysqlSession(MysqlConfig::ptr config, Logger::ptr logger)
-    : m_logger(logger)
+MysqlSession::MysqlSession(MysqlConfig::ptr config, Logger::uptr logger)
+    : m_logger(std::move(logger))
 {
     mysql_library_init(0, nullptr, nullptr);
     m_mysql = mysql_init(nullptr);
@@ -847,11 +846,11 @@ MysqlSession::MysqlSession(MysqlConfig::ptr config, Logger::ptr logger)
 
 bool MysqlSession::Connect(const std::string &url)
 {
-    std::regex re(R"(mysql://([^:@]+)(?::([^@]+))?@([^:/?]+)(?::(\d+))?(?:/([^?]*))?)");
+    std::regex pattern(R"(^mysql://(?:([^:@]*)(?::([^@]*))?@)?([a-zA-Z0-9\-\.]+)(?::(\d+))?(?:/([a-zA-Z0-9_]+))?$)");
     std::smatch matches;
     std::string username, password, host, database;
     uint32_t port = 3306;
-    if (std::regex_search(url, matches, re)) {
+    if (std::regex_search(url, matches, pattern)) {
         if (matches.size() > 1 && matches[1].matched) {
             username = matches[1].str();
         }
@@ -872,14 +871,32 @@ bool MysqlSession::Connect(const std::string &url)
                 return false;
             }
         }
-        if (matches[5].matched) {
+        if (matches.size() > 5 && matches[5].matched) {
             database = matches[5].str();
         }
     } else {
         MysqlLogError(m_logger->SpdLogger(), "URL format is incorrect");
         return false;
     }
-    return Connect(host, username, password, database, port);
+    using namespace utils;
+    std::string ip;
+    switch (utils::CheckAddressType(host))
+    {
+    case AddressType::IPv4 :
+        ip = host;
+        break;
+    case AddressType::IPv6 :
+        throw std::runtime_error("unsupported address type: IPV6");
+    case AddressType::Domain:
+        ip = utils::GetHostIPV4(host);
+        if (ip.empty()) {
+            throw std::runtime_error("DNS resolution failed");
+        }
+        break;
+    default:
+        throw std::runtime_error("unsupported address type: INVALID");
+    }
+    return Connect(ip, username, password, database, port);
 }
 
 bool 
@@ -981,7 +998,7 @@ MysqlSession::GetMysqlStmtExecutor()
         MysqlLogError(m_logger->SpdLogger(), "[Error: {}]", mysql_error(this->m_mysql));
         return nullptr;
     }
-    MysqlStmtExecutor::ptr params = std::make_shared<MysqlStmtExecutor>(stmt, m_logger);
+    MysqlStmtExecutor::ptr params = std::make_shared<MysqlStmtExecutor>(stmt, m_logger.get());
     return params;
 }
 

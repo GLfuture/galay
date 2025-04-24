@@ -872,6 +872,11 @@ HttpResponse::GetContent()
     return m_body;
 }
 
+size_t HttpResponse::GetNextIndex() const
+{
+    return m_next_index;
+}
+
 std::string
 HttpResponse::EncodePdu() const
 {
@@ -894,49 +899,45 @@ HttpResponse::EncodePdu() const
     return std::move( header + m_body);
 }
 
-
-std::pair<bool,size_t> 
-HttpResponse::DecodePdu(const std::string_view& buffer)
+bool HttpResponse::ParseHeader(const std::string_view &buffer)
 {
     m_error->Reset();
-    //header
-    if(m_status < HttpDecodeStatus::kHttpHeadEnd) 
-    {
-        const error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
-        if( errCode != error::kHttpError_NoError ) {
-            m_error->Code() = errCode;
-            return {false, 0};
-        }
-        if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
-            m_error->Code() = error::kHttpError_HeaderInComplete;
-            return {false, 0};
-        }
-    } 
+    error::HttpErrorCode errCode = m_header->FromString(m_status, buffer, m_next_index);
+    if( errCode != error::kHttpError_NoError ) {
+        m_error->Code() = errCode;
+        return false;
+    }
+    if( m_status != HttpDecodeStatus::kHttpHeadEnd) {
+        m_error->Code() = error::kHttpError_HeaderInComplete;
+        return false;
+    }
+    return true;
+}
 
-    if(m_status >= HttpDecodeStatus::kHttpHeadEnd) 
+bool HttpResponse::ParseBody(const std::string_view &buffer)
+{
+    if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
+        || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
     {
-        if((m_header->HeaderPairs().HasKey("Transfer-Encoding") && 0 == m_header->HeaderPairs().GetValue("Transfer-Encoding").compare("chunked"))
-            || (m_header->HeaderPairs().HasKey("transfer-encoding") && 0 == m_header->HeaderPairs().GetValue("transfer-encoding").compare("chunked")))
-        {
-            if(GetChunckBody(buffer)){
-                m_status = HttpDecodeStatus::kHttpBody;
-            }  else {
-                return {false, 0};
-            }
+        if(GetChunkBody(buffer)){
+            m_status = HttpDecodeStatus::kHttpBody;
+        }  else {
+            return false;
         }
-        else if (m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length"))
-        {
-            if(GetHttpBody(buffer)) {
-                m_status = HttpDecodeStatus::kHttpBody;
-            } else {
-                return {false, 0};
-            }
+    }
+    else if (m_header->HeaderPairs().HasKey("Content-Length") || m_header->HeaderPairs().HasKey("content-length"))
+    {
+        if(GetHttpBody(buffer)) {
+            m_status = HttpDecodeStatus::kHttpBody;
+        } else {
+            return false;
         }
     }
     size_t length = m_next_index;
     m_next_index = 0;
-    return {true, length};
+    return true;
 }
+
 
 bool HttpResponse::HasError() const
 {
@@ -1041,7 +1042,7 @@ HttpResponse::GetHttpBody(const std::string_view& buffer)
 
 
 bool 
-HttpResponse::GetChunckBody(const std::string_view& buffer)
+HttpResponse::GetChunkBody(const std::string_view& buffer)
 {
     while (!buffer.empty())
     {

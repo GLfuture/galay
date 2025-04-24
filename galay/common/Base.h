@@ -3,11 +3,11 @@
 
 #if defined(__linux__)
 struct GHandle {
-    int fd;
+    int fd = -1;
 };
 #elif defined(__APPLE__)
 struct GHandle {
-    int fd;
+    int fd = -1;
 };
 #elif defined(WIN32) || defined(_WIN32) || defined(_WIN32_) || defined(WIN64) || defined(_WIN64) || defined(_WIN64_)
 #include <WinSock2.h>

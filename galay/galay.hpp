@@ -7,16 +7,13 @@
 #include "common/Reflection.h"
 
 //kernel
-#include "kernel/Coroutine.hpp"
-#include "kernel/Async.hpp"
-#include "kernel/Scheduler.h"
 #include "kernel/Server.hpp"
+#include "kernel/Client.hpp"
 #include "kernel/ExternApi.hpp"
-#include "kernel/Log.h"
-#include "kernel/Time.hpp"
 
 //protocol
 #include "protocol/http/HttpServer.hpp"
+#include "protocol/http/HttpClient.hpp"
 #include "protocol/smtp/Smtp.h"
 #include "protocol/dns/Dns.h"
 #include "protocol/http2/Http2_0.hpp"

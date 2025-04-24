@@ -50,7 +50,7 @@ class MysqlStmtExecutor
     };
 public:
     using ptr = std::shared_ptr<MysqlStmtExecutor>;
-    MysqlStmtExecutor(MYSQL_STMT* stmt, Logger::ptr logger);
+    MysqlStmtExecutor(MYSQL_STMT* stmt, Logger* logger);
     bool Prepare(const std::string& ParamQuery);
     bool BindParam(MYSQL_BIND* params);
     bool LongDataToParam(const std::string& data, unsigned int index);
@@ -82,7 +82,7 @@ private:
     void ValidateColumn(int column, std::initializer_list<enum_field_types> expected_types) const;
 private:
     MYSQL_STMT* m_stmt;
-    Logger::ptr m_logger;
+    Logger* m_logger;
     int m_current_row;
     int m_current_col;
     std::vector<MYSQL_BIND> m_result_binds;
@@ -299,7 +299,8 @@ public:
     using uptr = std::unique_ptr<MysqlSession>;
 
     MysqlSession(MysqlConfig::ptr config);
-    MysqlSession(MysqlConfig::ptr config, Logger::ptr logger);
+    MysqlSession(MysqlConfig::ptr config, Logger::uptr logger);
+    //mysql://user:password@host:port/db_name
     bool Connect(const std::string& url);
     bool Connect(const std::string &host, const std::string &username, const std::string &password, const std::string &db_name, uint32_t port = 3306);
     void DisConnect();
@@ -325,7 +326,7 @@ public:
     ~MysqlSession();
 private:
     MYSQL *m_mysql; 
-    Logger::ptr m_logger;
+    Logger::uptr m_logger;
 };
 
 //To Do

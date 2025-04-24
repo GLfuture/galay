@@ -9,8 +9,14 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#elif defined(_WIN32)
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
 #endif
-
 
 namespace galay::utils
 {
@@ -141,5 +147,96 @@ std::string GetEnvValue(const std::string &name)
 {
     return std::getenv(name.c_str());;
 }
+
+std::string GetHostIPV4(const std::string &domain) {
+    struct addrinfo hints, *res, *p;
+    int status;
+    char ipstr[INET_ADDRSTRLEN];
+    std::string result;
+
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // 只获取IPv4地址
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((status = getaddrinfo(domain.c_str(), NULL, &hints, &res)) != 0) {
+        return "";
+    }
+
+    // 遍历地址列表，取第一个IPv4地址
+    for (p = res; p != NULL; p = p->ai_next) {
+        void *addr;
+        struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+        addr = &(ipv4->sin_addr);
+
+        // 将地址转换为字符串
+        inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+        result = ipstr;
+        break; // 取第一个地址
+    }
+
+    freeaddrinfo(res);
+    return result;
+}
+
+
+// 辅助函数：检查字符串是否由合法域名字符组成
+bool isDomainChar(char c) {
+    return std::isalnum(c) || c == '-' || c == '.';
+}
+
+// 域名格式验证
+bool isValidDomain(const std::string& domain) {
+    if (domain.empty() || domain.size() > 253) return false;
+    if (domain.front() == '.' || domain.back() == '.') return false;
+
+    size_t label_start = 0;
+    bool last_dot = false;
+
+    for (size_t i = 0; i < domain.size(); ++i) {
+        if (domain[i] == '.') {
+            if (last_dot || (i - label_start) < 1 || (i - label_start) > 63)
+                return false;
+            label_start = i + 1;
+            last_dot = true;
+        } else {
+            if (!isDomainChar(domain[i]) || 
+                (domain[i] == '-' && (i == label_start || i == domain.size() - 1)))
+                return false;
+            last_dot = false;
+        }
+    }
+
+    size_t last_label = domain.size() - label_start;
+    return (last_label >= 1 && last_label <= 63);
+}
+
+// 主判断函数
+AddressType CheckAddressType(const std::string& input) {
+    struct sockaddr_in sa4;
+    struct sockaddr_in6 sa6;
+
+    // 检测 IPv4
+    if (inet_pton(AF_INET, input.c_str(), &sa4.sin_addr) == 1) {
+        // 额外验证格式（防止类似 "1.2.3.4.5" 被误判）
+        std::string normalized(input.size(), 0);
+        inet_ntop(AF_INET, &sa4.sin_addr, &normalized[0], input.size() + 1);
+        if (normalized == input) return AddressType::IPv4;
+    }
+
+    // 检测 IPv6
+    if (inet_pton(AF_INET6, input.c_str(), &sa6.sin6_addr) == 1) {
+        // 标准化验证（处理缩写）
+        std::string normalized(INET6_ADDRSTRLEN, 0);
+        inet_ntop(AF_INET6, &sa6.sin6_addr, &normalized[0], INET6_ADDRSTRLEN);
+        normalized.resize(strlen(normalized.c_str()));
+        return (normalized == input) ? AddressType::IPv6 : AddressType::Invalid;
+    }
+
+    // 检测域名
+    return isValidDomain(input) ? AddressType::Domain : AddressType::Invalid;
+}
+
+
 
 }

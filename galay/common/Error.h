@@ -38,12 +38,13 @@ enum ErrorCode
     Error_KqueueCreateError,
     Error_LinuxAioSetupError,
     Error_LinuxAioSubmitError,
+    Error_SystemErrorEnd
 };
 
 enum HttpErrorCode
 {
     kHttpError_NoError = 0,
-    kHttpError_ConnectionClose,
+    kHttpError_ConnectionClose = Error_SystemErrorEnd,
     kHttpError_RecvTimeOut,
     kHttpError_HeaderInComplete,
     kHttpError_BodyInComplete,
@@ -54,6 +55,8 @@ enum HttpErrorCode
     kHttpError_HeaderPairExist,
     kHttpError_HeaderPairNotExist,
     kHttpError_BadRequest,
+    kHttpError_UrlInvalid,
+    kHttpError_PortInvalid,
     kHttpError_UnkownError,
 };
 
@@ -64,17 +67,17 @@ public:
     using wptr = std::weak_ptr<HttpError>;
     using uptr = std::unique_ptr<HttpError>;
     bool HasError() const;
-    HttpErrorCode& Code();
+    uint32_t& Code();
     void Reset();
-    std::string ToString(HttpErrorCode code) const;
+    std::string ToString(uint32_t code) const;
 protected:
-    HttpErrorCode m_code = kHttpError_NoError;
+    uint32_t m_code = kHttpError_NoError;
 };
 
 
 /*
-    16bits for galay error code
-    16bits for system error code
+    high 16bits for system error code
+    lower 16bits for galay error code
 */
 extern uint32_t MakeErrorCode(uint16_t galay_code, uint16_t system_code);
 

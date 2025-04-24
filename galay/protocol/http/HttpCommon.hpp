@@ -9,8 +9,8 @@
 namespace galay::http 
 {
 
-#define DEFAULT_HTTP_RECV_TIME_MS                       10000
-#define DEFAULT_HTTP_SEND_TIME_MS                       10000
+#define DEFAULT_HTTP_RECV_TIME_MS                       5 * 60 * 1000
+#define DEFAULT_HTTP_SEND_TIME_MS                       5 * 60 * 1000
 #define DEFAULT_HTTP_MAX_HEADER_SIZE                    4096    // http头最大长度4k
 #define DEFAULT_HTTP_MAX_URI_LEN                        2048    // uri最大长度2k
 
@@ -247,7 +247,7 @@ inline int status_code_length(HttpStatusCode code)
     return DEFAULT_LOG_STATUS_TEXT_LENGTH;
 }
 
-#define REQUEST_LOG(METHOD, URI, REMOTE) {\
+#define SERVER_REQUEST_LOG(METHOD, URI, REMOTE) {\
     std::string method = fmt::format("[{}{}{}]", method_color(METHOD), HttpMethodToString(METHOD), RESET_COLOR);\
     std::string uri = fmt::format("[{}{}{}]", method_color(METHOD), URI, RESET_COLOR);\
     HttpLogger::GetInstance()->GetLogger()->SpdLogger()->info( \
@@ -256,7 +256,7 @@ inline int status_code_length(HttpStatusCode code)
     uri, uri_length(URI), \
     "\033[38;5;39m", REMOTE, RESET_COLOR); }
 
-#define RESPONSE_LOG(STATUS, DURING_MS)   {\
+#define SERVER_RESPONSE_LOG(STATUS, DURING_MS)   {\
     std::string status = fmt::format("[{}{}{}]", status_color(STATUS), std::to_string(static_cast<int>(STATUS)), RESET_COLOR);\
     std::string status_text = fmt::format("[{}{}{}]", status_color(STATUS), HttpStatusCodeToString(STATUS), RESET_COLOR);\
     HttpLogger::GetInstance()->GetLogger()->SpdLogger()->info( \
@@ -266,6 +266,9 @@ inline int status_code_length(HttpStatusCode code)
     resp_time_color(DURING_MS), std::to_string(DURING_MS), RESET_COLOR); }
 }
 
+
+#define CLIENT_REQUEST_LOG(METHOD, URI, REMOTE) SERVER_REQUEST_LOG(METHOD, URI, REMOTE)
+#define CLIENT_RESPONSE_LOG(STATUS, DURING_MS)  SERVER_RESPONSE_LOG(STATUS, DURING_MS)
 
 
 #endif

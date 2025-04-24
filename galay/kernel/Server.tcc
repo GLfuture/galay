@@ -7,7 +7,7 @@ namespace galay
 {
 
 template<typename Socket>
-inline Connection<Socket>::Connection(details::EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
+inline Connection<Socket>::Connection(std::unique_ptr<Socket> socket) 
     :m_socket(std::move(socket)) 
 {
 }
@@ -35,11 +35,6 @@ inline std::pair<std::string, uint16_t> Connection<Socket>::GetRemoteAddr() cons
     return {ip_str, port};
 }
 
-template <typename Socket>
-inline details::EventScheduler *Connection<Socket>::GetScheduler() const
-{
-    return m_scheduler;
-}
 
 template <typename Socket>
 inline std::unique_ptr<Socket> &Connection<Socket>::GetSocket()
@@ -92,7 +87,7 @@ inline void CallbackStore<Socket>::RegisteCallback(callback_t callback)
 template <typename Socket>
 inline void CallbackStore<Socket>::CreateConnAndExecCallback(EventScheduler* scheduler, std::unique_ptr<Socket> socket) 
 {
-    auto connection = std::make_unique<Connection<Socket>>(scheduler, std::move(socket));
+    auto connection = std::make_unique<Connection<Socket>>(std::move(socket));
     if(m_callback) m_callback(RoutineCtx::Create(scheduler), std::move(connection));
 }
 
