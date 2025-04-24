@@ -49,7 +49,7 @@ private:
 private:
     std::ostringstream m_stream;
     HttpMethod m_method;
-    std::string m_uri = "/";                                    // uri
+    std::string m_uri;                                    // uri
     HttpVersion m_version;                                      // 版本号
     std::map<std::string, std::string> m_argList;               // 参数
     HeaderPair m_headerPairs;                                   // 字段

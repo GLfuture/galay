@@ -13,7 +13,9 @@ public:
     using HttpResponseCode = HttpStatusCode;
     //request
     static bool DefaultGet(HttpRequest* request, const std::string& url, bool keepalive = true);
-    static bool DefaultPost(HttpRequest* request, const std::string& url, bool keepalive = true);
+    static bool DefaultPost(HttpRequest* request, const std::string& url, std::string&& content, std::string&& content_type , bool keepalive = true);
+    static bool DefaultPut(HttpRequest* request, const std::string& url, std::string&& content, std::string&& content_type , bool keepalive = true);
+    static bool DefaultDelete(HttpRequest* request, const std::string& url, std::string&& content, std::string&& content_type , bool keepalive = true);
     //response
     static bool DefaultRedirect(HttpResponse* response, const std::string& url, HttpResponseCode code);
     static bool DefaultOK(HttpResponse* response, HttpVersion version);

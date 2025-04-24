@@ -63,7 +63,15 @@ public:
 
     template<typename CoRtn = void>
     AsyncResult<HttpResponse, CoRtn> Get(RoutineCtx ctx, const std::string& url, int64_t timeout, bool keepalive = true);
+
+    template<typename CoRtn = void>
+    AsyncResult<HttpResponse, CoRtn> Post(RoutineCtx ctx, const std::string& url, std::string&& content, std::string&& content_type, int64_t timeout, bool keepalive = true);
+
+    template<typename CoRtn = void>
+    AsyncResult<HttpResponse, CoRtn> Put(RoutineCtx ctx, const std::string& url, std::string &&content, std::string&& content_type, int64_t timeout, bool keepalive = true);
     
+    template<typename CoRtn = void>
+    AsyncResult<HttpResponse, CoRtn> Delete(RoutineCtx ctx, const std::string& url, std::string&& content, std::string&& content_type, int64_t timeout, bool keepalive = true);
     
     template<typename CoRtn = void>
     AsyncResult<bool, CoRtn> Close();

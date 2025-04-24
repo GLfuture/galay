@@ -221,6 +221,34 @@ inline AsyncResult<HttpResponse, CoRtn> HttpAbstractClient<SocketType>::Get(Rout
 
 template <typename SocketType>
 template <typename CoRtn>
+inline AsyncResult<HttpResponse, CoRtn> HttpAbstractClient<SocketType>::Post(RoutineCtx ctx, const std::string &url, std::string &&content, std::string&& content_type, int64_t timeout, bool keepalive)
+{
+    HttpRequest request;
+    HttpHelper::DefaultPost(&request, url, std::move(content), std::move(content_type), keepalive);
+    return this_coroutine::WaitAsyncRtnExecute<HttpResponse, CoRtn>(Handle<SocketType>(ctx, this, std::move(request), timeout));
+}
+
+
+template <typename SocketType>
+template <typename CoRtn>
+inline AsyncResult<HttpResponse, CoRtn> HttpAbstractClient<SocketType>::Put(RoutineCtx ctx, const std::string &url, std::string &&content, std::string&& content_type, int64_t timeout, bool keepalive)
+{
+    HttpRequest request;
+    HttpHelper::DefaultPut(&request, url, std::move(content), std::move(content_type), keepalive);
+    return this_coroutine::WaitAsyncRtnExecute<HttpResponse, CoRtn>(Handle<SocketType>(ctx, this, std::move(request), timeout));
+}
+
+template <typename SocketType>
+template <typename CoRtn>
+inline AsyncResult<HttpResponse, CoRtn> HttpAbstractClient<SocketType>::Delete(RoutineCtx ctx, const std::string &url, std::string &&content, std::string &&content_type, int64_t timeout, bool keepalive)
+{
+    HttpRequest request;
+    HttpHelper::DefaultDelete(&request, url, std::move(content), std::move(content_type), keepalive);
+    return this_coroutine::WaitAsyncRtnExecute<HttpResponse, CoRtn>(Handle<SocketType>(ctx, this, std::move(request), timeout));
+}
+
+template <typename SocketType>
+template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> HttpAbstractClient<SocketType>::Close()
 {
     return m_client->template Close<CoRtn>();
