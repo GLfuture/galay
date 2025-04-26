@@ -30,6 +30,7 @@
 #include "utils/Thread.h"
 #include "utils/App.hpp"
 #include "utils/Mvcc.hpp"
+#include "utils/Distributed.hpp"
 
 namespace galay 
 {

@@ -1,6 +1,6 @@
 #include "Md5.h"
 
-namespace galay::security
+namespace galay::algorithm
 {
     std::string 
     Md5Util::Encode(std::string const& str)

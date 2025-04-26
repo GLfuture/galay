@@ -1,6 +1,6 @@
 #include "Sha512.h"
 
-namespace galay::security
+namespace galay::algorithm
 {
 std::string
 Sha512Util::encode(const std::string& str)

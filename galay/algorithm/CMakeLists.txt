@@ -1,4 +1,4 @@
-project(security)
+project(algorithm)
 
 file(GLOB SRC_LIST "*.cc")
 

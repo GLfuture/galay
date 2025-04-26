@@ -12,7 +12,7 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
-namespace galay::security
+namespace galay::algorithm
 {
     
     class Sha256Util

@@ -4,7 +4,7 @@
 #include <string>
 #include <openssl/sha.h>
 
-namespace galay::security
+namespace galay::algorithm
 {
     class Sha512Util{
     public:

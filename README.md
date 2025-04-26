@@ -17,7 +17,7 @@
     - [kernel](doc/galay/3.kernel.md)
     - [middleware](doc/galay/4.middleware.md)
     - [protocol](doc/galay/5.protocol.md)
-    - [security](doc/galay/6.security.md)
+    - [algorithm](doc/galay/6.algorithm.md)
     - [utils](doc/galay/7.utils.md)
     - [service](doc/galay/8.service.md)
 

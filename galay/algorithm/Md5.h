@@ -10,7 +10,7 @@
 #include <string_view>
 #endif
 
-namespace galay::security
+namespace galay::algorithm
 {
     class Md5Util
     {

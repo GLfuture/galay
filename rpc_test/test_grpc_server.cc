@@ -94,7 +94,7 @@ public:
 
     }
 
-    std::string Name()
+    std::string Name() override
     {
         return "ExitCall";
     }

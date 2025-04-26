@@ -1,6 +1,6 @@
 #include "Sha256.h"
 
-namespace galay::security
+namespace galay::algorithm
 {
 std::string 
 Sha256Util::Encode(const std::string & str)

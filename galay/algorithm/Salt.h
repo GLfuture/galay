@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace galay::security
+namespace galay::algorithm
 {
     class Salt{
     public:

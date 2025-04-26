@@ -3,7 +3,7 @@
 #include <string.h>
 #include <openssl/rand.h>
 
-namespace galay::security
+namespace galay::algorithm
 {
 std::string 
 Salt::Create(int SaltLenMin,int SaltLenMax)

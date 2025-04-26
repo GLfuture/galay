@@ -10,7 +10,7 @@
 #include <string_view>
 #endif
 
-namespace galay::security
+namespace galay::algorithm
 {
     static const char *base64_chars[2] = {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

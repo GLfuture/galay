@@ -1,7 +1,7 @@
 #ifndef __GALAY_SMTP_H__
 #define __GALAY_SMTP_H__
 
-#include "galay/security/Base64.h"
+#include "galay/algorithm/Base64.h"
 #include <memory>
 #include <queue>
 

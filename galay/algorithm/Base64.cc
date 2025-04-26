@@ -1,6 +1,6 @@
 #include "Base64.h"
 
-namespace galay::security 
+namespace galay::algorithm 
 {
    //
  // Depending on the url parameter in base64_chars, one of
