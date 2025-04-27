@@ -26,18 +26,18 @@ struct RpcServerConfig
 };
 
 
-class RpcFunctionServerCaller {
+class RpcFunctionHandler {
     friend class RpcService;
 public:
-    using uptr = std::unique_ptr<RpcFunctionServerCaller>;
+    using uptr = std::unique_ptr<RpcFunctionHandler>;
 
-    RpcFunctionServerCaller(grpc::Service* service, grpc::ServerCompletionQueue* cq)
+    RpcFunctionHandler(grpc::Service* service, grpc::ServerCompletionQueue* cq)
         :m_service(service), m_cq(cq) {}
     virtual std::string Name() = 0;
     virtual void AsyncRequest(void* tag) = 0;
     virtual galay::Coroutine<void> HandleEvent() = 0;
     virtual void Finish(void *tag) = 0;
-    virtual RpcFunctionServerCaller* NewFunctionCaller() = 0;
+    virtual RpcFunctionHandler* NewFunctionCaller() = 0;
 protected:
     grpc::Service* m_service;
     grpc::ServerCompletionQueue* m_cq;
@@ -51,11 +51,11 @@ concept ServiceType = requires()
 };
 
 template<typename SlefType, ServiceType T>
-class RpcFunctionServerCallerImpl: public RpcFunctionServerCaller
+class RpcFunctionHandlerImpl: public RpcFunctionHandler
 {
 public:
-    RpcFunctionServerCallerImpl(grpc::Service* service, grpc::ServerCompletionQueue* cq)
-        :RpcFunctionServerCaller(service, cq) {}
+    RpcFunctionHandlerImpl(grpc::Service* service, grpc::ServerCompletionQueue* cq)
+        :RpcFunctionHandler(service, cq) {}
 
     T* GetService()
     {
@@ -72,15 +72,15 @@ public:
         return &this->m_context;
     }
 
-    RpcFunctionServerCaller* NewFunctionCaller() override
+    RpcFunctionHandler* NewFunctionCaller() override
     {
         return new SlefType(m_service, m_cq);
     }
 
 private:
-    using RpcFunctionServerCaller::m_service;
-    using RpcFunctionServerCaller::m_cq;
-    using RpcFunctionServerCaller::m_context;
+    using RpcFunctionHandler::m_service;
+    using RpcFunctionHandler::m_cq;
+    using RpcFunctionHandler::m_context;
 };
 
 
@@ -95,8 +95,8 @@ public:
     T* NewCaller()
     {
         static_assert(
-            std::is_base_of<RpcFunctionServerCaller, T>::value,
-            "Template type T must inherit from RpcFunctionServerCaller"
+            std::is_base_of<RpcFunctionHandler, T>::value,
+            "Template type T must inherit from RpcFunctionHandler"
         );
         auto caller = new T(m_service, m_cq);
         m_callers.push_back(caller);
@@ -109,7 +109,7 @@ public:
 private:
     grpc::ServerCompletionQueue* m_cq;
     grpc::Service* m_service;
-    std::vector<RpcFunctionServerCaller*> m_callers;
+    std::vector<RpcFunctionHandler*> m_callers;
 };
 
 class RpcServer final {

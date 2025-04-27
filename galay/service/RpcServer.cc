@@ -7,12 +7,12 @@
 namespace galay::service
 {
 
-galay::Coroutine<void> HandleFunctionCall(galay::RoutineCtx ctx, std::unique_ptr<RpcFunctionServerCaller> caller)
+galay::Coroutine<void> HandleFunctionCall(galay::RoutineCtx ctx, std::unique_ptr<RpcFunctionHandler> caller)
 {
     auto co = co_await galay::this_coroutine::GetThisCoroutine<void>();
     caller->AsyncRequest(co.lock().get());
     co_yield {};
-    HandleFunctionCall(galay::RoutineCtx::Create(nullptr), std::unique_ptr<RpcFunctionServerCaller>(caller->NewFunctionCaller()));
+    HandleFunctionCall(galay::RoutineCtx::Create(nullptr), std::unique_ptr<RpcFunctionHandler>(caller->NewFunctionCaller()));
     co_await galay::this_coroutine::WaitAsyncRtnExecute<void>(caller->HandleEvent());
     caller->Finish(co.lock().get());
     co_yield {};
@@ -28,7 +28,7 @@ void RpcService::Start()
 {
     assert(m_cq != nullptr);
     for(auto& caller: m_callers) {
-        HandleFunctionCall(galay::RoutineCtx::Create(nullptr), std::unique_ptr<RpcFunctionServerCaller>(caller));
+        HandleFunctionCall(galay::RoutineCtx::Create(nullptr), std::unique_ptr<RpcFunctionHandler>(caller));
     }
     m_callers.clear();
 }

@@ -6,10 +6,10 @@
 
 using namespace galay::service;
 
-class SayHelloCall: public RpcFunctionServerCallerImpl<SayHelloCall, Hello::AsyncService> {
+class SayHelloCall: public RpcFunctionHandlerImpl<SayHelloCall, Hello::AsyncService> {
 public:
     SayHelloCall(grpc::Service* service, grpc::ServerCompletionQueue* m_cq) 
-        : RpcFunctionServerCallerImpl(service, m_cq), m_responder(GetServerContext())
+        : RpcFunctionHandlerImpl(service, m_cq), m_responder(GetServerContext())
     {
 
     }
@@ -44,10 +44,10 @@ private:
     grpc::ServerAsyncResponseWriter<HelloResponse> m_responder;
 };
 
-class SayWorldCall: public RpcFunctionServerCallerImpl<SayWorldCall, Hello::AsyncService> {
+class SayWorldCall: public RpcFunctionHandlerImpl<SayWorldCall, Hello::AsyncService> {
 public:
     SayWorldCall(grpc::Service* service, grpc::ServerCompletionQueue* m_cq) 
-        : RpcFunctionServerCallerImpl(service, m_cq), m_responder(GetServerContext())
+        : RpcFunctionHandlerImpl(service, m_cq), m_responder(GetServerContext())
     {
 
     }
@@ -86,10 +86,10 @@ private:
     grpc::ServerAsyncResponseWriter<WorldResponse> m_responder;
 };
 
-class ExitCall: public RpcFunctionServerCallerImpl<ExitCall, System::AsyncService> {
+class ExitCall: public RpcFunctionHandlerImpl<ExitCall, System::AsyncService> {
 public:
     ExitCall(grpc::Service* service, grpc::ServerCompletionQueue* m_cq) 
-        : RpcFunctionServerCallerImpl(service, m_cq), m_responder(GetServerContext())
+        : RpcFunctionHandlerImpl(service, m_cq), m_responder(GetServerContext())
     {
 
     }
