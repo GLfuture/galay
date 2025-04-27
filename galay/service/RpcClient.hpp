@@ -26,10 +26,10 @@ struct RpcClientConfig
     }
 };
 
-class RpcFunctionClientCaller
+class RpcFunctionCaller
 {
 public:
-    RpcFunctionClientCaller(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
+    RpcFunctionCaller(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
         :m_channel(channel), m_cq(cq)
     {
     }
@@ -41,11 +41,11 @@ protected:
 };
 
 template<typename SlefType>
-class RpcFunctionClientCallerImpl: public RpcFunctionClientCaller
+class RpcFunctionCallerImpl: public RpcFunctionCaller
 {
 public:
-    RpcFunctionClientCallerImpl(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
-        :RpcFunctionClientCaller(channel, cq)
+    RpcFunctionCallerImpl(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
+        :RpcFunctionCaller(channel, cq)
     {
     }
 
@@ -65,8 +65,8 @@ public:
     }
     
 private:
-    using RpcFunctionClientCaller::m_channel;
-    using RpcFunctionClientCaller::m_context;
+    using RpcFunctionCaller::m_channel;
+    using RpcFunctionCaller::m_context;
 };
 
 
@@ -116,14 +116,14 @@ public:
     std::unique_ptr<T> NewCaller()
     {
         static_assert(
-            std::is_base_of<RpcFunctionClientCaller, T>::value,
-            "Template type T must inherit from RpcFunctionClientCaller"
+            std::is_base_of<RpcFunctionCaller, T>::value,
+            "Template type T must inherit from RpcFunctionCaller"
         );
         return std::make_unique<T>(m_channel, m_thread->GetCompletionQueue());
     }
 
     template<typename CoRtn>
-    AsyncResult<void, CoRtn> Call(RpcFunctionClientCaller* caller, grpc::Status* status)
+    AsyncResult<void, CoRtn> Call(RpcFunctionCaller* caller, grpc::Status* status)
     {
         return this_coroutine::WaitAsyncRtnExecute<void>(OnceCall(galay::RoutineCtx::Create(nullptr), caller, status));
     }
@@ -139,7 +139,7 @@ public:
     }
 
 private:
-    static galay::Coroutine<void> OnceCall(galay::RoutineCtx ctx, RpcFunctionClientCaller* caller, grpc::Status* status)
+    static galay::Coroutine<void> OnceCall(galay::RoutineCtx ctx, RpcFunctionCaller* caller, grpc::Status* status)
     {
         auto co = co_await this_coroutine::GetThisCoroutine<void>();
         caller->AsyncCall(status, co.lock().get());

@@ -9,11 +9,11 @@ using grpc::Status;
 
 using namespace galay::service;
 
-class HelloClientCaller: public galay::service::RpcFunctionClientCallerImpl<HelloClientCaller>
+class HelloClientCaller: public galay::service::RpcFunctionCallerImpl<HelloClientCaller>
 {
 public:
     HelloClientCaller(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
-        :RpcFunctionClientCallerImpl(channel, cq), m_stub(Hello::NewStub(channel))
+        :RpcFunctionCallerImpl(channel, cq), m_stub(Hello::NewStub(channel))
     {
     }
 
