@@ -302,8 +302,9 @@ Coroutine<bool> SendStaticFileImpl(RoutineCtx ctx, typename HttpStreamImpl<Socke
 template <typename SocketType>
 inline Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, std::unordered_map<HttpMethod, HttpRouter>& routers, HttpMiddleware* middleware)
 {
+    std::any user_data;
     while(!stream->Closed()) {
-        HttpContext context(HttpRequest(), stream);
+        HttpContext context(HttpRequest(), stream, user_data);
         auto& request = context.GetRequest();
         stream->RefreshActiveTime();
         bool result = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(RecvHttpRequestImpl<SocketType>(ctx, stream, request));

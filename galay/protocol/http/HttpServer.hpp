@@ -122,21 +122,19 @@ class HttpContext final
     template<typename SocketType>
     friend Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream, std::unordered_map<HttpMethod, HttpRouter>& routers, HttpMiddleware* middleware);
 public:
-    HttpContext(HttpRequest&& request, HttpStream::ptr stream)
-        : m_request(std::move(request)), m_stream(stream) {}
-    HttpRequest& GetRequest() {     return m_request;   }
+    HttpContext(HttpRequest&& request, HttpStream::ptr stream, std::any& user_data)
+        : m_request(std::move(request)), m_stream(stream), m_user_data(user_data) {}
+    HttpRequest& GetRequest() {   return m_request;   }
     HttpStream::ptr GetStream() {   return m_stream;    }
 
-    std::string GetParam(const std::string& key)
-    {
+    std::string GetParam(const std::string& key) {
         if(m_params.find(key) != m_params.end()) {
             return m_params[key];
         }
         return "";
     }
 
-    bool AddParam(const std::string& key, const std::string& value)
-    {
+    bool AddParam(const std::string& key, const std::string& value) {
         if(m_params.find(key) == m_params.end()) {
             m_params[key] = value;
             return true;
@@ -144,14 +142,17 @@ public:
         return false;
     }
 
-    bool AddParam(std::unordered_map<std::string, std::string>&& params)
-    {
+    bool AddParam(std::unordered_map<std::string, std::string>&& params) {
         m_params = std::move(params);
         return true;
     }
 
+    std::any& GetUserData() {
+        return m_user_data;
+    }
 
 private:
+    std::any& m_user_data;
     HttpRequest m_request;
     HttpStream::ptr m_stream;
     std::unordered_map<std::string, std::string> m_params;
