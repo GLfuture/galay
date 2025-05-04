@@ -34,6 +34,11 @@
 
 namespace galay 
 {
+#define _CONCAT(a, b) a##b
+#define _MAKE_DEFER_(line) DeferClass _CONCAT(defer_placeholder, line) = [&]()
+
+#undef DEFER
+#define DEFER _MAKE_DEFER_(__LINE__)
 
 #define DEFAULT_COROUTINE_SCHEDULER_THREAD_NUM          4
 #define DEFAULT_EVENT_SCHEDULER_THREAD_NUM              4
