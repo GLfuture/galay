@@ -316,9 +316,12 @@ inline Coroutine<void> Handle(RoutineCtx ctx, typename HttpStreamImpl<SocketType
         bool close = (request.Header()->HeaderPairs().GetValue("Connection").compare("close") == 0 || request.Header()->HeaderPairs().GetValue("connection").compare("close") == 0);
         if( middleware ){
             bool res = co_await this_coroutine::WaitAsyncRtnExecute<bool, void>(middleware->HandleRequest(ctx, context));
-            if(!res) {
+            if(context.GetStream()->Closed()) {
                 bool closed = co_await stream->Close();
                 co_return;
+            }
+            if(!res) {
+                continue;
             }
         }
         auto it = routers.find(request.Header()->Method()); 
