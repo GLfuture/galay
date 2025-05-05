@@ -46,13 +46,6 @@ inline PromiseType<T>::PromiseType(RoutineCtx ctx, Args&&...args)
 }
 
 template <typename T>
-template <typename... Args>
-inline PromiseType<T>::PromiseType(void *ptr, RoutineCtx ctx, Args &&...agrs)
-    : m_ctx(std::move(ctx))
-{
-}
-
-template <typename T>
 inline Coroutine<T> PromiseType<T>::get_return_object() noexcept
 {
     m_coroutine = std::make_shared<Coroutine<T>>(std::coroutine_handle<PromiseType>::from_promise(*this));
@@ -89,12 +82,6 @@ inline PromiseType<T>::~PromiseType()
 
 template<typename ...Args>
 inline PromiseType<void>::PromiseType(RoutineCtx ctx, Args&&... agrs)
-    : m_ctx(std::move(ctx))
-{
-}
-
-template<typename ...Args>
-inline PromiseType<void>::PromiseType(void* ptr, RoutineCtx ctx, Args&&... agrs)
     : m_ctx(std::move(ctx))
 {
 }

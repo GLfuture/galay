@@ -138,9 +138,6 @@ class PromiseType
 public:
     template<typename ...Args>
     PromiseType(RoutineCtx ctx, Args&&... agrs);
-
-    template<typename ...Args>
-    PromiseType(void* ptr, RoutineCtx ctx, Args&&... agrs);
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<T> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
@@ -162,8 +159,6 @@ class PromiseType<void>
 public:
     template<typename ...Args>
     PromiseType(RoutineCtx ctx, Args&&... agrs);
-    template<typename ...Args>
-    PromiseType(void* ptr, RoutineCtx ctx, Args&&... agrs);
     int get_return_object_on_alloaction_failure() noexcept { return -1; }
     Coroutine<void> get_return_object() noexcept;
     std::suspend_never initial_suspend() noexcept { return {}; }
