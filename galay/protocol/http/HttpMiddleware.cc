@@ -59,6 +59,16 @@ Coroutine<void> HttpStaticFileMiddleware::OnStreamHandleImpl(RoutineCtx ctx, Htt
             middleware->m_result = false;
             co_return;
         }
+    } else {
+        HttpResponse response;
+        HttpHelper::DefaultHttpResponse(&response, HttpVersion::Http_Version_1_1, HttpStatusCode::NotFound_404\
+            , "text/html", "NotFound");
+        bool res = co_await stream->SendResponse(ctx, std::move(response));
+        if(!res) {
+            co_await stream->Close();
+            middleware->m_result = false;
+            co_return;
+        }
     }
     middleware->m_result = false;
     co_return;
