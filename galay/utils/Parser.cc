@@ -4,6 +4,15 @@
 
 namespace galay::parser
 {
+static void Trim(std::string& s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
+        return !std::isspace(ch);
+    }));
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
 ParserManager::ParserManager()
 {
     RegisterExtension<ConfigParser>(".conf");
@@ -22,7 +31,11 @@ ParserManager::CreateParser(const std::string &filename,bool IsParse)
     std::string ext = filename.substr(pos);
     if(!m_creater.contains(ext)) return nullptr;
     auto parser = m_creater[ext]();
-    if(IsParse) parser->Parse(filename);
+    if(IsParse) {
+        if(parser->Parse(filename) != 0) {
+            return nullptr;
+        }
+    }
     return parser;
 }
 
@@ -35,52 +48,134 @@ ConfigParser::Parse(const std::string &filename)
 }
 
 int 
-ConfigParser::ParseContent(const std::string& content)
-{
+ConfigParser::ParseContent(const std::string& content) {
     std::stringstream stream(content);
     std::string line;
-    while (std::getline(stream, line))
-    {
+    
+    while (std::getline(stream, line)) {
         ConfType state = ConfType::kConfKey;
         std::string key, value;
-        for (int i = 0; i < line.length(); i++)
-        {
-            if (line[i] == ' ')
-                continue;
-            if (line[i] == '#')
-                break;
-            if ((line[i] == '=' || line[i] == ':') && state == ConfType::kConfKey)
-            {
+        bool in_array = false;
+
+        for (size_t i = 0; i < line.length(); ++i) {
+            char c = line[i];
+            if (c == ' ') continue;
+            if (c == '#') break;
+
+            // 检测数组开始
+            if (c == '[' && state == ConfType::kConfValue) {
+                in_array = true;
+            }
+
+            // 检测数组结束
+            if (c == ']' && in_array) {
+                in_array = false;
+            }
+
+            if ((c == '=' || c == ':') && state == ConfType::kConfKey) {
                 state = ConfType::kConfValue;
                 continue;
             }
-            switch (state)
-            {
-            case kConfKey:
-                key += line[i];
-                break;
-            case kConfValue:
-                value += line[i];
-                break;
-            default:
-                break;
+
+            switch (state) {
+            case ConfType::kConfKey:  key += c;  break;
+            case ConfType::kConfValue: value += c; break;
             }
         }
-        if(*value.begin() == '\"' && *value.rbegin() == '\"') {
-            value = value.substr(1, value.size() - 2);
-            ParseEscapes(value);
+
+        if (key.empty()) continue;
+
+        // 处理数组值
+        if (value.front() == '[' && value.back() == ']') {
+            std::vector<std::string> elements = ParseArray(value.substr(1, value.size()-2));
+            m_fields[key] = elements;
         }
-        m_fields.insert({key, value});
+        // 处理字符串值
+        else if (value.front() == '\"' && value.back() == '\"') {
+            value = value.substr(1, value.size()-2);
+            ParseEscapes(value);
+            m_fields[key] = value;
+        }
+        // 处理普通值
+        else {
+            m_fields[key] = value;
+        }
     }
     return 0;
 }
+
+std::vector<std::string> 
+ConfigParser::ParseArray(const std::string& arr_str) 
+{
+    std::vector<std::string> elements;
+    std::string current;
+    bool in_quotes = false;
+    char quote_char = '\0';
+    bool escape = false;
+
+    for (char c : arr_str) {
+        if (escape) {
+            // 处理转义字符
+            switch (c) {
+                case 'n':  current += '\n'; break;
+                case 't':  current += '\t'; break;
+                case '"':  current += '"';  break;
+                case '\'': current += '\''; break;
+                case '\\': current += '\\'; break;
+                default:   current += '\\'; current += c; break;
+            }
+            escape = false;
+        } else if (c == '\\') {
+            // 开始转义序列
+            escape = true;
+        } else if ((c == '"' || c == '\'') && !in_quotes) {
+            // 进入引号模式
+            in_quotes = true;
+            quote_char = c;
+        } else if (c == quote_char && in_quotes) {
+            // 结束引号模式
+            in_quotes = false;
+            quote_char = '\0';
+        } else if (c == ',' && !in_quotes) {
+            // 分割元素
+            Trim(current);
+            if (!current.empty() || in_quotes) {
+                elements.push_back(current);
+            }
+            current.clear();
+        } else {
+            // 普通字符
+            current += c;
+        }
+    }
+
+    // 处理最后一个元素
+    Trim(current);
+    if (!current.empty() || in_quotes) {
+        elements.push_back(current);
+    }
+
+    // 后处理引号内容
+    for (auto& elem : elements) {
+        if (elem.size() >= 2 && 
+           ((elem.front() == '"' && elem.back() == '"') ||
+            (elem.front() == '\'' && elem.back() == '\''))) 
+        {
+            elem = elem.substr(1, elem.size() - 2);
+        }
+        elem = ParseEscapes(elem);
+    }
+
+    return elements;
+}
+
 
 std::any 
 ConfigParser::GetValue(const std::string &key)
 {
     auto it = m_fields.find(key);
     if (it == m_fields.end())
-        return "";
+        return std::any();
     return it->second;
 }
 
@@ -93,7 +188,7 @@ ConfigParser::ParseEscapes(const std::string& input) {
             switch (input[i + 1]) {
                 case 'n':  ss << '\n'; break;
                 case 't':  ss << '\t'; break;
-                case '"':  ss << '"';  break;  
+                case '"':  ss << '"';  break;
                 case '\\': ss << '\\'; break;
                 default:   ss << input[i] << input[i + 1]; 
             }

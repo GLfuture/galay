@@ -69,11 +69,20 @@ namespace galay::parser
     public:
         int Parse(const std::string &filename) override;
         std::any GetValue(const std::string &key) override;
+        template<typename T>
+        T GetValueAs(const std::string& key) {
+            try {
+                return std::any_cast<T>(GetValue(key));
+            } catch (...) {
+                return T();
+            }
+        }
     private:
         int ParseContent(const std::string &content);
         std::string ParseEscapes(const std::string& input);
+        std::vector<std::string> ParseArray(const std::string& arr_str);
     private:
-        std::unordered_map<std::string, std::string> m_fields;
+        std::unordered_map<std::string, std::any> m_fields;
     };
 
 #ifdef USE_NLOHMANN_JSON
