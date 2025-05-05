@@ -26,32 +26,37 @@ struct RpcClientConfig
     }
 };
 
+template<typename RequestMessage, typename ResponseMessage>
 class RpcFunctionCaller
 {
 public:
+    using RequestType = RequestMessage;
+    using ResponseType = ResponseMessage;
+    
     RpcFunctionCaller(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
         :m_channel(channel), m_cq(cq)
     {
     }
-    virtual void AsyncCall(grpc::Status* status, void *tag) = 0;
+
+    virtual void AsyncCall(RequestMessage* request, ResponseMessage* response, grpc::Status* status, void *tag) = 0;
 protected:
     grpc::ClientContext m_context;
     std::shared_ptr<grpc::Channel> m_channel;
     grpc::CompletionQueue* m_cq;
 };
 
-template<typename SlefType>
-class RpcFunctionCallerImpl: public RpcFunctionCaller
+template<typename RequestMessage, typename ResponseMessage>
+class RpcFunctionCallerImpl: public RpcFunctionCaller<RequestMessage, ResponseMessage>
 {
 public:
     RpcFunctionCallerImpl(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
-        :RpcFunctionCaller(channel, cq)
+        :RpcFunctionCaller<RequestMessage, ResponseMessage>(channel, cq)
     {
     }
 
     grpc::ClientContext* GetContext()
     {
-        return &m_context;
+        return &this->m_context;
     }
 
     grpc::Channel* GetChannel()
@@ -61,19 +66,18 @@ public:
 
     grpc::CompletionQueue* GetCompletionQueue()
     {
-        return m_cq;
+        return this->m_cq;
     }
     
 private:
-    using RpcFunctionCaller::m_channel;
-    using RpcFunctionCaller::m_context;
+    using RpcFunctionCaller<RequestMessage, ResponseMessage>::m_channel;
+    using RpcFunctionCaller<RequestMessage, ResponseMessage>::m_context;
 };
 
 
 class RpcClient final
 {
 public:
-
     //如果thread为空，内部自动创建并启动（not call start）；非空（not call start）
     RpcClient(RpcClientConfig&& config, RpcClientCQThread::ptr thread = nullptr)
         :m_config(std::move(config))
@@ -115,17 +119,19 @@ public:
     template<typename T>
     std::unique_ptr<T> NewCaller()
     {
+        using RequestType = typename T::RequestType;
+        using ResponseType = typename T::ResponseType;
         static_assert(
-            std::is_base_of<RpcFunctionCaller, T>::value,
+            std::is_base_of<RpcFunctionCaller<RequestType, ResponseType>, T>::value,
             "Template type T must inherit from RpcFunctionCaller"
         );
         return std::make_unique<T>(m_channel, m_thread->GetCompletionQueue());
     }
 
-    template<typename CoRtn>
-    AsyncResult<void, CoRtn> Call(RpcFunctionCaller* caller, grpc::Status* status)
+    template<typename CoRtn, typename RequestMessage, typename ResponseMessage>
+    AsyncResult<void, CoRtn> Call(RpcFunctionCaller<RequestMessage, ResponseMessage>* caller, RequestMessage* request, ResponseMessage* response,  grpc::Status* status)
     {
-        return this_coroutine::WaitAsyncRtnExecute<void>(OnceCall(galay::RoutineCtx::Create(nullptr), caller, status));
+        return this_coroutine::WaitAsyncRtnExecute<void>(OnceCall<CoRtn, RequestMessage, ResponseMessage>(RoutineCtx::Create(nullptr), caller, request, response, status));
     }
 
     void StartCQThread()
@@ -137,16 +143,15 @@ public:
     {
         m_thread->Stop();
     }
-
 private:
-    static galay::Coroutine<void> OnceCall(galay::RoutineCtx ctx, RpcFunctionCaller* caller, grpc::Status* status)
+    template<typename CoRtn, typename RequestMessage, typename ResponseMessage>
+    static galay::Coroutine<void> OnceCall(RoutineCtx ctx, RpcFunctionCaller<RequestMessage, ResponseMessage>* caller, RequestMessage* request, ResponseMessage* response,  grpc::Status* status)
     {
-        auto co = co_await this_coroutine::GetThisCoroutine<void>();
-        caller->AsyncCall(status, co.lock().get());
+        auto co = co_await this_coroutine::GetThisCoroutine<CoRtn>();
+        caller->AsyncCall(request, response, status, co.lock().get());
         co_yield {};
         co_return;
     }
-
 private:
     RpcClientConfig m_config;
     std::shared_ptr<::grpc::Channel> m_channel;

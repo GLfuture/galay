@@ -9,7 +9,7 @@ using grpc::Status;
 
 using namespace galay::service;
 
-class HelloClientCaller: public galay::service::RpcFunctionCallerImpl<HelloClientCaller>
+class HelloClientCaller: public galay::service::RpcFunctionCallerImpl<HelloRequest, HelloResponse>
 {
 public:
     HelloClientCaller(std::shared_ptr<grpc::Channel> channel, grpc::CompletionQueue* cq)
@@ -17,20 +17,12 @@ public:
     {
     }
 
-    void AsyncCall(Status* status, void *tag) override
+    void AsyncCall(HelloRequest* request, HelloResponse* response, Status* status, void *tag) override
     {
-        request.set_msg("hello");
-        auto rpc = m_stub->AsyncSayHello(GetContext(), request, GetCompletionQueue());
-        rpc->Finish(&response, status, tag);
-    }
-
-    HelloResponse& GetResponse()
-    {
-        return response;
+        auto rpc = m_stub->AsyncSayHello(GetContext(), *request, GetCompletionQueue());
+        rpc->Finish(response, status, tag);
     }
 private:
-    HelloRequest request;
-    HelloResponse response;
     std::unique_ptr<Hello::Stub> m_stub;
 };
 
@@ -38,10 +30,13 @@ private:
 galay::Coroutine<void> CallHello(galay::RoutineCtx ctx, RpcClient& client)
 {
     Status status;
+    HelloRequest request;
+    HelloResponse response;
     auto caller = client.NewCaller<HelloClientCaller>();
-    co_await client.Call<void>(caller.get(), &status);
+    request.set_msg("Say");
+    co_await client.Call<void>(caller.get(), &request, &response, &status);
     if (status.ok()) {
-        std::cout << "CallHello: " << caller->GetResponse().msg() << std::endl;
+        std::cout << "CallHello: " << response.msg() << std::endl;
     } else {
         std::cout << "CallHello: " << status.error_code() << ": " << status.error_message() << std::endl;
     }

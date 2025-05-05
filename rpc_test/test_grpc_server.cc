@@ -35,7 +35,7 @@ public:
 private:
     static galay::Coroutine<void> HandleEventImpl(galay::RoutineCtx ctx, HelloRequest& request, HelloResponse& response)
     {
-        response.set_msg("Hello" + request.msg());
+        response.set_msg(request.msg() + "Hello");
         co_return;
     }
 private:
