@@ -146,6 +146,7 @@ HttpRequestHeader::FromString(HttpDecodeStatus& status, std::string_view str, si
                 {
                     return error::kHttpError_UriTooLong;
                 }
+                this->m_origin_uri = m_uri;
                 this->m_uri = ConvertFromUri(std::move(this->m_uri), false);
                 ParseArgs(this->m_uri);
                 status = HttpDecodeStatus::kHttpHeadVersion;
@@ -243,6 +244,7 @@ HttpRequestHeader::CopyFrom(const HttpRequestHeader::ptr& header)
     this->m_version = header->m_version;
     this->m_argList = header->m_argList;
     this->m_headerPairs = header->m_headerPairs;
+    this->m_origin_uri = header->m_origin_uri;
 }
 
 void HttpRequestHeader::Reset()
@@ -252,6 +254,11 @@ void HttpRequestHeader::Reset()
     if(!m_uri.empty()) m_uri.clear();
     if(!m_argList.empty()) m_argList.clear();
     m_headerPairs.Clear();
+}
+
+std::string HttpRequestHeader::OriginUri()
+{
+    return m_origin_uri;
 }
 
 void 

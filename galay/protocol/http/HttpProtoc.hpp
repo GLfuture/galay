@@ -39,6 +39,7 @@ public:
     error::HttpErrorCode FromString(HttpDecodeStatus& status, std::string_view str, size_t& next_index);
     void CopyFrom(const HttpRequestHeader::ptr& header);
     void Reset();
+    std::string OriginUri();
 private:
     void ParseArgs(std::string uri);
     std::string ConvertFromUri(std::string&& url, bool convert_plus_to_space);
@@ -49,10 +50,12 @@ private:
 private:
     std::ostringstream m_stream;
     HttpMethod m_method;
-    std::string m_uri;                                    // uri
+    std::string m_uri;                                          // uri
     HttpVersion m_version;                                      // 版本号
     std::map<std::string, std::string> m_argList;               // 参数
     HeaderPair m_headerPairs;                                   // 字段
+
+    std::string m_origin_uri;
 };
 
 class HttpRequest
