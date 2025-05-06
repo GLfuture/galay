@@ -17,8 +17,8 @@ public:
     static bool DefaultPut(HttpRequest* request, const std::string& url, std::string&& content, std::string&& content_type , bool keepalive = true);
     static bool DefaultDelete(HttpRequest* request, const std::string& url, std::string&& content, std::string&& content_type , bool keepalive = true);
     //response
-    static bool DefaultRedirect(HttpResponse* response, const std::string& url, HttpResponseCode code);
-    static bool DefaultOK(HttpResponse* response, HttpVersion version);
+    static bool DefaultRedirect(HttpResponse* response, const std::string& url, HttpResponseCode code, std::string type, std::string&& body);
+    static bool DefaultOK(HttpResponse* response, HttpVersion version, std::string type, std::string&& body);
 
     static bool DefaultHttpResponse(HttpResponse* response, HttpVersion version, HttpStatusCode code, std::string type, std::string &&body);
 };

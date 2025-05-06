@@ -12,9 +12,14 @@ int main(int argc, char *argv[])
     galay::parser::ParserManager parserManager;
     auto parser = parserManager.CreateParser("init.conf");
     auto confParser = std::dynamic_pointer_cast<galay::parser::ConfigParser>(parser);
-    std::cout << confParser->GetValueAs<std::string>("author") << std::endl;
+    std::cout << confParser->GetValueAs<std::string>("port") << std::endl;
     auto vec = confParser->GetValueAs<std::vector<std::string>>("vec");
     for (auto& v : vec)
+    {
+        std::cout << v << std::endl;
+    }
+    auto vec2 = confParser->GetValueAs<std::vector<std::string>>("vec2");
+    for (auto& v : vec2)
     {
         std::cout << v << std::endl;
     }

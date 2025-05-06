@@ -213,16 +213,16 @@ bool HttpHelper::DefaultDelete(HttpRequest *request, const std::string &url, std
     return true;
 }
 
-bool HttpHelper::DefaultRedirect(HttpResponse *response, const std::string &url, HttpResponseCode code)
+bool HttpHelper::DefaultRedirect(HttpResponse *response, const std::string &url, HttpResponseCode code, std::string type, std::string&& body)
 {
-    DefaultHttpResponse(response, HttpVersion::Http_Version_1_1, code, "text/html", "");
+    DefaultHttpResponse(response, HttpVersion::Http_Version_1_1, code, type, std::move(body));
     response->Header()->HeaderPairs().AddHeaderPair("Location", url);
     return true;
 }
 
-bool HttpHelper::DefaultOK(HttpResponse *response, HttpVersion version)
+bool HttpHelper::DefaultOK(HttpResponse *response, HttpVersion version, std::string type, std::string&& body)
 {
-    return DefaultHttpResponse(response, version, HttpStatusCode::OK_200, "", "");
+    return DefaultHttpResponse(response, version, HttpStatusCode::OK_200, type, std::move(body));
 }
 
 bool HttpHelper::DefaultHttpResponse(HttpResponse *response, HttpVersion version, HttpStatusCode code, std::string type, std::string &&body)
