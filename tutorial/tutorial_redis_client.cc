@@ -28,7 +28,7 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
 #elif defined(TEST_SYNC)
 void test()
 {
-    std::string url = "redis://123456@127.0.0.1:6379";
+    std::string url = "redis://127.0.0.1:6379";
     auto config = RedisConfig::CreateConfig();
     config->ConnectWithTimeout(1000);
     RedisSession session(config);

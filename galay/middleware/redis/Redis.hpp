@@ -103,8 +103,8 @@ private:
 class RedisValue 
 {
 public:
-	RedisValue(): m_replay(nullptr) {}
-    RedisValue(redisReply* reply): m_replay(reply) {}
+	RedisValue(bool auto_free = true): m_replay(nullptr), m_auto_free(auto_free) {}
+    RedisValue(redisReply* reply, bool auto_free = true): m_replay(reply), m_auto_free(auto_free) {}
 	RedisValue(RedisValue&& other);
 	RedisValue& operator=(RedisValue&& other);
 	RedisValue(const RedisValue&) = delete;
@@ -120,6 +120,8 @@ public:
     bool IsString();
     std::string ToString();
     bool IsArray();
+
+	//vector的生命周期需要小于等于RedisValue的生命周期
     std::vector<RedisValue> ToArray();
     
     //Resp3
@@ -128,20 +130,23 @@ public:
     bool IsBool();
     bool ToBool();
     bool IsMap();
+	//map的生命周期需要小于等于RedisValue的生命周期
     std::map<std::string, RedisValue> ToMap();
     bool IsSet();
+	//set的生命周期需要小于等于RedisValue的生命周期
     std::vector<RedisValue> ToSet();
     bool IsAttr();
     bool IsPush();
+	//push的生命周期需要小于等于RedisValue的生命周期
     std::vector<RedisValue> ToPush();
     bool IsBigNumber();
     std::string ToBigNumber();
     //不转义字符串
     bool IsVerb();
     std::string ToVerb();
-
     virtual ~RedisValue();
 protected:
+	bool m_auto_free;
     redisReply* m_replay;
 };
 

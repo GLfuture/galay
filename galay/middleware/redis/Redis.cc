@@ -195,12 +195,16 @@ RedisValue::RedisValue(RedisValue &&other)
 {
     m_replay = std::move(other.m_replay);
     other.m_replay = nullptr;
+    m_auto_free = other.m_auto_free;
+    other.m_auto_free = false;
 }
 
 RedisValue &RedisValue::operator=(RedisValue &&other)
 {
     m_replay = std::move(other.m_replay);
     other.m_replay = nullptr;
+    m_auto_free = other.m_auto_free;
+    other.m_auto_free = false;
     return *this;
 }
 
@@ -259,7 +263,7 @@ std::vector<RedisValue> RedisValue::ToArray()
     std::vector<RedisValue> result;
     result.reserve(m_replay->elements);
     for(size_t i = 0; i < m_replay->elements; ++i) {
-        result.push_back(RedisValue(m_replay->element[i]));
+        result.push_back(RedisValue(m_replay->element[i], false));
     }
     return std::move(result);
 }
@@ -293,7 +297,7 @@ std::map<std::string, RedisValue> RedisValue::ToMap()
 {
     std::map<std::string, RedisValue> result;
     for(size_t i = 0; i < m_replay->elements; i += 2) {
-        result.emplace(std::string(m_replay->element[i]->str, m_replay->element[i]->len), RedisValue(m_replay->element[i + 1]));
+        result.emplace(std::string(m_replay->element[i]->str, m_replay->element[i]->len), RedisValue(m_replay->element[i + 1], false));
     }
     return std::move(result);
 }
@@ -308,7 +312,7 @@ std::vector<RedisValue> RedisValue::ToSet()
     std::vector<RedisValue> result;
     result.reserve(m_replay->elements);
     for(size_t i = 0; i < m_replay->elements; ++i) {
-        result.push_back(RedisValue(m_replay->element[i]));
+        result.push_back(RedisValue(m_replay->element[i], false));
     }
     return std::vector<RedisValue>();
 }
@@ -328,7 +332,7 @@ std::vector<RedisValue> RedisValue::ToPush()
     std::vector<RedisValue> result;
     result.reserve(m_replay->elements);
     for(size_t i = 0; i < m_replay->elements; ++i) {
-        result.push_back(RedisValue(m_replay->element[i]));
+        result.push_back(RedisValue(m_replay->element[i], false));
     }
     return std::move(result);
 }
@@ -355,7 +359,7 @@ std::string RedisValue::ToVerb()
 
 RedisValue::~RedisValue()
 {
-    if(m_replay) {
+    if(m_auto_free && m_replay) {
         freeReplyObject(m_replay);
         m_replay = nullptr;
     }
