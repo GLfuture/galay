@@ -103,8 +103,8 @@ private:
 class RedisValue 
 {
 public:
-	RedisValue(bool auto_free = true): m_replay(nullptr), m_auto_free(auto_free) {}
-    RedisValue(redisReply* reply, bool auto_free = true): m_replay(reply), m_auto_free(auto_free) {}
+	RedisValue(bool auto_free = true): m_reply(nullptr), m_auto_free(auto_free) {}
+    RedisValue(redisReply* reply, bool auto_free = true): m_reply(reply), m_auto_free(auto_free) {}
 	RedisValue(RedisValue&& other);
 	RedisValue& operator=(RedisValue&& other);
 	RedisValue(const RedisValue&) = delete;
@@ -147,7 +147,7 @@ public:
     virtual ~RedisValue();
 protected:
 	bool m_auto_free;
-    redisReply* m_replay;
+    redisReply* m_reply;
 };
 
 class RedisAsyncValue: public RedisValue
@@ -345,6 +345,11 @@ public:
 	/*
 	* return: integer
 	*/
+	RedisValue SCard(const std::string& key);
+
+	/*
+	* return: integer
+	*/
 	template <ScoreValType... KV>
 	RedisValue ZAdd(const std::string& key, KV... values);
 	/*
@@ -360,8 +365,7 @@ public:
 	RedisValue ZRem(const std::string& key, Key... members);
 
 
-    template<typename... Args>
-    redisReply* RedisCommand(const std::string& cmd, Args... args);
+    redisReply* RedisCommand(const std::string& cmd);
 
     ~RedisSession();
 private:

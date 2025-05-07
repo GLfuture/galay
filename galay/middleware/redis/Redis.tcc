@@ -136,19 +136,6 @@ inline RedisValue RedisSession::ZRem(const std::string &key, Key... members)
     return RedisValue(reply);
 }
 
-template <typename... Args>
-inline redisReply *RedisSession::RedisCommand(const std::string &cmd, Args... args)
-{
-    redisReply* reply = static_cast<redisReply*>(redisCommand(m_redis, cmd.c_str(), args...));
-    if (!reply) {
-        RedisLogError(m_logger->SpdLogger(), "[redisCommand failed: cmd is {}, error is {}]", cmd, m_redis->errstr);
-        redisFree(m_redis);
-        m_redis = nullptr;
-        return nullptr;
-    }
-    return reply;
-}
-
 //Async
 template <typename CoRtn>
 inline AsyncResult<bool, CoRtn> RedisAsyncSession::AsyncConnect(THost host)

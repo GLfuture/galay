@@ -193,16 +193,16 @@ std::any &RedisConfig::GetParams()
 
 RedisValue::RedisValue(RedisValue &&other)
 {
-    m_replay = std::move(other.m_replay);
-    other.m_replay = nullptr;
+    m_reply = std::move(other.m_reply);
+    other.m_reply = nullptr;
     m_auto_free = other.m_auto_free;
     other.m_auto_free = false;
 }
 
 RedisValue &RedisValue::operator=(RedisValue &&other)
 {
-    m_replay = std::move(other.m_replay);
-    other.m_replay = nullptr;
+    m_reply = std::move(other.m_reply);
+    other.m_reply = nullptr;
     m_auto_free = other.m_auto_free;
     other.m_auto_free = false;
     return *this;
@@ -210,171 +210,174 @@ RedisValue &RedisValue::operator=(RedisValue &&other)
 
 bool RedisValue::IsNull()
 {
-    return m_replay->type == REDIS_REPLY_NIL || m_replay == nullptr;
+    return m_reply->type == REDIS_REPLY_NIL || m_reply == nullptr;
 }
 
 bool RedisValue::IsStatus()
 {
-    return m_replay->type == REDIS_REPLY_STATUS;
+    return m_reply->type == REDIS_REPLY_STATUS;
 }
 
 std::string RedisValue::ToStatus()
 {
-    return std::string(m_replay->str, m_replay->len);
+    return std::string(m_reply->str, m_reply->len);
 }
 
 bool RedisValue::IsError()
 {
-    return m_replay->type == REDIS_REPLY_ERROR;
+    return m_reply->type == REDIS_REPLY_ERROR;
 }
 
 std::string RedisValue::ToError()
 {
-    return std::string(m_replay->str, m_replay->len);
+    return std::string(m_reply->str, m_reply->len);
 }
 
 bool RedisValue::IsInteger()
 {
-    return m_replay->type == REDIS_REPLY_INTEGER;
+    return m_reply->type == REDIS_REPLY_INTEGER;
 }
 
 int64_t RedisValue::ToInteger()
 {
-    return m_replay->integer;
+    return m_reply->integer;
 }
 
 bool RedisValue::IsString()
 {
-    return m_replay->type == REDIS_REPLY_STRING ;
+    return m_reply->type == REDIS_REPLY_STRING ;
 }
 
 std::string RedisValue::ToString()
 {
-    return std::string(m_replay->str, m_replay->len);
+    std::string result(m_reply->str, m_reply->len);
+    return result;
 }
 
 bool RedisValue::IsArray()
 {
-    return m_replay->type == REDIS_REPLY_ARRAY;
+    return m_reply->type == REDIS_REPLY_ARRAY;
 }
 
 std::vector<RedisValue> RedisValue::ToArray()
 {
     std::vector<RedisValue> result;
-    result.reserve(m_replay->elements);
-    for(size_t i = 0; i < m_replay->elements; ++i) {
-        result.push_back(RedisValue(m_replay->element[i], false));
+    result.reserve(m_reply->elements);
+    for(size_t i = 0; i < m_reply->elements; ++i) {
+        result.push_back(RedisValue(m_reply->element[i], false));
     }
     return std::move(result);
 }
 
 bool RedisValue::IsDouble()
 {
-    return m_replay->type == REDIS_REPLY_DOUBLE;
+    return m_reply->type == REDIS_REPLY_DOUBLE;
 }
 
 double RedisValue::ToDouble()
 {
-    return strtod(m_replay->str, nullptr);
+    return strtod(m_reply->str, nullptr);
 }
 
 bool RedisValue::IsBool()
 {
-    return m_replay->type == REDIS_REPLY_BOOL;
+    return m_reply->type == REDIS_REPLY_BOOL;
 }
 
 bool RedisValue::ToBool()
 {
-    return m_replay->integer == 1;
+    return m_reply->integer == 1;
 }
 
 bool RedisValue::IsMap()
 {
-    return m_replay->type == REDIS_REPLY_MAP;
+    return m_reply->type == REDIS_REPLY_MAP;
 }
 
 std::map<std::string, RedisValue> RedisValue::ToMap()
 {
     std::map<std::string, RedisValue> result;
-    for(size_t i = 0; i < m_replay->elements; i += 2) {
-        result.emplace(std::string(m_replay->element[i]->str, m_replay->element[i]->len), RedisValue(m_replay->element[i + 1], false));
+    for(size_t i = 0; i < m_reply->elements; i += 2) {
+        result.emplace(std::string(m_reply->element[i]->str, m_reply->element[i]->len), RedisValue(m_reply->element[i + 1], false));
     }
     return std::move(result);
 }
 
 bool RedisValue::IsSet()
 {
-    return m_replay->type == REDIS_REPLY_SET;
+    return m_reply->type == REDIS_REPLY_SET;
 }
 
 std::vector<RedisValue> RedisValue::ToSet()
 {
     std::vector<RedisValue> result;
-    result.reserve(m_replay->elements);
-    for(size_t i = 0; i < m_replay->elements; ++i) {
-        result.push_back(RedisValue(m_replay->element[i], false));
+    result.reserve(m_reply->elements);
+    for(size_t i = 0; i < m_reply->elements; ++i) {
+        result.push_back(RedisValue(m_reply->element[i], false));
     }
     return std::vector<RedisValue>();
 }
 
 bool RedisValue::IsAttr()
 {
-    return m_replay->type == REDIS_REPLY_ATTR;
+    return m_reply->type == REDIS_REPLY_ATTR;
 }
 
 bool RedisValue::IsPush()
 {
-    return m_replay->type == REDIS_REPLY_PUSH;
+    return m_reply->type == REDIS_REPLY_PUSH;
 }
 
 std::vector<RedisValue> RedisValue::ToPush()
 {
     std::vector<RedisValue> result;
-    result.reserve(m_replay->elements);
-    for(size_t i = 0; i < m_replay->elements; ++i) {
-        result.push_back(RedisValue(m_replay->element[i], false));
+    result.reserve(m_reply->elements);
+    for(size_t i = 0; i < m_reply->elements; ++i) {
+        result.push_back(RedisValue(m_reply->element[i], false));
     }
     return std::move(result);
 }
 
 bool RedisValue::IsBigNumber()
 {
-    return m_replay->type == REDIS_REPLY_BIGNUM;
+    return m_reply->type == REDIS_REPLY_BIGNUM;
 }
 
 std::string RedisValue::ToBigNumber()
 {
-    return std::string(m_replay->str, m_replay->len);
+    std::string result(m_reply->str, m_reply->len);
+    return result;
 }
 
 bool RedisValue::IsVerb()
 {
-    return m_replay->type == REDIS_REPLY_VERB;
+    return m_reply->type == REDIS_REPLY_VERB;
 }
 
 std::string RedisValue::ToVerb()
 {
-    return std::string(m_replay->str, m_replay->len);
+    std::string result(m_reply->str, m_reply->len);
+    return result;
 }
 
 RedisValue::~RedisValue()
 {
-    if(m_auto_free && m_replay) {
-        freeReplyObject(m_replay);
-        m_replay = nullptr;
+    if(m_auto_free && m_reply) {
+        freeReplyObject(m_reply);
+        m_reply = nullptr;
     }
 }
 
 RedisAsyncValue::RedisAsyncValue(RedisAsyncValue &&other)
 {
-    m_replay = other.m_replay;
-    other.m_replay = nullptr;
+    m_reply = other.m_reply;
+    other.m_reply = nullptr;
 }
 
 RedisAsyncValue &RedisAsyncValue::operator=(RedisAsyncValue &&other)
 {
-    m_replay = other.m_replay;
-    other.m_replay = nullptr;
+    m_reply = other.m_reply;
+    other.m_reply = nullptr;
     return *this;
 }
 
@@ -585,7 +588,8 @@ bool RedisSession::DisConnect()
 
 RedisValue RedisSession::SelectDB(int32_t db_index)
 {
-    auto reply = RedisCommand("SELECT %d", db_index);
+    std::string cmd = std::format("SELECT {}", db_index);
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
@@ -597,128 +601,170 @@ RedisValue RedisSession::FlushDB()
 
 RedisValue RedisSession::Switch(int version)
 {
-    auto reply = RedisCommand("HELLO %d", version);
+    std::string cmd = std::format("HELLO {}", version);
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::Exist(const std::string &key)
 {
-    auto reply = RedisCommand("EXISTS %s", key.c_str());
+    std::string cmd = std::format("EXISTS {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::Get(const std::string& key)
 {
-    auto reply = RedisCommand("GET %s", key.c_str());
+    std::string cmd = std::format("GET {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::Set(const std::string &key, const std::string &value)
 {
-    auto reply = RedisCommand("SET %s %s", key.c_str(), value.c_str());
+    std::string cmd = std::format("SET {} {}", key.c_str(), value.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::Del(const std::string &key)
 {
-    auto reply = RedisCommand("DEL %s", key.c_str());
+    std::string cmd = std::format("DEL {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::SetEx(const std::string &key, int64_t second, const std::string &value)
 {
-    auto reply = RedisCommand("SETEX %s %lld %s", key.c_str(), second, value.c_str());
+    std::string cmd = std::format("SETEX {} {} {}", key.c_str(), second, value.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::PSetEx(const std::string &key, int64_t milliseconds, const std::string &value)
 {
-    auto reply = RedisCommand("PSETEX %s %lld %s", key.c_str(), milliseconds, value.c_str());
+    std::string cmd = std::format("PSETEX {} {} {}", key.c_str(), milliseconds, value.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::Incr(const std::string& key)
 {
-    auto reply = RedisCommand("INCR %s", key.c_str());
+    std::string cmd = std::format("INCR {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::IncrBy(std::string key, int64_t value)
 {
-    auto reply = RedisCommand("INCRBY %s %lld", key.c_str(), value);
+    std::string cmd = std::format("INCRBY {} {}", key.c_str(), value);
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::Decr(const std::string& key)
 {
-    auto reply = RedisCommand("DECR %s", key.c_str());
+    std::string cmd = std::format("DECR {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::HGet(const std::string& key, const std::string& field)
 {
-    auto reply = RedisCommand("HGET %s %s", key.c_str(), field.c_str());
+    std::string cmd = std::format("HGET {} {}", key.c_str(), field.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::HSet(const std::string &key, const std::string &field, const std::string &value)
 {
-    auto reply = RedisCommand("HSET %s %s %s", key.c_str(), field.c_str(), value.c_str());
+    std::string cmd = std::format("HGET {} {}", key.c_str(), field.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::HGetAll(const std::string& key)
 {
-    auto reply = RedisCommand("HGETALL %s", key.c_str());
+    std::string cmd = std::format("HGETALL {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::HIncrBy(const std::string& key, std::string field, int64_t value)
 {
-    auto reply = RedisCommand("HINCRBY %s %s %lld", key.c_str(), field.c_str(), value);
+    std::string cmd = std::format("HINCRBY {} {} {}", key.c_str(), field.c_str(), value);
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::LLen(const std::string& key)
 {
-    auto reply = RedisCommand("LLEN %s", key.c_str());
+    std::string cmd = std::format("LLEN {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::LRange(const std::string &key, int64_t start, int64_t end)
 {
-    auto reply = RedisCommand("LRANGE %s %lld %lld", key.c_str(), start, end);
+    std::string cmd = std::format("LRANGE {} {} {}", key.c_str(), start, end);
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::LRem(const std::string &key, const std::string& value, int64_t count)
 {
-    auto reply = RedisCommand("LREM %s %lld %s", key.c_str(), count, value.c_str());
+    std::string cmd = std::format("LREM {} {} {}", key.c_str(), count, value.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::SMembers(const std::string &key)
 {
-    auto reply = RedisCommand("SMEMBERS %s", key.c_str());
+    std::string cmd = std::format("SMEMBERS {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::SMove(const std::string &source, const std::string &destination, const std::string &member)
 {
-    auto reply = RedisCommand("SMOVE %s %s %s", source.c_str(), destination.c_str(), member.c_str());
+    std::string cmd = std::format("SMOVE {} {} {}", source.c_str(), destination.c_str(), member.c_str());
+    auto reply = RedisCommand(cmd);
+    return RedisValue(reply);
+}
+
+RedisValue RedisSession::SCard(const std::string &key)
+{
+    std::string cmd = std::format("SCARD {}", key.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::ZRange(const std::string& key, uint32_t beg, uint32_t end)
 {
-    auto reply = RedisCommand("ZRANGE %s %u %u", key.c_str(), beg, end);
+    std::string cmd = std::format("ZRANGE {} {} {}", key.c_str(), beg, end);
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
 }
 
 RedisValue RedisSession::ZScore(const std::string &key, const std::string &member)
 {
-    auto reply = RedisCommand("ZSCORE %s %s", key.c_str(), member.c_str());
+    std::string cmd = std::format("ZSCORE {} {}", key.c_str(), member.c_str());
+    auto reply = RedisCommand(cmd);
     return RedisValue(reply);
+}
+
+
+redisReply *RedisSession::RedisCommand(const std::string &cmd)
+{
+    RedisLogInfo(m_logger->SpdLogger(), "[redisCommand is {}]", cmd);
+    redisReply* reply = static_cast<redisReply*>(redisCommand(m_redis, cmd.c_str()));
+    if (!reply) {
+        RedisLogError(m_logger->SpdLogger(), "[redisCommand failed, error is {}]", m_redis->errstr);
+        redisFree(m_redis);
+        m_redis = nullptr;
+        return nullptr;
+    }
+    return reply;
 }
 
 RedisSession::~RedisSession()

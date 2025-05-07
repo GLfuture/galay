@@ -38,6 +38,12 @@ void test()
     }
     session.Set("hello", "world");
     std::cout << session.Get("hello").ToString() << std::endl;
+
+    session.SAdd("demo", "http://127.0.0.1");
+    auto s = session.SMembers("demo");
+    for(auto& v: s.ToArray()) {
+        std::cout << v.ToString() << std::endl;
+    }
     session.DisConnect();
 }
 #endif
