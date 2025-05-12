@@ -1,5 +1,6 @@
 #include "HttpProtoc.hpp"
 #include "assert.h"
+#include <iostream>
 
 namespace galay::http 
 {
@@ -537,6 +538,18 @@ bool HttpRequest::ParseBody(const std::string_view &buffer)
         } else {
             return false;
         }
+    } else{
+        size_t pos = buffer.find("\r\n\r\n", m_next_index);
+        if(pos == std::string::npos){
+            auto body = buffer.substr(m_next_index);
+            if(!body.empty()){
+                m_error->Code() = error::kHttpError_BodyInComplete;
+                return false;
+            }
+        }else{
+            m_body = buffer.substr(m_next_index, pos - m_next_index);
+            m_next_index = pos + 4;
+        }
     }
     size_t length = m_next_index;
     m_next_index = 0;
@@ -655,45 +668,32 @@ HttpRequest::GetContent()
     return this->m_body;
 }
 
-
+//必有content-length
 bool 
 HttpRequest::GetHttpBody(const std::string_view &buffer)
 {
     size_t n = buffer.length();
-    if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
-        std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        size_t length = 0;
-        try
-        {
-            length = std::stoul(contentLength);
-        }
-        catch(const std::exception& e)
-        {
-            m_error->Code() = error::kHttpError_BadRequest;
-        }
-        
-        if(length + m_next_index <= n) {
-            m_body = buffer.substr(m_next_index, length);
-            m_next_index += length;
-            if(m_next_index + 4 < n && buffer.substr(m_next_index,4) == "\r\n\r\n") {
-                m_next_index += 4;
-            }  
-        }else{
-            m_error->Code() = error::kHttpError_BodyInComplete;
-            return false;
-        }
-    }else{
-        size_t pos = buffer.find("\r\n\r\n", m_next_index);
-        if(pos == std::string::npos){
-            if(!buffer.empty()){
-                m_error->Code() = error::kHttpError_BodyInComplete;
-                return false;
-            }
-        }else{
-            m_body = buffer.substr(m_next_index, pos - m_next_index);
-            m_next_index = pos + 4;
-        }
+    std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+    if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("content-length");
+    size_t length = 0;
+    try
+    {
+        length = std::stoul(contentLength);
+    }
+    catch(const std::exception& e)
+    {
+        m_error->Code() = error::kHttpError_BadRequest;
+        return false;
+    }
+    if(length + m_next_index <= n) {
+        m_body = buffer.substr(m_next_index, length);
+        m_next_index += length;
+        if(m_next_index + 4 < n && buffer.substr(m_next_index,4) == "\r\n\r\n") {
+            m_next_index += 4;
+        } 
+    } else {
+        m_error->Code() = error::kHttpError_BodyInComplete;
+        return false;
     }
     return true;
 }
@@ -939,6 +939,18 @@ bool HttpResponse::ParseBody(const std::string_view &buffer)
         } else {
             return false;
         }
+    } else{
+        size_t pos = buffer.find("\r\n\r\n", m_next_index);
+        if(pos == std::string::npos){
+            auto body = buffer.substr(m_next_index);
+            if(!body.empty()){
+                m_error->Code() = error::kHttpError_BodyInComplete;
+                return false;
+            }
+        }else{
+            m_body = buffer.substr(m_next_index, pos - m_next_index);
+            m_next_index = pos + 4;
+        }
     }
     size_t length = m_next_index;
     m_next_index = 0;
@@ -1008,42 +1020,30 @@ bool
 HttpResponse::GetHttpBody(const std::string_view& buffer)
 {
     size_t n = buffer.length();
-    if(m_header->HeaderPairs().HasKey("content-length") || m_header->HeaderPairs().HasKey("Content-Length")){
-        std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
-        size_t length;
-        try
-        {
-            length = std::stoul(contentLength);
-        }
-        catch(const std::exception& e)
-        {
-            m_error->Code() = error::kHttpError_BadRequest;
-
-        }
-        
-        if(length + m_next_index <= n) {
-            m_body = buffer.substr(m_next_index, length);
-            m_next_index += length;
-            if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
-                m_next_index += 4;
-            }  
-        }else{
-            m_error->Code() = error::kHttpError_BodyInComplete;
-            return false;
-        }
-    }else{
-        size_t pos = buffer.find("\r\n\r\n", m_next_index);
-        if(pos == std::string::npos){
-            if(!buffer.empty()){
-                m_error->Code() = error::kHttpError_BodyInComplete;
-                return false;
-            }
-        }else{
-            m_body = buffer.substr(m_next_index, pos - m_next_index);
-            m_next_index = pos + 4;
-        }
+    std::string contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+    if( contentLength.empty() ) contentLength = m_header->HeaderPairs().GetValue("Content-Length");
+    size_t length;
+    try
+    {
+        length = std::stoul(contentLength);
     }
+    catch(const std::exception& e)
+    {
+        m_error->Code() = error::kHttpError_BadRequest;
+
+    }
+    
+    if(length + m_next_index <= n) {
+        m_body = buffer.substr(m_next_index, length);
+        m_next_index += length;
+        if(m_next_index + 4 < n && buffer.substr(m_next_index,4).compare("\r\n\r\n") == 0) {
+            m_next_index += 4;
+        }  
+    }else{
+        m_error->Code() = error::kHttpError_BodyInComplete;
+        return false;
+    }
+    
     return true;
 }
 

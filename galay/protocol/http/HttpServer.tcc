@@ -222,7 +222,10 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
     size_t expect = header_size + body_length;
     if( holder->m_offset == expect) {
         offset += body_length;
-        request.ParseBody(std::string_view(holder->m_buffer, offset));
+        if(!request.ParseBody(std::string_view(holder->m_buffer, offset))) {
+            HttpLogger::GetInstance()->GetLogger()->SpdLogger()->error("ParseBody error, error code: {}", request.GetErrorCode());
+            co_return false;
+        }
     }
     else {
         holder.Realloc(expect);
@@ -241,13 +244,14 @@ inline Coroutine<bool> RecvHttpRequestImpl(RoutineCtx ctx, typename HttpStreamIm
         } else {
             offset += ret;
         }
-        if(offset == body_length) {
+        if(offset == expect) {
             std::string_view view = std::string_view(holder->m_buffer, offset);
             request.ParseBody(view);
         }
     }
     auto remote = stream->GetRemoteAddr();
     SERVER_REQUEST_LOG(request.Header()->Method(), request.Header()->Uri(), remote.first + ":" + std::to_string(remote.second));
+    HttpLogger::GetInstance()->GetLogger()->SpdLogger()->debug("{}", std::string_view(holder->m_buffer, offset));
     co_return true;
 }
 
@@ -274,6 +278,7 @@ inline Coroutine<bool> SendHttpResponseImpl(RoutineCtx ctx, typename HttpStreamI
             offset += ret;
         }
     }
+    HttpLogger::GetInstance()->GetLogger()->SpdLogger()->debug("{}", std::string_view(holder->m_buffer, offset));
     res = true;
     co_return std::move(res);
 }

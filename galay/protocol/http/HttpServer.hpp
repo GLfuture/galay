@@ -163,12 +163,13 @@ class HttpAbstractServer
 {
 public:
     using Handler = std::function<Coroutine<void>(RoutineCtx,HttpContext)>;
+    using logger_ptr = std::shared_ptr<spdlog::logger>;
 
     explicit HttpAbstractServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
 
     template <HttpMethod ...Methods>
     void RouteHandler(const std::string& path, Handler handler);
-
+    logger_ptr GetLogger() {    return HttpLogger::GetInstance()->GetLogger()->SpdLogger();  }
     
     void Start(THost host);
     void Stop();
