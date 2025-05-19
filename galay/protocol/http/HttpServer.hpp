@@ -159,13 +159,13 @@ private:
 };
 
 template<typename SocketType>
-class HttpAbstractServer
+class HttpServerImpl
 {
 public:
     using Handler = std::function<Coroutine<void>(RoutineCtx,HttpContext)>;
     using logger_ptr = std::shared_ptr<spdlog::logger>;
 
-    explicit HttpAbstractServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
+    explicit HttpServerImpl(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger = nullptr);
 
     template <HttpMethod ...Methods>
     void RouteHandler(const std::string& path, Handler handler);
@@ -190,8 +190,8 @@ private:
     std::unordered_map<HttpMethod, HttpRouter> m_routers;
 };
 
-using HttpServer = HttpAbstractServer<AsyncTcpSocket>;
-using HttpsServer = HttpAbstractServer<AsyncTcpSslSocket>;
+using HttpServer = HttpServerImpl<AsyncTcpSocket>;
+using HttpsServer = HttpServerImpl<AsyncTcpSslSocket>;
 
 
 }

@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     // auto config = galay::HttpServerConfig::Create();
     // galay::GalayEnv env({});
     // galay::InitializeSSLServerEnv(argv[1], argv[2]);
-    // galay::http::HttpAbstractServer<galay::AsyncTcpSslSocket> server(config);
+    // galay::http::HttpServerImpl<galay::AsyncTcpSslSocket> server(config);
     // server.Start({"", 2333});
     // getchar();
     // server.Stop();

@@ -22,7 +22,7 @@ int main(int argc, const char* argv[])
     }
     galay::GalayEnv env({});
     auto config = galay::http::HttpServerConfig::Create();
-    galay::http::HttpAbstractServer<galay::AsyncTcpSocket> server(config);
+    galay::http::HttpServerImpl<galay::AsyncTcpSocket> server(config);
     server.RegisterStaticFileGetMiddleware("/static", "/home/gong/static");
     server.Start({"", port});
     getchar();

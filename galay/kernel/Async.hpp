@@ -227,7 +227,6 @@ public:
 
     bool IsConnected() const;
 private:
-    details::IOEventAction::ptr m_action;
     AsyncNetEventContext::uptr m_async_context;
 };
 

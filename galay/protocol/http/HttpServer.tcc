@@ -82,21 +82,21 @@ inline HttpServerConfig::ptr HttpServerConfig::Create()
 
 
 template <typename SocketType>
-inline HttpAbstractServer<SocketType>::HttpAbstractServer(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger)
+inline HttpServerImpl<SocketType>::HttpServerImpl(HttpServerConfig::ptr config, std::unique_ptr<Logger> logger)
     :m_server(config)
 {
     if(logger) HttpLogger::GetInstance()->ResetLogger(std::move(logger));
 }
 
 template <typename SocketType>
-inline bool HttpAbstractServer<SocketType>::RegisterStaticFileGetMiddleware(const std::string &url_file, const std::string &filesystem_file)
+inline bool HttpServerImpl<SocketType>::RegisterStaticFileGetMiddleware(const std::string &url_file, const std::string &filesystem_file)
 {
     auto middleware = std::make_unique<HttpStaticFileMiddleware>(url_file, filesystem_file);
     return RegisterMiddleware(std::move(middleware));
 }
 
 template <typename SocketType>
-inline void HttpAbstractServer<SocketType>::Start(THost host)
+inline void HttpServerImpl<SocketType>::Start(THost host)
 {
     m_server.OnCall([this](RoutineCtx ctx, Connection<SocketType>::uptr connection) {
         HttpStreamConfig config;
@@ -110,19 +110,19 @@ inline void HttpAbstractServer<SocketType>::Start(THost host)
 }
 
 template <typename SocketType>
-inline void HttpAbstractServer<SocketType>::Stop()
+inline void HttpServerImpl<SocketType>::Stop()
 {
     m_server.Stop();
 }
 
 template <typename SocketType>
-inline bool HttpAbstractServer<SocketType>::IsRunning() const
+inline bool HttpServerImpl<SocketType>::IsRunning() const
 {
     return m_server.IsRunning();
 }
 
 template <typename SocketType>
-inline bool HttpAbstractServer<SocketType>::RegisterMiddleware(HttpMiddleware::uptr middleware)
+inline bool HttpServerImpl<SocketType>::RegisterMiddleware(HttpMiddleware::uptr middleware)
 {
     if(!m_middleware) {
         m_middleware = std::move(middleware);
@@ -134,7 +134,7 @@ inline bool HttpAbstractServer<SocketType>::RegisterMiddleware(HttpMiddleware::u
 
 template <typename SocketType>
 template <HttpMethod... Methods>
-inline void HttpAbstractServer<SocketType>::RouteHandler(const std::string &path, Handler handler)
+inline void HttpServerImpl<SocketType>::RouteHandler(const std::string &path, Handler handler)
 {
     ([&](){
         this->m_routers[Methods].AddHandler(path, handler);
@@ -142,7 +142,7 @@ inline void HttpAbstractServer<SocketType>::RouteHandler(const std::string &path
 }
 
 template <typename SocketType>
-inline Coroutine<void> HttpAbstractServer<SocketType>::HttpRouteForward(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream)
+inline Coroutine<void> HttpServerImpl<SocketType>::HttpRouteForward(RoutineCtx ctx, typename HttpStreamImpl<SocketType>::ptr stream)
 {
     return Handle<SocketType>(ctx, stream, m_routers, m_middleware.get());
 }
