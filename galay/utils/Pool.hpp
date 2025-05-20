@@ -5,47 +5,57 @@
 #include <memory>
 #include <cinttypes>
 #include <concepts>
+#include <functional>
+#include <stdexcept>
 
-namespace galay::pool
+namespace galay::utils
 {
+
+class Object
+{
+public:
+    virtual void Reset() = 0;
+    virtual ~Object() = default;
+};
 
 template <typename T>
-concept Object = requires(T t)
-{
-    { std::is_default_constructible_v<T> };
-    { t.Reset() };
-};
+concept IsObject = std::is_base_of_v<Object, T>;
 
-template<Object T>
-class ProtocolPool
+template <IsObject T>
+class ObjectPool
 {
 public:
-    ProtocolPool(uint32_t capacity);
-    std::unique_ptr<T> GetProtocol();
-    void PutProtocol(std::unique_ptr<T> objector);
-    ~ProtocolPool();
-private:
-    std::atomic_uint32_t m_capacity;
-    moodycamel::ConcurrentQueue<std::unique_ptr<T>> m_queue;
-};
+    using CreateFunc = std::function<T*()>;
+    using DestroyFunc = std::function<void(T*)>;
 
-template<typename T>
-class SessionPool
-{
-public:
-    SessionPool(uint32_t capacity);
-    SessionPool(std::vector<T*> sessions);
-    T* GetSession();
-    void PutSession(T* session);
-    ~SessionPool();
+    ObjectPool(uint32_t size, 
+               CreateFunc create_func = []{ return new T(); },
+               DestroyFunc destroy_func = [](T* obj){ delete obj; });
+
+    ObjectPool(const ObjectPool&) = delete;
+    ObjectPool& operator=(const ObjectPool&) = delete;
+
+    ObjectPool(ObjectPool&& other) noexcept;
+    ObjectPool& operator=(ObjectPool&& other) noexcept;
+
+    ~ObjectPool();
+
+    std::unique_ptr<T, std::function<void(T*)>> Acquire();
+
+    bool Preallocate(uint32_t count);
+    size_t Size() const;
+    void Clear();
+
 private:
-    std::atomic_uint32_t m_capacity;
+    void Destroy(T* obj);
+
+    CreateFunc m_createFunc;
+    DestroyFunc m_destroyFunc;
     moodycamel::ConcurrentQueue<T*> m_queue;
 };
 
-
-}
+} // namespace galay::utils
 
 #include "Pool.tcc"
 
-#endif
+#endif // GALAY_POOL_HPP

@@ -3,72 +3,98 @@
 
 #include "Pool.hpp"
 
-namespace galay::pool
+namespace galay::utils
 {
 
-
-template<Object T>
-inline ProtocolPool<T>::ProtocolPool(uint32_t capacity)
-    : m_capacity(capacity)
+template <IsObject T>
+ObjectPool<T>::ObjectPool(uint32_t size, CreateFunc create_func, DestroyFunc destroy_func)
+    : m_createFunc(std::move(create_func)),
+      m_destroyFunc(std::move(destroy_func)),
+      m_queue(size)
 {
-    for(uint32_t i = 0; i < capacity; ++i) {
-        m_queue.enqueue(std::make_unique<T>());
+    for (uint32_t i = 0; i < size; ++i) {
+        T* obj = m_createFunc();
+        m_queue.enqueue(obj);
     }
 }
 
-template<Object T>
-inline std::unique_ptr<T> ProtocolPool<T>::GetProtocol()
+template <IsObject T>
+ObjectPool<T>::ObjectPool(ObjectPool&& other) noexcept
+    : m_createFunc(std::move(other.m_createFunc)),
+      m_destroyFunc(std::move(other.m_destroyFunc)),
+      m_queue(std::move(other.m_queue))
 {
-    if(std::unique_ptr<T> objector = nullptr; m_queue.try_dequeue(objector)){
-        return objector;
+}
+
+template <IsObject T>
+ObjectPool<T>& ObjectPool<T>::operator=(ObjectPool&& other) noexcept
+{
+    if (this != &other) {
+        Clear();
+        m_createFunc = std::move(other.m_createFunc);
+        m_destroyFunc = std::move(other.m_destroyFunc);
+        m_queue = std::move(other.m_queue);
     }
-    return std::make_unique<T>();
+    return *this;
 }
 
-template<Object T>
-inline void ProtocolPool<T>::PutProtocol(std::unique_ptr<T> objector)
+template <IsObject T>
+ObjectPool<T>::~ObjectPool()
 {
-    objector->Reset();
-    if(m_queue.size_approx() >= m_capacity.load()){
-        m_queue.enqueue(std::move(objector));
+    Clear();
+}
+
+template <IsObject T>
+std::unique_ptr<T, std::function<void(T*)>> ObjectPool<T>::Acquire()
+{
+    T* obj = nullptr;
+    if (!m_queue.try_dequeue(obj)) {
+        obj = m_createFunc();
+    }
+    obj->Reset();
+    return std::unique_ptr<T, std::function<void(T*)>>(obj, [this](T* p) { Destroy(p); });
+}
+
+template <IsObject T>
+bool ObjectPool<T>::Preallocate(uint32_t count)
+{
+    try {
+        for (uint32_t i = 0; i < count; ++i) {
+            m_queue.enqueue(m_createFunc());
+        }
+        return true;
+    } catch (...) {
+        return false;
     }
 }
 
-template<Object T>
-inline ProtocolPool<T>::~ProtocolPool()
+template <IsObject T>
+size_t ObjectPool<T>::Size() const
 {
-    std::unique_ptr<T> objector = nullptr;
-    while(m_queue.try_dequeue(objector)){
+    return m_queue.size_approx();
+}
+
+template <IsObject T>
+void ObjectPool<T>::Clear()
+{
+    T* obj = nullptr;
+    while (m_queue.try_dequeue(obj)) {
+        m_destroyFunc(obj);
     }
 }
 
-
-template <typename T>
-inline SessionPool<T>::SessionPool(uint32_t capacity)
+template <IsObject T>
+void ObjectPool<T>::Destroy(T* obj)
 {
+    if (obj != nullptr) {
+        try {
+            m_queue.enqueue(obj);
+        } catch (...) {
+            m_destroyFunc(obj);
+        }
+    }
 }
 
-template <typename T>
-inline SessionPool<T>::SessionPool(std::vector<T *> sessions)
-{
-}
+} // namespace galay::utils
 
-template <typename T>
-inline T *SessionPool<T>::GetSession()
-{
-    return nullptr;
-}
-
-
-template <typename T>
-inline void SessionPool<T>::PutSession(T *session)
-{
-}
-
-template <typename T>
-inline SessionPool<T>::~SessionPool()
-{
-}
-}
-
-#endif
+#endif // GALAY_POOL_TCC
