@@ -2,7 +2,7 @@
 #include "galay/kernel/EventEngine.h"
 #include <iostream>
 
-#define TEST_ASYNC_TIMEOUT
+#define TEST_SLEEP
 
 #ifdef TEST_SLEEP
 galay::Coroutine<void> test(galay::RoutineCtx ctx)
@@ -10,9 +10,25 @@ galay::Coroutine<void> test(galay::RoutineCtx ctx)
     std::cout << "start" << std::endl;
     co_await galay::this_coroutine::Sleepfor<void>(5000);
     std::cout << "sleep 5s" << std::endl;
+    co_await galay::this_coroutine::Sleepfor<void>(5000);
+    std::cout << "sleep 5s" << std::endl;
+    
     co_return;
 }
 
+void test()
+{
+    auto scheduler = galay::EventSchedulerHolder::GetInstance()->GetScheduler(0);
+    for (int i = 1 ;i <= 10; ++i)
+    {
+        galay::Timer::ptr timer = galay::Timer::Create([i](galay::details::TimeEvent::wptr, galay::Timer::ptr timer)
+        {
+            std::cout << i << ": " << timer->GetDeadline() << std::endl;
+        });
+        scheduler->AddTimer(timer, i * 100);
+    }
+    
+}
 
 
 int main()
@@ -42,9 +58,10 @@ int main()
     galay::GalayEnvConf conf;
     conf.m_coroutineSchedulerConf.m_thread_num = 1;
     conf.m_eventSchedulerConf.m_thread_num = 1;
-    conf.m_eventSchedulerConf.m_time_manager_type = galay::EventSchedulerTimerManagerType::kEventSchedulerTimerManagerTypeRbTree;
+    conf.m_eventSchedulerConf.m_time_manager_type = galay::EventSchedulerTimerManagerType::kEventSchedulerTimerManagerTypeHeap;
     galay::GalayEnv env(conf);
-    test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
+    //test(galay::RoutineCtx::Create(galay::EventSchedulerHolder::GetInstance()->GetScheduler(0)));
+    test();
     std::cout << "main thread wait..." << std::endl;
     getchar();
     return 0;

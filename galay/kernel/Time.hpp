@@ -13,6 +13,7 @@
 #include <concurrentqueue/moodycamel/concurrentqueue.h>
 #include "Internal.hpp"
 #include "galay/utils/System.h"
+#include <iostream>
 
 namespace galay::details {
 class TimeEvent;

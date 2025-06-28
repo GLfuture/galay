@@ -173,6 +173,9 @@ void TimeEvent::HandleEvent(EventEngine *engine)
         timer->Execute(weak_from_this());
     }
     ActiveTimerManager();
+#if defined(__linux__)
+    engine->ModEvent(this, nullptr);
+#endif
 }
 
 bool TimeEvent::SetEventEngine(EventEngine *engine)
@@ -189,8 +192,10 @@ EventEngine* TimeEvent::BelongEngine()
     return m_engine;
 }
 
+
 void TimeEvent::AddTimer(const Timer::ptr &timer, const int64_t timeout)
 {
+    std::cout << "AddTimer" << std::endl;
     timer->ResetTimeout(timeout);
     timer->SetIsCancel(false);
     timer->SetTimerManager(m_timer_manager);
@@ -283,6 +288,7 @@ void PriorityQueueTimerManager::UpdateTimers(void* ctx)
     {
         auto timer = Top();
         int64_t time = timer->GetRemainTime();
+        std::cout << "timer timeout: " << time << std::endl;
         if (time != 0)
         {
             abstime.tv_sec = time / 1000;
@@ -369,6 +375,7 @@ void RbtreeTimerManager::UpdateTimers(void *ctx)
     {
         auto timer = Top();
         int64_t time = timer->GetRemainTime();
+        std::cout << "time: " << time << std::endl;
         if (time != 0)
         {
             abstime.tv_sec = time / 1000;

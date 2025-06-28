@@ -208,7 +208,7 @@ public:
     std::optional<T> operator()();
 
     bool Become(CoroutineStatus status);
-    ~Coroutine() = default;
+    ~Coroutine() { std::cout << "~Coroutine" << std::endl; }
 private:
     void Destroy() override;
     void Resume() override;
@@ -250,7 +250,7 @@ public:
     void operator()() {}
 
     bool Become(CoroutineStatus status);
-    ~Coroutine() = default;
+    ~Coroutine() { std::cout << "~Coroutine" << std::endl;  }
 private:
     void Destroy() override;
     void Resume() override;
